@@ -1,0 +1,27 @@
+name: Frontend CI
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+permissions:
+  contents: read
+jobs:
+  frontend-checks:
+    runs-on: ubuntu-latest
+    env:
+      API_BASE_URL: http://localhost:5154/api/v1
+      NEXT_PUBLIC_API_BASE_URL: /api
+      APP_URL: http://localhost:3000
+      SESSION_PASSWORD: ci-only-session-password-not-for-production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+      - run: npm run typecheck
