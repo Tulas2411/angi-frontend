@@ -1,5 +1,7 @@
 # Frontend architecture
 
+These are implementation notes for the frontend scaffold. Canonical architecture and sources of truth are in [the frontend project rules](../.agents/project_architecture.md); implementation conventions are in [the coding rules](../.agents/coding_rule.md).
+
 The repository remains Next.js App Router, React, strict TypeScript, Tailwind 4 and npm. Existing auth DTOs, encrypted session, refresh coordination, server guards and backend proxy allowlist are retained. No new backend or deployment was introduced. Playwright and Prettier are development dependencies; simple components use React and native HTML rather than added form/query libraries.
 
 | Area                                         | Responsibility                                                                                      |
@@ -39,4 +41,4 @@ Desktop uses the reference content width and role-specific navigation. Mobile st
 
 ## Pending contracts
 
-The API design spreadsheet was not found. Current non-auth models are frontend view contracts; Figma constraints do not establish server DTOs. Business adapters, invitations, verification/recovery/OAuth, media storage, AI/recommendations and live mapping need verified API contracts. Frontend demo preview limits (31-day generated trips, small destination fixtures, simulated upload delay and bounded photo counts) are documented scaffold behavior, not claimed server restrictions. Existing real auth request fields/errors remain authoritative.
+The canonical API Design workbook is maintained in the separate `angi-backend/.docs/` directory (currently `ANGI_API_Design_Ver1.8.xlsx` in the sibling checkout). Current non-auth models have not been mapped to those contracts; they remain frontend view models, and Figma constraints do not establish server DTOs. Business adapters, invitations, verification/recovery/OAuth, media storage, AI/recommendations and live mapping need verified endpoint contracts and backend availability. Frontend demo preview limits (31-day generated trips, small destination fixtures, simulated upload delay and bounded photo counts) are documented scaffold behavior, not claimed server restrictions. Existing real auth request fields/errors remain authoritative.
