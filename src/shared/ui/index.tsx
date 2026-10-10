@@ -3,40 +3,38 @@ import type {
   InputHTMLAttributes,
   ReactNode,
 } from "react";
-
+export type ButtonVariant =
+  "primary" | "secondary" | "tertiary" | "destructive" | "icon";
 export function Button({
   className = "",
   variant = "primary",
+  loading = false,
+  disabled,
+  children,
+  type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "secondary";
+  variant?: ButtonVariant;
+  loading?: boolean;
 }) {
   return (
     <button
       {...props}
-      className={[
-        "inline-flex items-center justify-center rounded-xl px-5 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-orange-500 disabled:cursor-not-allowed disabled:opacity-60",
-        variant === "primary"
-          ? "bg-orange-600 text-white hover:bg-orange-700"
-          : "border border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
-        className,
-      ].join(" ")}
-    />
+      type={type}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={`button button-${variant} ${className}`}
+    >
+      {loading && <span aria-hidden>⌛</span>}
+      {loading ? "Đang xử lý…" : children}
+    </button>
   );
 }
 export function Input({
   className = "",
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      className={[
-        "w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-orange-500 focus:ring-4 focus:ring-orange-100 disabled:bg-stone-50",
-        className,
-      ].join(" ")}
-    />
-  );
+  return <input {...props} className={`input ${className}`} />;
 }
 export function Card({
   title,
@@ -48,31 +46,37 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section
-      className={[
-        "rounded-2xl border border-stone-200 bg-white p-6 shadow-sm",
-        className,
-      ].join(" ")}
-    >
-      {title && <h2 className="mb-5 text-lg font-semibold">{title}</h2>}
+    <section className={`card ${className}`}>
+      {title && <h2>{title}</h2>}
       {children}
     </section>
   );
 }
-export function Alert({ children }: { children: ReactNode }) {
+export function Alert({
+  children,
+  tone = "error",
+}: {
+  children: ReactNode;
+  tone?: "error" | "warning" | "success" | "info";
+}) {
   return (
     <div
-      role="alert"
-      className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm leading-6 text-red-800"
+      role={tone === "error" ? "alert" : "status"}
+      className={`alert alert-${tone}`}
     >
-      {children}
+      <span className="alert-symbol" aria-hidden>
+        {tone === "error" ? "!" : tone === "success" ? "✓" : "ⓘ"}
+      </span>
+      <div>{children}</div>
     </div>
   );
 }
-export function Badge({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
-      {children}
-    </span>
-  );
+export function Badge({
+  children,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  tone?: "neutral" | "success" | "error" | "warning";
+}) {
+  return <span className={`badge badge-${tone}`}>{children}</span>;
 }

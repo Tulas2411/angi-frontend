@@ -1,12 +1,15 @@
-import RoleDashboard from "@/components/role-dashboard";
+import { Suspense } from "react";
+import { PageRouter } from "@/features/platform/page-router";
+import { WorkspaceScope } from "@/components/layout/workspace";
+import { Skeleton } from "@/components/ui/primitives";
 import { requireUser } from "@/features/auth/server";
-export default async function AdministrationPage() {
+export default async function Page() {
+  await requireUser(["ADMIN"]);
   return (
-    <RoleDashboard
-      user={await requireUser(["ADMIN"])}
-      title="Quản trị ANGI"
-      description="Không gian quản trị người dùng, phân quyền và hoạt động hệ thống."
-      features={["Người dùng", "Phân quyền", "Nhật ký hệ thống"]}
-    />
+    <WorkspaceScope base="/administration">
+      <Suspense fallback={<Skeleton />}>
+        <PageRouter role="ADMIN" />
+      </Suspense>
+    </WorkspaceScope>
   );
 }

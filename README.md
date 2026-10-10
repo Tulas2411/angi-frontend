@@ -77,7 +77,7 @@ scripts/smoke-test.mjs        Kiểm tra tích hợp với backend local
 
 Role guard chạy phía server: chưa đăng nhập chuyển đến `/login`; sai role chuyển về trang của role hiện tại. ADMIN được vào trang moderation. Backend quyết định quyền truy cập API. Redirect sau khi streaming bắt đầu có thể trả HTTP 200 kèm chỉ thị redirect; nội dung trang không được phép không được render.
 
-Đã kết nối API backend thực tế: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`. `/api/auth/session` đọc thông tin phiên đã ký/mã hóa và làm mới token khi cần; đây không phải API `/me` của backend. Màn hình nghiệp vụ là khung để phát triển tiếp. Backend chưa triển khai `/api/v1/me`, cập nhật hồ sơ hay đổi mật khẩu; proxy giữ nguyên lỗi `ROUTE_NOT_FOUND` thay vì tạo dữ liệu giả.
+Đã kết nối API backend thực tế: `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`. `/api/auth/session` đọc thông tin phiên đã ký/mã hóa và làm mới token khi cần; đây không phải API `/me` của backend. Scaffold Figma có các trang nghiệp vụ và tương tác qua adapter demo riêng. Backend chưa triển khai các API nghiệp vụ tương ứng; chế độ live hiển thị trạng thái chưa khả dụng, proxy giữ nguyên lỗi thực tế.
 
 ## API client và xử lý lỗi
 
@@ -139,4 +139,21 @@ npm run test:smoke
 
 Smoke test chỉ chạy với backend local, đọc mật khẩu từ `../.tools/local-settings.json` hoặc `ANGI_TEST_PASSWORD`, tạo/đăng xuất phiên thử và kiểm tra 4 role, Origin, ApiResponse, refresh đồng thời và xóa phiên lỗi. Không in token/mật khẩu.
 
-`npm audit --omit=dev` hiện không có lỗ hổng. Audit toàn bộ dependency báo [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) ở `braces` qua công cụ lint, chưa có bản vá upstream tại thời điểm kiểm tra. Không dùng `npm audit fix --force` vì đề xuất hạ `eslint-config-next` xuống phiên bản không tương thích Next.js 16.
+## Scaffold Figma và bản minh họa
+
+Mở [bản minh họa](http://localhost:3000/demo) để thử các màn hình Guest, Traveler, Owner, Moderator và Admin. Có khám phá món/quán, cẩm nang, lập lịch ăn/bản đồ/ngân sách, quản lý nhà hàng/thực đơn, các luồng kiểm duyệt, quyền Mod, nhật ký và đồng bộ. Dữ liệu mẫu cập nhật trong bộ nhớ khi thao tác và đặt lại khi tải lại trang. Bản minh họa không tạo phiên đăng nhập hoặc gửi email.
+
+- [Hướng dẫn cài đặt và biến môi trường](docs/setup.md)
+- [Kiến trúc và ranh giới adapter](docs/architecture.md)
+- [Đối chiếu route/frame/component với Figma](docs/design-coverage.md)
+- [Kết quả kiểm tra và giới hạn còn lại](docs/verification.md)
+
+Thư viện thành phần: `/dev/components`; 23 kịch bản trạng thái: `/dev/scenarios`. Cả hai chỉ bật mặc định trong development. Chế độ dữ liệu mặc định là `NEXT_PUBLIC_DATA_MODE=live`; `/demo` dùng fixtures riêng. Đặt `NEXT_PUBLIC_ENABLE_DEMO=false` để tắt preview và giữ `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY=false` khi build production.
+
+```powershell
+$env:PLAYWRIGHT_BROWSERS_PATH='.cache/browsers'
+npx playwright install chromium
+npm run test:browser
+```
+
+Khi frontend đang chạy, `npm run test:visual` và `npm run test:states` tạo ảnh cùng manifest trong `artifacts/screenshots`. Không có backend mới hoặc bước deploy trong scaffold này. File `ANGI_API_Design_Ver1.8.xlsx` chưa có trong workspace; các model nghiệp vụ hiện là view model frontend và cần đối chiếu hợp đồng trước khi nối live API.

@@ -1,0 +1,283 @@
+{
+  "figmaFile": "lxEl7PJc0LdQ8j47KlUPkO",
+  "assets": [
+    {
+      "file": "public/assets/figma/logo.png",
+      "figmaNode": "92:454",
+      "sourceName": "imgLogoGc",
+      "slot": "Brand/header/footer"
+    },
+    {
+      "file": "public/assets/figma/search.svg",
+      "figmaNode": "92:454",
+      "sourceName": "imgSearch",
+      "slot": "Shared icon"
+    },
+    {
+      "file": "public/assets/figma/bell.svg",
+      "figmaNode": "92:454",
+      "sourceName": "imgThongBao",
+      "slot": "Shared icon"
+    },
+    {
+      "file": "public/assets/figma/warning.svg",
+      "figmaNode": "92:454",
+      "sourceName": "imgTriangleAlert",
+      "slot": "Shared icon"
+    },
+    {
+      "file": "public/assets/figma/success.svg",
+      "figmaNode": "92:454",
+      "sourceName": "imgCircleCheck",
+      "slot": "Shared icon"
+    },
+    {
+      "file": "public/assets/figma/calendar.svg",
+      "figmaNode": "92:454",
+      "sourceName": "imgCalendarDays",
+      "slot": "Shared icon"
+    },
+    {
+      "file": "public/assets/figma/food-inspiration.png",
+      "figmaNode": "92:454",
+      "sourceName": "imgPhoto",
+      "slot": "Discovery and blog fixture imagery"
+    },
+    {
+      "file": "public/assets/figma/coffee.png",
+      "figmaNode": "92:454",
+      "sourceName": "imgPhoto1",
+      "slot": "Discovery and blog fixture imagery"
+    },
+    {
+      "file": "public/assets/figma/restaurant.png",
+      "figmaNode": "465:49823",
+      "sourceName": "imgRestaurantCover",
+      "slot": "Restaurant and Owner fixtures"
+    },
+    {
+      "file": "public/assets/figma/dish-0.png",
+      "figmaNode": "465:51548",
+      "sourceName": "imgDishCover",
+      "slot": "Owner menu and dish fixtures"
+    },
+    {
+      "file": "public/assets/figma/dish-1.png",
+      "figmaNode": "465:51548",
+      "sourceName": "imgDishCover1",
+      "slot": "Owner menu and dish fixtures"
+    },
+    {
+      "file": "public/assets/figma/dish-2.png",
+      "figmaNode": "465:51548",
+      "sourceName": "imgDishCover2",
+      "slot": "Owner menu and dish fixtures"
+    },
+    {
+      "file": "public/assets/figma/dish-3.png",
+      "figmaNode": "465:51548",
+      "sourceName": "imgDishCover3",
+      "slot": "Owner menu and dish fixtures"
+    },
+    {
+      "file": "public/assets/figma/dish-4.png",
+      "figmaNode": "465:51548",
+      "sourceName": "imgDishCover4",
+      "slot": "Owner menu and dish fixtures"
+    },
+    {
+      "file": "public/assets/figma/roll-0.png",
+      "figmaNode": "842:13062",
+      "sourceName": "imgPhoto",
+      "slot": "Roll Dish card imagery"
+    },
+    {
+      "file": "public/assets/figma/roll-1.png",
+      "figmaNode": "842:13062",
+      "sourceName": "imgPhoto1",
+      "slot": "Roll Dish card imagery"
+    },
+    {
+      "file": "public/assets/figma/roll-2.png",
+      "figmaNode": "842:13062",
+      "sourceName": "imgPhoto2",
+      "slot": "Roll Dish card imagery"
+    },
+    {
+      "file": "public/assets/figma/roll-3.png",
+      "figmaNode": "842:13062",
+      "sourceName": "imgPhoto3",
+      "slot": "Roll Dish card imagery"
+    },
+    {
+      "file": "public/assets/figma/roll-4.png",
+      "figmaNode": "842:13062",
+      "sourceName": "imgPhoto4",
+      "slot": "Roll Dish card imagery"
+    },
+    {
+      "file": "public/assets/figma/roadmap-food.png",
+      "figmaNode": "24:1383",
+      "sourceName": "imgRectangle",
+      "slot": "Roadmap reference imagery"
+    },
+    {
+      "file": "public/assets/figma/roadmap-dish.png",
+      "figmaNode": "24:1383",
+      "sourceName": "imgRectangle1",
+      "slot": "Roadmap reference imagery"
+    },
+    {
+      "file": "public/assets/figma/roadmap-restaurant.png",
+      "figmaNode": "24:1383",
+      "sourceName": "imgRectangle2",
+      "slot": "Roadmap reference imagery"
+    },
+    {
+      "file": "public/assets/figma/roadmap-coffee.png",
+      "figmaNode": "24:1383",
+      "sourceName": "imgRectangle3",
+      "slot": "Roadmap reference imagery"
+    },
+    {
+      "file": "public/assets/figma/roadmap-map.png",
+      "figmaNode": "24:1383",
+      "sourceName": "imgRectangle4",
+      "slot": "Roadmap reference imagery"
+    },
+    {
+      "file": "public/assets/figma/motorcycle.svg",
+      "figmaNode": "24:1383",
+      "sourceName": "imgIconXeMay",
+      "slot": "Roadmap travel connector"
+    },
+    {
+      "file": "public/assets/figma/connection.svg",
+      "figmaNode": "24:1383",
+      "sourceName": "imgRouteDashedConnection",
+      "slot": "Roadmap travel connector"
+    },
+    {
+      "file": "public/assets/figma/guide-cover.png",
+      "figmaNode": "447:29323",
+      "sourceName": "imgNhThamChiu",
+      "slot": "Itinerary sharing reference image"
+    },
+    {
+      "file": "public/assets/figma/roll-marker.svg",
+      "figmaNode": "842:13062",
+      "sourceName": "imgFixedCenterSelectionMarker",
+      "slot": "Discovery and blog fixture imagery"
+    },
+    {
+      "file": "public/assets/figma/StreetEdges.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgStreetEdges",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/StreetNetwork.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgStreetNetwork",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/LakesidePark.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgLakesidePark",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/HHoanKim.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgHHoanKim",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/NgcSnIsland.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgNgcSnIsland",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/TheHucBridge.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgTheHucBridge",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/PinHalo.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgPinHalo",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/PinShadow.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgPinShadow",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/SelectedLocationPin.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgSelectedLocationPin",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/PinCenter.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgPinCenter",
+      "slot": "MapPicker exported SVG layer"
+    },
+    {
+      "file": "public/assets/figma/Plus.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgPlus",
+      "slot": "MapPicker and dialog control"
+    },
+    {
+      "file": "public/assets/figma/Minus.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgMinus",
+      "slot": "MapPicker and dialog control"
+    },
+    {
+      "file": "public/assets/figma/LocateFixed.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgLocateFixed",
+      "slot": "MapPicker and dialog control"
+    },
+    {
+      "file": "public/assets/figma/X.svg",
+      "figmaNode": "712:10225",
+      "sourceName": "imgX",
+      "slot": "MapPicker and dialog control"
+    },
+    {
+      "file": "public/assets/figma/thumb-up.svg",
+      "figmaNode": "752:10179",
+      "sourceName": "ThumbsUp",
+      "slot": "Roadmap photo feedback"
+    },
+    {
+      "file": "public/assets/figma/thumb-down.svg",
+      "figmaNode": "752:10182",
+      "sourceName": "ThumbsDown",
+      "slot": "Roadmap photo feedback"
+    }
+  ],
+  "fonts": [
+    {
+      "family": "DM Sans",
+      "weights": [400, 500, 600, 700],
+      "source": "Google Fonts / ofl/dmsans",
+      "license": "public/assets/fonts/DM-Sans-OFL.txt"
+    },
+    {
+      "family": "Fraunces",
+      "weights": [900],
+      "source": "Google Fonts / ofl/fraunces",
+      "license": "public/assets/fonts/Fraunces-OFL.txt"
+    }
+  ]
+}
