@@ -1,12 +1,15 @@
-import RoleDashboard from "@/components/role-dashboard";
+import { Suspense } from "react";
+import { PageRouter } from "@/features/platform/page-router";
+import { WorkspaceScope } from "@/components/layout/workspace";
+import { Skeleton } from "@/components/ui/primitives";
 import { requireUser } from "@/features/auth/server";
-export default async function DiscoveryPage() {
+export default async function Page() {
+  await requireUser(["TRAVELER"]);
   return (
-    <RoleDashboard
-      user={await requireUser(["TRAVELER"])}
-      title="Khám phá hương vị"
-      description="Những món ngon, nhà hàng và hành trình dành cho khẩu vị của bạn."
-      features={["Khám phá món ăn", "Lộ trình ẩm thực", "Cộng đồng"]}
-    />
+    <WorkspaceScope base="/discovery">
+      <Suspense fallback={<Skeleton />}>
+        <PageRouter role="TRAVELER" />
+      </Suspense>
+    </WorkspaceScope>
   );
 }

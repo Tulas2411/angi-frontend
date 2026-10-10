@@ -1,12 +1,15 @@
-import RoleDashboard from "@/components/role-dashboard";
+import { Suspense } from "react";
+import { PageRouter } from "@/features/platform/page-router";
+import { WorkspaceScope } from "@/components/layout/workspace";
+import { Skeleton } from "@/components/ui/primitives";
 import { requireUser } from "@/features/auth/server";
-export default async function ModerationPage() {
+export default async function Page() {
+  await requireUser(["MOD", "ADMIN"]);
   return (
-    <RoleDashboard
-      user={await requireUser(["MOD", "ADMIN"])}
-      title="Kiểm duyệt nội dung"
-      description="Cùng giữ cho cộng đồng ANGI hữu ích, an toàn và đáng tin cậy."
-      features={["Nội dung cần duyệt", "Báo cáo", "Xử lý vi phạm"]}
-    />
+    <WorkspaceScope base="/moderation">
+      <Suspense fallback={<Skeleton />}>
+        <PageRouter role="MOD" />
+      </Suspense>
+    </WorkspaceScope>
   );
 }

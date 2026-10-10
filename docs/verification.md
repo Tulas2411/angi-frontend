@@ -1,0 +1,40 @@
+# Verification results
+
+Verified locally on 2026-10-10 using Node.js 24, Next.js 16.4 and headless Chromium. Checks apply to the frontend scaffold and isolated demonstration data.
+
+| Check                            | Result                          | Evidence/scope                                                                                                                                                                                                                                                                                                   |
+| -------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run build`                  | Passed                          | Production compilation, route generation and TypeScript; no external font request at build time                                                                                                                                                                                                                  |
+| `npm run typecheck`              | Passed                          | Strict TypeScript including generated App Router types                                                                                                                                                                                                                                                           |
+| `npm run lint`                   | Passed                          | Existing Next/TypeScript rules; explicit native-image exception only for four local-export/data-URL components                                                                                                                                                                                                   |
+| `npm test`                       | 26 passed / 4 files             | Existing auth/API/session tests plus permissions, dates, upload limits, snapshot immutability, pagination, adapter isolation and coherent entity references                                                                                                                                                      |
+| `npm run test:browser`           | 9 passed                        | Real role redirects, no session from demo, allowed registration roles/password rules, map/trip/budget, destructive cancel/confirm, invitations, activation, full override replacement, single retry to pending, Owner menu isolation, unsaved exit, keyboard/focus, uploaded avatar persistence/profile identity |
+| `npm run test:visual`            | 63 views × 3 widths             | 189 captures at 1920/1440/390px; HTTP, JavaScript errors, missing images and page overflow checks                                                                                                                                                                                                                |
+| `npm run test:states`            | 77 captures; no errors          | Gallery/dialogs, 23 business scenarios, planning/map, review/menu/mod/Admin actions, permissions/audit/sync, unsaved sharing, roll/reduced motion, unavailable assistant, suggestions/settings/layers/notes                                                                                                      |
+| `node scripts/verify-assets.mjs` | Passed                          | 44 non-empty valid Figma exports, 5 local font files and 2 font licenses; byte counts and intrinsic geometry recorded                                                                                                                                                                                            |
+| `npm run format:check`           | Passed                          | Source/tests/scripts/docs; exhaustive inventory intentionally uses one JSON record per line                                                                                                                                                                                                                      |
+| `git diff --check`               | Passed                          | No whitespace errors                                                                                                                                                                                                                                                                                             |
+| `npm run test:smoke`             | External dependency unavailable | Local backend port 5154 did not connect; auth integration smoke was not run and no backend was started                                                                                                                                                                                                           |
+
+## Screenshot evidence
+
+The reproducible scripts and route/node mappings are checked in. Generated PNGs, manifests, HTML reports and contact sheets remain local under ignored `artifacts/`, `playwright-report/` and `test-results/`.
+
+- `artifacts/screenshots/manifest.json`: page route, Figma reference, viewport/scroll dimensions, image failures and HTTP status.
+- `artifacts/screenshots/states/manifest.json`: interaction name, host URL, Figma reference, viewport, image file and errors.
+- `artifacts/asset-verification.json`: original export source, intended slot, bytes and decoded geometry. Some Figma raster exports retain a `.png` filename while their supplied bytes are JPEG; Chromium and the verifier decode the original data correctly.
+- `node scripts/contact-sheets.mjs`: overview sheets for desktop/mobile views and state captures. Use full-size originals to inspect fine details.
+
+Desktop layout follows 1920px designs and checks 1440px variants. Additional state captures use 1257px planning/map and 1713px roadmap widths matching those reference families. The 390px layout is derived where no mobile design exists.
+
+## Visual review and corrections
+
+Reviewed contact sheets across all implemented route families and captured states, plus full-size public, Owner, Mod/Admin, planning, map and roadmap references. Corrections included home step/card composition and banner crop, CTA width, outlined destructive styling, map search overlay, roadmap flex children preserving image height, photo feedback placement, staff logo dimensions, selected roll alignment and contained keyboard-accessible table scrolling on mobile. Local fonts and intrinsic asset geometry were verified. Native dialogs were checked for viewport coverage, scroll, Escape and focus return.
+
+This is manual visual review and behavioral validation, not automated pixel equality. Some reference copy/counts differ from deterministic fixtures. Native date/select control chrome is browser-dependent. Nested structural frames inherit their host's implementation; the inventory does not imply 7,271 independent screenshots.
+
+## Remaining external limits
+
+The API design spreadsheet is absent, business endpoints are not implemented, and Code Connect requires unavailable Figma seat/plan access. Demo changes remain in memory. Real media upload, email delivery, OAuth, verification/recovery, invitations, live maps/travel times, AI/recommendations, business persistence and moderation/admin integrations require verified contracts. Default live mode retains unavailable/retry feedback. Auth server guards and the existing real login/refresh/logout implementation remain in place.
+
+The current date-dialog reference at `137:710` has a hidden backdrop without a usable current dialog frame; a semantic date-range form implements the operation. Static map layers do not claim live cartography or routing. Hidden blog/comment views preserve unavailable-reading context. The app was not deployed.
