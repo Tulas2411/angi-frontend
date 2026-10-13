@@ -75,6 +75,7 @@ export function getErrorMessage(error: unknown): string {
   const messages: Record<string, string> = {
     INVALID_CREDENTIALS: "Email hoặc mật khẩu không đúng.",
     EMAIL_NOT_VERIFIED: "Bạn cần xác minh email trước khi đăng nhập.",
+    EMAIL_ALREADY_EXISTS: "Email đã được sử dụng.",
     ACCOUNT_BANNED: "Tài khoản đã bị cấm.",
     ACCOUNT_DEACTIVATED: "Tài khoản đã ngừng hoạt động.",
     VALIDATION_FAILED: "Vui lòng kiểm tra thông tin đã nhập.",

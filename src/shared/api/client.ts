@@ -1,5 +1,10 @@
 "use client";
-import type { AuthUserDto, LoginRequestDto } from "@/features/auth/types";
+import type {
+  AuthUserDto,
+  LoginRequestDto,
+  RegisterAccountRequestDto,
+  RegisterAccountResponseDto,
+} from "@/features/auth/types";
 import { ApiError, readApiResponse } from "./error";
 
 async function request<T>(
@@ -50,6 +55,12 @@ async function request<T>(
   }
 }
 export const api = {
+  register: (body: RegisterAccountRequestDto) =>
+    request<RegisterAccountResponseDto>(
+      "auth/register",
+      { method: "POST", body: JSON.stringify(body) },
+      false,
+    ),
   login: (body: LoginRequestDto) =>
     request<AuthUserDto>(
       "auth/login",

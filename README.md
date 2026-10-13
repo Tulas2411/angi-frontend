@@ -17,6 +17,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Login, token refresh and logout                                                          | Connected to the existing backend through Next.js Route Handlers    |
 | Encrypted session and role guards                                                        | Implemented; real role workspaces require a backend login           |
+| Self-registration (AUTH-01: email, password, displayName, role TRAVELER/RESTAURANT_OWNER) | Connected to `POST /api/v1/auth/register` via `/api/auth/register` |
 | Dish/restaurant discovery, guides, itineraries and expenses                              | Interactive frontend screens using isolated demo data               |
 | Owner, moderation, administration, permissions, audit and sync screens                   | Interactive frontend screens using isolated demo data               |
 | Live business data                                                                       | Adapter not implemented; live pages show unavailable/retry feedback |

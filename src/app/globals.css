@@ -461,6 +461,54 @@ textarea:focus-visible,
 .chip:hover {
   border-color: var(--ink);
 }
+.role-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.password-row {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  flex-wrap: nowrap;
+}
+.password-row > .input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.password-row > .button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .role-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.role-grid > .choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--card);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.role-grid > .choice:hover {
+  border-color: var(--ink);
+}
+.role-grid > .choice:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--control);
+}
+.field-label {
+  font-size: 14px;
+  line-height: 20px;
+}
 .dialog {
   padding: 0;
   border: 1.5px solid var(--ink);

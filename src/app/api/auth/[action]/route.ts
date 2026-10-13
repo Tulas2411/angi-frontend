@@ -7,12 +7,25 @@ import {
   saveAuth,
   withAuth,
 } from "@/features/auth/server";
-import type { AuthResultDto } from "@/features/auth/types";
+import type {
+  AuthResultDto,
+  RegisterAccountRequestDto,
+  RegisterAccountResponseDto,
+} from "@/features/auth/types";
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
+import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ action: string }> };
+
+// AUTH-01 returns 201 Created. Preserve the designed status when forwarding to the browser.
+function created<T>(data: T) {
+  return NextResponse.json(
+    { success: true, message: null, errorCode: null, data },
+    { status: 201, headers: { "Cache-Control": "no-store" } },
+  );
+}
 
 export async function GET(_request: Request, context: Context) {
   const session = await getSession();
@@ -32,6 +45,16 @@ export async function POST(request: Request, context: Context) {
     checkOrigin(request);
     const { action } = await context.params;
     switch (action) {
+      case "register": {
+        // Public endpoint. No session is read or written here because registration
+        // creates a pending_verification account and never returns tokens.
+        const body = (await readJson(request)) as RegisterAccountRequestDto;
+        const result = await backend<RegisterAccountResponseDto>(
+          "auth/register",
+          { method: "POST", body },
+        );
+        return created(result);
+      }
       case "login": {
         const auth = await backend<AuthResultDto>("auth/login", {
           method: "POST",
