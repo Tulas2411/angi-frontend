@@ -72,4 +72,22 @@ describe("ANGI ApiResponse", () => {
       readApiResponse(new Response("Bad gateway", { status: 503 })),
     ).rejects.toMatchObject({ status: 503 });
   });
+  it("unwraps a 201 Created response from AUTH-01 registration", async () => {
+    const data = {
+      userId: 12,
+      email: "an.nguyen@gmail.com",
+      role: "TRAVELER",
+      status: "pending_verification",
+    };
+    await expect(
+      readApiResponse(response({ success: true, data }, 201)),
+    ).resolves.toEqual(data);
+  });
+  it("maps EMAIL_ALREADY_EXISTS to the localized user message", () => {
+    expect(
+      getErrorMessage(
+        new ApiError(409, "EMAIL_ALREADY_EXISTS", "Email đã được sử dụng."),
+      ),
+    ).toBe("Email đã được sử dụng.");
+  });
 });
