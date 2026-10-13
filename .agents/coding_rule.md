@@ -4,10 +4,10 @@ Rules for changes to `angi-frontend`. Read [project_architecture.md](project_arc
 
 ## 1. Scope and feature ownership
 
-- Use the existing `src/features` folders. Add business behavior in its owning feature, reusable controls in the UI kit, and verified API mapping in services.
-- Keep `src/app` focused on routing, metadata, server guards, layout and page composition. Do not duplicate a whole feature inside a route file.
-- Extract pure calculations, validation and permission presentation rules from large page components when they need reuse or independent tests. Preserve existing contracts during extraction.
-- Implement the assigned feature. Do not add dependencies, unrelated refactors, new product roles or new backend contracts as incidental changes.
+- Use the existing `src/features` folders. Add page behavior in the owning feature, reusable controls in the UI kit and API mapping at the service boundary.
+- Keep `src/app` focused on routing, metadata, server guards, layouts and page composition. Do not duplicate a whole feature inside a route file.
+- Place shared view models and provider behavior in `features/platform`; keep scenario fixtures in `src/mocks`. Extract pure calculations and presentation rules when they need reuse or independent tests.
+- Scope changes to the assigned FE feature. Add dependencies, roles or API contracts only when the task and verified sources require them.
 
 ## 2. Dependency direction
 
@@ -34,7 +34,7 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 | Other API enums/fields           | Exact documented values               | `pending_verification`, `avatarUrl`            |
 
 - Keep strict TypeScript. Prefer `unknown` plus narrowing for external data; do not bypass validation with `any`, unexplained non-null assertions or casts that invent a contract.
-- Use typed props and named domain types. Preserve backend nullability and ID types; demo string IDs are not evidence that all backend IDs are strings.
+- Use typed props and named domain types. `features/platform/contracts.ts` contains FE view models; preserve backend nullability and ID types only in verified wire DTOs. Demo string IDs do not define server IDs.
 - Reuse `ApiResponse`, `AuthUserDto`, `RoleCode` and the existing view contracts. Use type-only imports where applicable.
 - Documentation and code identifiers are English. User-facing messages, field labels and accessible names remain Vietnamese.
 
@@ -70,13 +70,13 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 
 ## 7. Adding a live endpoint
 
-1. Read the latest API Design and verify that BE implements the operation.
-2. Add exact request/response DTOs in the owning feature. Keep them separate from presentation view models.
-3. Add the exact method/path to the proxy allowlist and export that method if needed. Never accept a caller-controlled upstream host.
-4. Preserve Origin checks for mutations and `withAuth` for authenticated calls. Do not attach auth to a public operation without its documented need.
-5. Preserve the endpoint's designed status, pagination, query semantics, units, nulls and error data. Extend the response helper deliberately if 201/202 is required.
-6. Implement a typed service/mapper behind the existing adapter boundary and update the page's loading/error states.
-7. Test response/error handling and the relevant access/data behavior. Update setup and integration status documentation.
+1. Find the latest backend API contract and confirm the operation exists in the backend implementation. If those sources are unavailable, leave the integration pending rather than deriving a DTO from a Figma screen or fixture.
+2. Add typed wire request/response models in the owning feature, separate from `features/platform/contracts.ts` view models. Map between them explicitly.
+3. Add the exact method/path to the Next.js proxy allowlist and export the corresponding Route Handler method. Never accept a caller-controlled upstream host.
+4. Keep the browser on the same-origin API client. Preserve Origin checks for mutations and `withAuth` for protected calls; use public calls only where the contract says they are public.
+5. Preserve designed status, pagination, query behavior, units, nulls and structured errors. The current `ok` helper emits 200; extend it for an operation that must return 201/202.
+6. Add a typed service/adapter and render its loading, empty, error and success states. Keep demo fixtures isolated from live failures.
+7. Test response/error handling and relevant role/data behavior. Update the documented integration status.
 
 An allowlisted path is not an implemented endpoint. The generic `api.post` helper does not work through the current proxy until its server method and allowlist entry are added. Do not invent a whole-state `AppData` save API.
 
@@ -99,16 +99,15 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 - Effects must clean up listeners, timers and stale async updates. Do not use effects to mirror values that can be derived during render.
 - Current demo changes are temporary. Never imply a demo action sent an email, uploaded to a cloud service or persisted in BE.
 
-## 10. Forms, dates and business presentation
+## 10. Forms, dates and presentation
 
 - Use native semantic forms and reusable `Field`, `Input`, `TextArea`, `SelectField`, `Choice` and related primitives.
 - Every control needs an accessible label. Connect helper/errors through `aria-describedby` and invalid state through `aria-invalid`.
 - Validate for useful UX, then keep BE authoritative. Do not silently change its limits or enum values to match a fixture.
-- Public registration allows only Traveler/Owner. Moderator invitations are an Admin flow, not a self-registration role or a password supplied by Admin.
-- Preserve separate verification, operating and moderation states; do not compress them into one restaurant status.
-- Preserve permission `inherit`/`allow`/`deny` semantics, read-only audit views, pending menu edits and immutable published trip snapshots.
-- A sync retry moves a dead event to pending; it must not claim that processing completed.
-- Keep monetary values numeric and format VND at presentation time. Preserve UTC API timestamps and distinguish date-only values from instants when formatting.
+- Use the current route and role policy when showing auth and staff controls. Public registration UI offers Traveler/Owner; Admin invitation UI is a separate preview flow.
+- Preserve distinct FE view-model states where the screens distinguish them: restaurant verification, operating and moderation; pending menu edits; published trip snapshots; permission overrides; and audit views. Do not present demo transitions as confirmed backend behavior.
+- A demo sync retry changes the event to pending. Its UI must not claim processing completed.
+- Keep monetary values numeric and format VND for display. Preserve UTC API timestamps and distinguish date-only values from instants when formatting.
 
 ## 11. UI kit, assets and responsive behavior
 
@@ -125,7 +124,7 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 
 - `.env.example` lists variable names and safe defaults. `.env.local` and real credentials stay local; preserve existing values during setup.
 - `NEXT_PUBLIC_*` values are public/build-time values. Store session secrets and backend-only URLs without that prefix.
-- Keep database/recommendation/email/media secret keys in BE. FE calls BE through verified contracts instead of bypassing it.
+- Keep database and external-service secrets out of browser code and public assets. FE reaches backend operations through verified contracts, not direct database access.
 - Coordinate demo/gallery flags with the intended environment. Production previews require an explicit decision; real protected routes still require auth even in demo data mode.
 - Avoid introducing libraries already covered by native HTML, React or existing helpers. When a dependency is justified, review its footprint and update the npm lockfile with npm rather than editing it manually.
 
