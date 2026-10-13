@@ -1,34 +1,31 @@
 # ANGI — Frontend Project Architecture
 
-This document describes the frontend, its boundaries, and its current capabilities. Implementation rules: [coding_rule.md](coding_rule.md). Human Git workflow and assistant restrictions: [commit_guide.md](commit_guide.md). Team onboarding: [../README.md](../README.md).
+This document describes the implemented frontend and its boundaries. Implementation rules: [coding_rule.md](coding_rule.md). Human Git workflow and assistant restrictions: [commit_guide.md](commit_guide.md). Team onboarding: [../README.md](../README.md).
 
 ## 0. Sources of truth
 
-Use the highest available version of each design document. These rules summarize the project; they do not replace its contracts.
+Use each source for the decision it owns. These rules summarize the FE implementation; they do not establish server contracts.
 
-| Source                                                                       | Decides                                                                                                |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `angi-backend/.docs/ANGI_API_Design_Ver*.xlsx`                               | Endpoint paths/methods, request/response DTOs, status codes, error codes, enums and sample JSON        |
-| `angi-backend/.docs/ANGI_Data_Dictionary_Ver*.xlsx`                          | Data semantics, ID types, nullability and relationships; never a reason to access the database from FE |
-| `angi-backend/.docs/ANGI_Jira_Plan_Ver*.xlsx` and the assigned team ticket   | Work scope and the actual Jira key                                                                     |
-| ANGI Figma references in `../docs/design-coverage.md`                        | Layout, visual tokens, assets, component variants and interaction states                               |
-| `../docs/assets.json`, `../docs/design-inventory.json`                       | Local asset provenance and design-to-code mappings                                                     |
-| `../package.json`, `../package-lock.json`, `../node_modules/next/dist/docs/` | Installed stack and framework behavior                                                                 |
-| The checked-out backend implementation/OpenAPI                               | Which designed endpoints are actually available                                                        |
+| Decision                                                | Source                                                                                                                                                              |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Current routes, components, data flow and configuration | `../src/`, `../package.json`, `../.env.example` and `../.github/workflows/ci.yml`                                                                                   |
+| Layout, visual tokens, assets and interaction states    | ANGI Figma references in [design coverage](../docs/design-coverage.md), [asset manifest](../docs/assets.json) and [design inventory](../docs/design-inventory.json) |
+| Endpoint methods, DTOs, status codes, errors and enums  | Latest `ANGI_API_Design_Ver*.xlsx` from the separate backend repository, checked against its implementation/OpenAPI                                                 |
+| Data semantics needed for API mapping                   | Latest backend data dictionary; FE never accesses the database directly                                                                                             |
+| Framework behavior                                      | Installed Next.js guides in `../node_modules/next/dist/docs/` after `npm ci`                                                                                        |
+| Work scope                                              | Assigned team ticket and its design references                                                                                                                      |
 
-The backend workbooks are maintained in a separate repository, not bundled in FE. In a sibling checkout they are under `../angi-backend/.docs/` relative to the frontend root. The current local API workbook is v1.8; always check for a higher version before integrating an endpoint.
+Backend workbooks are not bundled with FE. If a sibling `angi-backend` checkout exists, look under `../angi-backend/.docs/` from the frontend root and select the newest relevant workbook. No such checkout is required for FE-only work. Do not assume a workbook version or implement an endpoint from Figma/fixtures alone.
 
-- Read the endpoint's entries in the API Design sheets `Backend API`, `Chi tiết Request-Response`, `DTO`, `Mã lỗi` and `Enum` as applicable.
-- Figma and frontend fixtures do not establish API fields or server business rules. Preserve DTO field names, enum values, nullability, ID types and units; map verified DTOs into view models explicitly.
-- When a contract or product decision is missing or contradictory, ask the responsible team member before implementing that behavior. Continue unrelated work that is already clear.
-- Framework behavior must follow the installed Next.js documentation. Do not copy examples for an older Pages Router project.
-- Keep these documents aligned with implementation; distinguish a planned capability from a working integration.
+- For an API integration, verify the relevant request/response, DTO, error and enum entries and that the backend implements the operation. Preserve wire field names, nullability, ID types and units; map them to FE view models explicitly.
+- When a contract or product decision is missing or contradictory, ask the responsible team member before implementing that behavior. Continue work whose requirements are clear.
+- Follow the installed Next.js documentation for framework behavior. Keep these files aligned with code, and distinguish previews from working integrations.
 
 ## 1. Product and scope
 
 ANGI (Ăn Gì) helps travelers discover Vietnamese regional dishes and restaurants and plan food itineraries. This repository contains the browser application and its Next.js API boundary. The REST backend and recommendation service are separate projects.
 
-Actors: Guest, Traveler, Restaurant Owner, Moderator and Administrator. Payment, ordering, delivery, table booking, third-party data import and native mobile applications are outside the current product scope.
+The FE covers Guest, Traveler, Restaurant Owner, Moderator and Administrator experiences. Authentication is wired through Next.js Route Handlers. Most business screens are fixture-backed previews; the live business adapter is still unavailable. Check the [README status table](../README.md#current-implementation-status) before describing a screen as integrated.
 
 Documentation and identifiers are in English. Product copy and accessible labels are Vietnamese unless the team agrees to change the product language.
 
@@ -149,7 +146,7 @@ Working auth handlers:
 | `POST /api/auth/refresh` | `POST /api/v1/auth/refresh`           | Updated user DTO                              |
 | `POST /api/auth/logout`  | `POST /api/v1/auth/logout`            | `null`                                        |
 
-`api/backend/[...path]` currently allows `GET me`, `PATCH me` and `PUT me/password`. These account operations are not implemented by the checked-out backend. The client has a generic `post` method, but the proxy does not export `POST` yet; a client helper alone does not enable a server operation.
+`api/backend/[...path]` currently allows `GET me`, `PATCH me` and `PUT me/password`. An FE allowlist entry does not establish that the backend operation is available; verify it against the backend before using it. The client has a generic `post` method, but the proxy does not export `POST` yet; a client helper alone does not enable a server operation.
 
 The proxy checks the exact method/path, uses `withAuth`, forwards the configured backend request and preserves structured errors. It never accepts an arbitrary upstream URL. Review both the allowlist and the exported HTTP methods when adding an operation. Current proxy success helpers return 200; integration of an endpoint requiring 201 or 202 must also preserve its designed status.
 
@@ -175,7 +172,7 @@ Coordination and revocation currently live in one Next.js process. Multi-instanc
 - Demo users and IDs are fixtures, not authenticated principals or server IDs. Demo uploads use local data URLs, invitations do not send email, and static map artwork does not provide live routing.
 - Preserve coherent references between dishes, restaurants, menus and trips, separate pending menu edits, immutable published snapshots, distinct restaurant statuses, permission override semantics and retry-to-pending behavior.
 
-Implement a verified live adapter behind this boundary when backend endpoints become available. A designed but unimplemented API must remain visibly unavailable rather than silently falling back to fixtures.
+The whole-`AppData` save operation is a demo interface, not a backend endpoint. Implement live data with verified per-operation DTO mapping when backend endpoints become available. A designed but unimplemented API must remain visibly unavailable rather than silently falling back to fixtures.
 
 ## 9. UI system
 
@@ -185,7 +182,7 @@ Use local assets/fonts with recorded provenance and licenses. Preserve image geo
 
 ## 10. Configuration and quality checks
 
-Environment variables are listed in `.env.example` and the README. Private values stay in `.env.local`; public variables are embedded at build time. Demo/gallery availability must be set intentionally for each environment. Database credentials and external-service secrets belong in BE.
+Environment variables are listed in `.env.example` and the README. Private values stay in `.env.local`; `NEXT_PUBLIC_*` values are embedded in browser builds. Demo/gallery availability must be set intentionally for each environment. Database credentials and external-service secrets must never be placed in browser code or public assets.
 
 Current CI (`frontend-checks`) runs `npm ci`, lint, unit tests, production build and typecheck on PRs/pushes to `dev`/`main`. Browser, formatting, visual and asset checks are additional local checks, not current CI jobs. On a fresh checkout, build before standalone typecheck to generate route types.
 
