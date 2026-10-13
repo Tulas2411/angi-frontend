@@ -1,0 +1,28 @@
+:root {
+  --canvas: #f4efe7;
+  --card: #fff;
+  --control: #eee9e7;
+  --ink: #222;
+  --muted: #68615d;
+  --coral: #ff5e62;
+  --line: #e7e3e5;
+  --success: #e7eee3;
+  --warning: #fff7e8;
+  --error: #fff0f0;
+  --radius-sm: 16px;
+  --radius-md: 20px;
+  --radius-lg: 24px;
+  --radius-xl: 28px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --shadow: 4px 5px 0 rgb(34 34 34 / 0.1);
+  --shadow-card: 5px 6px 0 rgb(34 34 34 / 0.12);
+  --content-width: 1280px;
+  --font-body: "DM Sans", sans-serif;
+  --font-heading: "Fraunces", serif;
+}

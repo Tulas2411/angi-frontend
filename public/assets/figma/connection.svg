@@ -1,0 +1,13 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="64" viewBox="0 0 16 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Route / dashed connection" clip-path="url(#clip0_0_196)">
+<g id="Vector">
+<path d="M8 0V64Z" fill="black"/>
+<path d="M8 0V1.52381M8 64V62.4762M8 5.5873V8.63492M8 12.6984V15.746M8 19.8095V22.8571M8 26.9206V29.9683M8 34.0317V37.0794M8 41.1429V44.1905M8 48.254V51.3016M8 55.3651V58.4127" stroke-width="1.5" stroke-linecap="round" stroke="#BEB5AE"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_196">
+<rect width="16" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>

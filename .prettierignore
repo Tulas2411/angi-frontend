@@ -1,0 +1,5 @@
+docs/design-inventory.json
+artifacts/
+.cache/
+playwright-report/
+test-results/
