@@ -1,7 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
-import { HOME_BY_ROLE } from "./roles";
 import { api } from "@/shared/api/client";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { Alert, Input } from "@/shared/ui";
@@ -34,7 +33,8 @@ export default function LoginForm() {
         email: String(form.get("email") ?? "").trim(),
         password: String(form.get("password") ?? ""),
       });
-      window.location.assign(HOME_BY_ROLE[user.role]);
+      void user;
+      window.location.assign("/demo/traveler");
     } catch (caught) {
       setError(getErrorMessage(caught));
       if (caught instanceof ApiError) setFields(caught.errors ?? {});

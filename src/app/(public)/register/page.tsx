@@ -1,16 +1,13 @@
 import Brand from "@/components/brand";
-import { getSession, readAuth } from "@/features/auth/server";
-import { HOME_BY_ROLE } from "@/features/auth/roles";
 import RegisterForm from "@/features/auth/register-form";
-import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Đăng ký",
 };
 
-export default async function Page() {
-  const auth = readAuth(await getSession());
-  if (auth) redirect(HOME_BY_ROLE[auth.user.role]);
+export default function Page() {
+  // Cho phép mở /register bất kể đã đăng nhập hay chưa: người dùng có thể
+  // tạo tài khoản khác hoặc xem lại form mà không bị đẩy đi nơi khác.
   return (
     <main className="container auth-page">
       <Brand />
