@@ -74,11 +74,11 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 2. Add typed wire request/response models in the owning feature, separate from `features/platform/contracts.ts` view models. Map between them explicitly.
 3. Add the exact method/path to the Next.js proxy allowlist and export the corresponding Route Handler method. Never accept a caller-controlled upstream host.
 4. Keep the browser on the same-origin API client. Preserve Origin checks for mutations and `withAuth` for protected calls; use public calls only where the contract says they are public.
-5. Preserve designed status, pagination, query behavior, units, nulls and structured errors. The current `ok` helper emits 200; extend it for an operation that must return 201/202.
+5. Preserve designed status, pagination, query behavior, units, nulls and structured errors. Pass the designed success status to `ok(data, status)`; its default is 200.
 6. Add a typed service/adapter and render its loading, empty, error and success states. Keep demo fixtures isolated from live failures.
 7. Test response/error handling and relevant role/data behavior. Update the documented integration status.
 
-An allowlisted path is not an implemented endpoint. The generic `api.post` helper does not work through the current proxy until its server method and allowlist entry are added. Do not invent a whole-state `AppData` save API.
+An allowlisted path is not an implemented endpoint. The generic `api.post` helper requires an exported server method and the exact allowlist entry. Use `api.upload` for multipart requests and let fetch generate the boundary. Do not invent a whole-state `AppData` save API.
 
 ## 8. Authentication and refresh
 
@@ -102,6 +102,7 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 ## 10. Forms, dates and presentation
 
 - Use native semantic forms and reusable `Field`, `Input`, `TextArea`, `SelectField`, `Choice` and related primitives.
+- Every action requiring user confirmation must use an in-app popup modal built from the shared `Dialog` or `ConfirmDialog`. Never use browser `alert`, `confirm` or `prompt` for these decisions. Inline alerts/toasts may provide feedback that does not require a user decision.
 - Every control needs an accessible label. Connect helper/errors through `aria-describedby` and invalid state through `aria-invalid`.
 - Validate for useful UX, then keep BE authoritative. Do not silently change its limits or enum values to match a fixture.
 - Use the current route and role policy when showing auth and staff controls. Public registration UI offers Traveler/Owner; Admin invitation UI is a separate preview flow.

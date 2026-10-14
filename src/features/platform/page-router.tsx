@@ -47,6 +47,7 @@ import {
   SubmissionQueue,
 } from "@/features/moderation/pages";
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
+import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
 
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
@@ -128,10 +129,16 @@ export function PageRouter({
   role: RoleCode | "GUEST";
   segments?: string[];
 }) {
-  const { status } = usePlatform(),
+  const { status, mode } = usePlatform(),
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+  // This verified operation does not depend on the still-unavailable AppData adapter.
+  if (
+    role === "RESTAURANT_OWNER" &&
+    (area === "register" || (mode === "live" && (!area || area === "profile")))
+  )
+    return <RestaurantRegistrationPage />;
   if (status !== "ready") return <UnavailablePage />;
   if (
     [

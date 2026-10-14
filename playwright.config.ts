@@ -1,6 +1,8 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/browser",
+  // F-43 needs the isolated API/session configuration in playwright.owner.config.ts.
+  testIgnore: "restaurant-registration.spec.ts",
   timeout: 60000,
   expect: { timeout: 10000 },
   fullyParallel: false,

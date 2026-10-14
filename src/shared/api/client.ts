@@ -17,7 +17,7 @@ async function request<T>(
   try {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
-    if (init.body !== undefined)
+    if (init.body !== undefined && !(init.body instanceof FormData))
       headers.set("Content-Type", "application/json");
     let response: Response;
     try {
@@ -71,6 +71,9 @@ export const api = {
   refresh: () => request<AuthUserDto>("auth/refresh", { method: "POST" }),
   logout: () => request<null>("auth/logout", { method: "POST" }),
   get: <T>(path: string) => request<T>(`backend/${path}`),
+  getPublic: <T>(path: string) => request<T>(path, {}, false),
+  upload: <T>(path: string, body: FormData) =>
+    request<T>(`backend/${path}`, { method: "POST", body }),
   post: <T>(path: string, body: unknown) =>
     request<T>(`backend/${path}`, {
       method: "POST",

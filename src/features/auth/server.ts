@@ -111,14 +111,21 @@ export async function backend<T>(
   const baseUrl = process.env.API_BASE_URL;
   if (!baseUrl) throw new Error("Thiếu API_BASE_URL.");
   const headers = new Headers({ Accept: "application/json" });
-  if (init.body !== undefined) headers.set("Content-Type", "application/json");
+  const multipart = init.body instanceof FormData;
+  if (init.body !== undefined && !multipart)
+    headers.set("Content-Type", "application/json");
   if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
   let response: Response;
   try {
     response = await fetch(`${baseUrl.replace(/\/$/, "")}/${path}`, {
       method: init.method ?? "GET",
       headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      body:
+        init.body instanceof FormData
+          ? init.body
+          : init.body === undefined
+            ? undefined
+            : JSON.stringify(init.body),
       cache: "no-store",
       signal: AbortSignal.timeout(10_000),
     });
