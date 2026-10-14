@@ -2,24 +2,27 @@ import { redirect } from "next/navigation";
 import Brand from "@/components/brand";
 import LoginForm from "@/features/auth/login-form";
 import { getSession, readAuth } from "@/features/auth/server";
-import { HOME_BY_ROLE } from "@/features/auth/roles";
 import { Alert, Card } from "@/shared/ui";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string }>;
+  searchParams: Promise<{ reason?: string; next?: string }>;
 }) {
+  // Cho phép mở /login bất kể đã đăng nhập hay chưa (hỗ trợ test UI form).
+  // Chỉ tự chuyển sang homepage khi user gõ /login mà có query ?reason=UNAUTHORIZED.
+  const { reason, next } = await searchParams;
   const auth = readAuth(await getSession());
-  if (auth) redirect(HOME_BY_ROLE[auth.user.role]);
-  const { reason } = await searchParams,
-    known = [
-      "UNAUTHORIZED",
-      "REFRESH_TOKEN_INVALID",
-      "ACCOUNT_BANNED",
-      "ACCOUNT_SUSPENDED",
-      "ACCOUNT_DEACTIVATED",
-    ];
+  if (auth && reason === "UNAUTHORIZED" && !next) {
+    redirect("/demo/traveler");
+  }
+  const known = [
+    "UNAUTHORIZED",
+    "REFRESH_TOKEN_INVALID",
+    "ACCOUNT_BANNED",
+    "ACCOUNT_SUSPENDED",
+    "ACCOUNT_DEACTIVATED",
+  ];
   return (
     <main className="container auth-page">
       <Brand />
@@ -30,6 +33,12 @@ export default async function LoginPage({
               {getErrorMessage(
                 new ApiError(401, reason, "Vui lòng đăng nhập lại."),
               )}
+            </Alert>
+          )}
+          {auth && (
+            <Alert>
+              Bạn đang đăng nhập với tài khoản <b>{auth.user.email}</b> (
+              {auth.user.role}). Bạn có thể đăng nhập lại để chuyển tài khoản.
             </Alert>
           )}
           <LoginForm />

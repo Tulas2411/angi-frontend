@@ -48,8 +48,8 @@ import {
   SubmissionQueue,
 } from "@/features/moderation/pages";
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
+import { DishDetail } from "@/features/discovery/pages";
 import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
-
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -160,7 +160,7 @@ export function PageRouter({
       ) : (
         <DiscoveryList kind="restaurants" />
       );
-    if (area === "dishes") return <DiscoveryList kind="dishes" />;
+    if (area === "dishes") return id ? <DishDetail id={id} /> : <DiscoveryList kind="dishes" />;
     if (
       role === "GUEST" &&
       area === "guides" &&
