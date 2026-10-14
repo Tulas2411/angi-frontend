@@ -7,7 +7,7 @@ export const ROLE_CODES: readonly RoleCode[] = [
   "ADMIN",
 ];
 export const HOME_BY_ROLE: Record<RoleCode, string> = {
-  TRAVELER: "/discovery",
+  TRAVELER: "/demo/traveler",
   RESTAURANT_OWNER: "/restaurant",
   MOD: "/moderation",
   ADMIN: "/administration",

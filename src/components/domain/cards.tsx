@@ -47,7 +47,7 @@ export function RestaurantStatuses({ restaurant }: { restaurant: Restaurant }) {
     </div>
   );
 }
-export function DishCard({ dish, href }: { dish: Dish; href: string }) {
+export function DishCard({ dish, href, isDetailPage = false }: { dish: Dish; href: string; isDetailPage?: boolean }) {
   return (
     <Card className="domain-card">
       <Media src={dish.image} alt={dish.name} />
@@ -55,9 +55,17 @@ export function DishCard({ dish, href }: { dish: Dish; href: string }) {
       <p className="helper">
         {dish.tags.join(" · ")} · {money(dish.price)}
       </p>
-      <ActionLink href={href} secondary>
-        Xem quán
-      </ActionLink>
+      <div className="actions">
+        {isDetailPage ? (
+          <ActionLink href={`/dishes/${dish.id}`} secondary>
+            Xem chi tiết
+          </ActionLink>
+        ) : (
+          <ActionLink href={href} secondary>
+            Xem quán
+          </ActionLink>
+        )}
+      </div>
     </Card>
   );
 }

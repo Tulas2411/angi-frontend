@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Alert, Button, Card } from "@/shared/ui";
+import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   EmptyState,
@@ -22,6 +22,7 @@ import {
 import { usePlatform } from "@/features/platform/provider";
 import { useWorkspace, PageHeading } from "@/components/layout/workspace";
 import { Media } from "@/components/ui/primitives";
+import { money } from "@/features/platform/rules";
 import { pageSlice } from "@/features/platform/rules";
 
 export function DiscoveryPage() {
@@ -262,6 +263,7 @@ export function DiscoveryList({ kind }: { kind: "restaurants" | "dishes" }) {
                 key={d.id}
                 dish={d}
                 href={`${base}/restaurants/${d.restaurantId}`}
+                isDetailPage={true}
               />
             ))
           : pageSlice(restaurants, page, 6).items.map((r) => (
@@ -359,15 +361,12 @@ export function RestaurantDetail({ id }: { id: string }) {
       {tab === "menu" ? (
         <div className="grid-3">
           {dishes.map((d) => (
-            <Card className="domain-card" key={d.id}>
-              <Media src={d.image} alt={d.name} />
-              <h3>{d.name}</h3>
-              <p>{d.description}</p>
-              <span>
-                {new Intl.NumberFormat("vi-VN").format(d.price)}₫ ·{" "}
-                {d.serving ? "Đang phục vụ" : "Tạm hết món"}
-              </span>
-            </Card>
+            <DishCard
+              key={d.id}
+              dish={d}
+              href={`${base}/restaurants/${restaurant.id}`}
+              isDetailPage={true}
+            />
           ))}
           {dishes.length === 0 && (
             <EmptyState title="Chưa có thực đơn">
@@ -475,6 +474,142 @@ export function RestaurantDetail({ id }: { id: string }) {
             value={reason}
             onChange={setReason}
             options={["Sai thông tin", "Vệ sinh", "Nội dung không phù hợp"].map(
+              (v) => ({ value: v, label: v }),
+            )}
+          />
+          <TextArea
+            label="Thông tin bổ sung"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            maxLength={1000}
+          />
+          <Button type="submit" loading={busy}>
+            Gửi báo cáo
+          </Button>
+        </form>
+      </Dialog>
+    </div>
+  );
+}
+export function DishDetail({ id }: { id: string }) {
+  const { data, mutate, busy } = usePlatform(),
+    { base, user } = useWorkspace(),
+    [reportOpen, setReportOpen] = useState(false),
+    [reason, setReason] = useState("Sai thông tin"),
+    [text, setText] = useState("");
+  const dish = data.dishes.find(
+    (d) => d.id === id && d.moderation === "visible",
+  );
+  if (!dish)
+    return (
+      <EmptyState
+        title="Không tìm thấy món ăn"
+        action={<ActionLink href={`${base}/dishes`}>Về danh sách</ActionLink>}
+      />
+    );
+  const restaurant = data.restaurants.find(
+    (r) => r.id === dish.restaurantId && r.moderation === "visible",
+  );
+  const relatedDishes = data.dishes
+    .filter(
+      (d) =>
+        d.id !== id &&
+        d.restaurantId === dish.restaurantId &&
+        d.moderation === "visible",
+    )
+    .slice(0, 3);
+  return (
+    <div className="container workspace stack">
+      <PageHeading title={dish.name} description={dish.description} />
+      <Card className="soft">
+        <div className="profile-card">
+          <Media src={dish.image} alt={dish.name} className="profile-media" />
+          <div className="stack-sm">
+            <h2>{dish.name}</h2>
+            <p>{dish.description}</p>
+            <p className="price">{money(dish.price)}</p>
+            <div className="tags">
+              {dish.tags.map((tag) => (
+                <Badge key={tag}>{tag}</Badge>
+              ))}
+              {dish.serving ? (
+                <Badge tone="success">Đang phục vụ</Badge>
+              ) : (
+                <Badge tone="warning">Tạm hết món</Badge>
+              )}
+            </div>
+            {restaurant && (
+              <div className="restaurant-link">
+                <p className="helper">
+                  Quán: <strong>{restaurant.name}</strong> ·{" "}
+                  {restaurant.district}
+                </p>
+                <ActionLink href={`${base}/restaurants/${restaurant.id}`} secondary>
+                  Xem thông tin quán
+                </ActionLink>
+              </div>
+            )}
+            <div className="actions">
+              {user ? (
+                <Button variant="secondary" onClick={() => setReportOpen(true)}>
+                  Báo cáo thông tin
+                </Button>
+              ) : (
+                <ActionLink href="/login">Đăng nhập để báo cáo</ActionLink>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+      {relatedDishes.length > 0 && (
+        <section className="section-band white">
+          <div className="section-heading">
+            <h3>Món khác tại quán này</h3>
+          </div>
+          <div className="grid-3">
+            {relatedDishes.map((d) => (
+              <DishCard
+                key={d.id}
+                dish={d}
+                href={`${base}/restaurants/${d.restaurantId}`}
+                isDetailPage={true}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+      <Dialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        title="Báo cáo món ăn"
+      >
+        <form
+          className="stack"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await mutate(
+              (d) =>
+                d.reports.unshift({
+                  id: crypto.randomUUID(),
+                  target: "dish",
+                  targetId: id,
+                  reporter: user!.displayName,
+                  reason,
+                  description: text,
+                  status: "open",
+                  date: new Date().toISOString().slice(0, 10),
+                }),
+              "Đã nhận báo cáo trong bản minh họa.",
+            );
+            setReportOpen(false);
+            setText("");
+          }}
+        >
+          <SelectField
+            label="Lý do"
+            value={reason}
+            onChange={setReason}
+            options={["Sai thông tin", "Giá không đúng", "Hết nguyên liệu", "Nội dung không phù hợp"].map(
               (v) => ({ value: v, label: v }),
             )}
           />

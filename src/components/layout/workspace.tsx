@@ -1,7 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { AuthUserDto, RoleCode } from "@/features/auth/types";
 import { LogoutButton } from "@/features/auth/session-panel";
 import { PlatformProvider, usePlatform } from "@/features/platform/provider";
@@ -115,6 +122,11 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
     [search, setSearch] = useState("");
   const traveler = !user || user.role === "TRAVELER";
   const publicBase = demo ? "/demo/guest" : "";
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  // Đóng dropdown tài khoản khi điều hướng (bấm link bên trong)
+  useEffect(() => {
+    if (menuRef.current) menuRef.current.removeAttribute("open");
+  }, [path]);
   return (
     <header className={`container header ${traveler ? "" : "header-staff"}`}>
       <Brand href={base || "/"} />
@@ -168,11 +180,19 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
             <Link href={`${base}/notifications`} aria-label="Thông báo">
               <Icon name="bell" />
             </Link>
-            <details className="account-menu">
+            <details className="account-menu" ref={menuRef}>
               <summary aria-label={`Tài khoản ${user.displayName}`}>
                 <Avatar name={user.displayName} image={user.avatarUrl} />
               </summary>
-              <div>
+              <div
+                onClick={(e) => {
+                  // Đóng menu khi bấm vào link/logout bên trong
+                  const target = e.target as HTMLElement;
+                  if (target.closest("a, button")) {
+                    menuRef.current?.removeAttribute("open");
+                  }
+                }}
+              >
                 <p>{user.displayName}</p>
                 <p className="helper">{user.email}</p>
                 <Link

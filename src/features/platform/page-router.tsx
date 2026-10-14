@@ -16,6 +16,7 @@ import {
   AccountPage,
   NotificationsPage,
   PreferencesPage,
+  ProfileViewPage,
 } from "@/features/profile/pages";
 import {
   NewTripPage,
@@ -47,9 +48,9 @@ import {
   SubmissionQueue,
 } from "@/features/moderation/pages";
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
+import { DishDetail } from "@/features/discovery/pages";
 import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
 import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
-
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -164,7 +165,7 @@ export function PageRouter({
       ) : (
         <DiscoveryList kind="restaurants" />
       );
-    if (area === "dishes") return <DiscoveryList kind="dishes" />;
+    if (area === "dishes") return id ? <DishDetail id={id} /> : <DiscoveryList kind="dishes" />;
     if (
       role === "GUEST" &&
       area === "guides" &&
@@ -192,7 +193,11 @@ export function PageRouter({
     if (role === "TRAVELER") {
       if (area === "my-guides") return <BlogList mine />;
       if (area === "profile" || area === "account")
-        return <AccountPage profile />;
+        return id === "edit" ? (
+          <AccountPage profile />
+        ) : (
+          <ProfileViewPage />
+        );
       if (area === "preferences" || area === "survey")
         return <PreferencesPage survey={area === "survey"} />;
       if (area === "notifications") return <NotificationsPage />;

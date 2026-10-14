@@ -161,7 +161,7 @@ export interface SyncEvent {
 }
 export interface Report {
   id: string;
-  target: "restaurant" | "blog";
+  target: "restaurant" | "blog" | "dish";
   targetId: string;
   reporter: string;
   reason: string;
