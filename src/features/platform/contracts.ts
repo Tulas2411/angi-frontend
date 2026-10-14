@@ -11,6 +11,8 @@ export interface Restaurant {
   address: string;
   province: string;
   district: string;
+  ward?: string;
+  priceLevel?: number | null;
   phone: string;
   email: string;
   website: string;

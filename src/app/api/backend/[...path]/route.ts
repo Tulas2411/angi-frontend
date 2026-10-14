@@ -10,6 +10,7 @@ const allowedEndpoints = new Set([
   "PATCH me",
   "PUT me/password",
   "GET owner/restaurant",
+  "PATCH owner/restaurant",
   "POST owner/restaurant",
   "POST media",
 ]);

@@ -1,0 +1,38 @@
+import type { OwnerRestaurantDto } from "../../src/features/owner/restaurant-types";
+
+/** OWN-02 v1.8 example with local image assets and valid array shapes. */
+export const ownerRestaurantSample: OwnerRestaurantDto = {
+  id: 7,
+  name: "Bún Bò Bà Diệu",
+  slug: "bun-bo-ba-dieu",
+  coverUrl: "/assets/figma/roadmap-restaurant.png",
+  addressLine: "12 Lê Duẩn",
+  district: "Quận Hải Châu",
+  provinceName: "Thành phố Đà Nẵng",
+  latitude: 16.067812,
+  longitude: 108.220116,
+  priceLevel: 1,
+  ratingAvg: 4.6,
+  ratingCount: 213,
+  operatingStatus: "open",
+  isOpenNow: true,
+  distanceKm: null,
+  description: "Quán bún bò gia truyền 30 năm",
+  phone: "0236 3812 345",
+  email: "bunbobadieu@gmail.com",
+  website: "https://facebook.com/bunbobadieu",
+  ward: "Phường Hải Châu 1",
+  images: [
+    "/assets/figma/roadmap-restaurant.png",
+    "/assets/figma/restaurant.png",
+  ],
+  businessHours: [{ dayOfWeek: 1, openTime: "06:00", closeTime: "13:30" }],
+  menu: null,
+  myReview: null,
+  verificationStatus: "verified",
+  moderationStatus: "visible",
+  latestVerification: null,
+  openMenuSubmission: { id: 14, status: "draft" },
+  createdAt: "2026-09-25T02:00:00Z",
+  updatedAt: "2026-10-01T09:00:00Z",
+};

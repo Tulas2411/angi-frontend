@@ -12,13 +12,15 @@ export function MapPicker({
   open,
   onClose,
   onSelect,
+  initialLocation,
 }: {
   open: boolean;
   onClose: () => void;
   onSelect: (location: (typeof locations)[number]) => void;
+  initialLocation?: (typeof locations)[number];
 }) {
   const [query, setQuery] = useState(""),
-    [selected, setSelected] = useState(locations[0]),
+    [selected, setSelected] = useState(initialLocation ?? locations[0]),
     [zoom, setZoom] = useState(1);
   return (
     <Dialog open={open} onClose={onClose} title="Chọn địa điểm trên bản đồ" map>
@@ -123,7 +125,7 @@ export function MapPicker({
             aria-label="Về địa điểm ban đầu"
             onClick={() => {
               setZoom(1);
-              setSelected(locations[0]);
+              setSelected(initialLocation ?? locations[0]);
             }}
           >
             <Icon name="LocateFixed" />

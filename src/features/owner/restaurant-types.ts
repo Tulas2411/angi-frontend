@@ -1,4 +1,4 @@
-/** OWN-01/02 and MEDIA-01 wire contracts, API Design v1.8. */
+/** OWN-01/02/03 and MEDIA-01 wire contracts, API Design v1.8. */
 export interface BusinessHourDto {
   dayOfWeek: number;
   openTime: string;
@@ -54,6 +54,24 @@ export interface OwnerRestaurantDto {
   openMenuSubmission: { id: number; status: "draft" | "pending" } | null;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Omitted fields remain unchanged; explicit null clears nullable fields. */
+export interface UpdateRestaurantRequestDto {
+  name?: string;
+  phone?: string;
+  addressLine?: string;
+  district?: string;
+  provinceName?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string | null;
+  email?: string | null;
+  website?: string | null;
+  ward?: string | null;
+  priceLevel?: number | null;
+  coverMediaId?: number | null;
+  imageMediaIds?: number[];
 }
 
 export interface MediaFileDto {
