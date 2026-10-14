@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { RoleCode } from "@/features/auth/types";
 import { Button, Card, Alert } from "@/shared/ui";
@@ -16,6 +16,7 @@ import {
   AccountPage,
   NotificationsPage,
   PreferencesPage,
+  ProfileViewPage,
 } from "@/features/profile/pages";
 import {
   NewTripPage,
@@ -51,7 +52,13 @@ import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
-  if (status === "loading")
+  // Tránh hydration mismatch: SSR + first client render đều hiển thị Skeleton.
+  // Sau khi mounted mới quyết định hiển thị trạng thái thật.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted || status === "loading")
     return (
       <div className="container workspace">
         <Skeleton />
@@ -180,7 +187,11 @@ export function PageRouter({
     if (role === "TRAVELER") {
       if (area === "my-guides") return <BlogList mine />;
       if (area === "profile" || area === "account")
-        return <AccountPage profile />;
+        return id === "edit" ? (
+          <AccountPage profile />
+        ) : (
+          <ProfileViewPage />
+        );
       if (area === "preferences" || area === "survey")
         return <PreferencesPage survey={area === "survey"} />;
       if (area === "notifications") return <NotificationsPage />;

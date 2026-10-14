@@ -1,8 +1,10 @@
 "use client";
-import { useState } from "react";
-import { Alert, Button, Card } from "@/shared/ui";
+import { useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Alert, Badge, Button, Card, Input } from "@/shared/ui";
 import {
   ActionLink,
+  Breadcrumbs,
   Choice,
   ConfirmDialog,
   Dialog,
@@ -10,16 +12,19 @@ import {
   Tabs,
   UploadField,
   Avatar,
+  Icon,
   type UploadedFile,
   TextArea,
 } from "@/components/ui/primitives";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
-import { dateLabel } from "@/features/platform/rules";
+import { dateLabel, validateUpload } from "@/features/platform/rules";
+import { LogoutButton } from "@/features/auth/session-panel";
 
 export function AccountPage({ profile = false }: { profile?: boolean }) {
   const { data, mutate, busy } = usePlatform(),
     { user, base } = useWorkspace(),
+    router = useRouter(),
     [name, setName] = useState(
       profile ? data.profile.name : (user?.displayName ?? ""),
     ),
@@ -30,117 +35,270 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
     [current, setCurrent] = useState(""),
     [password, setPassword] = useState(""),
     [confirm, setConfirm] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    avatarInput = useRef<HTMLInputElement>(null),
+    [uploadError, setUploadError] = useState("");
+
+  const displayName = profile ? data.profile.name : (user?.displayName ?? "");
+  const email = user?.email ?? "";
+  const avatar = files[0]?.url ?? data.profile.avatar;
+
+  async function saveProfile(e: FormEvent) {
+    e.preventDefault();
+    await mutate((d) => {
+      if (user?.role === "TRAVELER")
+        for (const blog of d.blogs) {
+          if (blog.author === user.displayName) blog.author = name.trim();
+          for (const comment of blog.comments)
+            if (comment.author === user.displayName)
+              comment.author = name.trim();
+        }
+      d.profile = {
+        name: name.trim(),
+        phone,
+        bio,
+        avatar: files[0]?.url ?? d.profile.avatar,
+      };
+    });
+  }
+
+  function resetForm() {
+    setName(data.profile.name);
+    setPhone(data.profile.phone);
+    setBio(data.profile.bio ?? "");
+    setFiles([]);
+  }
+
   return (
     <div className={profile ? "container workspace stack" : "stack"}>
-      <PageHeading
-        title={profile ? "Hồ sơ của tôi" : "Tài khoản của bạn"}
-        description="Cập nhật thông tin cá nhân và bảo vệ tài khoản của bạn."
-      />
-      <div className="split-content">
-        <Card className="soft" title="Thông tin cá nhân">
-          <form
-            className="stack"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              await mutate((d) => {
-                if (user?.role === "TRAVELER")
-                  for (const blog of d.blogs) {
-                    if (blog.author === user.displayName)
-                      blog.author = name.trim();
-                    for (const comment of blog.comments)
-                      if (comment.author === user.displayName)
-                        comment.author = name.trim();
-                  }
-                d.profile = {
-                  name: name.trim(),
-                  phone,
-                  bio,
-                  avatar: files[0]?.url ?? d.profile.avatar,
-                };
-              });
-            }}
-          >
-            <Field
-              label="Tên hiển thị"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              minLength={2}
-              maxLength={100}
-              required
-              helper="Từ 2 đến 100 ký tự."
-            />
-            <Field
-              label="Email"
-              value={user?.email ?? ""}
-              readOnly
-              helper="Email tài khoản · Chỉ xem"
-            />
-            <Field
-              label="Số điện thoại"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              maxLength={20}
-            />
-            <UploadField
-              label="Ảnh đại diện"
-              files={files}
-              onChange={setFiles}
-            />
-            <TextArea
-              label="Giới thiệu"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              maxLength={500}
-              helper="Không bắt buộc."
-            />
-            <div className="actions">
-              <Button type="submit" loading={busy}>
-                Lưu hồ sơ
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setName(
-                    profile ? data.profile.name : (user?.displayName ?? ""),
-                  );
-                  setPhone(data.profile.phone);
-                  setBio(data.profile.bio ?? "");
-                  setFiles([]);
-                }}
-              >
-                Hủy thay đổi
-              </Button>
-            </div>
-          </form>
-        </Card>
-        <div className="stack">
-          <Card title="Tài khoản">
-            <div className="actions">
-              <Avatar
-                name={name}
-                image={files[0]?.url ?? data.profile.avatar}
-              />
-              <strong>{name}</strong>
-            </div>
-            <p className="helper">Đang hoạt động · Dữ liệu minh họa</p>
-            <Button variant="secondary" onClick={() => setPasswordOpen(true)}>
-              Đổi mật khẩu
-            </Button>
-          </Card>
-          {profile && (
-            <Card title="Lịch trình ăn uống">
-              <p>{data.trips.length} lịch ăn trong bản minh họa.</p>
-              <ActionLink href={`${base}/roadmaps`} secondary>
-                Xem lịch ăn của tôi
-              </ActionLink>
+      {/* === MÀN HỒ SƠ CHO TRAVELER (2 CỘT) === */}
+      {profile ? (
+        <>
+          <Breadcrumbs
+            items={[
+              { label: "Trang chủ", href: base || "/" },
+              { label: "Hồ sơ của tôi" },
+            ]}
+          />
+          <PageHeading
+            title="Chỉnh sửa hồ sơ"
+            description="Cập nhật thông tin cá nhân, ảnh đại diện và bảo vệ tài khoản của bạn."
+          />
+
+          <div className="profile-edit-grid">
+            {/* CỘT TRÁI: 1 card duy nhất (avatar + tên + email + nút thay/xóa ảnh) */}
+            <Card className="profile-edit-side">
+              {/* Avatar */}
+              <div className="profile-avatar-block">
+                <span className="profile-avatar-xl" aria-hidden>
+                  <Avatar name={displayName} image={avatar} />
+                </span>
+              </div>
+
+              {/* Tên + email */}
+              <div className="profile-side-identity">
+                <h2>{displayName}</h2>
+                <p className="helper">{email}</p>
+              </div>
+
+              {/* 2 nút: Thay đổi / Xóa ảnh đại diện */}
+              <div className="profile-avatar-actions">
+                <input
+                  ref={avatarInput}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  onChange={async (e) => {
+                    const picked = e.target.files?.[0];
+                    e.target.value = "";
+                    if (!picked) return;
+                    const problem = validateUpload(picked, false);
+                    if (problem) {
+                      setUploadError(problem);
+                      return;
+                    }
+                    setUploadError("");
+                    const url = await new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader();
+                      reader.onload = () => resolve(String(reader.result));
+                      reader.onerror = () =>
+                        reject(new Error("Không đọc được tệp."));
+                      reader.readAsDataURL(picked);
+                    });
+                    setFiles([
+                      {
+                        id: crypto.randomUUID(),
+                        name: picked.name,
+                        url,
+                        size: picked.size,
+                        type: picked.type,
+                      },
+                    ]);
+                  }}
+                />
+                <Button
+                  className="button-sm"
+                  onClick={() => avatarInput.current?.click()}
+                >
+                  Thay đổi ảnh đại diện
+                </Button>
+                <Button
+                  className="button-sm"
+                  variant="secondary"
+                  disabled={!avatar}
+                  onClick={() => {
+                    setFiles([]);
+                    if (profile)
+                      mutate((d) => {
+                        d.profile = { ...d.profile, avatar: "" };
+                      });
+                  }}
+                >
+                  Xóa ảnh đại diện
+                </Button>
+                {uploadError && (
+                  <p className="profile-avatar-error" role="alert">
+                    {uploadError}
+                  </p>
+                )}
+              </div>
             </Card>
-          )}
-        </div>
-      </div>
+
+            {/* CỘT PHẢI: form thông tin cá nhân */}
+            <Card className="soft" title="Thông tin cá nhân">
+              <form
+                id="profile-form"
+                className="stack"
+                onSubmit={saveProfile}
+              >
+                <Field
+                  label="Tên hiển thị"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                  helper="Từ 2 đến 100 ký tự."
+                />
+                <Field
+                  label="Email"
+                  value={email}
+                  readOnly
+                  helper="Email tài khoản · Chỉ xem"
+                />
+                <Field
+                  label="Số điện thoại"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={20}
+                />
+                <TextArea
+                  label="Giới thiệu"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={500}
+                  helper="Không bắt buộc."
+                />
+                <div className="actions">
+                  <Button type="submit" loading={busy}>
+                    Lưu thay đổi
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => router.push(`${base}/profile`)}
+                  >
+                    Hủy thay đổi
+                  </Button>
+                </div>
+              </form>
+            </Card>
+          </div>
+        </>
+      ) : (
+        /* === MÀN TÀI KHOẢN CHO CÁC ROLE KHÁC === */
+        <>
+          <PageHeading
+            title="Tài khoản của bạn"
+            description="Cập nhật thông tin cá nhân và bảo vệ tài khoản của bạn."
+          />
+          <div className="split-content">
+            <Card className="soft" title="Thông tin cá nhân">
+              <form className="stack" onSubmit={saveProfile}>
+                <Field
+                  label="Tên hiển thị"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  minLength={2}
+                  maxLength={100}
+                  required
+                  helper="Từ 2 đến 100 ký tự."
+                />
+                <Field
+                  label="Email"
+                  value={user?.email ?? ""}
+                  readOnly
+                  helper="Email tài khoản · Chỉ xem"
+                />
+                <Field
+                  label="Số điện thoại"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  maxLength={20}
+                />
+                <UploadField
+                  label="Ảnh đại diện"
+                  files={files}
+                  onChange={setFiles}
+                />
+                <TextArea
+                  label="Giới thiệu"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  maxLength={500}
+                  helper="Không bắt buộc."
+                />
+                <div className="actions">
+                  <Button type="submit" loading={busy}>
+                    Lưu hồ sơ
+                  </Button>
+                  <Button variant="secondary" onClick={resetForm}>
+                    Hủy thay đổi
+                  </Button>
+                </div>
+              </form>
+            </Card>
+            <div className="stack">
+              <Card title="Tài khoản">
+                <div className="profile-card">
+                  <Avatar name={displayName} image={avatar} />
+                  <div>
+                    <strong>{displayName}</strong>
+                    <p className="helper">{email}</p>
+                  </div>
+                </div>
+                <p className="helper">Đang hoạt động · Dữ liệu minh họa</p>
+                <div className="actions">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setPasswordOpen(true)}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                  <LogoutButton />
+                </div>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Dialog đổi mật khẩu */}
       <Dialog
         open={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
+        onClose={() => {
+          setPasswordOpen(false);
+          setError("");
+        }}
         title="Đổi mật khẩu"
       >
         <form
@@ -187,6 +345,308 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
     </div>
   );
 }
+
+/* === Ô NHẬP MẬT KHẨU CÓ NÚT HIỆN/ẨN === */
+function PasswordField({
+  label,
+  value,
+  onChange,
+  required,
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
+  autoComplete?: string;
+}) {
+  const [shown, setShown] = useState(false);
+  return (
+    <div className="field">
+      <label>
+        {label}
+        {required ? " *" : ""}
+      </label>
+      <div className="password-row">
+        <Input
+          type={shown ? "text" : "password"}
+          value={value}
+          onChange={onChange}
+          autoComplete={autoComplete}
+          required={required}
+        />
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={() => setShown((s) => !s)}
+        >
+          {shown ? "Ẩn" : "Hiện"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* === TRANG HỒ SƠ CỦA TÔI (READ-ONLY) === */
+export function ProfileViewPage() {
+  const { data, mutate, busy } = usePlatform(),
+    { user, base } = useWorkspace();
+  const displayName = data.profile.name;
+  const email = user?.email ?? "";
+  const avatar = data.profile.avatar;
+  const [tab, setTab] = useState<"trips" | "guides">("trips");
+
+  // Popup đổi mật khẩu
+  const [pwOpen, setPwOpen] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState(false);
+
+  function openPwDialog() {
+    setPwCurrent("");
+    setPwNew("");
+    setPwConfirm("");
+    setPwError("");
+    setPwSuccess(false);
+    setPwOpen(true);
+  }
+  function closePwDialog() {
+    setPwOpen(false);
+  }
+  function submitPw(e: FormEvent) {
+    e.preventDefault();
+    setPwError("");
+    setPwSuccess(false);
+    if (!pwCurrent) {
+      setPwError("Vui lòng nhập mật khẩu hiện tại.");
+      return;
+    }
+    if (pwNew.length < 8) {
+      setPwError("Mật khẩu mới phải có ít nhất 8 ký tự.");
+      return;
+    }
+    if (pwNew !== pwConfirm) {
+      setPwError("Mật khẩu nhập lại không khớp.");
+      return;
+    }
+    // TODO: gọi API đổi mật khẩu thật (mutate/POST). Tạm coi như thành công.
+    setPwSuccess(true);
+    setPwCurrent("");
+    setPwNew("");
+    setPwConfirm("");
+  }
+
+  // Đếm số cẩm nang của user hiện tại
+  const myGuides = data.blogs.filter((b) => b.author === displayName);
+
+  return (
+    <div className="container workspace stack">
+      <Breadcrumbs
+        items={[
+          { label: "Trang chủ", href: base || "/" },
+          { label: "Hồ sơ của tôi" },
+        ]}
+      />
+
+      {/* HERO: card trái (avatar + tên/email/nút) + card phải (Lịch trình ăn) */}
+      <div className="split-content profile-columns">
+        {/* CỘT TRÁI: card hình chữ nhật chứa avatar + tên + email + nút */}
+        <Card>
+          <div className="profile-side-card">
+            <span className="profile-avatar-xl" aria-hidden>
+              <Avatar name={displayName} image={avatar} />
+            </span>
+            <div className="profile-side-identity">
+              <h2>{displayName}</h2>
+              <p className="helper">{email}</p>
+            </div>
+            <div className="profile-side-actions actions">
+              <ActionLink href={`${base}/profile/edit`}>
+                Chỉnh sửa hồ sơ
+              </ActionLink>
+              <Button variant="secondary" onClick={openPwDialog}>
+                Đổi mật khẩu
+              </Button>
+            </div>
+          </div>
+        </Card>
+
+        {/* CỘT PHẢI: Card "Lịch trình ăn" hoặc "Hướng dẫn" với tabs */}
+        <div className="stack">
+          <div className="profile-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "trips"}
+              className={`profile-tab ${tab === "trips" ? "active" : ""}`}
+              onClick={() => setTab("trips")}
+            >
+              Lịch trình ăn của tôi
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab === "guides"}
+              className={`profile-tab ${tab === "guides" ? "active" : ""}`}
+              onClick={() => setTab("guides")}
+            >
+              Hướng dẫn
+            </button>
+          </div>
+
+          {tab === "trips" ? (
+            <Card title="Lịch trình ăn của tôi">
+              {data.trips.length > 0 ? (
+                <div className="stack">
+                  {data.trips.map((trip) => (
+                    <article className="profile-trip" key={trip.id}>
+                      <span className="profile-trip-thumb" aria-hidden>
+                        <Icon name="calendar" />
+                      </span>
+                      <div className="profile-trip-body">
+                        <div className="between">
+                          <strong>{trip.name}</strong>
+                          <span className="helper">
+                            Cập nhật {dateLabel(trip.end)}
+                          </span>
+                        </div>
+                        <p className="helper">{trip.destination}</p>
+                        <p className="helper">
+                          Lên kế hoạch từ {trip.days?.length ?? 5} ngày
+                        </p>
+                        <div className="actions">
+                          <ActionLink href={`${base}/roadmaps/${trip.id}`}>
+                            Mở lịch ăn
+                          </ActionLink>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                  <ActionLink href={`${base}/roadmaps`} secondary>
+                    Xem tất cả lịch ăn
+                  </ActionLink>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <span aria-hidden className="empty-symbol">
+                    ◎
+                  </span>
+                  <h3>Chưa có lịch ăn</h3>
+                  <p>
+                    Tạo lịch ăn đầu tiên để ANGI gợi ý món phù hợp theo khu
+                    vực.
+                  </p>
+                  <ActionLink href={`${base}/roadmaps/new`}>
+                    Tạo lịch ăn
+                  </ActionLink>
+                </div>
+              )}
+            </Card>
+          ) : (
+            <Card title="Hướng dẫn của tôi">
+              {myGuides.length > 0 ? (
+                <div className="stack">
+                  {myGuides.map((blog) => (
+                    <article className="profile-trip" key={blog.id}>
+                      <span className="profile-trip-thumb" aria-hidden>
+                        <Icon name="Plus" />
+                      </span>
+                      <div className="profile-trip-body">
+                        <div className="between">
+                          <strong>{blog.title}</strong>
+                          <span className="helper">
+                            Cập nhật {dateLabel(blog.date)}
+                          </span>
+                        </div>
+                        <p className="helper">
+                          {blog.content.slice(0, 120)}
+                          {blog.content.length > 120 ? "…" : ""}
+                        </p>
+                        <div className="actions">
+                          <ActionLink href={`${base}/guides/${blog.id}`}>
+                            Mở bài viết
+                          </ActionLink>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                  <ActionLink href={`${base}/my-guides`} secondary>
+                    Xem tất cả bài viết
+                  </ActionLink>
+                </div>
+              ) : (
+                <div className="empty-state">
+                  <span aria-hidden className="empty-symbol">
+                    ◎
+                  </span>
+                  <h3>Chưa có bài viết</h3>
+                  <p>
+                    Chia sẻ trải nghiệm ẩm thực của bạn với cộng đồng ANGI.
+                  </p>
+                  <ActionLink href={`${base}/guides/new`}>
+                    Viết cẩm nang
+                  </ActionLink>
+                </div>
+              )}
+            </Card>
+          )}
+        </div>
+      </div>
+
+      {/* Popup đổi mật khẩu */}
+      <Dialog
+        open={pwOpen}
+        onClose={closePwDialog}
+        title="Đổi mật khẩu"
+        footer={
+          <div className="dialog-actions-pw">
+            <Button type="submit" form="pw-form" loading={busy}>
+              Đổi mật khẩu
+            </Button>
+            <Button variant="secondary" onClick={closePwDialog}>
+              Hủy
+            </Button>
+          </div>
+        }
+      >
+        <form id="pw-form" className="stack" onSubmit={submitPw}>
+          <Alert
+            tone={pwError ? "error" : pwSuccess ? "success" : "info"}
+          >
+            {pwError ||
+              (pwSuccess
+                ? "Đổi mật khẩu thành công. Bạn có thể đóng cửa sổ."
+                : "Vui lòng nhập mật khẩu hiện tại và mật khẩu mới (tối thiểu 8 ký tự).")}
+          </Alert>
+          <PasswordField
+            label="Mật khẩu hiện tại"
+            value={pwCurrent}
+            onChange={(e) => setPwCurrent(e.target.value)}
+            autoComplete="current-password"
+            required
+          />
+          <PasswordField
+            label="Mật khẩu mới"
+            value={pwNew}
+            onChange={(e) => setPwNew(e.target.value)}
+            autoComplete="new-password"
+            required
+          />
+          <PasswordField
+            label="Nhập lại mật khẩu mới"
+            value={pwConfirm}
+            onChange={(e) => setPwConfirm(e.target.value)}
+            autoComplete="new-password"
+            required
+          />
+        </form>
+      </Dialog>
+    </div>
+  );
+}
+
 export function PreferencesPage({ survey = false }: { survey?: boolean }) {
   const { data, mutate, busy } = usePlatform(),
     { base } = useWorkspace(),
@@ -294,6 +754,7 @@ export function PreferencesPage({ survey = false }: { survey?: boolean }) {
     </div>
   );
 }
+
 export function NotificationsPage() {
   const { data, mutate, busy } = usePlatform(),
     { user, base } = useWorkspace(),

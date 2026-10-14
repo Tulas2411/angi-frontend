@@ -258,7 +258,23 @@ export const initialData: AppData = {
       },
     ],
   })),
-  trips: [trip],
+  trips: [
+    trip,
+    {
+      id: "da-lat",
+      name: "Lịch ăn tại Đà Lạt tháng 9",
+      destination: "Đà Lạt",
+      start: "2026-09-10",
+      end: "2026-09-15",
+      budget: 4200000,
+      notes: "Đi cùng gia đình · Thích đồ nướng và lẩu.",
+      readOnly: false,
+      days: Array.from({ length: 5 }, (_, i) => ({
+        date: new Date(Date.UTC(2026, 8, 10 + i)).toISOString().slice(0, 10),
+        items: [],
+      })),
+    } satisfies Trip,
+  ],
   notices: ["TRAVELER", "RESTAURANT_OWNER", "MOD", "ADMIN"].flatMap((role) => [
     {
       id: `${role}-1`,
