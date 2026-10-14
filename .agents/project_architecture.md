@@ -25,7 +25,7 @@ Backend workbooks are not bundled with FE. If a sibling `angi-backend` checkout 
 
 ANGI (Ăn Gì) helps travelers discover Vietnamese regional dishes and restaurants and plan food itineraries. This repository contains the browser application and its Next.js API boundary. The REST backend and recommendation service are separate projects.
 
-The FE covers Guest, Traveler, Restaurant Owner, Moderator and Administrator experiences. Authentication is wired through Next.js Route Handlers. Most business screens are fixture-backed previews; the live business adapter is still unavailable. Check the [README status table](../README.md#current-implementation-status) before describing a screen as integrated.
+The FE covers Guest, Traveler, Restaurant Owner, Moderator and Administrator experiences. Authentication and F-43 owner registration/media upload are wired through Next.js Route Handlers. Most other business screens are fixture-backed previews; the whole-business adapter is still unavailable. Check the [README status table](../README.md#current-implementation-status) before describing a screen as integrated.
 
 Documentation and identifiers are in English. Product copy and accessible labels are Vietnamese unless the team agrees to change the product language.
 
@@ -146,9 +146,9 @@ Working auth handlers:
 | `POST /api/auth/refresh` | `POST /api/v1/auth/refresh`           | Updated user DTO                              |
 | `POST /api/auth/logout`  | `POST /api/v1/auth/logout`            | `null`                                        |
 
-`api/backend/[...path]` currently allows `GET me`, `PATCH me` and `PUT me/password`. An FE allowlist entry does not establish that the backend operation is available; verify it against the backend before using it. The client has a generic `post` method, but the proxy does not export `POST` yet; a client helper alone does not enable a server operation.
+`api/backend/[...path]` allows `GET me`, `PATCH me`, `PUT me/password`, `GET/POST owner/restaurant` and `POST media`. Owner registration and multipart restaurant-image uploads are verified against API Design v1.8 and the backend implementation. The owner operations require a `RESTAURANT_OWNER` session; media requires authentication. The existing account allowlist entries still require backend availability verification.
 
-The proxy checks the exact method/path, uses `withAuth`, forwards the configured backend request and preserves structured errors. It never accepts an arbitrary upstream URL. Review both the allowlist and the exported HTTP methods when adding an operation. Current proxy success helpers return 200; integration of an endpoint requiring 201 or 202 must also preserve its designed status.
+The proxy checks the exact method/path, uses `withAuth`, forwards the configured backend request and preserves structured errors. It never accepts an arbitrary upstream URL. Review both the allowlist and the exported HTTP methods when adding an operation. Owner registration and media upload return 201; other configured methods return 200. Native `FormData` forwarding lets fetch generate the multipart boundary and remains replayable for the single authorized refresh retry.
 
 ## 7. Session and rotating refresh tokens
 
@@ -167,12 +167,16 @@ Coordination and revocation currently live in one Next.js process. Multi-instanc
 `PlatformProvider` owns readiness, retry, busy feedback, serialized mutations and toast state. `DataService.load()`/`save(next)` currently serve a frontend view model.
 
 - `createDemoService` clones deterministic fixtures into a provider-owned repository. Changes persist during client navigation within that workspace and reset on reload/remount.
-- `liveService` deliberately raises `UnavailableContractError`; no business endpoint mapping is implemented yet. Live pages show unavailable/retry feedback.
+- `liveService` deliberately raises `UnavailableContractError`; the whole-business adapter is not implemented. Most live pages show unavailable/retry feedback. F-43 uses its own verified operation service, so owner root/profile/register can load the owner's restaurant or register one without depending on `AppData` readiness.
 - `NEXT_PUBLIC_DATA_MODE=live` is the default. Explicit `/demo` workspaces force demo mode. Setting the global mode to `demo` does not bypass role guards on authenticated routes.
 - Demo users and IDs are fixtures, not authenticated principals or server IDs. Demo uploads use local data URLs, invitations do not send email, and static map artwork does not provide live routing.
 - Preserve coherent references between dishes, restaurants, menus and trips, separate pending menu edits, immutable published snapshots, distinct restaurant statuses, permission override semantics and retry-to-pending behavior.
 
 The whole-`AppData` save operation is a demo interface, not a backend endpoint. Implement live data with verified per-operation DTO mapping when backend endpoints become available. A designed but unimplemented API must remain visibly unavailable rather than silently falling back to fixtures.
+
+F-43 keeps wire DTOs, validation, media and location controls in `features/owner`. Demo registration uses an isolated mock service and publishes an explicit view-model mapping through `PlatformProvider.mutate`. Live registration first checks OWN-02: only `RESTAURANT_NOT_FOUND` enables a new form; transport failures offer retry and an existing restaurant prevents a duplicate. A successful OWN-01 response is unverified; verification submission remains a separate integration.
+
+The live location picker supports manual coordinates and browser geolocation without external configuration. An optional public Mapbox token enables Static Images and explicit V6 forward geocoding with `permanent=true` because restaurant coordinates are stored; the provider account must support permanent geocoding. Demo maps remain local fixtures. Province suggestions use the fixed public V1 catalog through `/api/locations/provinces` to match the current required-district address contract; catalog errors allow manual full-name input. Neither map search nor province suggestions silently overwrites address fields.
 
 ## 9. UI system
 

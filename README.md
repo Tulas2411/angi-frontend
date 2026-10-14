@@ -13,15 +13,16 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 
 ## Current implementation status
 
-| Area                                                                                     | Status                                                              |
-| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| Login, token refresh and logout                                                          | Connected to the existing backend through Next.js Route Handlers    |
-| Encrypted session and role guards                                                        | Implemented; real role workspaces require a backend login           |
-| Self-registration (AUTH-01: email, password, displayName, role TRAVELER/RESTAURANT_OWNER) | Connected to `POST /api/v1/auth/register` via `/api/auth/register` |
-| Dish/restaurant discovery, guides, itineraries and expenses                              | Interactive frontend screens using isolated demo data               |
-| Owner, moderation, administration, permissions, audit and sync screens                   | Interactive frontend screens using isolated demo data               |
-| Live business data                                                                       | Adapter not implemented; live pages show unavailable/retry feedback |
-| Registration, verification/recovery, OAuth, invitations, cloud uploads, live maps and AI | UI/scaffold exists where designed; real integrations remain pending |
+| Area                                                                                      | Status                                                                           |
+| ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Login, token refresh and logout                                                           | Connected to the existing backend through Next.js Route Handlers                 |
+| Encrypted session and role guards                                                         | Implemented; real role workspaces require a backend login                        |
+| Self-registration (AUTH-01: email, password, displayName, role TRAVELER/RESTAURANT_OWNER) | Connected to `POST /api/v1/auth/register` via `/api/auth/register`               |
+| Dish/restaurant discovery, guides, itineraries and expenses                               | Interactive frontend screens using isolated demo data                            |
+| Owner, moderation, administration, permissions, audit and sync screens                    | Interactive frontend screens using isolated demo data                            |
+| Owner restaurant registration (F-43 / ANGI-36)                                            | Connected to OWN-01/OWN-02 and MEDIA-01; isolated mock registration is available |
+| Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback            |
+| Verification/recovery, OAuth, invitations, routing and AI                                 | UI/scaffold exists where designed; real integrations remain pending              |
 
 A successful demo action changes local fixture state. It does not persist business data, send an email or authenticate the selected demo role. Backend API Design describes planned contracts; an entry in that workbook does not prove that an endpoint has been implemented.
 
@@ -74,6 +75,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 | `APP_URL`                              | `http://localhost:3000`                     | Exact browser origin allowed for mutations                                       |
 | `SESSION_PASSWORD`                     | Your own random key, at least 32 characters | Encrypts the frontend session cookie; required for auth                          |
 | `NEXT_PUBLIC_DATA_MODE`                | `live`                                      | Business data mode; `demo` opts workspace shells into fixtures                   |
+| `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`      | Empty                                       | Optional public `pk.*` token for restaurant map/address search                   |
 | `NEXT_PUBLIC_ENABLE_DEMO`              | `true`                                      | Set `false` to disable the `/demo` route family                                  |
 | `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY` | `false`                                     | Gallery/scenarios are available in development; production needs explicit `true` |
 
@@ -89,7 +91,11 @@ Open [the demo selector](http://localhost:3000/demo). It works without Docker or
 
 For design/component work, use [the component gallery](http://localhost:3000/dev/components) and [reproducible state scenarios](http://localhost:3000/dev/scenarios). Fixture changes reset on page reload or workspace remount.
 
-The default business mode is `live`, so the regular public/role business pages show unavailable feedback until a live adapter is implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
+The default business mode is `live`. Owner restaurant registration uses the verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
+
+For F-43, log in as a Restaurant Owner and open `/restaurant/register`; owner root/profile also checks whether a restaurant exists. The new-owner demo is `/dev/scenarios?state=owner-register-restaurant`. Required information includes business name/phone, address, province/district and explicitly selected coordinates. Optional cover/gallery images upload through MEDIA-01 before OWN-01 receives numeric media IDs. Registration creates an unverified restaurant; sending verification documents is a separate task. Existing restaurants and registration conflicts prevent duplicate creation.
+
+Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables Mapbox Static Images and address search. The account must support permanent geocoding because saved restaurant coordinates use `permanent=true`; see [Mapbox Geocoding](https://docs.mapbox.com/api/search/geocoding/). Province suggestions use the [V1 catalog](https://provinces.open-api.vn/) to match the current API's required district field; manual full-name entry remains available if that service fails. See [setup details](docs/setup.md).
 
 ### 4. Run real authentication when needed
 
@@ -176,6 +182,8 @@ try {
 - Mutations validate Origin using `APP_URL`. Personalized responses are not cached. Login/logout use full navigation to clear cached protected routes.
 - The backend proxy has an exact method/path allowlist. Its current `me`/password entries are planned account operations, not working backend endpoints. Adding a client helper alone does not enable an operation; add verified DTOs, the allowed method/path and its Route Handler export together.
 
+The F-43 proxy additionally allows `GET/POST owner/restaurant` for Owner sessions and authenticated multipart `POST media`. POST success preserves 201, field errors remain associated with the form, and transport failures retain input for retry. The form's typed service bypasses the pending whole-business adapter without substituting fixtures into live failures.
+
 The canonical API workbook is maintained in `angi-backend/.docs/ANGI_API_Design_Ver*.xlsx` (currently v1.8 in the sibling checkout). Read the newest version and verify backend availability before connecting business APIs. Do not silently substitute demo data when a live call fails.
 
 Session coordination and revocation currently run in one Next.js process. Before using multiple instances/serverless, add a shared session store with atomic refresh coordination and durable revocation. Process-local maps do not survive restarts. Production configuration also needs HTTPS, private environment keys, considered cookie size/client IP handling, and an explicit decision about demo/gallery availability.
@@ -195,15 +203,16 @@ Build before standalone typecheck on a fresh checkout so Next.js route types exi
 
 Additional checks:
 
-| Command                                                    | Purpose/prerequisites                                                                             |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `npm run format:check`                                     | Existing source/tests/scripts/docs formatting check                                               |
-| `npm exec prettier -- --check README.md AGENTS.md .agents` | README and rule-document formatting                                                               |
-| `npm run test:browser`                                     | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000               |
-| `npm run test:visual`                                      | Route screenshots and page/asset/overflow checks; dev server must be running                      |
-| `npm run test:states`                                      | Interaction/scenario captures; dev server must be running                                         |
-| `node scripts/verify-assets.mjs`                           | Local design assets and font/license verification                                                 |
-| `npm run test:smoke`                                       | Existing real-auth integration checks; local backend/frontend and prepared test accounts required |
+| Command                                                    | Purpose/prerequisites                                                                               |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `npm run format:check`                                     | Existing source/tests/scripts/docs formatting check                                                 |
+| `npm exec prettier -- --check README.md AGENTS.md .agents` | README and rule-document formatting                                                                 |
+| `npm run test:browser`                                     | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000                 |
+| `npx playwright test --config=playwright.owner.config.ts`  | F-43 integration, error, role, keyboard and responsive checks; isolated frontend 3001/API stub 5164 |
+| `npm run test:visual`                                      | Route screenshots and page/asset/overflow checks; dev server must be running                        |
+| `npm run test:states`                                      | Interaction/scenario captures; dev server must be running                                           |
+| `node scripts/verify-assets.mjs`                           | Local design assets and font/license verification                                                   |
+| `npm run test:smoke`                                       | Existing real-auth integration checks; local backend/frontend and prepared test accounts required   |
 
 For browser checks, install Chromium. PowerShell example using a local cache:
 
