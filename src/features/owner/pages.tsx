@@ -27,6 +27,7 @@ import type { Dish } from "@/features/platform/contracts";
 import { MapPicker } from "@/components/domain/map-picker";
 import { initialData } from "@/mocks/fixtures";
 import { EmptyState } from "@/components/ui/primitives";
+import { RestaurantRegistrationPage } from "./restaurant-registration-page";
 
 export function OwnerOverview() {
   const { data } = usePlatform(),
@@ -108,6 +109,23 @@ export function OwnerOverview() {
   );
 }
 export function OwnerRestaurant({
+  initialTab = "information",
+}: {
+  initialTab?: string;
+}) {
+  const { data } = usePlatform();
+  // Keep the onboarding component mounted when its mutation publishes the new restaurant.
+  const [registering] = useState(
+    () =>
+      !data.restaurants.some(
+        (restaurant) => restaurant.id === data.ownerRestaurantId,
+      ),
+  );
+  if (registering) return <RestaurantRegistrationPage />;
+  return <OwnerRestaurantProfile initialTab={initialTab} />;
+}
+
+function OwnerRestaurantProfile({
   initialTab = "information",
 }: {
   initialTab?: string;

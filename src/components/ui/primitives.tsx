@@ -147,12 +147,16 @@ export function TextArea({
 }
 export function SelectField({
   label,
+  name,
+  error,
   value,
   onChange,
   options,
   disabled = false,
 }: {
   label: string;
+  name?: string;
+  error?: string;
   value: string;
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
@@ -165,6 +169,9 @@ export function SelectField({
       <select
         className="input"
         id={id}
+        name={name}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-error` : undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
@@ -175,6 +182,11 @@ export function SelectField({
           </option>
         ))}
       </select>
+      {error && (
+        <p id={`${id}-error`} className="field-error">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -317,6 +329,7 @@ export function ConfirmDialog({
   destructive = false,
   loading = false,
   label = "Xác nhận",
+  cancelLabel = "Hủy",
 }: {
   open: boolean;
   title: string;
@@ -326,6 +339,7 @@ export function ConfirmDialog({
   destructive?: boolean;
   loading?: boolean;
   label?: string;
+  cancelLabel?: string;
 }) {
   return (
     <Dialog
@@ -335,7 +349,7 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            Hủy
+            {cancelLabel}
           </Button>
           <Button
             variant={destructive ? "destructive" : "primary"}

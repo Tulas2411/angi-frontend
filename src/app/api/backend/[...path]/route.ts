@@ -4,8 +4,15 @@ import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
-// Account endpoints from API Design v1.8; the current BE does not implement them yet.
-const allowedEndpoints = new Set(["GET me", "PATCH me", "PUT me/password"]);
+// Exact operations verified against API Design v1.8 and the sibling BE checkout.
+const allowedEndpoints = new Set([
+  "GET me",
+  "PATCH me",
+  "PUT me/password",
+  "GET owner/restaurant",
+  "POST owner/restaurant",
+  "POST media",
+]);
 
 async function handle(request: Request, context: Context) {
   const session = await getSession();
@@ -20,16 +27,39 @@ async function handle(request: Request, context: Context) {
       );
     }
     if (request.method !== "GET") checkOrigin(request);
-    const body = request.method === "GET" ? undefined : await readJson(request);
+    let body: unknown;
+    if (request.method !== "GET") {
+      if (endpoint === "media") {
+        try {
+          body = await request.formData();
+        } catch {
+          throw new ApiError(
+            400,
+            "BAD_REQUEST",
+            "Tệp tải lên phải dùng multipart/form-data.",
+          );
+        }
+      } else body = await readJson(request);
+    }
     const query = new URL(request.url).search;
     return ok(
-      await withAuth(session, (auth) =>
-        backend<unknown>(`${endpoint}${query}`, {
+      await withAuth(session, (auth) => {
+        if (
+          endpoint === "owner/restaurant" &&
+          auth.user.role !== "RESTAURANT_OWNER"
+        )
+          throw new ApiError(
+            403,
+            "FORBIDDEN",
+            "Chỉ chủ nhà hàng được thực hiện thao tác này.",
+          );
+        return backend<unknown>(`${endpoint}${query}`, {
           method: request.method,
           body,
           token: auth.accessToken,
-        }),
-      ),
+        });
+      }),
+      request.method === "POST" ? 201 : 200,
     );
   } catch (error) {
     return fail(error, session);
@@ -38,3 +68,4 @@ async function handle(request: Request, context: Context) {
 export const GET = handle;
 export const PATCH = handle;
 export const PUT = handle;
+export const POST = handle;

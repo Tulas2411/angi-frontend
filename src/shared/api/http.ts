@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 import { destroySession, type AuthSession } from "@/features/auth/server";
 import { ApiError } from "./error";
 
-export function ok<T>(data: T) {
+export function ok<T>(data: T, status = 200) {
   return NextResponse.json(
     { success: true, message: null, errorCode: null, data },
-    { headers: { "Cache-Control": "no-store" } },
+    { status, headers: { "Cache-Control": "no-store" } },
   );
 }
 export function fail(error: unknown, session?: AuthSession) {
