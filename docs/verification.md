@@ -39,6 +39,27 @@ Image-picker follow-up: native file chrome is hidden behind a gray image tile wi
 
 Confirmation-modal follow-up — 2026-10-14: ANGI-36 replaces the browser confirmation with the shared `ConfirmDialog`, using explicit continue/cancel-registration actions. The updated cancellation browser case passed against the running localhost:3000 demo: continuing or pressing Escape retains entered fields and the selected cover, focus returns to the cancel trigger, and navigation occurs only after confirming cancellation. No native alert/confirm/prompt fired. Desktop/mobile modal captures are `artifacts/owner-cancel-modal-desktop.png` and `artifacts/owner-cancel-modal-mobile.png`. The coding rules now require in-app modals for user confirmations. Lint and typecheck passed; this focused run does not replace the earlier full-suite evidence.
 
+## F-44 / ANGI-43 verification — 2026-10-14
+
+Verified restaurant profile GET/PATCH against API Design v1.8 and the implemented OWN-02/OWN-03 DTOs, validator and use case in the sibling backend. Branch `feat/ANGI-43-manage-restaurant-profile` starts from the fetched `origin/dev` (`65745a1`, including ANGI-36). Local runtime is Node.js 22.12.0; documented/CI runtime remains Node.js 24.
+
+| Check                                                       | Result              | Scope                                                                                                                                                                          |
+| ----------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run lint`                                              | Passed              | Existing rules and profile feature                                                                                                                                             |
+| `npm test`                                                  | 43 passed / 6 files | Partial PATCH omission, explicit null/empty-array clearing, numeric media IDs, validation, mock atomicity/ownership and preservation of related/read-only data                 |
+| `node scripts/owner-test-server.mjs --build` / typecheck    | Passed              | Production compilation and strict TypeScript in an isolated source snapshot; standalone `npm run typecheck` also checked the working source                                    |
+| `npx playwright test --config=playwright.profile.config.ts` | 7 passed            | GET/PATCH/200, prefill/reload, draft/error retry, focus, duplicate submission, media replacement/clearing, modal cancellation, loading retry, roles/Origin and demo navigation |
+| `npx playwright test --config=playwright.owner.config.ts`   | 9 passed            | F-43 regression using the isolated source snapshot, local API stub and test-only encrypted session                                                                             |
+| Scoped Prettier / `git diff --check`                        | Passed              | Changed code/configuration/documentation and whitespace                                                                                                                        |
+
+Desktop 1440px and mobile 390px captures are `artifacts/owner-profile-desktop.png` and `artifacts/owner-profile-mobile.png` (ignored). Both were visually reviewed; the demo browser case checks no page-wide overflow, no page errors and no native confirmation dialogs. Opening and saving the demo map without changing its marker keeps the form unchanged. Unsaved demo hours require a modal before leaving for information/photos; continuing keeps the draft. Demo profile saves remain in provider memory during workspace navigation and reset on reload/remount.
+
+GET returns existing image URLs without media IDs. The editor therefore preserves unchanged images, replaces the entire gallery with uploaded IDs, or intentionally clears it with `[]`; it does not derive IDs from URLs. Cover removal sends `null`. Hours and independently managed statuses are excluded from profile PATCH; live hours/status tabs are read-only and existing demo previews remain available.
+
+Browser tests use local API/session stubs on ports 3001/5164 and exercise the real same-origin proxy and encrypted-session boundary. They are not evidence of a running .NET/database integration. The source snapshot copies no private env files and lets the regular localhost:3000 preview remain running. Real backend persistence, configured Mapbox/GPS and Node.js 24/CI verification remain integration checks. The previously recorded non-owner `/discovery` hydration warning also appeared during the F-43 regression; profile/demo screens did not produce page errors.
+
+Changes remain unstaged/uncommitted. A human creates the PR targeting `dev` and obtains Dũng's review under the commit guide.
+
 ## Screenshot evidence
 
 The reproducible scripts and route/node mappings are checked in. Generated PNGs, manifests, HTML reports and contact sheets remain local under ignored `artifacts/`, `playwright-report/` and `test-results/`.

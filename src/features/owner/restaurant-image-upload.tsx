@@ -25,7 +25,7 @@ export function RestaurantImageUpload({
   error?: string;
   onChange: (files: MediaFileDto[]) => void;
   onPending: (pending: boolean) => void;
-  service: RestaurantRegistrationService;
+  service: Pick<RestaurantRegistrationService, "upload">;
 }) {
   const id = useId();
   const [problem, setProblem] = useState("");

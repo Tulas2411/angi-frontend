@@ -50,6 +50,7 @@ import {
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
 import { DishDetail } from "@/features/discovery/pages";
 import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
+import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -134,10 +135,14 @@ export function PageRouter({
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "profile")
+    return (
+      <RestaurantProfilePage initialTab={params.get("tab") ?? "information"} />
+    );
   // This verified operation does not depend on the still-unavailable AppData adapter.
   if (
     role === "RESTAURANT_OWNER" &&
-    (area === "register" || (mode === "live" && (!area || area === "profile")))
+    (area === "register" || (mode === "live" && !area))
   )
     return <RestaurantRegistrationPage />;
   if (status !== "ready") return <UnavailablePage />;

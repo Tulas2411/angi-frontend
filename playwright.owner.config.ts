@@ -15,7 +15,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 3001",
+    command: "node scripts/owner-test-server.mjs",
     url: "http://localhost:3001/demo",
     reuseExistingServer: false,
     timeout: 120000,

@@ -197,6 +197,8 @@ export function RestaurantRegistrationPage() {
             address: restaurant.addressLine,
             province: restaurant.provinceName ?? "",
             district: restaurant.district ?? "",
+            ward: restaurant.ward ?? "",
+            priceLevel: restaurant.priceLevel,
             phone: restaurant.phone ?? "",
             email: restaurant.email ?? "",
             website: restaurant.website ?? "",
@@ -287,6 +289,9 @@ export function RestaurantRegistrationPage() {
             </>
           )}
           <div className="actions">
+            <ActionLink href={`${base}/profile`} secondary>
+              Quản lý hồ sơ
+            </ActionLink>
             <ActionLink href={`${base}/verification`}>
               Đến hồ sơ xác minh
             </ActionLink>
