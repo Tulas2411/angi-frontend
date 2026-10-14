@@ -16,6 +16,7 @@ import {
   AccountPage,
   NotificationsPage,
   PreferencesPage,
+  ProfileViewPage,
 } from "@/features/profile/pages";
 import {
   NewTripPage,
@@ -187,7 +188,11 @@ export function PageRouter({
     if (role === "TRAVELER") {
       if (area === "my-guides") return <BlogList mine />;
       if (area === "profile" || area === "account")
-        return <AccountPage profile />;
+        return id === "edit" ? (
+          <AccountPage profile />
+        ) : (
+          <ProfileViewPage />
+        );
       if (area === "preferences" || area === "survey")
         return <PreferencesPage survey={area === "survey"} />;
       if (area === "notifications") return <NotificationsPage />;
