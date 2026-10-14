@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { RoleCode } from "@/features/auth/types";
 import { Button, Card, Alert } from "@/shared/ui";
@@ -52,13 +52,7 @@ import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
-  // Tránh hydration mismatch: SSR + first client render đều hiển thị Skeleton.
-  // Sau khi mounted mới quyết định hiển thị trạng thái thật.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  if (!mounted || status === "loading")
+  if (status === "loading")
     return (
       <div className="container workspace">
         <Skeleton />
