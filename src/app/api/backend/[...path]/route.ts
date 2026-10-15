@@ -11,6 +11,7 @@ const allowedEndpoints = new Set([
   "PUT me/password",
   "GET owner/restaurant",
   "PATCH owner/restaurant",
+  "PUT owner/restaurant/business-hours",
   "POST owner/restaurant",
   "POST media",
 ]);
@@ -46,7 +47,8 @@ async function handle(request: Request, context: Context) {
     return ok(
       await withAuth(session, (auth) => {
         if (
-          endpoint === "owner/restaurant" &&
+          (endpoint === "owner/restaurant" ||
+            endpoint === "owner/restaurant/business-hours") &&
           auth.user.role !== "RESTAURANT_OWNER"
         )
           throw new ApiError(

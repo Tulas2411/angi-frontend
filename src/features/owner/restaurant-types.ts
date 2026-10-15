@@ -1,8 +1,18 @@
-/** OWN-01/02/03 and MEDIA-01 wire contracts, API Design v1.8. */
+/** OWN-01/02/03/04 and MEDIA-01 wire contracts, API Design v1.8. */
 export interface BusinessHourDto {
   dayOfWeek: number;
   openTime: string;
   closeTime: string;
+}
+
+/** OWN-04 replaces the entire week; [] means no hours declared. */
+export interface UpdateBusinessHoursRequestDto {
+  hours: BusinessHourDto[];
+}
+
+export interface UpdateBusinessHoursResponseDto {
+  hours: BusinessHourDto[];
+  isOpenNow: boolean;
 }
 
 export interface RegisterRestaurantRequestDto {

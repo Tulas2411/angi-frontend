@@ -272,7 +272,7 @@ function RestaurantProfileEditor({
   function changeTab(next: string) {
     if (blocked || next === tab) return;
     const navigate = () => router.push(`${base}/profile?tab=${next}`);
-    if (demo && dirty && ["hours", "status"].includes(next))
+    if (dirty && (next === "hours" || (demo && next === "status")))
       setConfirmation({
         title: "Bỏ thay đổi chưa lưu?",
         description:
@@ -694,32 +694,6 @@ function RestaurantProfileEditor({
             </Button>
           </div>
         </form>
-      ) : tab === "hours" ? (
-        <Card title="Giờ mở cửa" className="stack">
-          {!restaurant.businessHours.length ? (
-            <p>Chưa khai báo giờ mở cửa.</p>
-          ) : (
-            restaurant.businessHours.map((hour, index) => (
-              <p key={index}>
-                {
-                  [
-                    "Chủ nhật",
-                    "Thứ 2",
-                    "Thứ 3",
-                    "Thứ 4",
-                    "Thứ 5",
-                    "Thứ 6",
-                    "Thứ 7",
-                  ][hour.dayOfWeek]
-                }{" "}
-                · {hour.openTime} – {hour.closeTime}
-              </p>
-            ))
-          )}
-          <p className="helper">
-            Chức năng chỉnh sửa giờ mở cửa hiện chưa khả dụng.
-          </p>
-        </Card>
       ) : (
         <Card title="Trạng thái nhà hàng" className="stack">
           <p>

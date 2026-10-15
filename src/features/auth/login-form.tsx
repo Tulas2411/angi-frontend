@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api } from "@/shared/api/client";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { Alert, Input } from "@/shared/ui";
+import { HOME_BY_ROLE } from "./roles";
 import { GoogleLoginButton } from "@/features/auth/google-login-button";
 
 type SocialProvider = "facebook" | "google" | "apple";
@@ -47,8 +48,8 @@ export default function LoginForm() {
         email: String(form.get("email") ?? "").trim(),
         password: String(form.get("password") ?? ""),
       });
-      void user;
-      window.location.assign("/demo/traveler");
+      // Full navigation clears cached protected content after the session changes.
+      window.location.assign(HOME_BY_ROLE[user.role]);
     } catch (caught) {
       setError(getErrorMessage(caught));
       if (caught instanceof ApiError) setFields(caught.errors ?? {});

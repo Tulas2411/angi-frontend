@@ -36,17 +36,19 @@ export function ownerProfileFromDemo(
     website: restaurant.website || null,
     ward: restaurant.ward || null,
     images: [...(restaurant.photos ?? [])],
-    businessHours: hours.flatMap((hour, index) =>
-      hour.closed
-        ? []
-        : [
-            {
-              dayOfWeek: (index + 1) % 7,
-              openTime: hour.open,
-              closeTime: hour.close,
-            },
-          ],
-    ),
+    businessHours:
+      restaurant.businessHours?.map((hour) => ({ ...hour })) ??
+      hours.flatMap((hour, index) =>
+        hour.closed
+          ? []
+          : [
+              {
+                dayOfWeek: (index + 1) % 7,
+                openTime: hour.open,
+                closeTime: hour.close,
+              },
+            ],
+      ),
     menu: null,
     myReview: null,
     verificationStatus:

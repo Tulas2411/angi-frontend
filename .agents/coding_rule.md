@@ -77,6 +77,7 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 5. Preserve designed status, pagination, query behavior, units, nulls and structured errors. Pass the designed success status to `ok(data, status)`; its default is 200.
 6. Add a typed service/adapter and render its loading, empty, error and success states. Keep demo fixtures isolated from live failures.
 7. Test response/error handling and relevant role/data behavior. Update the documented integration status.
+8. Complete the final API Design reconciliation required by [Checks and evidence](#13-checks-and-evidence).
 
 An allowlisted path is not an implemented endpoint. The generic `api.post` helper requires an exported server method and the exact allowlist entry. Use `api.upload` for multipart requests and let fetch generate the boundary. Do not invent a whole-state `AppData` save API.
 
@@ -139,6 +140,8 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 | Layout, shared styles or assets                   | Representative desktop/mobile visual checks and asset verification        |
 
 CI currently runs lint, unit tests, build and typecheck. Build generates route types on a fresh checkout. Browser, visual and formatting checks run separately; do not describe them as mandatory CI jobs until the workflow actually includes them.
+
+After code and checks for every task, reopen the latest API Design workbook from disk and reconcile the finished task against its relevant endpoint, DTO, JSON sample, validation and error entries again. Check for a newer workbook or changes to the same version during the task; fix the task's affected code and rerun relevant checks before reporting completion. Record the file/version and inspected sheets/ranges in verification evidence. If the task has no API mapping, record that finding without inventing a contract. An earlier extraction alone is not a final contract check.
 
 Write meaningful tests for behavior and failure modes, not for implementation trivia. Use deterministic fixtures and explicit clocks where time matters. Use isolated local credentials for auth smoke tests; do not send those tests to a shared/production environment.
 

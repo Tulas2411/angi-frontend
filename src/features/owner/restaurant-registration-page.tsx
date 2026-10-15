@@ -205,6 +205,9 @@ export function RestaurantRegistrationPage() {
             description: restaurant.description ?? "",
             image: restaurant.coverUrl ?? "",
             photos: restaurant.images,
+            businessHours: restaurant.businessHours.map((hour) => ({
+              ...hour,
+            })),
             latitude: restaurant.latitude,
             longitude: restaurant.longitude,
             verification: restaurant.verificationStatus,

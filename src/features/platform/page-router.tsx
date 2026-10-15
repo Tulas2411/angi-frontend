@@ -51,6 +51,7 @@ import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
 import { DishDetail } from "@/features/discovery/pages";
 import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
 import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
+import { RestaurantBusinessHoursPage } from "@/features/owner/restaurant-business-hours-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -135,6 +136,13 @@ export function PageRouter({
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+  if (
+    role === "RESTAURANT_OWNER" &&
+    mode === "live" &&
+    area === "profile" &&
+    params.get("tab") === "hours"
+  )
+    return <RestaurantBusinessHoursPage />;
 
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "profile")
     return (

@@ -1,6 +1,6 @@
 import type { RoleCode } from "@/features/auth/types";
 
-/** Frontend view models. Business API DTOs remain pending API Design v1.8. */
+/** Frontend view models; operation-specific wire DTOs live in feature modules. */
 export type DataMode = "demo" | "live";
 export type Visibility = "visible" | "hidden" | "suspended";
 export type Verification =
@@ -25,6 +25,7 @@ export interface Restaurant {
   latitude: number;
   longitude: number;
   photos?: string[];
+  businessHours?: { dayOfWeek: number; openTime: string; closeTime: string }[];
 }
 export interface Dish {
   id: string;

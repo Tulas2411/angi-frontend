@@ -28,6 +28,7 @@ import type { Dish } from "@/features/platform/contracts";
 import { EmptyState } from "@/components/ui/primitives";
 import { RestaurantRegistrationPage } from "./restaurant-registration-page";
 import { RestaurantProfilePage } from "./restaurant-profile-page";
+import { RestaurantBusinessHoursPage } from "./restaurant-business-hours-page";
 
 export function OwnerOverview() {
   const { data } = usePlatform(),
@@ -122,28 +123,20 @@ export function OwnerRestaurant({
       ),
   );
   if (registering) return <RestaurantRegistrationPage />;
-  if (initialTab === "hours" || initialTab === "status")
-    return <OwnerRestaurantProfile initialTab={initialTab} />;
+  if (initialTab === "hours") return <RestaurantBusinessHoursPage />;
+  if (initialTab === "status") return <OwnerOperatingStatusPreview />;
   return <RestaurantProfilePage initialTab={initialTab} />;
 }
 
-// Existing fixture-only OWN-04/05 previews; profile edits live in RestaurantProfilePage.
-function OwnerRestaurantProfile({
-  initialTab,
-}: {
-  initialTab: "hours" | "status";
-}) {
+// OWN-05 remains a fixture-only operating-status preview.
+function OwnerOperatingStatusPreview() {
   const router = useRouter();
   const { base } = useWorkspace();
   const { data, mutate, busy } = usePlatform();
   const restaurant = data.restaurants.find(
     (item) => item.id === data.ownerRestaurantId,
   );
-  const [tab, setTab] = useState(initialTab);
-  const [hours, setHours] = useState(data.hours);
   const [confirm, setConfirm] = useState(false);
-  const [leaveTab, setLeaveTab] = useState<string | null>(null);
-  const [error, setError] = useState("");
   if (!restaurant) return <EmptyState title="Bạn chưa đăng ký nhà hàng" />;
   return (
     <div className="stack">
@@ -152,13 +145,10 @@ function OwnerRestaurantProfile({
         description={`${restaurant.name} · Bản minh họa`}
       />
       <Tabs
-        value={tab}
-        onChange={(value) => {
-          if (busy) return;
-          if (value === "hours" || value === "status") setTab(value);
-          else if (JSON.stringify(hours) !== JSON.stringify(data.hours))
-            setLeaveTab(value);
-          else router.push(`${base}/profile?tab=${value}`);
+        value="status"
+        onChange={(tab) => {
+          if (!busy && tab !== "status")
+            router.push(`${base}/profile?tab=${tab}`);
         }}
         items={[
           { value: "information", label: "Thông tin" },
@@ -167,108 +157,23 @@ function OwnerRestaurantProfile({
           { value: "status", label: "Trạng thái" },
         ]}
       />
-      {tab === "hours" ? (
-        <Card title="Giờ mở cửa">
-          <form
-            className="stack"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (
-                hours.some((hour) => !hour.closed && hour.open >= hour.close)
-              ) {
-                setError("Giờ đóng phải sau giờ mở trong mỗi ngày minh họa.");
-                return;
-              }
-              await mutate((next) => {
-                next.hours = hours;
-              });
-              setError("");
-            }}
-          >
-            {hours.map((hour, index) => (
-              <div className="grid-4" key={hour.day}>
-                <strong>{hour.day}</strong>
-                <Choice
-                  kind="switch"
-                  label={hour.closed ? "Nghỉ" : "Mở cửa"}
-                  checked={!hour.closed}
-                  onChange={(value) =>
-                    setHours((current) =>
-                      current.map((row, position) =>
-                        position === index ? { ...row, closed: !value } : row,
-                      ),
-                    )
-                  }
-                />
-                <Field
-                  label="Giờ mở"
-                  type="time"
-                  value={hour.open}
-                  disabled={hour.closed}
-                  onChange={(event) =>
-                    setHours((current) =>
-                      current.map((row, position) =>
-                        position === index
-                          ? { ...row, open: event.target.value }
-                          : row,
-                      ),
-                    )
-                  }
-                />
-                <Field
-                  label="Giờ đóng"
-                  type="time"
-                  value={hour.close}
-                  disabled={hour.closed}
-                  onChange={(event) =>
-                    setHours((current) =>
-                      current.map((row, position) =>
-                        position === index
-                          ? { ...row, close: event.target.value }
-                          : row,
-                      ),
-                    )
-                  }
-                />
-              </div>
-            ))}
-            {error && <Alert>{error}</Alert>}
-            <Button type="submit" loading={busy}>
-              Lưu giờ mở cửa
-            </Button>
-          </form>
-        </Card>
-      ) : (
-        <>
-          <RestaurantStatuses restaurant={restaurant} />
-          <Card title="Trạng thái hoạt động">
-            <p>
-              Đóng / mở hoạt động độc lập với kết quả xác minh và kiểm duyệt.
-            </p>
-            <Button variant="secondary" onClick={() => setConfirm(true)}>
-              {restaurant.operating === "open"
-                ? "Tạm đóng nhà hàng"
-                : "Mở lại nhà hàng"}
-            </Button>
-          </Card>
-        </>
-      )}
-      <ConfirmDialog
-        open={leaveTab !== null}
-        title="Bỏ thay đổi giờ mở cửa chưa lưu?"
-        label="Bỏ thay đổi và chuyển thẻ"
-        cancelLabel="Tiếp tục chỉnh sửa"
-        onClose={() => setLeaveTab(null)}
-        onConfirm={() => {
-          if (leaveTab) router.push(`${base}/profile?tab=${leaveTab}`);
-          setLeaveTab(null);
-        }}
-      >
-        <p>Giờ mở cửa bạn đang chỉnh sửa sẽ bị bỏ khi chuyển thẻ.</p>
-      </ConfirmDialog>
+      <RestaurantStatuses restaurant={restaurant} />
+      <Card title="Trạng thái hoạt động">
+        <p>Đóng / mở hoạt động độc lập với kết quả xác minh và kiểm duyệt.</p>
+        <Button
+          variant="secondary"
+          disabled={busy}
+          onClick={() => setConfirm(true)}
+        >
+          {restaurant.operating === "open"
+            ? "Tạm đóng nhà hàng"
+            : "Mở lại nhà hàng"}
+        </Button>
+      </Card>
       <ConfirmDialog
         open={confirm}
         title="Cập nhật trạng thái hoạt động?"
+        loading={busy}
         onClose={() => setConfirm(false)}
         onConfirm={async () => {
           await mutate((next) => {
