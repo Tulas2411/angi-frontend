@@ -5,7 +5,6 @@ import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   Choice,
-  Combobox,
   ConfirmDialog,
   Dialog,
   EmptyState,
@@ -17,6 +16,7 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { MapPicker } from "@/components/domain/map-picker";
+import { MapboxPreview } from "@/components/domain/mapbox-preview";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import {
@@ -27,6 +27,7 @@ import {
 } from "@/features/platform/rules";
 import type { ItineraryItem } from "@/features/platform/contracts";
 import { TripExpenses } from "./expenses";
+import { ProvinceField } from "@/components/domain/province-field";
 
 export function TripList() {
   const { data, mutate } = usePlatform(),
@@ -177,11 +178,11 @@ export function NewTripPage() {
             router.push(`${base}/roadmaps/${id}`);
           }}
         >
-          <Combobox
+          <ProvinceField
             label="Ăn ở đâu?"
             value={destination}
             onChange={setDestination}
-            options={["Hà Nội", "Đà Nẵng", "Đà Lạt", "Hồ Chí Minh", "Huế"]}
+            helper="Chọn tỉnh/thành từ gợi ý hoặc chọn địa điểm trên bản đồ."
           />
           <div className="actions">
             <Button variant="tertiary" onClick={() => setMapOpen(true)}>
@@ -275,7 +276,7 @@ export function NewTripPage() {
   );
 }
 export function RoadmapPage({ id }: { id: string }) {
-  const { data, mutate, busy, notify } = usePlatform(),
+  const { data, mutate, busy } = usePlatform(),
     { base } = useWorkspace(),
     params = useSearchParams(),
     [day, setDay] = useState(0),
@@ -291,7 +292,8 @@ export function RoadmapPage({ id }: { id: string }) {
     [tab, setTab] = useState("information"),
     [start, setStart] = useState(""),
     [end, setEnd] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [showMapMarkers, setShowMapMarkers] = useState(true);
   const trip = data.trips.find((t) => t.id === id),
     readOnly = trip?.readOnly || params.get("view") === "readonly";
   if (!trip)
@@ -588,25 +590,27 @@ export function RoadmapPage({ id }: { id: string }) {
           Hỏi trợ lý món ăn
         </Button>
       </section>
-      <aside className="roadmap-map" aria-label="Bản đồ minh họa lịch ăn">
+      <aside className="roadmap-map" aria-label="Bản đồ lịch ăn">
         <details className="map-layers">
           <summary className="button button-secondary">Lớp bản đồ</summary>
           <div className="card">
             <Choice
               label="Lịch ăn uống"
-              checked={true}
-              onChange={() =>
-                notify(
-                  "Bản đồ tĩnh minh họa giữ các điểm ăn uống. Dịch vụ bản đồ chưa khả dụng.",
-                )
-              }
+              checked={showMapMarkers}
+              onChange={() => setShowMapMarkers((previous) => !previous)}
             />
-            <p className="helper">Bản đồ tĩnh minh họa.</p>
+            <p className="helper">
+              Hiển thị địa điểm trong ngày trên bản đồ Mapbox.
+            </p>
           </div>
         </details>
-        <img
-          src="/assets/figma/roadmap-map.png"
-          alt="Bản đồ khu vực Hoàn Kiếm, Hà Nội"
+        <MapboxPreview
+          key={`${day}-${restaurant?.id ?? "all"}`}
+          locations={data.restaurants.filter((value) =>
+            currentDay?.items.some((entry) => entry.restaurantId === value.id),
+          )}
+          highlighted={restaurant}
+          showMarkers={showMapMarkers}
         />
         {restaurant && (
           <div className="map-detail stack-sm">

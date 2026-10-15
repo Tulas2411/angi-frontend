@@ -6,7 +6,6 @@ import {
   Avatar,
   Breadcrumbs,
   Choice,
-  Combobox,
   ConfirmDialog,
   DataTable,
   Dialog,
@@ -29,6 +28,7 @@ import {
   BlogCard,
 } from "@/components/domain/cards";
 import { MapPicker } from "@/components/domain/map-picker";
+import { ProvinceField } from "@/components/domain/province-field";
 import { usePlatform } from "./provider";
 import { effectivePermission } from "./rules";
 export function ComponentGallery() {
@@ -113,12 +113,7 @@ export function ComponentGallery() {
           />
           <Field label="Ngày bắt đầu" type="date" defaultValue="2026-09-25" />
           <Field label="Ngày kết thúc" type="date" defaultValue="2026-10-04" />
-          <Combobox
-            label="Điểm đến"
-            value={text}
-            onChange={setText}
-            options={["Hà Nội", "Đà Nẵng", "Đà Lạt"]}
-          />
+          <ProvinceField label="Điểm đến" value={text} onChange={setText} />
           <SelectField
             label="Lựa chọn"
             value={tab}
@@ -398,7 +393,7 @@ export function ComponentGallery() {
         onClose={() => setDialog("")}
         onSelect={() => {
           setDialog("");
-          notify("Đã chọn tọa độ minh họa.");
+          notify("Đã chọn tọa độ trên bản đồ.");
         }}
       />
     </div>

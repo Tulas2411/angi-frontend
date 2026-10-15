@@ -25,7 +25,7 @@ export default defineConfig({
       APP_URL: "http://localhost:3001",
       SESSION_PASSWORD: "angi-owner-tests-isolated-local-session-key-only",
       NEXT_PUBLIC_DATA_MODE: "live",
-      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: "",
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: "pk.angi-tests-placeholder",
       NEXT_PUBLIC_ENABLE_DEMO: "true",
       NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY: "true",
     },

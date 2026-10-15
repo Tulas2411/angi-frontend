@@ -25,6 +25,8 @@ import { useWorkspace, PageHeading } from "@/components/layout/workspace";
 import { Media } from "@/components/ui/primitives";
 import { money } from "@/features/platform/rules";
 import { pageSlice } from "@/features/platform/rules";
+import { ProvinceField } from "@/components/domain/province-field";
+import { matchesRestaurantLocation } from "@/shared/locations/restaurant-search";
 
 export function DiscoveryPage() {
   const { data } = usePlatform(),
@@ -206,10 +208,26 @@ export function DiscoveryPage() {
   );
 }
 export function DiscoveryList({ kind }: { kind: "restaurants" | "dishes" }) {
+  const params = useSearchParams();
+  const query = params.get("q") ?? "";
+  return (
+    <DiscoveryResults
+      key={`${kind}:${query}`}
+      kind={kind}
+      initialQuery={query}
+    />
+  );
+}
+function DiscoveryResults({
+  kind,
+  initialQuery,
+}: {
+  kind: "restaurants" | "dishes";
+  initialQuery: string;
+}) {
   const { data } = usePlatform(),
     { base } = useWorkspace(),
-    params = useSearchParams(),
-    [search, setSearch] = useState(params.get("q") ?? ""),
+    [search, setSearch] = useState(initialQuery),
     [filter, setFilter] = useState("all"),
     [page, setPage] = useState(1);
   const dishes = data.dishes.filter(
@@ -221,9 +239,7 @@ export function DiscoveryList({ kind }: { kind: "restaurants" | "dishes" }) {
   const restaurants = data.restaurants.filter(
     (r) =>
       r.moderation === "visible" &&
-      `${r.name} ${r.address}`
-        .toLocaleLowerCase("vi")
-        .includes(search.toLocaleLowerCase("vi")) &&
+      matchesRestaurantLocation(r, search) &&
       (filter !== "verified" || r.verification === "verified"),
   );
   return (
@@ -232,17 +248,29 @@ export function DiscoveryList({ kind }: { kind: "restaurants" | "dishes" }) {
         title={kind === "dishes" ? "Khám phá món ngon" : "Khám phá quán ăn"}
         description="Tìm hương vị cho bữa ăn tiếp theo · Dữ liệu minh họa"
       />
-      <Field
-        label={
-          kind === "dishes" ? "Tìm món ăn" : "Tìm theo tên quán hoặc địa điểm"
-        }
-        type="search"
-        value={search}
-        onChange={(e) => {
-          setSearch(e.target.value);
-          setPage(1);
-        }}
-      />
+      {kind === "restaurants" ? (
+        <ProvinceField
+          label="Tìm theo tên quán hoặc địa điểm"
+          type="search"
+          value={search}
+          autoComplete="off"
+          helper="Nhập tên quán, địa chỉ hoặc chọn tỉnh/thành từ gợi ý."
+          onChange={(value) => {
+            setSearch(value);
+            setPage(1);
+          }}
+        />
+      ) : (
+        <Field
+          label="Tìm món ăn"
+          type="search"
+          value={search}
+          onChange={(event) => {
+            setSearch(event.target.value);
+            setPage(1);
+          }}
+        />
+      )}
       <Tabs
         value={filter}
         onChange={(v) => {
@@ -524,7 +552,8 @@ export function DishDetail({ id }: { id: string }) {
           </div>
         }
       >
-        Món ăn với mã &quot;{id}&quot; không tồn tại trong dữ liệu hiện tại hoặc đã bị gỡ. Bạn có thể quay lại danh sách để chọn món khác.
+        Món ăn với mã &quot;{id}&quot; không tồn tại trong dữ liệu hiện tại hoặc
+        đã bị gỡ. Bạn có thể quay lại danh sách để chọn món khác.
       </EmptyState>
     );
   }
@@ -549,19 +578,12 @@ export function DishDetail({ id }: { id: string }) {
       : 0;
   return (
     <div className="container workspace stack">
-      <PageHeading
-        title={dish.name}
-        description={dish.description}
-      />
+      <PageHeading title={dish.name} description={dish.description} />
 
       {/* HERO: Ảnh + Thông tin tổng quan */}
       <Card className="soft">
         <div className="profile-card">
-          <Media
-            src={dish.image}
-            alt={dish.name}
-            className="profile-media"
-          />
+          <Media src={dish.image} alt={dish.name} className="profile-media" />
           <div className="stack-sm">
             <h2>{dish.name}</h2>
             <p className="helper">{dish.description}</p>
@@ -581,10 +603,7 @@ export function DishDetail({ id }: { id: string }) {
             </div>
             <div className="actions">
               {user ? (
-                <Button
-                  variant="secondary"
-                  onClick={() => setReportOpen(true)}
-                >
+                <Button variant="secondary" onClick={() => setReportOpen(true)}>
                   Báo cáo thông tin
                 </Button>
               ) : (
@@ -620,9 +639,8 @@ export function DishDetail({ id }: { id: string }) {
           )}
           {reviewsForRestaurant.length > 0 && (
             <li>
-              <strong>Mức độ yêu thích:</strong>{" "}
-              {averageRating.toFixed(1)} / 5 sao từ{" "}
-              {reviewsForRestaurant.length} đánh giá
+              <strong>Mức độ yêu thích:</strong> {averageRating.toFixed(1)} / 5
+              sao từ {reviewsForRestaurant.length} đánh giá
             </li>
           )}
         </ul>
@@ -737,9 +755,7 @@ export function DishDetail({ id }: { id: string }) {
         <div className="stack">
           {relatedDishes.length > 0 && (
             <div className="stack-sm">
-              <h4>
-                Món khác tại {restaurant ? restaurant.name : "quán này"}
-              </h4>
+              <h4>Món khác tại {restaurant ? restaurant.name : "quán này"}</h4>
               <div className="grid-3">
                 {relatedDishes.map((d) => (
                   <DishCard
@@ -835,9 +851,12 @@ export function DishDetail({ id }: { id: string }) {
             label="Lý do"
             value={reason}
             onChange={setReason}
-            options={["Sai thông tin", "Giá không đúng", "Hết nguyên liệu", "Nội dung không phù hợp"].map(
-              (v) => ({ value: v, label: v }),
-            )}
+            options={[
+              "Sai thông tin",
+              "Giá không đúng",
+              "Hết nguyên liệu",
+              "Nội dung không phù hợp",
+            ].map((v) => ({ value: v, label: v }))}
           />
           <TextArea
             label="Thông tin bổ sung"

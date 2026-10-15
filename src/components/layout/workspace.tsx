@@ -16,6 +16,7 @@ import { initialData } from "@/mocks/fixtures";
 import type { AppData, DataMode } from "@/features/platform/contracts";
 import { Avatar, Icon, ActionLink } from "@/components/ui/primitives";
 import Brand from "@/components/brand";
+import { ProvinceField } from "@/components/domain/province-field";
 
 export const navigation: Record<RoleCode, [string, string][]> = {
   TRAVELER: [
@@ -163,11 +164,13 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
           }}
         >
           <Icon name="search" />
-          <input
-            aria-label="Tìm địa điểm hoặc nhà hàng"
+          <ProvinceField
+            label="Tìm địa điểm hoặc nhà hàng"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
             placeholder="Nhập địa điểm hoặc nhà hàng"
+            autoComplete="off"
+            showCatalogStatus={false}
           />
         </form>
       )}

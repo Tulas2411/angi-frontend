@@ -7,6 +7,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 ## Start here
 
 - New team member: follow [Local setup](#local-setup), then open `/demo` to explore the screens.
+- Running the full local stack and testing real Owner APIs: follow [the Vietnamese run and test guide](docs/local-run-and-test-guide.vi.md).
 - Implementing a feature: read [Project architecture](.agents/project_architecture.md) and [Coding rules](.agents/coding_rule.md).
 - Integrating an API: read [API and authentication](#api-and-authentication) and the latest backend API Design before adding a service.
 - Reviewing a change: use [Checks](#checks), [Design coverage](docs/design-coverage.md) and [Human Git workflow](.agents/commit_guide.md).
@@ -73,7 +74,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 
 | Variable                               | Example/default                             | Purpose                                                                          |
 | -------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `API_BASE_URL`                         | `http://localhost:5154/api/v1`              | Private server-side REST API base URL                                            |
+| `API_BASE_URL`                         | `http://127.0.0.1:5154/api/v1`              | Private server-side REST API base URL                                            |
 | `NEXT_PUBLIC_API_BASE_URL`             | `/api`                                      | Same-origin Next.js handlers called by the browser                               |
 | `APP_URL`                              | `http://localhost:3000`                     | Exact browser origin allowed for mutations                                       |
 | `SESSION_PASSWORD`                     | Your own random key, at least 32 characters | Encrypts the frontend session cookie; required for auth                          |
@@ -83,6 +84,8 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 | `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY` | `false`                                     | Gallery/scenarios are available in development; production needs explicit `true` |
 
 Keep real values in `.env.local`, which is ignored by Git. Variables prefixed with `NEXT_PUBLIC_` are public and selected at build time. Restart dev or rebuild after changing them. Keep the browser API base `/api`; calling the backend directly would bypass this app's session and proxy flow. Changing the app port or hostname also requires matching `APP_URL`.
+
+Use `127.0.0.1` for the local Docker backend URL: the local stack binds IPv4 only, while Node.js can resolve `localhost` to IPv6 `::1`. That mismatch causes login to return `503 SERVICE_UNAVAILABLE` even when OpenAPI opens in the browser. The frontend browser origin and `APP_URL` can remain `http://localhost:3000`.
 
 ### 3. Run a frontend preview
 
@@ -102,6 +105,9 @@ For F-44, open `/restaurant/profile` after Owner login, or `/demo/owner/profile`
 
 For F-45, open `/restaurant/profile?tab=hours` or `/demo/owner/profile?tab=hours`. OWN-02 supplies the current `businessHours`; OWN-04 `PUT /api/v1/owner/restaurant/business-hours` replaces the full week with `{ hours }` and returns `{ hours, isOpenNow }`. Days use 0 for Sunday through 6 for Saturday; times are Vietnam `HH:mm`. Add several intervals per day, including overnight intervals, without overlap across days or the week boundary. Sending `hours: []` clears the declared schedule; missing days contain no starting interval, but may still be covered by the previous day's overnight interval. Cancel, clear/remove and leaving a dirty editor use in-app modals. Failures retain the draft, and successful saves use the returned schedule/status. Operating/verification/moderation statuses stay independent. Demo hours retain every interval during workspace navigation and reset on reload/remount.
 
+Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables interactive Mapbox GL JS location dialogs, Static Images in the itinerary panel and address search. Run `./scripts/sync-mapbox-env.ps1` to copy the public `pk.*` token from the sibling backend `.env` into frontend local configuration, then restart FE. The script refuses secret tokens. Demo workspaces still use fixture business data with real Mapbox cartography. The account must support permanent geocoding because saved restaurant coordinates use `permanent=true`; see [Mapbox Geocoding](https://docs.mapbox.com/api/search/geocoding/).
+
+ProvinceField supplies [Provinces Open API V1](https://provinces.open-api.vn/) suggestions for restaurant address forms, itinerary destinations, header/restaurant location search, map search and the gallery, including demos. It supports unaccented search, official-name selection, shared caching, manual entry and retry. V1 preserves the current API's required district field; no new key or env setting is needed. See [setup details](docs/setup.md) and run `npx playwright test --config=playwright.province.config.ts` for isolated checks.
 For F-46, open `/restaurant/profile?tab=status` or `/demo/owner/profile?tab=status`. OWN-02 supplies current operating, verification and moderation states. OWN-05 `PUT /api/v1/owner/restaurant/operating-status` takes `{ operatingStatus, note? }` and returns only `{ operatingStatus }`. Choose `open`, `temporarily_closed` or `permanently_closed`, optionally supply a reason up to 500 characters, then review and confirm in a modal before any PUT. Blank reasons are omitted; reason-only edits do not submit an unchanged status. Suspended restaurants may still close, but reopening returns `409 RESTAURANT_SUSPENDED`; the editor retains the draft and session. Verification, moderation, profile data and hours remain independent. Permanent closure is preserved exactly across demo navigation, and the API permits reopening when moderation allows it. Demo changes reset on reload/remount. Live use requires OWN-02 and OWN-05.
 
 Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables Mapbox Static Images and address search. The account must support permanent geocoding because saved restaurant coordinates use `permanent=true`; see [Mapbox Geocoding](https://docs.mapbox.com/api/search/geocoding/). Province suggestions use the [V1 catalog](https://provinces.open-api.vn/) to match the current API's required district field; manual full-name entry remains available if that service fails. See [setup details](docs/setup.md).

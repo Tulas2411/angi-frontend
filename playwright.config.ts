@@ -6,6 +6,7 @@ export default defineConfig({
     "restaurant-registration.spec.ts",
     "restaurant-profile.spec.ts",
     "restaurant-business-hours.spec.ts",
+    "mapbox.spec.ts",
     "restaurant-operating-status.spec.ts",
   ],
   timeout: 60000,
@@ -25,5 +26,10 @@ export default defineConfig({
     url: "http://localhost:3000/demo",
     reuseExistingServer: true,
     timeout: 120000,
+    env: {
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN:
+        process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ||
+        "pk.angi-tests-placeholder",
+    },
   },
 });
