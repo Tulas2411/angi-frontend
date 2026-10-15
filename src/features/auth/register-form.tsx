@@ -1,5 +1,5 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Alert, Button, Card, Input } from "@/shared/ui";
 import { Choice } from "@/components/ui/primitives";
@@ -136,6 +136,69 @@ function RoleOption({
   );
 }
 
+function PendingVerification({ email }: { email: string }) {
+  const [secondsLeft, setSecondsLeft] = useState(60);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (secondsLeft <= 0) return;
+    const timer = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [secondsLeft]);
+
+  async function handleResend() {
+    setResending(true);
+    setResendMessage(null);
+    try {
+      await api.resendVerification(email);
+      setResendMessage("Đã gửi lại email xác minh. Vui lòng kiểm tra hộp thư.");
+      setSecondsLeft(60);
+    } catch (caught) {
+      setResendMessage(getErrorMessage(caught));
+    } finally {
+      setResending(false);
+    }
+  }
+
+  return (
+    <Card className="stack">
+      <Alert tone="info">
+        Kiểm tra hộp thư <strong>{email}</strong> để xác minh email trước khi
+        đăng nhập.
+      </Alert>
+      <p className="helper">
+        Liên kết xác minh có hiệu lực trong 24 giờ. Nếu không thấy email, kiểm
+        tra thư mục spam.
+      </p>
+      {resendMessage && (
+        <Alert tone={resendMessage.startsWith("Đã gửi") ? "success" : "error"}>
+          {resendMessage}
+        </Alert>
+      )}
+      <div className="auth-links-vertical">
+        <Button
+          type="button"
+          variant="primary"
+          onClick={handleResend}
+          disabled={secondsLeft > 0 || resending}
+          loading={resending}
+          className="auth-link-button"
+        >
+          {secondsLeft > 0
+            ? `Gửi lại sau ${secondsLeft}s`
+            : "Gửi lại liên kết"}
+        </Button>
+        <Link href={HOME_BY_ROLE.TRAVELER} className="button button-primary auth-link-button">
+          Về trang chủ
+        </Link>
+      </div>
+    </Card>
+  );
+}
+
 export default function RegisterForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -170,6 +233,8 @@ export default function RegisterForm() {
         displayName: name.trim(),
         role,
       });
+      // Lưu email để hiển thị trên trang verify-success sau khi xác minh
+      localStorage.setItem("pending_verification_email", result.email);
       setSubmitted({ email: result.email });
     } catch (caught) {
       if (caught instanceof ApiError) {
@@ -190,29 +255,7 @@ export default function RegisterForm() {
   }
 
   if (submitted) {
-    return (
-      <Card className="stack">
-        <Alert tone="success">
-          Đã tạo tài khoản. Vui lòng kiểm tra hộp thư {submitted.email} để xác
-          minh email trước khi đăng nhập.
-        </Alert>
-        <p className="helper">
-          Liên kết xác minh có hiệu lực trong 24 giờ. Nếu không thấy email, kiểm
-          tra thư mục spam hoặc thử lại từ trang đăng nhập.
-        </p>
-        <div className="between auth-links">
-          <Link
-            href={HOME_BY_ROLE.TRAVELER}
-            className="button button-tertiary"
-          >
-            ← Về trang chủ
-          </Link>
-          <Link href="/login" className="button button-secondary">
-            Đăng nhập
-          </Link>
-        </div>
-      </Card>
-    );
+    return <PendingVerification email={submitted.email} />;
   }
 
   return (

@@ -131,21 +131,54 @@ export function PageRouter({
   role: RoleCode | "GUEST";
   segments?: string[];
 }) {
-  const { status, mode } = usePlatform(),
+  const { status, data, mode } = usePlatform(),
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "profile")
     return (
       <RestaurantProfilePage initialTab={params.get("tab") ?? "information"} />
     );
-  // This verified operation does not depend on the still-unavailable AppData adapter.
+
+  // These operations do not depend on the AppData adapter.
   if (
     role === "RESTAURANT_OWNER" &&
     (area === "register" || (mode === "live" && !area))
   )
     return <RestaurantRegistrationPage />;
-  if (status !== "ready") return <UnavailablePage />;
+
+  if (status !== "ready") {
+    if (area === "dishes" && id) {
+      const fallback = data.dishes.find(
+        (d) => d.id === id && d.moderation === "visible",
+      );
+      if (fallback) return <DishDetail id={id} />;
+    }
+
+    if (area === "restaurants" && id) {
+      const fallback = data.restaurants.find(
+        (r) => r.id === id && r.moderation === "visible",
+      );
+      if (fallback) return <RestaurantDetail id={id} />;
+    }
+
+    if (area === "guides" && id) {
+      const fallback = data.blogs.find((b) => b.id === id);
+      if (fallback) return <BlogDetail id={id} />;
+    }
+
+    if (
+      area === "restaurants" ||
+      area === "dishes" ||
+      area === "guides" ||
+      !area
+    ) {
+      return <DiscoveryPage />;
+    }
+
+    return <UnavailablePage />;
+  }
   if (
     [
       "register",

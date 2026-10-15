@@ -1,6 +1,8 @@
 "use client";
 import type {
   AuthUserDto,
+  GoogleLoginRequestDto,
+  GoogleLoginResponseDto,
   LoginRequestDto,
   RegisterAccountRequestDto,
   RegisterAccountResponseDto,
@@ -61,9 +63,36 @@ export const api = {
       { method: "POST", body: JSON.stringify(body) },
       false,
     ),
+  resendVerification: (email: string) =>
+    request<{ sent: boolean }>(
+      "auth/verify-email/resend",
+      { method: "POST", body: JSON.stringify({ email }) },
+      false,
+    ),
+  forgotPassword: (email: string) =>
+    request<{ sent: boolean }>(
+      "auth/forgot-password",
+      { method: "POST", body: JSON.stringify({ email }) },
+      false,
+    ),
+  resetPassword: (token: string, newPassword: string) =>
+    request<{ userId: string; status: string }>(
+      "auth/reset-password",
+      {
+        method: "POST",
+        body: JSON.stringify({ token, newPassword }),
+      },
+      false,
+    ),
   login: (body: LoginRequestDto) =>
     request<AuthUserDto>(
       "auth/login",
+      { method: "POST", body: JSON.stringify(body) },
+      false,
+    ),
+  googleLogin: (body: GoogleLoginRequestDto) =>
+    request<GoogleLoginResponseDto>(
+      "auth/google",
       { method: "POST", body: JSON.stringify(body) },
       false,
     ),
