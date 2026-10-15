@@ -60,6 +60,39 @@ Browser tests use local API/session stubs on ports 3001/5164 and exercise the re
 
 Changes remain unstaged/uncommitted. A human creates the PR targeting `dev` and obtains Dũng's review under the commit guide.
 
+## F-45 / ANGI-48 verification — 2026-10-14
+
+Branch `feat/ANGI-48-update-business-hour` starts from fetched `origin/dev` (`6706c6d`, including F-44). The assigned key comes from `ANGI_Jira_Plan_Ver1.2.xlsx`, Backlog row 36. Local runtime is Node.js 22.12.0; documented/CI runtime remains Node.js 24. Checks below supplement the historical sections above.
+
+| Check                                                     | Result              | Scope                                                                                                                                                                                               |
+| --------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run lint`                                            | Passed              | No errors or warnings after the owner-login redirect correction                                                                                                                                     |
+| `npm test`                                                | 55 passed / 7 files | Twelve new cases cover full replacement/clearing, multiple slots, midnight/week overlap, exact times/days, Vietnam open/close boundaries, error keys and mock isolation/persistence                 |
+| `npm run typecheck`                                       | Passed              | Working source including tests; `next typegen` first refreshed stale ignored route types from the newer dev baseline                                                                                |
+| `node scripts/owner-test-server.mjs --build`              | Passed              | Production compilation, TypeScript and route generation in an isolated source snapshot                                                                                                              |
+| `npx playwright test --config=playwright.hours.config.ts` | 7 passed            | GET/PUT/200, complete payload, multiple/overnight slots, indexed/backend errors and focus, duplicate save, modal clear/cancel/tab exit, empty/missing/error states, roles/Origin and demo isolation |
+| F-44 / F-43 browser regressions                           | 7 / 9 passed        | Separate profile/owner configs, run sequentially against isolated ports 3001/5164                                                                                                                   |
+| Focused F-45 demo visual rerun                            | 1 passed            | Refreshed full-page captures from scroll position 0 at 1440px and 390px                                                                                                                             |
+| Scoped Prettier / `git diff --check`                      | Passed              | Changed files; existing unrelated formatting in `page-router.tsx` is retained, with the new route block formatted                                                                                   |
+
+Visually reviewed `artifacts/owner-hours-desktop.png` and `artifacts/owner-hours-mobile.png` (ignored). The mobile case checks no page-wide overflow. Browser cases cover keyboard Escape/focus return and reject native confirmation dialogs. Demo schedules retain all intervals, including explicit empty arrays, during workspace navigation; reload/remount resets fixtures. Clear/remove only stage changes until the full-week PUT succeeds. Profile/status fields remain independent.
+
+The fetched baseline hardcoded successful login to `/demo/traveler` for every role. This task restores the successful-login destination from `HOME_BY_ROLE`, preserving full navigation and the existing centralized role policy. Owner/non-owner browser cases passed with that correction. The existing Traveler home in that policy remains `/demo/traveler`; owner regression expectations now reflect it.
+
+Final API reconciliation was performed **after implementation and runtime checks**, reopening the newest sibling workbook directly from disk: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx`. Its SHA-256 before and after the final read, and at task start, is `07A492969E221D36833AE73CE13E7D7CE83D2D3A44F5FCFE00D59597C3DEDC66`; no newer API workbook was present in that directory. The final task contract matched these entries:
+
+| Workbook source                                              | Finished behavior checked                                                                                               |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| `Backend API!A59:O59`, `A61:O61`                             | OWN-02 GET and owner-only OWN-04 PUT with the exact paths; success 200 and missing-owner handling                       |
+| `Chi tiết Request-Response!A278:I280`                        | Required full `{ hours }` request, `[]` clearing, returned `{ hours, isOpenNow }`; no profile or operating-status PATCH |
+| `DTO!A90:G92`, `C115:F115`                                   | Numeric Sunday=0 through Saturday=6, Vietnam `HH:mm`, multiple/overnight intervals and GET `businessHours`              |
+| `JSON mẫu!A1980:D2003`                                       | Sample Monday 06:00–13:30 request and response envelope/shape; the fixed-time mock test reproduces `isOpenNow: true`    |
+| `Mã lỗi!A10:C10`, `A14:C14`, `A18:C18`, `A22:C22`, `A30:C31` | Field validation, `INVALID_BUSINESS_HOURS`, session/role errors and not-found responses                                 |
+
+The backend's controller, request/response DTOs, validators, overlap rules and UTC+7 mapper were also checked. Its overnight rules reject actual overlap across adjacent days and the circular week; touching boundaries are allowed, equal endpoints are invalid, and a day without a starting interval can still be covered by the previous day's overnight interval. The frontend and mock follow those rules. The new coding rule requires this fresh final workbook reconciliation for every completed coding task, including a changed file with the same version name.
+
+API/session browser checks use local stubs and the real same-origin proxy/encrypted-session boundary. They do not establish real .NET/database persistence; that smoke check and Node.js 24/CI remain integration verification. No private env file, backend source, workbook, staging area, commit, push or PR was changed. Dũng's PR review is human follow-up under the commit guide.
+
 ## Screenshot evidence
 
 The reproducible scripts and route/node mappings are checked in. Generated PNGs, manifests, HTML reports and contact sheets remain local under ignored `artifacts/`, `playwright-report/` and `test-results/`.

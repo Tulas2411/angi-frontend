@@ -143,9 +143,12 @@ async function login(page: Page, traveler = false) {
     .fill(traveler ? "traveler@profile.test" : "owner@profile.test");
   await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await expect(page).toHaveURL(traveler ? /\/discovery$/ : /\/restaurant$/, {
-    timeout: 30000,
-  });
+  await expect(page).toHaveURL(
+    traveler ? /\/demo\/traveler$/ : /\/restaurant$/,
+    {
+      timeout: 30000,
+    },
+  );
   if (!traveler)
     await expect(
       page.getByRole("heading", { name: "Bạn đã có nhà hàng" }),
@@ -339,7 +342,7 @@ test("non-owner routes, PATCH and foreign mutation origins remain denied", async
 }) => {
   await login(page, true);
   await page.goto("/restaurant/profile");
-  await expect(page).toHaveURL(/\/discovery$/);
+  await expect(page).toHaveURL(/\/demo\/traveler$/);
   expect(
     (
       await page.request.patch("/api/backend/owner/restaurant", {
@@ -404,7 +407,10 @@ test("demo edits remain isolated, survive workspace navigation and fit desktop/m
     ),
   ).toBe(true);
   await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await page.getByLabel("Giờ mở", { exact: true }).first().fill("05:15");
+  await page
+    .getByLabel(/^Giờ mở ·/)
+    .first()
+    .fill("05:15");
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Bỏ thay đổi giờ mở cửa chưa lưu?" }),
@@ -412,9 +418,7 @@ test("demo edits remain isolated, survive workspace navigation and fit desktop/m
   await page
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
-  await expect(page.getByLabel("Giờ mở", { exact: true }).first()).toHaveValue(
-    "05:15",
-  );
+  await expect(page.getByLabel(/^Giờ mở ·/).first()).toHaveValue("05:15");
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await page
     .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })

@@ -166,7 +166,7 @@ async function login(page: Page, email = "owner@test.local") {
   await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(
-    email.startsWith("traveler") ? /\/discovery$/ : /\/restaurant$/,
+    email.startsWith("traveler") ? /\/demo\/traveler$/ : /\/restaurant$/,
   );
 }
 async function fill(page: Page) {
@@ -335,7 +335,7 @@ test("existing owners and non-owner sessions cannot register another restaurant"
   await page.context().clearCookies();
   await login(page, "traveler@test.local");
   await page.goto("/restaurant/register");
-  await expect(page).toHaveURL(/\/discovery$/);
+  await expect(page).toHaveURL(/\/demo\/traveler$/);
   const denied = await page.request.post("/api/backend/owner/restaurant", {
     headers: { origin: "http://localhost:3001" },
     data: {},
