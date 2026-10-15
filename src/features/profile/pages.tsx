@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Card, Input } from "@/shared/ui";
+import { Alert, Button, Card, Input } from "@/shared/ui";
 import {
   ActionLink,
   Breadcrumbs,
@@ -389,7 +389,7 @@ function PasswordField({
 
 /* === TRANG HỒ SƠ CỦA TÔI (READ-ONLY) === */
 export function ProfileViewPage() {
-  const { data, mutate, busy } = usePlatform(),
+  const { data, busy } = usePlatform(),
     { user, base } = useWorkspace();
   const displayName = data.profile.name;
   const email = user?.email ?? "";

@@ -1,6 +1,7 @@
 "use client";
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/shared/api/client";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { Alert, Input } from "@/shared/ui";
@@ -9,6 +10,7 @@ import { GoogleLoginButton } from "@/features/auth/google-login-button";
 type SocialProvider = "facebook" | "google" | "apple";
 
 export default function LoginForm() {
+  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [socialError, setSocialError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -19,10 +21,10 @@ export default function LoginForm() {
     setSocialError(null);
     if (isNewUser) {
       // New user from Google - redirect to choose role
-      window.location.assign("/choose-role");
+      router.push("/choose-role");
     } else {
       // Existing user - go to demo/traveler
-      window.location.assign("/demo/traveler");
+      router.push("/demo/traveler");
     }
   }
 
@@ -48,7 +50,7 @@ export default function LoginForm() {
         password: String(form.get("password") ?? ""),
       });
       void user;
-      window.location.assign("/demo/traveler");
+      router.push("/demo/traveler");
     } catch (caught) {
       setError(getErrorMessage(caught));
       if (caught instanceof ApiError) setFields(caught.errors ?? {});
@@ -68,7 +70,6 @@ export default function LoginForm() {
         <GoogleLoginButton
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}
-          disabled={busy}
         />
         <button
           type="button"

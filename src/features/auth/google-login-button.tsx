@@ -1,24 +1,20 @@
 "use client";
 import { GoogleLogin } from "@react-oauth/google";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { api } from "@/shared/api/client";
 import { getErrorMessage } from "@/shared/api/error";
-import { useState } from "react";
 import { Alert } from "@/shared/ui";
-
-interface GoogleLoginButtonProps {
-  onSuccess?: (isNewUser: boolean) => void;
-  onError?: (message: string) => void;
-  disabled?: boolean;
-  variant?: "full" | "icon-only";
-}
 
 export function GoogleLoginButton({
   onSuccess,
   onError,
-  disabled,
-  variant = "full",
-}: GoogleLoginButtonProps) {
+}: {
+  onSuccess?: (isNewUser: boolean) => void;
+  onError?: (message: string) => void;
+}) {
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
   async function handleSuccess(response: { credential?: string }) {
@@ -30,9 +26,8 @@ export function GoogleLoginButton({
     setError(null);
     try {
       const result = await api.googleLogin({ idToken: token });
-      void result;
       onSuccess?.(result.isNewUser);
-      window.location.assign("/demo/traveler");
+      router.push(result.isNewUser ? "/choose-role" : "/demo/traveler");
     } catch (err) {
       const msg = getErrorMessage(err);
       setError(msg);

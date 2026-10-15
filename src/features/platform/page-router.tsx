@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import type { RoleCode } from "@/features/auth/types";
 import { Button, Card, Alert } from "@/shared/ui";
@@ -55,10 +55,11 @@ export function UnavailablePage() {
   const { status, reload } = usePlatform();
   // Tránh hydration mismatch: SSR + first client render đều hiển thị Skeleton.
   // Sau khi mounted mới quyết định hiển thị trạng thái thật.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
   if (!mounted || status === "loading")
     return (
       <div className="container workspace">
@@ -136,7 +137,7 @@ export function PageRouter({
   role: RoleCode | "GUEST";
   segments?: string[];
 }) {
-  const { status, data, mode } = usePlatform(),
+  const { status, data } = usePlatform(),
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
