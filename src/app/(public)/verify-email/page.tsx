@@ -1,17 +1,31 @@
 import Brand from "@/components/brand";
-import { AuthFlowPage } from "@/features/auth/flows";
+import VerifyEmailClient from "./verify-email-client";
+
+export const metadata = {
+  title: "Xác minh email",
+};
+
 export default async function Page({
   searchParams,
 }: {
   searchParams: Promise<{ token?: string }>;
 }) {
   const { token } = await searchParams;
+
   return (
     <main className="auth-page">
       <div className="container">
         <Brand />
       </div>
-      <AuthFlowPage flow="verify-email" tokenPresent={Boolean(token)} />
+      <div className="container" style={{ maxWidth: 480 }}>
+        {token ? (
+          <VerifyEmailClient />
+        ) : (
+          <div className="alert alert-error">
+            Liên kết xác minh không hợp lệ hoặc đã hết hạn.
+          </div>
+        )}
+      </div>
     </main>
   );
 }

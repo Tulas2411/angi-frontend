@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import { GoogleProvider } from "@/components/providers/google-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi">
-      <body className="min-h-screen antialiased">{children}</body>
+      <body className="min-h-screen antialiased">
+        <GoogleProvider>{children}</GoogleProvider>
+      </body>
     </html>
   );
 }

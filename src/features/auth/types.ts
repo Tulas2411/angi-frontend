@@ -25,6 +25,15 @@ export interface LoginRequestDto {
   password: string;
 }
 
+export interface GoogleLoginRequestDto {
+  idToken: string;
+  role?: RoleCode;
+}
+
+export interface GoogleLoginResponseDto extends AuthResultDto {
+  isNewUser: boolean;
+}
+
 // Wire DTOs for AUTH-01 self-registration. Status comes from backend as snake_case
 // (e.g. "pending_verification") and reuses the existing UserStatus union.
 export type RegisterableRole = Extract<RoleCode, "TRAVELER" | "RESTAURANT_OWNER">;

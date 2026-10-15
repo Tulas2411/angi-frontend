@@ -1,8 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Alert, Button, Card } from "@/shared/ui";
 import { ActionLink, Choice, Field } from "@/components/ui/primitives";
 import { PageHeading } from "@/components/layout/workspace";
+import { api } from "@/shared/api/client";
+import { ApiError, getErrorMessage } from "@/shared/api/error";
 export type AuthFlow =
   | "register"
   | "forgot-password"
@@ -27,7 +30,9 @@ export function AuthFlowPage({
     [show, setShow] = useState(false),
     [state, setState] = useState<"form" | "success">("form"),
     [error, setError] = useState(""),
-    [cooldown, setCooldown] = useState(0);
+    [cooldown, setCooldown] = useState(0),
+    [busy, setBusy] = useState(false),
+    [resetToken, setResetToken] = useState("");
   useEffect(() => {
     if (!cooldown) return;
     const timer = setTimeout(() => setCooldown((n) => n - 1), 1000);
@@ -63,14 +68,69 @@ export function AuthFlowPage({
       setError("Mật khẩu xác nhận chưa trùng khớp.");
       return;
     }
-    if (!demo) {
-      setError(
-        "Luồng này chưa có hợp đồng API trong repository. Chưa gửi email hoặc thay đổi tài khoản.",
-      );
+    if (demo) {
+      setState("success");
+      if (flow === "register") setCooldown(60);
       return;
     }
-    setState("success");
-    if (flow === "register") setCooldown(60);
+    if (flow === "forgot-password") {
+      handleForgotPassword();
+      return;
+    }
+    if (flow === "reset-password" && resetToken) {
+      handleResetPassword();
+      return;
+    }
+    setError(
+      "Luồng này chưa có hợp đồng API trong repository. Chưa gửi email hoặc thay đổi tài khoản.",
+    );
+  }
+  // Read token from URL for reset-password flow.
+  useEffect(() => {
+    if (flow !== "reset-password" || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("token");
+    if (t) setResetToken(t);
+  }, [flow]);
+  // If reset-password is opened without a token, redirect to forgot-password.
+  useEffect(() => {
+    if (flow !== "reset-password" || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (!params.get("token") && !resetToken) {
+      window.location.replace("/forgot-password");
+    }
+  }, [flow, resetToken]);
+  async function handleForgotPassword() {
+    setBusy(true);
+    setError("");
+    try {
+      await api.forgotPassword(email.trim().toLowerCase());
+      setState("success");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? getErrorMessage(caught)
+          : "Không thể gửi email đặt lại. Vui lòng thử lại.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function handleResetPassword() {
+    setBusy(true);
+    setError("");
+    try {
+      await api.resetPassword(resetToken, password);
+      setState("success");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? getErrorMessage(caught)
+          : "Không thể đặt lại mật khẩu. Vui lòng thử lại.",
+      );
+    } finally {
+      setBusy(false);
+    }
   }
   return (
     <div className="container workspace" style={{ maxWidth: 640 }}>
@@ -83,7 +143,7 @@ export function AuthFlowPage({
         }
       />
       <Card className="soft">
-        {invalidToken ? (
+      {invalidToken && !resetToken ? (
           <Alert>
             Liên kết không hợp lệ hoặc đã hết hạn. Yêu cầu một liên kết mới.
           </Alert>
@@ -92,14 +152,30 @@ export function AuthFlowPage({
             <h2>
               {flow === "register"
                 ? "Kiểm tra hộp thư của bạn"
-                : "Đã hoàn thành bước minh họa"}
+                : flow === "forgot-password"
+                  ? "Kiểm tra hộp thư của bạn"
+                  : flow === "reset-password"
+                    ? "Đặt lại mật khẩu thành công"
+                    : "Đã hoàn thành bước minh họa"}
             </h2>
             <p>
               {flow === "register"
                 ? `Minh họa gửi liên kết xác minh đến ${email}. Bạn cần xác minh trước khi đăng nhập.`
-                : "Không có thay đổi trên tài khoản hoặc email thực."}
+                : flow === "forgot-password"
+                  ? `Nếu ${email} tồn tại trong hệ thống, chúng tôi vừa gửi liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư và bấm vào liên kết để đặt mật khẩu mới.`
+                  : flow === "reset-password"
+                    ? "Mật khẩu của bạn đã được cập nhật. Bạn có thể đăng nhập bằng mật khẩu mới."
+                    : "Không có thay đổi trên tài khoản hoặc email thực."}
             </p>
-            <ActionLink href="/login">Quay lại đăng nhập</ActionLink>
+            {flow === "reset-password" ? (
+              <div className="auth-links-vertical">
+                <Link href="/login" className="button button-primary auth-link-button">
+                  Đăng nhập
+                </Link>
+              </div>
+            ) : (
+              <ActionLink href="/login">Quay lại đăng nhập</ActionLink>
+            )}
           </div>
         ) : flow === "verify-email" ? (
           <div className="stack">
@@ -201,21 +277,29 @@ export function AuthFlowPage({
                 </div>
               </fieldset>
             )}
-            <Button type="submit">
+            <Button type="submit" disabled={busy}>
               {flow === "register"
                 ? "Tạo tài khoản"
                 : flow === "forgot-password"
-                  ? "Gửi liên kết đặt lại"
-                  : "Tiếp tục"}
+                  ? busy
+                    ? "Đang gửi..."
+                    : "Gửi liên kết đặt lại"
+                  : flow === "reset-password"
+                    ? busy
+                      ? "Đang đặt lại..."
+                      : "Đặt lại mật khẩu"
+                    : "Tiếp tục"}
             </Button>
           </form>
         )}
         {error && (
           <Alert tone={demo && cooldown > 0 ? "info" : "error"}>{error}</Alert>
         )}
-        <ActionLink href="/login" secondary>
-          Đăng nhập
-        </ActionLink>
+        {flow !== "reset-password" && (
+          <ActionLink href="/login" secondary>
+            Đăng nhập
+          </ActionLink>
+        )}
       </Card>
     </div>
   );

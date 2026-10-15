@@ -5,22 +5,36 @@ import { api } from "@/shared/api/client";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { Alert, Input } from "@/shared/ui";
 import { HOME_BY_ROLE } from "./roles";
+import { GoogleLoginButton } from "@/features/auth/google-login-button";
 
 type SocialProvider = "facebook" | "google" | "apple";
 
 export default function LoginForm() {
   const [busy, setBusy] = useState(false);
-  const [socialBusy, setSocialBusy] = useState<SocialProvider | null>(null);
+  const [socialError, setSocialError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const [remember, setRemember] = useState(true);
 
+  async function handleGoogleSuccess(isNewUser: boolean) {
+    setSocialError(null);
+    if (isNewUser) {
+      // New user from Google - redirect to choose role
+      window.location.assign("/choose-role");
+    } else {
+      // Existing user - go to demo/traveler
+      window.location.assign("/demo/traveler");
+    }
+  }
+
+  function handleGoogleError(message: string) {
+    setSocialError(message);
+  }
+
   function social(provider: SocialProvider) {
-    setSocialBusy(provider);
-    setError(
-      `Đăng nhập bằng ${labelOf(provider)} chưa được kích hoạt trong bản minh họa.`,
+    setSocialError(
+      `Đăng nhập bằng ${labelOf(provider)} chưa được hỗ trợ trong bản này.`,
     );
-    setTimeout(() => setSocialBusy(null), 600);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -48,32 +62,29 @@ export default function LoginForm() {
       <header className="login-header">
         <h1>Login to view this page</h1>
       </header>
+      {socialError && <Alert>{socialError}</Alert>}
       {error && <Alert>{error}</Alert>}
 
       <div className="login-social">
+        <GoogleLoginButton
+          onSuccess={handleGoogleSuccess}
+          onError={handleGoogleError}
+          disabled={busy}
+        />
         <button
           type="button"
           className="login-social-btn login-social-btn--facebook"
           onClick={() => social("facebook")}
-          disabled={busy || socialBusy !== null}
+          disabled={busy}
         >
           <FacebookIcon />
           <span>Tiếp tục với Facebook</span>
         </button>
         <button
           type="button"
-          className="login-social-btn login-social-btn--google"
-          onClick={() => social("google")}
-          disabled={busy || socialBusy !== null}
-        >
-          <GoogleIcon />
-          <span>Tiếp tục với Google</span>
-        </button>
-        <button
-          type="button"
           className="login-social-btn login-social-btn--apple"
           onClick={() => social("apple")}
-          disabled={busy || socialBusy !== null}
+          disabled={busy}
         >
           <AppleIcon />
           <span>Tiếp tục với Apple</span>
@@ -182,35 +193,6 @@ function FacebookIcon() {
       <path
         fill="#FFFFFF"
         d="M24 12.073C24 5.405 18.627 0 12 0S0 5.405 0 12.073c0 6.025 4.388 11.02 10.125 11.927v-8.437H7.078v-3.49h3.047V9.43c0-3.018 1.792-4.685 4.533-4.685 1.313 0 2.686.235 2.686.235v2.969h-1.514c-1.491 0-1.955.93-1.955 1.886v2.266h3.328l-.532 3.49h-2.796v8.437C19.612 23.094 24 18.099 24 12.073z"
-      />
-    </svg>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="18"
-      height="18"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        fill="#4285F4"
-        d="M23.49 12.275c0-.78-.07-1.53-.2-2.25H12v4.51h6.46c-.28 1.43-1.1 2.64-2.34 3.46v2.87h3.78c2.21-2.04 3.49-5.04 3.49-8.59z"
-      />
-      <path
-        fill="#34A853"
-        d="M12 24c3.15 0 5.79-1.05 7.72-2.85l-3.78-2.87c-1.05.7-2.39 1.12-3.94 1.12-3.03 0-5.6-2.05-6.51-4.79H1.55v2.99A11.997 11.997 0 0 0 12 24z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M5.49 14.61A7.21 7.21 0 0 1 5.13 12c0-.91.16-1.79.36-2.61V6.4H1.55A11.997 11.997 0 0 0 .01 12c0 1.94.46 3.77 1.54 5.6l3.94-2.99z"
-      />
-      <path
-        fill="#EA4335"
-        d="M12 4.77c1.71 0 3.24.59 4.45 1.74l3.34-3.34C17.78 1.18 15.13 0 12 0A11.997 11.997 0 0 0 1.55 6.4l3.94 2.99C6.4 6.82 8.97 4.77 12 4.77z"
       />
     </svg>
   );
