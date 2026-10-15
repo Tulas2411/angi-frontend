@@ -38,7 +38,16 @@ export function RestaurantStatuses({ restaurant }: { restaurant: Restaurant }) {
       </div>
       <div>
         <h3>Hoạt động</h3>
-        <span>{restaurant.operating === "open" ? "Đang mở" : "Đang đóng"}</span>
+        <span>
+          {
+            {
+              open: "Đang mở",
+              closed: "Đang đóng",
+              temporarily_closed: "Tạm đóng",
+              permanently_closed: "Đóng cửa vĩnh viễn",
+            }[restaurant.operating]
+          }
+        </span>
       </div>
       <div>
         <h3>Kiểm duyệt</h3>
