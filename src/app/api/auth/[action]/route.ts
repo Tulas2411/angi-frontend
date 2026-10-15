@@ -99,6 +99,15 @@ export async function POST(request: Request, context: Context) {
         await saveAuth(session, auth, true);
         return ok(auth.user);
       }
+      case "google": {
+        const body = (await readJson(request)) as { idToken: string; role?: string };
+        const result = await backend<{ accessToken: string; accessTokenExpiresAt: string; refreshToken: string; refreshTokenExpiresAt: string; user: unknown; isNewUser: boolean }>(
+          "auth/google",
+          { method: "POST", body: { idToken: body.idToken } },
+        );
+        await saveAuth(session, result as AuthResultDto, true);
+        return ok(result.user);
+      }
       case "refresh":
         return ok((await refreshSession(session)).user);
       case "logout": {

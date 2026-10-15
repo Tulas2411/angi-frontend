@@ -16,6 +16,7 @@
     "format:check": "prettier --check src tests scripts docs playwright.config.ts"
   },
   "dependencies": {
+    "@react-oauth/google": "^0.13.5",
     "iron-session": "^9.0.1",
     "next": "16.4.0",
     "react": "19.3.0",

@@ -515,7 +515,6 @@ export function DishDetail({ id }: { id: string }) {
     return (
       <EmptyState
         title="Không tìm thấy món ăn"
-        description={`Món ăn với mã "${id}" không tồn tại trong dữ liệu hiện tại hoặc đã bị gỡ. Bạn có thể quay lại danh sách để chọn món khác.`}
         action={
           <div className="actions">
             <ActionLink href={`${base}/dishes`}>Về danh sách món</ActionLink>
@@ -524,7 +523,9 @@ export function DishDetail({ id }: { id: string }) {
             </ActionLink>
           </div>
         }
-      />
+      >
+        Món ăn với mã &quot;{id}&quot; không tồn tại trong dữ liệu hiện tại hoặc đã bị gỡ. Bạn có thể quay lại danh sách để chọn món khác.
+      </EmptyState>
     );
   }
   const restaurant = data.restaurants.find(
@@ -538,13 +539,13 @@ export function DishDetail({ id }: { id: string }) {
         d.moderation === "visible",
     )
     .slice(0, 3);
-  const totalReviewsForDish = data.reviews.filter(
-    (r) => r.dishId === id && r.moderation === "visible",
+  const reviewsForRestaurant = data.reviews.filter(
+    (r) => r.restaurantId === dish.restaurantId && r.moderation === "visible",
   );
   const averageRating =
-    totalReviewsForDish.length > 0
-      ? totalReviewsForDish.reduce((s, r) => s + r.rating, 0) /
-        totalReviewsForDish.length
+    reviewsForRestaurant.length > 0
+      ? reviewsForRestaurant.reduce((s, r) => s + r.rating, 0) /
+        reviewsForRestaurant.length
       : 0;
   return (
     <div className="container workspace stack">
@@ -617,11 +618,11 @@ export function DishDetail({ id }: { id: string }) {
               <strong>Phù hợp:</strong> {dish.tags.join(", ")}
             </li>
           )}
-          {totalReviewsForDish.length > 0 && (
+          {reviewsForRestaurant.length > 0 && (
             <li>
               <strong>Mức độ yêu thích:</strong>{" "}
               {averageRating.toFixed(1)} / 5 sao từ{" "}
-              {totalReviewsForDish.length} đánh giá
+              {reviewsForRestaurant.length} đánh giá
             </li>
           )}
         </ul>
@@ -659,8 +660,8 @@ export function DishDetail({ id }: { id: string }) {
           <div>
             <p className="helper">Đánh giá</p>
             <p>
-              {totalReviewsForDish.length > 0
-                ? `${averageRating.toFixed(1)} / 5 (${totalReviewsForDish.length})`
+              {reviewsForRestaurant.length > 0
+                ? `${averageRating.toFixed(1)} / 5 (${reviewsForRestaurant.length})`
                 : "Chưa có"}
             </p>
           </div>
@@ -789,13 +790,13 @@ export function DishDetail({ id }: { id: string }) {
       </Card>
 
       {/* ĐÁNH GIÁ */}
-      {totalReviewsForDish.length > 0 && (
+      {reviewsForRestaurant.length > 0 && (
         <Card
-          title={`Đánh giá từ thực khách (${totalReviewsForDish.length})`}
+          title={`Đánh giá từ thực khách (${reviewsForRestaurant.length})`}
           className="soft"
         >
           <div className="stack">
-            {totalReviewsForDish.slice(0, 3).map((r) => (
+            {reviewsForRestaurant.slice(0, 3).map((r) => (
               <div key={r.id} className="review-row">
                 <ReviewContent review={r} />
               </div>

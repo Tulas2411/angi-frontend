@@ -208,7 +208,10 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
                   </>
                 )}
                 {demo ? (
-                  <Link href="/demo">Về bản minh họa</Link>
+                  <>
+                    <Link href="/demo">Về bản minh họa</Link>
+                    <LogoutButton />
+                  </>
                 ) : (
                   <LogoutButton />
                 )}
