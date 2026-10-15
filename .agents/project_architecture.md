@@ -121,7 +121,7 @@ Missing sessions redirect to `/login`; a role mismatch redirects to that role's 
 
 ## 6. API envelope and proxy
 
-Backend paths start at `API_BASE_URL`, normally `http://localhost:5154/api/v1`. Browser calls use the same-origin `NEXT_PUBLIC_API_BASE_URL`, normally `/api`.
+Backend paths start at `API_BASE_URL`, normally `http://127.0.0.1:5154/api/v1` for the local Docker stack. Use the explicit IPv4 address because this stack binds IPv4 only and Node.js may resolve `localhost` to `::1`. Browser calls use the same-origin `NEXT_PUBLIC_API_BASE_URL`, normally `/api`.
 
 Every application API response uses:
 
@@ -169,7 +169,7 @@ Coordination and revocation currently live in one Next.js process. Multi-instanc
 - `createDemoService` clones deterministic fixtures into a provider-owned repository. Changes persist during client navigation within that workspace and reset on reload/remount.
 - `liveService` deliberately raises `UnavailableContractError`; the whole-business adapter is not implemented. Most live pages show unavailable/retry feedback. F-43/F-44/F-45 use verified operation services: owner root/register handles registration, `/restaurant/profile` handles GET/PATCH and its hours tab handles GET/PUT without depending on `AppData` readiness.
 - `NEXT_PUBLIC_DATA_MODE=live` is the default. Explicit `/demo` workspaces force demo mode. Setting the global mode to `demo` does not bypass role guards on authenticated routes.
-- Demo users and IDs are fixtures, not authenticated principals or server IDs. Demo uploads use local data URLs, invitations do not send email, and static map artwork does not provide live routing.
+- Demo users and IDs are fixtures, not authenticated principals or server IDs. Demo uploads use local data URLs and invitations do not send email. Mapbox supplies real geography in demo workspaces too; this does not provide live routing or travel times.
 - Preserve coherent references between dishes, restaurants, menus and trips, separate pending menu edits, immutable published snapshots, distinct restaurant statuses, permission override semantics and retry-to-pending behavior.
 
 The whole-`AppData` save operation is a demo interface, not a backend endpoint. Implement live data with verified per-operation DTO mapping when backend endpoints become available. A designed but unimplemented API must remain visibly unavailable rather than silently falling back to fixtures.
@@ -182,9 +182,11 @@ F-45 owns `restaurant-business-hours-page`, the typed business-hours service and
 
 Owner browser checks use `scripts/owner-test-server.mjs`: it snapshots source, assets and non-secret configuration into a fresh ignored `.cache` workspace, shares installed dependencies, and starts its own frontend at port 3001. No private env file is copied; suites supply test-only auth and an API stub at 5164. `--build` compiles that snapshot without affecting a running preview. TypeScript excludes `.cache` so generated test workspaces do not become application sources.
 
-The live location picker supports manual coordinates and browser geolocation without external configuration. An optional public Mapbox token enables Static Images and explicit V6 forward geocoding with `permanent=true` because restaurant coordinates are stored; the provider account must support permanent geocoding. Demo maps remain local fixtures. Province suggestions use the fixed public V1 catalog through `/api/locations/provinces` to match the current required-district address contract; catalog errors allow manual full-name input. Neither map search nor province suggestions silently overwrites address fields.
+The live location picker supports manual coordinates and browser geolocation without external configuration. An optional public Mapbox token enables a lazily imported Mapbox GL JS renderer and explicit V6 forward geocoding with `permanent=true` because restaurant coordinates are stored; the provider account must support permanent geocoding. All location pickers, including demo workspaces and itinerary creation, share the domain MapLocationDialog, InteractiveLocationMap and shared/maps/mapbox utilities. Native wheel zoom/drag panning changes only the camera; explicit point selection changes saved coordinates. Marker overlays project the selected point through Mapbox rather than remaining at screen center. WebGL/style failures preserve manual entry. The itinerary panel still renders Static Images geography/markers through MapboxPreview; demo business data still uses fixtures. scripts/sync-mapbox-env.ps1 copies only a public pk. token from the sibling backend env into frontend local configuration. Province suggestions use the fixed public V1 catalog through `/api/locations/provinces` to match the current required-district address contract; catalog errors allow manual full-name input. Neither map search nor province suggestions silently overwrites address fields.
 
 ## 9. UI system
+
+ProvinceField is the shared administrative-area autocomplete for restaurant registration/profile (live and demo), itinerary destinations, header/restaurant location search, map search and the component gallery. It uses the existing same-origin public `/api/locations/provinces` route backed by the fixed Provinces Open API V1 catalog, preserving the current required-district restaurant contract. The browser service deduplicates requests, caches successful results for five minutes and publishes retries to all mounted fields; the provider fetch is revalidated daily. Vietnamese accent-insensitive matching preserves official names on selection. Existing values/manual entry remain editable when the catalog fails. Map search still resolves explicit selections through Mapbox; province suggestions never overwrite separate address fields or coordinates. Header searches pass the selected name to the restaurant list; demo filtering accepts both official and existing short province names.
 
 Reuse tokens from `src/styles/theme/tokens.css`, base controls from `src/shared/ui` and composed primitives from `src/components/ui`. Layout and responsive behavior live in shared CSS and workspace shells.
 

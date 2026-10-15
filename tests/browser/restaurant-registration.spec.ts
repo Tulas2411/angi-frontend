@@ -1,3 +1,4 @@
+import { stubMapboxRendering } from "./mapbox-fixture";
 import { createServer, type Server } from "node:http";
 import { test, expect, type Page } from "@playwright/test";
 import type {
@@ -145,9 +146,7 @@ test.beforeEach(async ({ page }) => {
   conflictNext = false;
   requests = [];
   uploads = [];
-  await page.route("https://api.mapbox.com/**", (route) =>
-    route.fulfill({ contentType: "image/png", body: png }),
-  );
+  await stubMapboxRendering(page);
   await page.route("**/api/locations/provinces", (route) =>
     route.fulfill({
       json: {
@@ -182,6 +181,9 @@ async function pickLocation(page: Page) {
   await expect(
     dialog.getByRole("button", { name: "Lưu vị trí" }),
   ).toBeDisabled();
+  await dialog
+    .getByRole("button", { name: "Nhập tọa độ", exact: true })
+    .click();
   await dialog.getByLabel("Vĩ độ").fill("21.0285");
   await dialog.getByLabel("Kinh độ").fill("105.8542");
   await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
@@ -208,6 +210,10 @@ test("required fields and explicit location prevent accidental registration", as
   await expect(page.getByText("Đã chọn: 21.028500, 105.854200")).toBeVisible();
   const opener = page.getByRole("button", { name: "Chọn vị trí trên bản đồ" });
   await opener.click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Nhập tọa độ", exact: true })
+    .click();
   await page.getByRole("dialog").getByLabel("Vĩ độ").fill("22");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
@@ -231,6 +237,11 @@ test("multipart media and a numeric OWN-01 request preserve 201 and produce unve
 }) => {
   await login(page);
   await fill(page);
+  const province = page.getByRole("combobox", { name: "Tỉnh / thành phố" });
+  await province.fill("ha noi");
+  await page
+    .getByRole("option", { name: "Thành phố Hà Nội", exact: true })
+    .click();
   await pickLocation(page);
   const mediaResponse = page.waitForResponse(
     (res) =>
@@ -443,11 +454,16 @@ test("map keyboard selection and permanent address search produce explicit coord
   await login(page);
   await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
   const dialog = page.getByRole("dialog");
-  const map = dialog.getByRole("button", {
+  const map = dialog.getByRole("application", {
     name: "Bản đồ chọn vị trí nhà hàng",
   });
-  await map.focus();
+  await expect(map).toHaveAttribute("aria-busy", "false");
+  await map.locator("canvas").focus();
   await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Enter");
+  await dialog
+    .getByRole("button", { name: "Nhập tọa độ", exact: true })
+    .click();
   expect(
     Number(await dialog.getByLabel("Kinh độ").inputValue()),
   ).toBeGreaterThan(105.8542);
@@ -460,6 +476,123 @@ test("map keyboard selection and permanent address search produce explicit coord
     .click();
   await dialog.getByRole("button", { name: "Lưu vị trí" }).click();
   await expect(page.getByText("Đã chọn: 10.776900, 106.700900")).toBeVisible();
+});
+
+test("map information cards close independently and keep the pin and saved coordinates", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await login(page);
+  await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
+  const dialog = page.getByRole("dialog", { name: "Chọn vị trí nhà hàng" });
+  const map = dialog.getByRole("application", {
+    name: "Bản đồ chọn vị trí nhà hàng",
+  });
+  await expect(map).toHaveAttribute("aria-busy", "false");
+  const mapBounds = await map.boundingBox();
+  const dialogBounds = await dialog.boundingBox();
+  if (!mapBounds || !dialogBounds)
+    throw new Error("Map dialog must have visible bounds.");
+  expect(Math.abs(mapBounds.width - dialogBounds.width)).toBeLessThan(4);
+  expect(Math.abs(mapBounds.height - dialogBounds.height)).toBeLessThan(4);
+  await map.click({
+    position: { x: mapBounds.width * 0.7, y: mapBounds.height * 0.55 },
+  });
+  const pin = dialog.getByRole("button", {
+    name: "Hiển thị thông tin vị trí đã chọn",
+  });
+  await expect(pin).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Nhập tọa độ", exact: true })
+    .click();
+  await dialog.getByLabel("Vĩ độ").fill("21.0285");
+  await dialog.getByLabel("Kinh độ").fill("105.8542");
+  await dialog.getByRole("button", { name: "Đóng bảng nhập tọa độ" }).click();
+  const pinInfo = dialog.getByRole("region", {
+    name: "Thông tin điểm trên bản đồ",
+    exact: true,
+  });
+  const summary = dialog.getByRole("region", {
+    name: "Thông tin địa điểm đã chọn",
+    exact: true,
+  });
+  await expect(pinInfo).toContainText("21.02850° N, 105.85420° E");
+  await expect(summary).toBeVisible();
+  await dialog.screenshot({
+    path: "artifacts/restaurant-map-live-layout-desktop.png",
+  });
+  await dialog
+    .getByRole("button", { name: "Ẩn thông tin điểm trên bản đồ", exact: true })
+    .click();
+  await expect(pinInfo).toHaveCount(0);
+  await expect(summary).toBeVisible();
+  await expect(pin).toBeFocused();
+  await dialog
+    .getByRole("button", { name: "Ẩn thông tin địa điểm đã chọn", exact: true })
+    .click();
+  await expect(summary).toHaveCount(0);
+  await expect(pin).toBeVisible();
+  await dialog.getByRole("button", { name: "Phóng to bản đồ" }).click();
+  await expect(pinInfo).toHaveCount(0);
+  await expect(summary).toHaveCount(0);
+  await pin.click();
+  await expect(pinInfo).toContainText("21.02850° N, 105.85420° E");
+  await expect(summary).toBeVisible();
+  await dialog
+    .getByRole("button", { name: "Ẩn thông tin điểm trên bản đồ", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Ẩn thông tin địa điểm đã chọn", exact: true })
+    .click();
+  await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
+  await expect(page.getByText("Đã chọn: 21.028500, 105.854200")).toBeVisible();
+});
+
+test("demo workspace uses Mapbox overlays on desktop/mobile and retains selection after hiding cards", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/dev/scenarios?state=owner-register-restaurant");
+  const opener = page.getByRole("button", { name: "Chọn vị trí trên bản đồ" });
+  await opener.click();
+  const dialog = page.getByRole("dialog");
+  const summary = dialog.getByRole("region", {
+    name: "Thông tin địa điểm đã chọn",
+    exact: true,
+  });
+  await expect(summary).toContainText("Hồ Hoàn Kiếm");
+  await dialog.screenshot({
+    path: "artifacts/restaurant-map-demo-desktop.png",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await dialog.screenshot({ path: "artifacts/restaurant-map-demo-mobile.png" });
+  expect(
+    await dialog.evaluate(
+      (element) => element.scrollWidth <= element.clientWidth,
+    ),
+  ).toBe(true);
+  const controls = await dialog
+    .getByRole("button", { name: "Dùng vị trí hiện tại" })
+    .boundingBox();
+  const summaryBounds = await summary.boundingBox();
+  if (!controls || !summaryBounds)
+    throw new Error("Map controls and summary must be visible.");
+  expect(summaryBounds.y + summaryBounds.height).toBeLessThan(controls.y);
+  await dialog
+    .getByRole("button", { name: "Ẩn thông tin điểm trên bản đồ", exact: true })
+    .click();
+  await dialog
+    .getByRole("button", { name: "Ẩn thông tin địa điểm đã chọn", exact: true })
+    .click();
+  await expect(
+    dialog.getByRole("button", { name: "Hiển thị thông tin vị trí đã chọn" }),
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: "Lưu", exact: true }).click();
+  await expect(page.getByText("Đã chọn: 21.028500, 105.854200")).toBeVisible();
+  await opener.click();
+  await expect(summary).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(opener).toBeFocused();
 });
 
 test("failed catalog and map retain manual entry; malformed uploads and foreign origins are denied", async ({
@@ -484,7 +617,7 @@ test("failed catalog and map retain manual entry; malformed uploads and foreign 
   await expect(page.getByText(/Không tải được bản đồ/)).toBeVisible();
   await page
     .getByRole("dialog")
-    .getByRole("button", { name: "Hủy", exact: true })
+    .getByRole("button", { name: "Đóng hộp thoại", exact: true })
     .click();
   const malformed = await page.request.post("/api/backend/media", {
     headers: { origin: "http://localhost:3001" },

@@ -1,17 +1,14 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { sealData, unsealData } from "iron-session";
 
 const base = process.env.APP_URL ?? "http://localhost:3000";
-const password =
-  process.env.ANGI_TEST_PASSWORD ??
-  JSON.parse(
-    readFileSync(
-      new URL("../../.tools/local-settings.json", import.meta.url),
-      "utf8",
-    ).replace(/^\uFEFF/, ""),
-  ).devAccountPassword;
+assert.ok(
+  ["localhost", "127.0.0.1", "[::1]"].includes(new URL(base).hostname),
+  "Smoke tests require an isolated loopback frontend",
+);
+const password = process.env.ANGI_TEST_PASSWORD;
+assert.ok(password, "ANGI_TEST_PASSWORD is required for seeded local accounts");
 const secret = process.env.SESSION_PASSWORD;
 assert.ok(secret, "SESSION_PASSWORD is required");
 let checks = 0;
@@ -85,7 +82,11 @@ async function pack(data) {
   );
 }
 
-check((await call("/")).status === 200, "public homepage");
+await redirected(
+  await call("/"),
+  "/login?reason=UNAUTHORIZED",
+  "anonymous root guard",
+);
 const anonymous = await call("/administration");
 check(
   anonymous.status === 307 && anonymous.headers.get("location") === "/login",
@@ -126,7 +127,7 @@ check(
 );
 
 for (const [email, role, home] of [
-  ["traveler@angi.local", "TRAVELER", "/discovery"],
+  ["traveler@angi.local", "TRAVELER", "/demo/traveler"],
   ["owner@angi.local", "RESTAURANT_OWNER", "/restaurant"],
   ["mod@angi.local", "MOD", "/moderation"],
   ["admin@angi.local", "ADMIN", "/administration"],
@@ -150,9 +151,10 @@ for (const [email, role, home] of [
     logout.status === 200 && (await logout.json()).data === null,
     role + " logout",
   );
+  const revoked = await call("/api/auth/session", { cookie: session.cookie });
   check(
-    (await call(home, { cookie: session.cookie })).headers.get("location") ===
-      "/login",
+    revoked.status === 401 &&
+      (await revoked.json()).errorCode === "UNAUTHORIZED",
     role + " revoked frontend session",
   );
 }
@@ -195,11 +197,13 @@ check(
   (await call("/api/auth/session", { cookie: currentCookie })).status === 200,
   "refreshed session stays usable",
 );
-const futureApi = await call("/api/backend/me", { cookie: currentCookie });
+const profileApi = await call("/api/backend/me", { cookie: currentCookie });
+const profile = await profileApi.json();
 check(
-  futureApi.status === 404 &&
-    (await futureApi.json()).errorCode === "ROUTE_NOT_FOUND",
-  "unimplemented me keeps backend errorCode",
+  profileApi.status === 200 &&
+    profile.success &&
+    profile.data.email === "traveler@angi.local",
+  "implemented ME-01 works with a rotated real session",
 );
 const loggedOut = await call("/api/auth/logout", {
   method: "POST",
