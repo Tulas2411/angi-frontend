@@ -19,10 +19,12 @@ export default function LoginForm() {
   async function handleGoogleSuccess(isNewUser: boolean) {
     setSocialError(null);
     if (isNewUser) {
-      // New user from Google - redirect to choose role
+      // Full navigation clears cached protected content after the session changes.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/choose-role");
     } else {
-      // Existing user - go to demo/traveler
+      // Full navigation clears cached protected content after the session changes.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/demo/traveler");
     }
   }

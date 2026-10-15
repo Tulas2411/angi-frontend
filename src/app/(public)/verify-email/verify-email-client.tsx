@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Card } from "@/shared/ui";
 
@@ -7,50 +8,78 @@ export default function VerifyEmailClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const [status, setStatus] = useState<"loading" | "success" | "error">("loading");
-  const [errorMessage, setErrorMessage] = useState("");
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const verification = useRef<{
+    token: string;
+    baseUrl: string;
+    request: Promise<Response>;
+  } | null>(null);
+  const [failure, setFailure] = useState<{
+    token: string;
+    message: string;
+  } | null>(null);
+  const errorMessage = !token
+    ? "Liên kết xác minh không hợp lệ."
+    : !baseUrl
+      ? "Thiếu cấu hình NEXT_PUBLIC_API_BASE_URL."
+      : failure?.token === token
+        ? failure.message
+        : "";
 
   useEffect(() => {
-    if (!token) {
-      setStatus("error");
-      setErrorMessage("Liên kết xác minh không hợp lệ.");
-      return;
-    }
-
-    async function verify() {
-      try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-        if (!baseUrl) {
-          setStatus("error");
-          setErrorMessage("Thiếu cấu hình NEXT_PUBLIC_API_BASE_URL.");
-          return;
-        }
-        const response = await fetch(`${baseUrl.replace(/\/$/, "")}/auth/verify-email`, {
+    if (!token || !baseUrl) return;
+    let active = true;
+    // Reuse the request when Strict Mode replays the effect for this token.
+    if (
+      verification.current?.token !== token ||
+      verification.current.baseUrl !== baseUrl
+    ) {
+      verification.current = {
+        token,
+        baseUrl,
+        request: fetch(`${baseUrl.replace(/\/$/, "")}/auth/verify-email`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
-        });
+        }),
+      };
+    }
 
-        const data = await response.json();
+    async function verify(currentToken: string, request: Promise<Response>) {
+      try {
+        const response = await request;
+        const data = await response.clone().json();
+        if (!active) return;
 
         if (response.ok && data.success) {
-          const email = localStorage.getItem("pending_verification_email") || "";
+          const email =
+            localStorage.getItem("pending_verification_email") || "";
           localStorage.removeItem("pending_verification_email");
-          router.push(`/verify-success${email ? `?email=${encodeURIComponent(email)}` : ""}`);
+          router.push(
+            `/verify-success${email ? `?email=${encodeURIComponent(email)}` : ""}`,
+          );
         } else {
-          setStatus("error");
-          setErrorMessage(data.message || "Xác minh email thất bại.");
+          setFailure({
+            token: currentToken,
+            message: data.message || "Xác minh email thất bại.",
+          });
         }
       } catch {
-        setStatus("error");
-        setErrorMessage("Không thể kết nối server. Vui lòng thử lại.");
+        if (active)
+          setFailure({
+            token: currentToken,
+            message: "Không thể kết nối server. Vui lòng thử lại.",
+          });
       }
     }
 
-    verify();
-  }, [token, router]);
+    void verify(token, verification.current.request);
+    return () => {
+      active = false;
+    };
+  }, [token, baseUrl, router]);
 
-  if (status === "loading") {
+  if (!errorMessage) {
     return (
       <Card className="stack">
         <Alert tone="info">Đang xác minh email...</Alert>
@@ -62,8 +91,12 @@ export default function VerifyEmailClient() {
     <Card className="stack">
       <Alert tone="error">{errorMessage}</Alert>
       <div className="between auth-links">
-        <a href="/" className="button button-tertiary">← Về trang chủ</a>
-        <a href="/register" className="button button-secondary">Đăng ký lại</a>
+        <Link href="/" className="button button-tertiary">
+          ← Về trang chủ
+        </Link>
+        <Link href="/register" className="button button-secondary">
+          Đăng ký lại
+        </Link>
       </div>
     </Card>
   );

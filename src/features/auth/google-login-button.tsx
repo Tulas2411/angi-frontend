@@ -22,6 +22,7 @@ export function GoogleLoginButton({
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
   async function handleSuccess(response: { credential?: string }) {
+    if (disabled) return;
     const token = response.credential;
     if (!token) {
       handleError();
@@ -32,6 +33,8 @@ export function GoogleLoginButton({
       const result = await api.googleLogin({ idToken: token });
       void result;
       onSuccess?.(result.isNewUser);
+      // Full navigation clears cached protected content after the session changes.
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign("/demo/traveler");
     } catch (err) {
       const msg = getErrorMessage(err);
@@ -57,17 +60,20 @@ export function GoogleLoginButton({
 
   return (
     <>
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={handleError}
-        useOneTap={false}
-        theme="outline"
-        size="large"
-        text="signin_with"
-        shape="rectangular"
-        logo_alignment="left"
-        width="100%"
-      />
+      <div inert={disabled} aria-disabled={disabled}>
+        <GoogleLogin
+          type={variant === "icon-only" ? "icon" : "standard"}
+          onSuccess={handleSuccess}
+          onError={handleError}
+          useOneTap={false}
+          theme="outline"
+          size="large"
+          text="signin_with"
+          shape="rectangular"
+          logo_alignment="left"
+          width="100%"
+        />
+      </div>
       {error && <Alert>{error}</Alert>}
     </>
   );

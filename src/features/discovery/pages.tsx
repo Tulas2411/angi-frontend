@@ -494,7 +494,7 @@ export function RestaurantDetail({ id }: { id: string }) {
 }
 export function DishDetail({ id }: { id: string }) {
   const { data, mutate, busy } = usePlatform(),
-    { base, user } = useWorkspace(),
+    { base, user, demo } = useWorkspace(),
     [reportOpen, setReportOpen] = useState(false),
     [reason, setReason] = useState("Sai thông tin"),
     [text, setText] = useState("");
@@ -509,7 +509,7 @@ export function DishDetail({ id }: { id: string }) {
         "- tổng số dish trong data:",
         data.dishes.length,
         "- demo mode:",
-        useWorkspace().demo,
+        demo,
       );
     }
     return (

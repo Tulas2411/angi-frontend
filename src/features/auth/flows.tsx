@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
 import { ActionLink, Choice, Field } from "@/components/ui/primitives";
 import { PageHeading } from "@/components/layout/workspace";
@@ -22,6 +23,9 @@ export function AuthFlowPage({
   demo?: boolean;
   tokenPresent?: boolean;
 }) {
+  const router = useRouter();
+  const params = useSearchParams();
+  const resetToken = flow === "reset-password" ? params.get("token") ?? "" : "";
   const [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [role, setRole] = useState("TRAVELER"),
@@ -31,8 +35,7 @@ export function AuthFlowPage({
     [state, setState] = useState<"form" | "success">("form"),
     [error, setError] = useState(""),
     [cooldown, setCooldown] = useState(0),
-    [busy, setBusy] = useState(false),
-    [resetToken, setResetToken] = useState("");
+    [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!cooldown) return;
     const timer = setTimeout(() => setCooldown((n) => n - 1), 1000);
@@ -85,21 +88,11 @@ export function AuthFlowPage({
       "Luồng này chưa có hợp đồng API trong repository. Chưa gửi email hoặc thay đổi tài khoản.",
     );
   }
-  // Read token from URL for reset-password flow.
-  useEffect(() => {
-    if (flow !== "reset-password" || typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const t = params.get("token");
-    if (t) setResetToken(t);
-  }, [flow]);
   // If reset-password is opened without a token, redirect to forgot-password.
   useEffect(() => {
-    if (flow !== "reset-password" || typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (!params.get("token") && !resetToken) {
-      window.location.replace("/forgot-password");
-    }
-  }, [flow, resetToken]);
+    if (flow === "reset-password" && !demo && !resetToken)
+      router.replace("/forgot-password");
+  }, [flow, demo, resetToken, router]);
   async function handleForgotPassword() {
     setBusy(true);
     setError("");
