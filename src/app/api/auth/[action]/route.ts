@@ -55,6 +55,42 @@ export async function POST(request: Request, context: Context) {
         );
         return created(result);
       }
+      case "verify-email": {
+        // Public endpoint. Consumes the one-time token, activates the account.
+        const body = await readJson(request);
+        const result = await backend<{ userId: string; emailVerifiedAt: string; status: string }>(
+          "auth/verify-email",
+          { method: "POST", body },
+        );
+        return ok(result);
+      }
+      case "verify-email/resend": {
+        // Public endpoint. Reissues a verification email.
+        const body = await readJson(request);
+        const result = await backend<{ sent: boolean }>(
+          "auth/verify-email/resend",
+          { method: "POST", body },
+        );
+        return ok(result);
+      }
+      case "forgot-password": {
+        // Public endpoint. Sends a password reset link to the email.
+        const body = await readJson(request);
+        const result = await backend<{ sent: boolean }>(
+          "auth/forgot-password",
+          { method: "POST", body },
+        );
+        return ok(result);
+      }
+      case "reset-password": {
+        // Public endpoint. Consumes the reset token and updates the password.
+        const body = await readJson(request);
+        const result = await backend<{ userId: string; status: string }>(
+          "auth/reset-password",
+          { method: "POST", body },
+        );
+        return ok(result);
+      }
       case "login": {
         const auth = await backend<AuthResultDto>("auth/login", {
           method: "POST",
