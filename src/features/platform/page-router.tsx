@@ -52,6 +52,7 @@ import { DishDetail } from "@/features/discovery/pages";
 import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
 import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
 import { RestaurantBusinessHoursPage } from "@/features/owner/restaurant-business-hours-page";
+import { RestaurantOperatingStatusPage } from "@/features/owner/restaurant-operating-status-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -136,6 +137,13 @@ export function PageRouter({
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+  if (
+    role === "RESTAURANT_OWNER" &&
+    mode === "live" &&
+    area === "profile" &&
+    params.get("tab") === "status"
+  )
+    return <RestaurantOperatingStatusPage />;
   if (
     role === "RESTAURANT_OWNER" &&
     mode === "live" &&

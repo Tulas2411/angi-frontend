@@ -27,7 +27,9 @@ export function ownerProfileFromDemo(
     ratingAvg: restaurant.rating,
     ratingCount: 0,
     operatingStatus:
-      restaurant.operating === "open" ? "open" : "temporarily_closed",
+      restaurant.operating === "closed"
+        ? "temporarily_closed"
+        : restaurant.operating,
     isOpenNow: false,
     distanceKm: null,
     description: restaurant.description || null,

@@ -24,6 +24,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 | Owner restaurant registration (F-43 / ANGI-36)                                            | Connected to OWN-01/OWN-02 and MEDIA-01; isolated mock registration is available              |
 | Owner restaurant profile (F-44 / ANGI-43)                                                 | Connected to OWN-02/OWN-03; information, location and image changes use verified DTOs         |
 | Owner business hours (F-45 / ANGI-48)                                                     | Connected to OWN-02/OWN-04; complete weekly schedules, multiple intervals and overnight hours |
+| Owner operating status (F-46 / ANGI-55)                                                   | Connected to OWN-02/OWN-05; three states, optional reason and suspension conflict handling    |
 | Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback                         |
 | Verification/recovery, OAuth, invitations, routing and AI                                 | UI/scaffold exists where designed; real integrations remain pending                           |
 
@@ -96,7 +97,7 @@ Open [the demo selector](http://localhost:3000/demo). It works without Docker or
 
 For design/component work, use [the component gallery](http://localhost:3000/dev/components) and [reproducible state scenarios](http://localhost:3000/dev/scenarios). Fixture changes reset on page reload or workspace remount.
 
-The default business mode is `live`. Owner restaurant registration and profile editing use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
+The default business mode is `live`. Owner restaurant registration, profile editing, business hours and operating status use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
 
 For F-43, log in as a Restaurant Owner and open `/restaurant/register`; owner root also checks whether a restaurant exists. The new-owner demo is `/dev/scenarios?state=owner-register-restaurant`. Required information includes business name/phone, address, province/district and explicitly selected coordinates. Optional cover/gallery images upload through MEDIA-01 before OWN-01 receives numeric media IDs. Registration creates an unverified restaurant; sending verification documents is a separate task. Existing restaurants and registration conflicts prevent duplicate creation.
 
@@ -107,6 +108,9 @@ For F-45, open `/restaurant/profile?tab=hours` or `/demo/owner/profile?tab=hours
 Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables interactive Mapbox GL JS location dialogs, Static Images in the itinerary panel and address search. Run `./scripts/sync-mapbox-env.ps1` to copy the public `pk.*` token from the sibling backend `.env` into frontend local configuration, then restart FE. The script refuses secret tokens. Demo workspaces still use fixture business data with real Mapbox cartography. The account must support permanent geocoding because saved restaurant coordinates use `permanent=true`; see [Mapbox Geocoding](https://docs.mapbox.com/api/search/geocoding/).
 
 ProvinceField supplies [Provinces Open API V1](https://provinces.open-api.vn/) suggestions for restaurant address forms, itinerary destinations, header/restaurant location search, map search and the gallery, including demos. It supports unaccented search, official-name selection, shared caching, manual entry and retry. V1 preserves the current API's required district field; no new key or env setting is needed. See [setup details](docs/setup.md) and run `npx playwright test --config=playwright.province.config.ts` for isolated checks.
+For F-46, open `/restaurant/profile?tab=status` or `/demo/owner/profile?tab=status`. OWN-02 supplies current operating, verification and moderation states. OWN-05 `PUT /api/v1/owner/restaurant/operating-status` takes `{ operatingStatus, note? }` and returns only `{ operatingStatus }`. Choose `open`, `temporarily_closed` or `permanently_closed`, optionally supply a reason up to 500 characters, then review and confirm in a modal before any PUT. Blank reasons are omitted; reason-only edits do not submit an unchanged status. Suspended restaurants may still close, but reopening returns `409 RESTAURANT_SUSPENDED`; the editor retains the draft and session. Verification, moderation, profile data and hours remain independent. Permanent closure is preserved exactly across demo navigation, and the API permits reopening when moderation allows it. Demo changes reset on reload/remount. Live use requires OWN-02 and OWN-05.
+
+Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables Mapbox Static Images and address search. The account must support permanent geocoding because saved restaurant coordinates use `permanent=true`; see [Mapbox Geocoding](https://docs.mapbox.com/api/search/geocoding/). Province suggestions use the [V1 catalog](https://provinces.open-api.vn/) to match the current API's required district field; manual full-name entry remains available if that service fails. See [setup details](docs/setup.md).
 
 ### 4. Run real authentication when needed
 
@@ -214,19 +218,20 @@ Build before standalone typecheck on a fresh checkout so Next.js route types exi
 
 Additional checks:
 
-| Command                                                     | Purpose/prerequisites                                                                                                |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `npm run format:check`                                      | Existing source/tests/scripts/docs formatting check                                                                  |
-| `npm exec prettier -- --check README.md AGENTS.md .agents`  | README and rule-document formatting                                                                                  |
-| `npm run test:browser`                                      | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000                                  |
-| `npx playwright test --config=playwright.owner.config.ts`   | F-43 integration, error, role, keyboard and responsive checks; isolated frontend 3001/API stub 5164                  |
-| `npx playwright test --config=playwright.profile.config.ts` | F-44 GET/PATCH, media, validation, role, modal and responsive checks; isolated source/server and API stub            |
-| `npx playwright test --config=playwright.hours.config.ts`   | F-45 full-week PUT, overnight intervals, errors, role/Origin, modals and responsive checks; same isolated test ports |
-| `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                     |
-| `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                         |
-| `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                            |
-| `node scripts/verify-assets.mjs`                            | Local design assets and font/license verification                                                                    |
-| `npm run test:smoke`                                        | Existing real-auth integration checks; local backend/frontend and prepared test accounts required                    |
+| Command                                                     | Purpose/prerequisites                                                                                                  |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`                                      | Existing source/tests/scripts/docs formatting check                                                                    |
+| `npm exec prettier -- --check README.md AGENTS.md .agents`  | README and rule-document formatting                                                                                    |
+| `npm run test:browser`                                      | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000                                    |
+| `npx playwright test --config=playwright.owner.config.ts`   | F-43 integration, error, role, keyboard and responsive checks; isolated frontend 3001/API stub 5164                    |
+| `npx playwright test --config=playwright.profile.config.ts` | F-44 GET/PATCH, media, validation, role, modal and responsive checks; isolated source/server and API stub              |
+| `npx playwright test --config=playwright.hours.config.ts`   | F-45 full-week PUT, overnight intervals, errors, role/Origin, modals and responsive checks; same isolated test ports   |
+| `npx playwright test --config=playwright.status.config.ts`  | F-46 PUT, confirmation, three states, suspension, roles/Origin, draft retention and responsive checks; same test ports |
+| `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                       |
+| `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                           |
+| `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                              |
+| `node scripts/verify-assets.mjs`                            | Local design assets and font/license verification                                                                      |
+| `npm run test:smoke`                                        | Existing real-auth integration checks; local backend/frontend and prepared test accounts required                      |
 
 For browser checks, install Chromium. PowerShell example using a local cache:
 
