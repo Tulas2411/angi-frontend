@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { RoleCode } from "@/features/auth/types";
 import { Button, Card, Alert } from "@/shared/ui";
@@ -49,17 +49,12 @@ import {
 } from "@/features/moderation/pages";
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
 import { DishDetail } from "@/features/discovery/pages";
-
+import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
+import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
-  // Tránh hydration mismatch: SSR + first client render đều hiển thị Skeleton.
-  // Sau khi mounted mới quyết định hiển thị trạng thái thật.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-  if (!mounted || status === "loading")
+  if (status === "loading")
     return (
       <div className="container workspace">
         <Skeleton />
@@ -140,6 +135,19 @@ export function PageRouter({
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "profile")
+    return (
+      <RestaurantProfilePage initialTab={params.get("tab") ?? "information"} />
+    );
+
+  // These operations do not depend on the AppData adapter.
+  if (
+    role === "RESTAURANT_OWNER" &&
+    (area === "register" || (mode === "live" && !area))
+  )
+    return <RestaurantRegistrationPage />;
+
   if (status !== "ready") {
     if (area === "dishes" && id) {
       const fallback = data.dishes.find(
@@ -147,16 +155,19 @@ export function PageRouter({
       );
       if (fallback) return <DishDetail id={id} />;
     }
+
     if (area === "restaurants" && id) {
       const fallback = data.restaurants.find(
         (r) => r.id === id && r.moderation === "visible",
       );
       if (fallback) return <RestaurantDetail id={id} />;
     }
+
     if (area === "guides" && id) {
       const fallback = data.blogs.find((b) => b.id === id);
       if (fallback) return <BlogDetail id={id} />;
     }
+
     if (
       area === "restaurants" ||
       area === "dishes" ||
@@ -165,6 +176,7 @@ export function PageRouter({
     ) {
       return <DiscoveryPage />;
     }
+
     return <UnavailablePage />;
   }
   if (

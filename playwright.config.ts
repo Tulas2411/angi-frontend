@@ -1,6 +1,8 @@
 import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/browser",
+  // F-43/F-44 use their separate owner/profile API-session configurations.
+  testIgnore: ["restaurant-registration.spec.ts", "restaurant-profile.spec.ts"],
   timeout: 60000,
   expect: { timeout: 10000 },
   fullyParallel: false,

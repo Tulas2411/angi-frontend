@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
@@ -24,9 +25,9 @@ import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import { dateLabel, money } from "@/features/platform/rules";
 import type { Dish } from "@/features/platform/contracts";
-import { MapPicker } from "@/components/domain/map-picker";
-import { initialData } from "@/mocks/fixtures";
 import { EmptyState } from "@/components/ui/primitives";
+import { RestaurantRegistrationPage } from "./restaurant-registration-page";
+import { RestaurantProfilePage } from "./restaurant-profile-page";
 
 export function OwnerOverview() {
   const { data } = usePlatform(),
@@ -112,52 +113,53 @@ export function OwnerRestaurant({
 }: {
   initialTab?: string;
 }) {
-  const { data, mutate, busy } = usePlatform(),
-    existing = data.restaurants.find((r) => r.id === data.ownerRestaurantId),
-    restaurant = existing ?? {
-      ...initialData.restaurants[0],
-      id: "bep-nha",
-      name: "",
-      address: "",
-      phone: "",
-      email: "",
-      description: "",
-      image: "",
-      verification: "unverified" as const,
-      moderation: "visible" as const,
-      photos: [],
-    },
-    [tab, setTab] = useState(initialTab),
-    [form, setForm] = useState(restaurant),
-    [photos, setPhotos] = useState<UploadedFile[]>(
-      (restaurant.photos ?? []).map((url, i) => ({
-        id: `existing-${i}`,
-        name: `Ảnh nhà hàng ${i + 1}`,
-        url,
-        size: 0,
-        type: "image/png",
-      })),
-    ),
-    [cover, setCover] = useState<UploadedFile[]>([]),
-    [hours, setHours] = useState(data.hours),
-    [map, setMap] = useState(false),
-    [confirm, setConfirm] = useState(false),
-    [error, setError] = useState("");
-  const update = (field: keyof typeof form, value: string) =>
-    setForm((f) => ({ ...f, [field]: value }));
+  const { data } = usePlatform();
+  // Keep the onboarding component mounted when its mutation publishes the new restaurant.
+  const [registering] = useState(
+    () =>
+      !data.restaurants.some(
+        (restaurant) => restaurant.id === data.ownerRestaurantId,
+      ),
+  );
+  if (registering) return <RestaurantRegistrationPage />;
+  if (initialTab === "hours" || initialTab === "status")
+    return <OwnerRestaurantProfile initialTab={initialTab} />;
+  return <RestaurantProfilePage initialTab={initialTab} />;
+}
+
+// Existing fixture-only OWN-04/05 previews; profile edits live in RestaurantProfilePage.
+function OwnerRestaurantProfile({
+  initialTab,
+}: {
+  initialTab: "hours" | "status";
+}) {
+  const router = useRouter();
+  const { base } = useWorkspace();
+  const { data, mutate, busy } = usePlatform();
+  const restaurant = data.restaurants.find(
+    (item) => item.id === data.ownerRestaurantId,
+  );
+  const [tab, setTab] = useState(initialTab);
+  const [hours, setHours] = useState(data.hours);
+  const [confirm, setConfirm] = useState(false);
+  const [leaveTab, setLeaveTab] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  if (!restaurant) return <EmptyState title="Bạn chưa đăng ký nhà hàng" />;
   return (
     <div className="stack">
       <PageHeading
-        title={existing ? "Nhà hàng của tôi" : "Đăng ký nhà hàng"}
-        description={
-          existing
-            ? `${restaurant.name} · Thông tin được cập nhật ngay sau khi lưu.`
-            : "Nhập thông tin liên hệ và vị trí để tạo hồ sơ nhà hàng."
-        }
+        title="Nhà hàng của tôi"
+        description={`${restaurant.name} · Bản minh họa`}
       />
       <Tabs
         value={tab}
-        onChange={setTab}
+        onChange={(value) => {
+          if (busy) return;
+          if (value === "hours" || value === "status") setTab(value);
+          else if (JSON.stringify(hours) !== JSON.stringify(data.hours))
+            setLeaveTab(value);
+          else router.push(`${base}/profile?tab=${value}`);
+        }}
         items={[
           { value: "information", label: "Thông tin" },
           { value: "photos", label: "Hình ảnh" },
@@ -165,176 +167,35 @@ export function OwnerRestaurant({
           { value: "status", label: "Trạng thái" },
         ]}
       />
-      {tab === "information" ? (
-        <Card title="Thông tin nhà hàng">
-          <form
-            className="stack"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!form.name.trim() || !form.address.trim()) {
-                setError("Nhập tên và địa chỉ nhà hàng.");
-                return;
-              }
-              await mutate((d) => {
-                const index = d.restaurants.findIndex((r) => r.id === form.id);
-                if (index >= 0) d.restaurants[index] = form;
-                else d.restaurants.unshift(form);
-                d.ownerRestaurantId = form.id;
-              });
-              setError("");
-            }}
-          >
-            <p className="helper">Các mục có dấu * là bắt buộc.</p>
-            <div className="grid-2">
-              <Field
-                label="Tên nhà hàng"
-                value={form.name}
-                onChange={(e) => update("name", e.target.value)}
-                required
-                maxLength={200}
-              />
-              <Field
-                label="Số điện thoại nhà hàng"
-                value={form.phone}
-                onChange={(e) => update("phone", e.target.value)}
-                required
-                maxLength={20}
-              />
-              <Field
-                label="Email nhà hàng"
-                type="email"
-                value={form.email}
-                onChange={(e) => update("email", e.target.value)}
-                maxLength={255}
-              />
-              <Field
-                label="Website"
-                type="url"
-                value={form.website}
-                onChange={(e) => update("website", e.target.value)}
-              />
-            </div>
-            <TextArea
-              label="Mô tả"
-              value={form.description}
-              onChange={(e) => update("description", e.target.value)}
-              maxLength={2000}
-            />
-            <Field
-              label="Địa chỉ"
-              value={form.address}
-              onChange={(e) => update("address", e.target.value)}
-              maxLength={255}
-              required
-            />
-            <div className="grid-2">
-              <SelectField
-                label="Tỉnh / thành phố *"
-                value={form.province}
-                onChange={(province) =>
-                  setForm((f) => ({
-                    ...f,
-                    province,
-                    district:
-                      province === "Hà Nội"
-                        ? "Hoàn Kiếm"
-                        : province === "Đà Nẵng"
-                          ? "Hải Châu"
-                          : "Quận 1",
-                  }))
-                }
-                options={["Hà Nội", "Đà Nẵng", "Hồ Chí Minh"].map((v) => ({
-                  value: v,
-                  label: v,
-                }))}
-              />
-              <SelectField
-                label="Quận / huyện *"
-                value={form.district}
-                onChange={(v) => update("district", v)}
-                options={(form.province === "Hà Nội"
-                  ? ["Hoàn Kiếm", "Hai Bà Trưng", "Ba Đình"]
-                  : form.province === "Đà Nẵng"
-                    ? ["Hải Châu", "Sơn Trà"]
-                    : ["Quận 1", "Quận 3"]
-                ).map((v) => ({
-                  value: v,
-                  label: v,
-                }))}
-              />
-            </div>
-            <div className="between">
-              <p className="helper">
-                Tọa độ: {form.latitude}, {form.longitude}
-              </p>
-              <Button variant="secondary" onClick={() => setMap(true)}>
-                Chọn vị trí trên bản đồ
-              </Button>
-            </div>
-            {error && <Alert>{error}</Alert>}
-            <div className="actions">
-              <Button type="submit" loading={busy}>
-                {existing ? "Lưu thông tin" : "Đăng ký nhà hàng"}
-              </Button>
-              <Button variant="secondary" onClick={() => setForm(restaurant)}>
-                Hủy
-              </Button>
-            </div>
-          </form>
-        </Card>
-      ) : tab === "photos" ? (
-        <Card title="Hình ảnh nhà hàng">
-          <Media src={restaurant.image} alt="Ảnh bìa hiện tại" />
-          <UploadField label="Ảnh bìa mới" files={cover} onChange={setCover} />
-          <UploadField
-            label="Thư viện ảnh nhà hàng"
-            max={10}
-            files={photos}
-            onChange={setPhotos}
-          />
-          <Button
-            loading={busy}
-            onClick={() =>
-              void mutate((d) => {
-                const target = d.restaurants.find(
-                  (r) => r.id === data.ownerRestaurantId,
-                );
-                if (!target) return;
-                if (cover[0]?.url) target.image = cover[0].url;
-                target.photos = photos.map((f) => f.url!).filter(Boolean);
-              })
-            }
-          >
-            Lưu hình ảnh
-          </Button>
-        </Card>
-      ) : tab === "hours" ? (
+      {tab === "hours" ? (
         <Card title="Giờ mở cửa">
           <form
             className="stack"
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (hours.some((h) => !h.closed && h.open >= h.close)) {
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (
+                hours.some((hour) => !hour.closed && hour.open >= hour.close)
+              ) {
                 setError("Giờ đóng phải sau giờ mở trong mỗi ngày minh họa.");
                 return;
               }
-              await mutate((d) => {
-                d.hours = hours;
+              await mutate((next) => {
+                next.hours = hours;
               });
               setError("");
             }}
           >
-            {hours.map((h, i) => (
-              <div className="grid-4" key={h.day}>
-                <strong>{h.day}</strong>
+            {hours.map((hour, index) => (
+              <div className="grid-4" key={hour.day}>
+                <strong>{hour.day}</strong>
                 <Choice
                   kind="switch"
-                  label={h.closed ? "Nghỉ" : "Mở cửa"}
-                  checked={!h.closed}
-                  onChange={(v) =>
+                  label={hour.closed ? "Nghỉ" : "Mở cửa"}
+                  checked={!hour.closed}
+                  onChange={(value) =>
                     setHours((current) =>
-                      current.map((row, index) =>
-                        index === i ? { ...row, closed: !v } : row,
+                      current.map((row, position) =>
+                        position === index ? { ...row, closed: !value } : row,
                       ),
                     )
                   }
@@ -342,12 +203,14 @@ export function OwnerRestaurant({
                 <Field
                   label="Giờ mở"
                   type="time"
-                  value={h.open}
-                  disabled={h.closed}
-                  onChange={(e) =>
+                  value={hour.open}
+                  disabled={hour.closed}
+                  onChange={(event) =>
                     setHours((current) =>
-                      current.map((row, index) =>
-                        index === i ? { ...row, open: e.target.value } : row,
+                      current.map((row, position) =>
+                        position === index
+                          ? { ...row, open: event.target.value }
+                          : row,
                       ),
                     )
                   }
@@ -355,12 +218,14 @@ export function OwnerRestaurant({
                 <Field
                   label="Giờ đóng"
                   type="time"
-                  value={h.close}
-                  disabled={h.closed}
-                  onChange={(e) =>
+                  value={hour.close}
+                  disabled={hour.closed}
+                  onChange={(event) =>
                     setHours((current) =>
-                      current.map((row, index) =>
-                        index === i ? { ...row, close: e.target.value } : row,
+                      current.map((row, position) =>
+                        position === index
+                          ? { ...row, close: event.target.value }
+                          : row,
                       ),
                     )
                   }
@@ -388,25 +253,31 @@ export function OwnerRestaurant({
           </Card>
         </>
       )}
-      <MapPicker
-        open={map}
-        onClose={() => setMap(false)}
-        onSelect={(l) =>
-          setForm((f) => ({
-            ...f,
-            latitude: l.latitude,
-            longitude: l.longitude,
-          }))
-        }
-      />
+      <ConfirmDialog
+        open={leaveTab !== null}
+        title="Bỏ thay đổi giờ mở cửa chưa lưu?"
+        label="Bỏ thay đổi và chuyển thẻ"
+        cancelLabel="Tiếp tục chỉnh sửa"
+        onClose={() => setLeaveTab(null)}
+        onConfirm={() => {
+          if (leaveTab) router.push(`${base}/profile?tab=${leaveTab}`);
+          setLeaveTab(null);
+        }}
+      >
+        <p>Giờ mở cửa bạn đang chỉnh sửa sẽ bị bỏ khi chuyển thẻ.</p>
+      </ConfirmDialog>
       <ConfirmDialog
         open={confirm}
         title="Cập nhật trạng thái hoạt động?"
         onClose={() => setConfirm(false)}
         onConfirm={async () => {
-          await mutate((d) => {
-            d.restaurants[0].operating =
-              d.restaurants[0].operating === "open" ? "closed" : "open";
+          await mutate((next) => {
+            const target = next.restaurants.find(
+              (item) => item.id === next.ownerRestaurantId,
+            );
+            if (target)
+              target.operating =
+                target.operating === "open" ? "closed" : "open";
           });
           setConfirm(false);
         }}
