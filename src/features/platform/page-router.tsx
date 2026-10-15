@@ -136,11 +136,37 @@ export function PageRouter({
   role: RoleCode | "GUEST";
   segments?: string[];
 }) {
-  const { status } = usePlatform(),
+  const { status, data, mode } = usePlatform(),
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
-  if (status !== "ready") return <UnavailablePage />;
+  if (status !== "ready") {
+    if (area === "dishes" && id) {
+      const fallback = data.dishes.find(
+        (d) => d.id === id && d.moderation === "visible",
+      );
+      if (fallback) return <DishDetail id={id} />;
+    }
+    if (area === "restaurants" && id) {
+      const fallback = data.restaurants.find(
+        (r) => r.id === id && r.moderation === "visible",
+      );
+      if (fallback) return <RestaurantDetail id={id} />;
+    }
+    if (area === "guides" && id) {
+      const fallback = data.blogs.find((b) => b.id === id);
+      if (fallback) return <BlogDetail id={id} />;
+    }
+    if (
+      area === "restaurants" ||
+      area === "dishes" ||
+      area === "guides" ||
+      !area
+    ) {
+      return <DiscoveryPage />;
+    }
+    return <UnavailablePage />;
+  }
   if (
     [
       "register",

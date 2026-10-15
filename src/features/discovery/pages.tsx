@@ -18,6 +18,7 @@ import {
   RestaurantCard,
   ReviewContent,
   RestaurantStatuses,
+  verificationLabels,
 } from "@/components/domain/cards";
 import { usePlatform } from "@/features/platform/provider";
 import { useWorkspace, PageHeading } from "@/components/layout/workspace";
@@ -497,16 +498,35 @@ export function DishDetail({ id }: { id: string }) {
     [reportOpen, setReportOpen] = useState(false),
     [reason, setReason] = useState("Sai thông tin"),
     [text, setText] = useState("");
-  const dish = data.dishes.find(
-    (d) => d.id === id && d.moderation === "visible",
-  );
-  if (!dish)
+  const visibleDishes = data.dishes.filter((d) => d.id === id),
+    dish =
+      visibleDishes.find((d) => d.moderation === "visible") || visibleDishes[0];
+  if (!dish) {
+    if (typeof window !== "undefined") {
+      console.warn(
+        "[DishDetail] Không tìm thấy dish với id:",
+        id,
+        "- tổng số dish trong data:",
+        data.dishes.length,
+        "- demo mode:",
+        useWorkspace().demo,
+      );
+    }
     return (
       <EmptyState
         title="Không tìm thấy món ăn"
-        action={<ActionLink href={`${base}/dishes`}>Về danh sách</ActionLink>}
+        description={`Món ăn với mã "${id}" không tồn tại trong dữ liệu hiện tại hoặc đã bị gỡ. Bạn có thể quay lại danh sách để chọn món khác.`}
+        action={
+          <div className="actions">
+            <ActionLink href={`${base}/dishes`}>Về danh sách món</ActionLink>
+            <ActionLink href={`${base}/restaurants`} secondary>
+              Khám phá quán
+            </ActionLink>
+          </div>
+        }
       />
     );
+  }
   const restaurant = data.restaurants.find(
     (r) => r.id === dish.restaurantId && r.moderation === "visible",
   );
@@ -518,40 +538,52 @@ export function DishDetail({ id }: { id: string }) {
         d.moderation === "visible",
     )
     .slice(0, 3);
+  const totalReviewsForDish = data.reviews.filter(
+    (r) => r.dishId === id && r.moderation === "visible",
+  );
+  const averageRating =
+    totalReviewsForDish.length > 0
+      ? totalReviewsForDish.reduce((s, r) => s + r.rating, 0) /
+        totalReviewsForDish.length
+      : 0;
   return (
     <div className="container workspace stack">
-      <PageHeading title={dish.name} description={dish.description} />
+      <PageHeading
+        title={dish.name}
+        description={dish.description}
+      />
+
+      {/* HERO: Ảnh + Thông tin tổng quan */}
       <Card className="soft">
         <div className="profile-card">
-          <Media src={dish.image} alt={dish.name} className="profile-media" />
+          <Media
+            src={dish.image}
+            alt={dish.name}
+            className="profile-media"
+          />
           <div className="stack-sm">
             <h2>{dish.name}</h2>
-            <p>{dish.description}</p>
+            <p className="helper">{dish.description}</p>
             <p className="price">{money(dish.price)}</p>
             <div className="tags">
               {dish.tags.map((tag) => (
                 <Badge key={tag}>{tag}</Badge>
               ))}
+              {dish.kind === "water" && <Badge>Món nước</Badge>}
+              {dish.kind === "dry" && <Badge>Món khô</Badge>}
+              {dish.kind === "other" && <Badge>Khác</Badge>}
               {dish.serving ? (
                 <Badge tone="success">Đang phục vụ</Badge>
               ) : (
                 <Badge tone="warning">Tạm hết món</Badge>
               )}
             </div>
-            {restaurant && (
-              <div className="restaurant-link">
-                <p className="helper">
-                  Quán: <strong>{restaurant.name}</strong> ·{" "}
-                  {restaurant.district}
-                </p>
-                <ActionLink href={`${base}/restaurants/${restaurant.id}`} secondary>
-                  Xem thông tin quán
-                </ActionLink>
-              </div>
-            )}
             <div className="actions">
               {user ? (
-                <Button variant="secondary" onClick={() => setReportOpen(true)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => setReportOpen(true)}
+                >
                   Báo cáo thông tin
                 </Button>
               ) : (
@@ -561,22 +593,215 @@ export function DishDetail({ id }: { id: string }) {
           </div>
         </div>
       </Card>
-      {relatedDishes.length > 0 && (
-        <section className="section-band white">
-          <div className="section-heading">
-            <h3>Món khác tại quán này</h3>
+
+      {/* ĐẶC ĐIỂM NỔI BẬT */}
+      <Card title="Đặc điểm nổi bật" className="soft">
+        <ul className="dish-features">
+          <li>
+            <strong>Loại món:</strong>{" "}
+            {dish.kind === "water"
+              ? "Món nước (súp, phở, bún nước...)"
+              : dish.kind === "dry"
+                ? "Món khô (cơm, bún trộn, gỏi...)"
+                : "Món khác (đồ uống, tráng miệng...)"}
+          </li>
+          <li>
+            <strong>Trạng thái phục vụ:</strong>{" "}
+            {dish.serving ? "Đang được phục vụ" : "Tạm hết món"}
+          </li>
+          <li>
+            <strong>Giá tham khảo:</strong> {money(dish.price)}
+          </li>
+          {dish.tags.length > 0 && (
+            <li>
+              <strong>Phù hợp:</strong> {dish.tags.join(", ")}
+            </li>
+          )}
+          {totalReviewsForDish.length > 0 && (
+            <li>
+              <strong>Mức độ yêu thích:</strong>{" "}
+              {averageRating.toFixed(1)} / 5 sao từ{" "}
+              {totalReviewsForDish.length} đánh giá
+            </li>
+          )}
+        </ul>
+      </Card>
+
+      {/* THÔNG TIN CHI TIẾT */}
+      <Card title="Thông tin chi tiết" className="soft">
+        <div className="dish-info-grid">
+          <div>
+            <p className="helper">Danh mục</p>
+            <p>
+              {dish.kind === "water"
+                ? "Món nước"
+                : dish.kind === "dry"
+                  ? "Món khô"
+                  : "Khác"}
+            </p>
           </div>
-          <div className="grid-3">
-            {relatedDishes.map((d) => (
-              <DishCard
-                key={d.id}
-                dish={d}
-                href={`${base}/restaurants/${d.restaurantId}`}
-                isDetailPage={true}
-              />
+          <div>
+            <p className="helper">Trạng thái</p>
+            <p>
+              {dish.serving ? (
+                <Badge tone="success">Đang phục vụ</Badge>
+              ) : (
+                <Badge tone="warning">Tạm hết món</Badge>
+              )}
+            </p>
+          </div>
+          <div>
+            <p className="helper">Giá</p>
+            <p>
+              <strong>{money(dish.price)}</strong>
+            </p>
+          </div>
+          <div>
+            <p className="helper">Đánh giá</p>
+            <p>
+              {totalReviewsForDish.length > 0
+                ? `${averageRating.toFixed(1)} / 5 (${totalReviewsForDish.length})`
+                : "Chưa có"}
+            </p>
+          </div>
+          <div>
+            <p className="helper">Mã món</p>
+            <p>
+              <code>{dish.id}</code>
+            </p>
+          </div>
+          <div>
+            <p className="helper">Cập nhật</p>
+            <p>Đang phục vụ hôm nay</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* NHÀ HÀNG PHỤC VỤ */}
+      {restaurant && (
+        <Card title="Nhà hàng phục vụ món này" className="soft">
+          <div className="profile-card">
+            <Media
+              src={restaurant.image}
+              alt={restaurant.name}
+              className="profile-media"
+            />
+            <div className="stack-sm">
+              <h3>{restaurant.name}</h3>
+              <div className="tags">
+                <Badge
+                  tone={
+                    restaurant.verification === "verified"
+                      ? "success"
+                      : "warning"
+                  }
+                >
+                  {verificationLabels[restaurant.verification]}
+                </Badge>
+                <Badge
+                  tone={restaurant.operating === "open" ? "success" : "warning"}
+                >
+                  {restaurant.operating === "open"
+                    ? "Đang mở cửa"
+                    : "Đang đóng cửa"}
+                </Badge>
+                <Badge>{restaurant.rating} / 5 sao</Badge>
+              </div>
+              <p className="helper">
+                📍 {restaurant.address}, {restaurant.district},{" "}
+                {restaurant.province}
+              </p>
+              <p className="helper">
+                📞 {restaurant.phone} · ✉️ {restaurant.email}
+              </p>
+              {restaurant.website && (
+                <p className="helper">🌐 {restaurant.website}</p>
+              )}
+              <p>{restaurant.description}</p>
+              <div className="actions">
+                <ActionLink
+                  href={`${base}/restaurants/${restaurant.id}`}
+                  secondary
+                >
+                  Xem chi tiết nhà hàng
+                </ActionLink>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* THÔNG TIN LIÊN QUAN: Món cùng quán + Món cùng loại */}
+      <Card title="Thông tin liên quan" className="soft">
+        <div className="stack">
+          {relatedDishes.length > 0 && (
+            <div className="stack-sm">
+              <h4>
+                Món khác tại {restaurant ? restaurant.name : "quán này"}
+              </h4>
+              <div className="grid-3">
+                {relatedDishes.map((d) => (
+                  <DishCard
+                    key={d.id}
+                    dish={d}
+                    href={`${base}/restaurants/${d.restaurantId}`}
+                    isDetailPage={true}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+          {(() => {
+            const sameKind = data.dishes
+              .filter(
+                (d) =>
+                  d.id !== id &&
+                  d.kind === dish.kind &&
+                  d.moderation === "visible",
+              )
+              .slice(0, 3);
+            if (sameKind.length === 0) return null;
+            return (
+              <div className="stack-sm">
+                <h4>
+                  Món cùng loại (
+                  {dish.kind === "water"
+                    ? "món nước"
+                    : dish.kind === "dry"
+                      ? "món khô"
+                      : "khác"}
+                  )
+                </h4>
+                <div className="grid-3">
+                  {sameKind.map((d) => (
+                    <DishCard
+                      key={d.id}
+                      dish={d}
+                      href={`${base}/restaurants/${d.restaurantId}`}
+                      isDetailPage={true}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      </Card>
+
+      {/* ĐÁNH GIÁ */}
+      {totalReviewsForDish.length > 0 && (
+        <Card
+          title={`Đánh giá từ thực khách (${totalReviewsForDish.length})`}
+          className="soft"
+        >
+          <div className="stack">
+            {totalReviewsForDish.slice(0, 3).map((r) => (
+              <div key={r.id} className="review-row">
+                <ReviewContent review={r} />
+              </div>
             ))}
           </div>
-        </section>
+        </Card>
       )}
       <Dialog
         open={reportOpen}
