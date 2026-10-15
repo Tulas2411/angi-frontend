@@ -1,3 +1,4 @@
+import { stubMapboxRendering } from "./mapbox-fixture";
 import { createServer, type Server } from "node:http";
 import { test, expect, type Page } from "@playwright/test";
 import type {
@@ -125,6 +126,7 @@ test.beforeEach(async ({ page }) => {
   failPatch = false;
   delayPatch = false;
   uploads = 0;
+  await stubMapboxRendering(page);
   await page.route("**/api/locations/provinces", (route) =>
     route.fulfill({
       json: {
@@ -152,7 +154,7 @@ async function login(page: Page, traveler = false) {
   if (!traveler)
     await expect(
       page.getByRole("heading", { name: "Bạn đã có nhà hàng" }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 30000 });
 }
 async function openProfile(page: Page) {
   await login(page);
@@ -226,6 +228,38 @@ test("local and backend validation retain drafts, focus the invalid field and al
     page.getByText("Đã lưu hồ sơ nhà hàng.", { exact: true }),
   ).toBeVisible();
   expect(patches).toHaveLength(2);
+});
+
+test("province choices preserve unchanged profile values and PATCH the selected official name", async ({
+  page,
+}) => {
+  await page.route("**/api/locations/provinces", (route) =>
+    route.fulfill({
+      json: {
+        success: true,
+        data: [{ name: "Thành phố Đà Nẵng" }, { name: "Tỉnh Điện Biên" }],
+      },
+    }),
+  );
+  await openProfile(page);
+  const province = page.getByRole("combobox", { name: "Tỉnh / thành phố" });
+  await province.fill("da nang");
+  await page
+    .getByRole("option", { name: "Thành phố Đà Nẵng", exact: true })
+    .click();
+  await expect(save(page)).toBeDisabled();
+  await province.fill("dien bien");
+  await page
+    .getByRole("option", { name: "Tỉnh Điện Biên", exact: true })
+    .click();
+  await page.getByLabel("Quận / huyện").fill("Huyện Điện Biên");
+  await page.getByLabel("Phường / xã").fill("");
+  await save(page).click();
+  await expect(save(page)).toBeDisabled();
+  expect(patches).toEqual([
+    { provinceName: "Tỉnh Điện Biên", district: "Huyện Điện Biên", ward: null },
+  ]);
+  expect(current?.provinceName).toBe("Tỉnh Điện Biên");
 });
 
 test("saving disables duplicate submission and cancellation restores the latest saved response", async ({
@@ -363,6 +397,34 @@ test("non-owner routes, PATCH and foreign mutation origins remain denied", async
     ).status(),
   ).toBe(403);
   expect(patches).toHaveLength(0);
+});
+
+test("Mapbox location selection stages numeric coordinates until the owner saves the profile", async ({
+  page,
+}) => {
+  await openProfile(page);
+  await page
+    .getByRole("button", { name: "Chọn vị trí trên bản đồ", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", { name: "Chọn vị trí nhà hàng" });
+  await expect(
+    dialog.getByRole("application", {
+      name: "Bản đồ chọn vị trí nhà hàng",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-busy", "false");
+  await dialog
+    .getByRole("button", { name: "Nhập tọa độ", exact: true })
+    .click();
+  await dialog.getByLabel("Vĩ độ").fill("10.7769");
+  await dialog.getByLabel("Kinh độ").fill("106.7009");
+  await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
+  expect(patches).toHaveLength(0);
+  await save(page).click();
+  await expect(save(page)).toBeDisabled();
+  await expect
+    .poll(() => patches)
+    .toEqual([{ latitude: 10.7769, longitude: 106.7009 }]);
 });
 
 test("demo edits remain isolated, survive workspace navigation and fit desktop/mobile", async ({

@@ -11,9 +11,9 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { MapPicker } from "@/components/domain/map-picker";
+import { ProvinceField } from "@/components/domain/province-field";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
-import { api } from "@/shared/api/client";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { createMockRestaurantRegistrationService } from "@/mocks/restaurant-registration";
 import {
@@ -60,16 +60,6 @@ export function RestaurantRegistrationPage() {
   const [conflict, setConflict] = useState(false);
   const [loadStatus, setLoadStatus] = useState(demo ? "ready" : "loading");
   const [attempt, setAttempt] = useState(0);
-  const [provinces, setProvinces] = useState<{ name: string }[]>(
-    demo
-      ? [
-          { name: "Thành phố Hà Nội" },
-          { name: "Thành phố Đà Nẵng" },
-          { name: "Thành phố Hồ Chí Minh" },
-        ]
-      : [],
-  );
-  const [provinceError, setProvinceError] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const submitting = useRef(false);
   const active = useRef(true);
@@ -106,24 +96,6 @@ export function RestaurantRegistrationPage() {
       ignore = true;
     };
   }, [demo, attempt]);
-  useEffect(() => {
-    if (demo) return;
-    let ignore = false;
-    api
-      .getPublic<{ name: string }[]>("locations/provinces")
-      .then((items) => {
-        if (!ignore) {
-          setProvinces(items);
-          setProvinceError(false);
-        }
-      })
-      .catch(() => {
-        if (!ignore) setProvinceError(true);
-      });
-    return () => {
-      ignore = true;
-    };
-  }, [demo]);
   const demoExisting = demo
     ? data.restaurants.find((item) => item.id === data.ownerRestaurantId)
     : undefined;
@@ -387,30 +359,15 @@ export function RestaurantRegistrationPage() {
               onChange={(event) => update("addressLine", event.target.value)}
             />
             <div className="grid-3">
-              <div>
-                <Field
-                  label="Tỉnh / thành phố"
-                  name="provinceName"
-                  value={values.provinceName}
-                  required
-                  maxLength={100}
-                  list="restaurant-provinces"
-                  error={errors.provinceName}
-                  helper={
-                    provinceError
-                      ? "Chưa tải được gợi ý. Nhập tên đầy đủ, ví dụ Thành phố Hà Nội."
-                      : "Nhập tên đầy đủ hoặc chọn từ gợi ý."
-                  }
-                  onChange={(event) =>
-                    update("provinceName", event.target.value)
-                  }
-                />
-                <datalist id="restaurant-provinces">
-                  {provinces.map((item) => (
-                    <option value={item.name} key={item.name} />
-                  ))}
-                </datalist>
-              </div>
+              <ProvinceField
+                label="Tỉnh / thành phố"
+                name="provinceName"
+                value={values.provinceName}
+                required
+                maxLength={100}
+                error={errors.provinceName}
+                onChange={(value) => update("provinceName", value)}
+              />
               <Field
                 label="Quận / huyện"
                 name="district"
@@ -530,6 +487,7 @@ export function RestaurantRegistrationPage() {
         (demo ? (
           <MapPicker
             open
+            initialLocation={location ?? undefined}
             onClose={closeMap}
             onSelect={(point) => {
               setLocation(point);

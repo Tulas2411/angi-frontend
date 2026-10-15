@@ -11,6 +11,7 @@ import {
 } from "react";
 import { Button, Input } from "@/shared/ui";
 import { pageSlice, validateUpload } from "@/features/platform/rules";
+import { searchText } from "@/shared/text/search";
 export function Icon({
   name,
 }: {
@@ -544,62 +545,105 @@ export function Combobox({
   value,
   onChange,
   options,
-}: {
+  helper,
+  error,
+  id: suppliedId,
+  onKeyDown,
+  onClick,
+  onFocus,
+  onBlur,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
+  helper?: string;
+  error?: string;
 }) {
   const [open, setOpen] = useState(false),
     [active, setActive] = useState(0),
-    id = useId();
+    generatedId = useId();
+  const id = suppliedId ?? generatedId;
   const matches = options.filter((o) =>
-    o.toLocaleLowerCase("vi").includes(value.toLocaleLowerCase("vi")),
+    searchText(o).includes(searchText(value)),
   );
+  const expanded = open && matches.length > 0;
+  const activeOption = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (expanded) activeOption.current?.scrollIntoView({ block: "nearest" });
+  }, [active, expanded, value, options]);
   return (
     <div className="field combobox">
-      <label htmlFor={id}>{label}</label>
+      <label htmlFor={id}>
+        {label}
+        {props.required && " *"}
+      </label>
       <Input
+        {...props}
         id={id}
         role="combobox"
         aria-autocomplete="list"
-        aria-expanded={open}
-        aria-controls={`${id}-list`}
+        aria-expanded={expanded}
+        aria-controls={expanded ? `${id}-list` : undefined}
         aria-activedescendant={
-          open && matches[active] ? `${id}-${active}` : undefined
+          expanded && matches[active] ? `${id}-${active}` : undefined
         }
+        aria-invalid={!!error}
+        aria-describedby={helper || error ? `${id}-help` : undefined}
         value={value}
-        placeholder="VD: Hà Nội, Đà Nẵng, Đà Lạt"
+        onClick={(event) => {
+          setOpen(true);
+          onClick?.(event);
+        }}
         onChange={(e) => {
           onChange(e.target.value);
           setOpen(true);
           setActive(0);
         }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        onFocus={(event) => {
+          setOpen(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setOpen(false);
+          onBlur?.(event);
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
+          if (e.key === "Escape" && expanded) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+          }
           if (e.key === "ArrowDown") {
             e.preventDefault();
             setOpen(true);
-            setActive((i) => Math.min(i + 1, matches.length - 1));
+            setActive((i) =>
+              !open ? 0 : Math.max(0, Math.min(i + 1, matches.length - 1)),
+            );
           }
           if (e.key === "ArrowUp") {
             e.preventDefault();
-            setActive((i) => Math.max(0, i - 1));
+            setOpen(true);
+            setActive((i) =>
+              !open ? Math.max(0, matches.length - 1) : Math.max(0, i - 1),
+            );
           }
           if (e.key === "Enter" && open && matches[active]) {
             e.preventDefault();
+            e.stopPropagation();
             onChange(matches[active]);
             setOpen(false);
           }
+          if (!e.defaultPrevented) onKeyDown?.(e);
         }}
       />
-      {open && matches.length > 0 && (
+      {expanded && (
         <ul role="listbox" id={`${id}-list`} className="combobox-options">
           {matches.map((o, i) => (
             <li
               key={o}
+              ref={i === active ? activeOption : undefined}
               role="option"
               aria-selected={i === active}
               id={`${id}-${i}`}
@@ -618,6 +662,11 @@ export function Combobox({
             </li>
           ))}
         </ul>
+      )}
+      {(helper || error) && (
+        <p id={`${id}-help`} className={error ? "field-error" : "helper"}>
+          {error || helper}
+        </p>
       )}
     </div>
   );

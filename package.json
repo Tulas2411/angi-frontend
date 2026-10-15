@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:smoke": "node --env-file=.env.local scripts/smoke-test.mjs",
     "test:browser": "playwright test",
+    "test:live": "node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts",
     "test:visual": "node scripts/visual-check.mjs",
     "test:states": "node scripts/state-visual-check.mjs",
     "format:check": "prettier --check src tests scripts docs playwright.config.ts"
@@ -18,6 +19,7 @@
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
     "iron-session": "^9.0.1",
+    "mapbox-gl": "^3.33.0",
     "next": "16.4.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",

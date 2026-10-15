@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/primitives";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
-import { api } from "@/shared/api/client";
+import { ProvinceField } from "@/components/domain/province-field";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { MapPicker } from "@/components/domain/map-picker";
 import {
@@ -194,7 +194,6 @@ function RestaurantProfileEditor({
   const [success, setSuccess] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
-  const [provinces, setProvinces] = useState<{ name: string }[]>([]);
   const formRef = useRef<HTMLFormElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const active = useRef(true);
@@ -216,19 +215,6 @@ function RestaurantProfileEditor({
       active.current = false;
     };
   }, []);
-  useEffect(() => {
-    let ignore = false;
-    if (!demo)
-      api
-        .getPublic<{ name: string }[]>("locations/provinces")
-        .then((items) => {
-          if (!ignore) setProvinces(items);
-        })
-        .catch(() => {});
-    return () => {
-      ignore = true;
-    };
-  }, [demo]);
   useEffect(() => {
     if (!focusRequest || tab !== focusRequest.tab) return;
     const control = formRef.current?.elements.namedItem(focusRequest.field);
@@ -428,25 +414,14 @@ function RestaurantProfileEditor({
                   }
                 />
                 <div className="grid-3">
-                  <div>
-                    <Field
-                      label="Tỉnh / thành phố"
-                      name="provinceName"
-                      list="profile-provinces"
-                      maxLength={100}
-                      value={values.provinceName}
-                      error={errors.provinceName}
-                      helper="Nhập tên đầy đủ hoặc chọn từ gợi ý."
-                      onChange={(event) =>
-                        change("provinceName", event.target.value)
-                      }
-                    />
-                    <datalist id="profile-provinces">
-                      {provinces.map((item) => (
-                        <option key={item.name} value={item.name} />
-                      ))}
-                    </datalist>
-                  </div>
+                  <ProvinceField
+                    label="Tỉnh / thành phố"
+                    name="provinceName"
+                    maxLength={100}
+                    value={values.provinceName}
+                    error={errors.provinceName}
+                    onChange={(value) => change("provinceName", value)}
+                  />
                   <Field
                     label="Quận / huyện"
                     name="district"

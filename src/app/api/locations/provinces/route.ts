@@ -1,5 +1,6 @@
 import { ApiError } from "@/shared/api/error";
 import { fail, ok } from "@/shared/api/http";
+import { readProvinceCatalog } from "@/shared/locations/provinces";
 
 /** V1 catalog matches the current contract's required district and legacy address model. */
 export async function GET() {
@@ -10,17 +11,7 @@ export async function GET() {
     });
     if (!response.ok) throw new Error();
     const payload: unknown = await response.json();
-    if (!Array.isArray(payload)) throw new Error();
-    const provinces = payload.flatMap((item: unknown) =>
-      item &&
-      typeof item === "object" &&
-      "name" in item &&
-      typeof item.name === "string"
-        ? [{ name: item.name }]
-        : [],
-    );
-    if (!provinces.length) throw new Error();
-    return ok(provinces);
+    return ok(readProvinceCatalog(payload));
   } catch {
     return fail(
       new ApiError(

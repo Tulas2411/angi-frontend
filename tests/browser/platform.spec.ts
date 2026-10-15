@@ -64,6 +64,18 @@ test("public routes cannot create an authenticated session; real workspaces requ
 test("new trip validates fields, saves a budget and selects a map location", async ({
   page,
 }) => {
+  await page.route("https://api.mapbox.com/search/geocode/**", (route) =>
+    route.fulfill({
+      json: {
+        features: [
+          {
+            geometry: { coordinates: [105.8532, 21.0345] },
+            properties: { full_address: "Phố cổ Hà Nội" },
+          },
+        ],
+      },
+    }),
+  );
   await page.goto("/demo/traveler/roadmaps/new");
   await page.getByLabel("Ăn ở đâu?").fill("Hà Nội");
   await page.getByLabel("Ngày bắt đầu").fill("2026-10-09");
@@ -73,6 +85,7 @@ test("new trip validates fields, saves a budget and selects a map location", asy
   const map = page.getByRole("dialog");
   await expect(map).toBeVisible();
   await page.getByLabel("Tìm địa chỉ hoặc địa điểm").fill("Phố");
+  await map.getByRole("button", { name: "Tìm kiếm", exact: true }).click();
   await map.getByRole("button", { name: "Phố cổ Hà Nội", exact: true }).click();
   await map.getByRole("button", { name: /Lưu|Chọn vị trí/ }).click();
   await expect(map).not.toBeVisible();
