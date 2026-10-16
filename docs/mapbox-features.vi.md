@@ -1,6 +1,6 @@
 # Bản đồ, tìm quán và chỉ đường trong ANGI
 
-Ngày thay đổi: 16/10/2026. Đây là hướng dẫn sử dụng và các bước để chủ dự án tự kiểm thử. Bản thay đổi này **chưa chạy test, lint, typecheck, build hoặc kiểm thử trình duyệt** theo yêu cầu. Không đọc lại token, mở bản đồ, gọi thử API Mapbox hay thay đổi file env trong quá trình thực hiện.
+Ngày thay đổi: 16/10/2026. Đây là hướng dẫn sử dụng và các bước để chủ dự án tự kiểm thử. Giao diện bản đồ chưa được kiểm thử trình duyệt hoặc gọi thử Mapbox theo yêu cầu. Lần sửa CI sau đó đã chạy qua TypeScript và production build trong bản sao không có token Mapbox/file env riêng tư; xem [báo cáo kiểm tra](verification.md). Không đọc lại token, mở bản đồ, gọi thử API Mapbox hay thay đổi file env trong quá trình thực hiện.
 
 ## Mở ở đâu
 

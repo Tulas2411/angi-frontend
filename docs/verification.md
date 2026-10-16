@@ -1,5 +1,16 @@
 # Verification results
 
+## 2026-10-16: Fix CI GeoJSONFeature type errors
+
+CI failed with TS2339 for `properties`/`geometry` in InteractiveLocationMap. Mapbox GL JS 3.33.0 declares `GeoJSONFeature extends GeoJSON.Feature`, but the application did not install the GeoJSON namespace declarations. Added `@types/geojson` ^7946.0.16 as an explicit dev dependency using npm and updated package-lock.json. No casts, type suppression, TypeScript configuration changes or runtime map changes were needed.
+
+- Full-project `npm run typecheck`: **passed** with TypeScript 5.9.3.
+- Production Next.js build: **passed** in `.cache/owner-test-LVw3TX`, including compilation, TypeScript and all 18 static pages. The first sandboxed attempt compiled the bundle but hit Windows `spawn EPERM`; rerunning the build in that same isolated snapshot with process-spawn permission succeeded.
+- Local runtime: Node.js 22.12.0 / npm 10.9.0 on Windows; CI remains configured for Node.js 24 on Linux. npm emitted pre-existing engine-range warnings for iron-session/eslint-visitor-keys; installation and checks completed. The isolated build's missing Google client ID warnings were expected because private env files were not copied.
+- No browser, unit/API test, token probe, env-file read/sync or live Mapbox call. The build used an empty public Mapbox token, test-only session configuration and an unusable local backend address. The running preview and its build output were untouched. This validates compilation, not live POI/directions behavior; GitHub CI itself was not triggered.
+
+After the checks, reopened the latest known workbook, `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (2026-10-15 15:48:43, SHA-256 `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`), including `Backend API` rows 58–60, coordinate DTO/sample fields and validation/auth error entries. This is a type-dependency fix with no ANGI API mapping change; owner request/response handling and the existing district discrepancy are unaffected.
+
 ## 2026-10-16: Remove province suggestions from map dialog search
 
 Replaced ProvinceField with a labeled native search input in the shared MapLocationDialog and adjusted its flex styling. Map dialogs no longer mount the province autocomplete or load its catalog for this search control. Explicit search/Enter, result selection and the Owner POI-only setting are retained. Province/ward fields in address forms remain unchanged.
