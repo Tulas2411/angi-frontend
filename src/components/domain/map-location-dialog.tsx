@@ -1,15 +1,21 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { Alert, Button } from "@/shared/ui";
+import { Alert, Button, Input } from "@/shared/ui";
 import { Dialog, Field, Icon } from "@/components/ui/primitives";
 import {
   MapControls,
   MapSelectionOverlay,
 } from "@/components/domain/map-overlays";
-import { searchMapLocations } from "@/shared/maps/mapbox";
-import type { MapLocation } from "@/shared/maps/mapbox";
+import {
+  filterMapPlaces,
+  isMapLocation,
+  mapCategories,
+  searchMapLocations,
+  searchMapPlaces,
+} from "@/shared/maps/mapbox";
+import type { MapLocation, MapRoute, MapStyle } from "@/shared/maps/mapbox";
 import { InteractiveLocationMap } from "./interactive-location-map";
-import { ProvinceField } from "./province-field";
+import { MapDirectionsPanel } from "./map-directions-panel";
 
 export function MapLocationDialog({
   location,
@@ -18,6 +24,9 @@ export function MapLocationDialog({
   title = "Chọn địa điểm trên bản đồ",
   mapLabel = "Bản đồ chọn địa điểm",
   saveLabel = "Lưu",
+  mode = "pick",
+  locations = [],
+  poiSearchOnly = false,
 }: {
   title?: string;
   mapLabel?: string;
@@ -25,22 +34,42 @@ export function MapLocationDialog({
   location: MapLocation | null;
   onSelect: (location: MapLocation) => void;
   onClose: () => void;
+  mode?: "pick" | "explore";
+  locations?: MapLocation[];
+  poiSearchOnly?: boolean;
 }) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const hasMap = !!token?.startsWith("pk.");
+  const initialLocation = location && isMapLocation(location) ? location : null;
   const [center, setCenter] = useState(
-    location ?? { name: "Hà Nội", latitude: 21.0285, longitude: 105.8542 },
+    initialLocation ?? {
+      name: "Hà Nội",
+      latitude: 21.0285,
+      longitude: 105.8542,
+    },
   );
   const [selectedName, setSelectedName] = useState(
-    location?.name ?? "Vị trí đã chọn",
+    initialLocation?.name ?? "Vị trí đã chọn",
   );
-  const [latitude, setLatitude] = useState(location?.latitude.toString() ?? "");
+  const [metadata, setMetadata] = useState<MapLocation | null>(initialLocation);
+  const [latitude, setLatitude] = useState(
+    initialLocation?.latitude.toString() ?? "",
+  );
   const [longitude, setLongitude] = useState(
-    location?.longitude.toString() ?? "",
+    initialLocation?.longitude.toString() ?? "",
   );
   const [zoom, setZoom] = useState(14);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MapLocation[]>([]);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [searchMode, setSearchMode] = useState<"map" | "poi" | "address">(
+    poiSearchOnly ? "poi" : "map",
+  );
+  const [style, setStyle] = useState<MapStyle>("streets");
+  const [directionDestination, setDirectionDestination] =
+    useState<MapLocation | null>(null);
+  const [routes, setRoutes] = useState<MapRoute[]>([]);
+  const [activeRoute, setActiveRoute] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
@@ -49,11 +78,14 @@ export function MapLocationDialog({
   const manualToggle = useRef<HTMLSpanElement>(null);
   const manualId = useId();
   const searchController = useRef<AbortController | null>(null);
+  const placesReader = useRef<(() => MapLocation[]) | null>(null);
   const active = useRef(true);
+  const locateRevision = useRef(0);
   useEffect(() => {
     active.current = true;
     return () => {
       active.current = false;
+      locateRevision.current += 1;
       searchController.current?.abort();
     };
   }, []);
@@ -66,20 +98,25 @@ export function MapLocationDialog({
     Math.abs(Number(longitude)) <= 180;
   const selected = valid
     ? {
+        ...metadata,
         name: selectedName,
         latitude: Number(latitude),
         longitude: Number(longitude),
       }
     : null;
   function select(point: MapLocation, recenter = true) {
+    resetSearch();
     if (recenter) setCenter(point);
     setSelectedName(point.name);
+    setMetadata(point);
     setLatitude(point.latitude.toFixed(6));
     setLongitude(point.longitude.toFixed(6));
     setSelectionRevision((previous) => previous + 1);
     setError("");
   }
   function updateCoordinate(axis: "latitude" | "longitude", value: string) {
+    resetSearch();
+    setMetadata(null);
     if (axis === "latitude") setLatitude(value);
     else setLongitude(value);
     const nextLatitude = axis === "latitude" ? value : latitude;
@@ -102,23 +139,75 @@ export function MapLocationDialog({
       setError("");
     }
   }
-  async function search() {
-    if (!query.trim() || !token || busy) return;
+  function resetSearch() {
+    locateRevision.current += 1;
     searchController.current?.abort();
+    searchController.current = null;
+    setBusy(false);
+    setResultsOpen(false);
+    setError("");
+  }
+  async function search(category?: string) {
+    if (
+      (!category && !query.trim()) ||
+      !token ||
+      busy ||
+      searchController.current
+    )
+      return;
+    const activeSearchMode = poiSearchOnly ? "poi" : searchMode;
+    if (
+      activeSearchMode === "map" ||
+      (category && activeSearchMode === "address")
+    ) {
+      const found = filterMapPlaces(
+        [...locations, ...(placesReader.current?.() ?? [])],
+        query,
+        category,
+      );
+      setResults(found);
+      setResultsOpen(true);
+      setError(
+        found.length
+          ? ""
+          : "Không thấy địa điểm trong vùng bản đồ đã tải. Thử di chuyển hoặc phóng to bản đồ rồi tìm lại, chọn POI mở rộng hoặc tìm địa chỉ.",
+      );
+      return;
+    }
     const controller = new AbortController();
     searchController.current = controller;
     setBusy(true);
     setError("");
+    setResults([]);
+    setResultsOpen(false);
     try {
-      const found = await searchMapLocations(
-        query.trim(),
-        token,
-        AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
-      );
-      if (active.current) {
+      const signal = AbortSignal.any([
+        controller.signal,
+        AbortSignal.timeout(10000),
+      ]);
+      const found =
+        activeSearchMode === "address" && !category
+          ? await searchMapLocations(query.trim(), token, signal)
+          : await searchMapPlaces(
+              query.trim(),
+              token,
+              center,
+              signal,
+              category,
+            );
+      if (
+        active.current &&
+        searchController.current === controller &&
+        !controller.signal.aborted
+      ) {
         setResults(found);
+        setResultsOpen(true);
         if (!found.length)
-          setError("Không có địa chỉ phù hợp. Thử từ khóa khác.");
+          setError(
+            poiSearchOnly
+              ? "Không tìm thấy nhà hàng phù hợp. Thử tên khác hoặc chấm vị trí trên bản đồ."
+              : "Không tìm thấy địa điểm phù hợp. Thử từ khóa khác, tìm địa chỉ hoặc chấm vị trí trên bản đồ.",
+          );
       }
     } catch (caught) {
       if (active.current && !controller.signal.aborted)
@@ -126,18 +215,23 @@ export function MapLocationDialog({
           caught instanceof Error ? caught.message : "Không tìm được địa chỉ.",
         );
     } finally {
-      if (active.current) setBusy(false);
+      if (active.current && searchController.current === controller) {
+        setBusy(false);
+        searchController.current = null;
+      }
     }
   }
   function locate() {
+    if (busy) return;
     if (!navigator.geolocation) {
       setError("Trình duyệt không hỗ trợ vị trí. Nhập tọa độ địa điểm.");
       return;
     }
     setBusy(true);
+    const revision = ++locateRevision.current;
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        if (!active.current) return;
+        if (!active.current || revision !== locateRevision.current) return;
         select({
           name: "Vị trí hiện tại",
           latitude: position.coords.latitude,
@@ -147,7 +241,7 @@ export function MapLocationDialog({
         setBusy(false);
       },
       () => {
-        if (active.current) {
+        if (active.current && revision === locateRevision.current) {
           setError(
             "Không lấy được vị trí. Chấm trên bản đồ hoặc nhập tọa độ địa điểm.",
           );
@@ -158,9 +252,36 @@ export function MapLocationDialog({
       { timeout: 10000, maximumAge: 0 },
     );
   }
+  const ownPlaces = locations.filter(isMapLocation);
+  const route = routes[activeRoute];
+  const places = [
+    ...ownPlaces,
+    ...results,
+    ...(route
+      ? [
+          { ...route.origin, name: `Xuất phát: ${route.origin.name}` },
+          route.destination,
+        ]
+      : []),
+  ];
+  function directions() {
+    if (!selected || !hasMap) return;
+    resetSearch();
+    setManualOpen(false);
+    setRoutes([]);
+    setActiveRoute(0);
+    setDirectionDestination(selected);
+  }
+  function closeDirections() {
+    setDirectionDestination(null);
+    setRoutes([]);
+    setActiveRoute(0);
+  }
   return (
     <Dialog open title={title} onClose={onClose} map>
-      <div className="map-surface mapbox-location-surface">
+      <div
+        className={`map-surface mapbox-location-surface${poiSearchOnly ? " map-poi-only-surface" : ""}`}
+      >
         {hasMap && !mapFailed ? (
           <InteractiveLocationMap
             token={token ?? ""}
@@ -168,14 +289,27 @@ export function MapLocationDialog({
             camera={{ ...center, zoom }}
             selected={selected}
             selectionRevision={selectionRevision}
-            summaryHidden={manualOpen}
+            summaryHidden={manualOpen || resultsOpen || !!directionDestination}
+            style={style}
+            places={places}
+            routes={routes}
+            activeRoute={activeRoute}
+            onDirections={directions}
+            onPlacesReader={(reader) => {
+              placesReader.current = reader;
+            }}
             onCameraChange={(camera) => {
               setCenter((previous) => ({ ...previous, ...camera }));
               setZoom(camera.zoom);
             }}
-            onSelect={(point) => select(point, false)}
+            onSelect={(point) => {
+              resetSearch();
+              select(point, false);
+              setManualOpen(false);
+            }}
             onError={() => {
               setMapFailed(true);
+              closeDirections();
               setManualOpen(true);
             }}
           />
@@ -184,61 +318,159 @@ export function MapLocationDialog({
             <Icon name="LocateFixed" />
           </div>
         )}
-        <div
-          className="map-search"
-          role="search"
-          aria-label="Tìm vị trí địa điểm"
-        >
-          <div className="map-search-bar">
-            <ProvinceField
-              label="Tìm địa chỉ hoặc địa điểm"
-              placeholder="Tìm địa chỉ hoặc địa điểm"
-              value={query}
-              maxLength={256}
-              disabled={!hasMap}
-              autoComplete="off"
-              showCatalogStatus={false}
-              onChange={(value) => {
-                setQuery(value);
-                setResults([]);
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  void search();
-                }
-              }}
-            />
-            <Button
-              variant="icon"
-              aria-label="Tìm kiếm"
-              disabled={!hasMap || !query.trim() || busy}
-              onClick={() => void search()}
-            >
-              <Icon name="search" />
-            </Button>
-          </div>
-          {!!results.length && (
-            <ul className="map-search-results">
-              {results.map((point, index) => (
-                <li key={index}>
+        {!directionDestination && (
+          <div
+            className="map-search"
+            role="search"
+            aria-label="Tìm vị trí địa điểm"
+          >
+            <div className="map-search-bar">
+              <Input
+                type="search"
+                aria-label="Tìm địa chỉ hoặc địa điểm"
+                placeholder="Tìm địa chỉ hoặc địa điểm"
+                value={query}
+                maxLength={256}
+                disabled={!hasMap}
+                autoComplete="off"
+                onChange={(event) => {
+                  resetSearch();
+                  setQuery(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void search();
+                  }
+                }}
+              />
+              <Button
+                variant="icon"
+                aria-label="Tìm kiếm"
+                disabled={!hasMap || !query.trim() || busy}
+                onClick={() => void search()}
+              >
+                <Icon name="search" />
+              </Button>
+            </div>
+            {!poiSearchOnly && (
+              <>
+                <div
+                  className="map-choice-row map-search-modes"
+                  role="group"
+                  aria-label="Loại tìm kiếm"
+                >
                   <Button
                     variant="tertiary"
+                    aria-pressed={searchMode === "map"}
                     onClick={() => {
-                      select(point);
-                      setQuery(point.name);
-                      setResults([]);
-                      setManualOpen(false);
+                      resetSearch();
+                      setSearchMode("map");
                     }}
                   >
-                    {point.name}
+                    Vùng bản đồ
                   </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="map-notices">
+                  <Button
+                    variant="tertiary"
+                    aria-pressed={searchMode === "poi"}
+                    onClick={() => {
+                      resetSearch();
+                      setSearchMode("poi");
+                    }}
+                  >
+                    POI mở rộng
+                  </Button>
+                  <Button
+                    variant="tertiary"
+                    aria-pressed={searchMode === "address"}
+                    onClick={() => {
+                      resetSearch();
+                      setSearchMode("address");
+                    }}
+                  >
+                    Địa chỉ
+                  </Button>
+                </div>
+                <div
+                  className="map-category-row"
+                  role="group"
+                  aria-label="Tìm địa điểm quanh vùng bản đồ"
+                >
+                  {mapCategories.map((category) => (
+                    <Button
+                      key={category.id}
+                      variant="secondary"
+                      disabled={!hasMap || busy}
+                      onClick={() => {
+                        void search(category.id);
+                      }}
+                    >
+                      {category.label}
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
+            {resultsOpen && !!results.length && (
+              <ul className="map-search-results">
+                {results.map((point, index) => (
+                  <li key={index}>
+                    <Button
+                      variant="tertiary"
+                      onClick={() => {
+                        select(point);
+                        setQuery(point.name);
+                        setResultsOpen(false);
+                        setManualOpen(false);
+                      }}
+                    >
+                      <span>
+                        <strong>{point.name}</strong>
+                        <small>{point.fullAddress ?? point.address}</small>
+                      </span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!resultsOpen && !!results.length && (
+              <Button variant="tertiary" onClick={() => setResultsOpen(true)}>
+                Quay lại kết quả ({results.length})
+              </Button>
+            )}
+            {resultsOpen && !!results.length && (
+              <Button variant="tertiary" onClick={() => setResultsOpen(false)}>
+                Ẩn kết quả
+              </Button>
+            )}
+            {mode === "explore" && !!ownPlaces.length && (
+              <details className="map-own-places">
+                <summary>Nhà hàng ANGI ({ownPlaces.length})</summary>
+                <ul className="map-search-results">
+                  {ownPlaces.map((point, index) => (
+                    <li key={point.id ?? index}>
+                      <Button
+                        variant="tertiary"
+                        onClick={() => {
+                          select(point);
+                          setResultsOpen(false);
+                        }}
+                      >
+                        <span>
+                          <strong>{point.name}</strong>
+                          <small>{point.fullAddress ?? point.address}</small>
+                        </span>
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+          </div>
+        )}
+        <div
+          className={`map-notices${directionDestination ? " map-notices-directions" : ""}`}
+        >
           {(!hasMap || mapFailed) && (
             <Alert tone="info">
               {mapFailed
@@ -253,23 +485,62 @@ export function MapLocationDialog({
           )}
           {error && <Alert>{error}</Alert>}
         </div>
+        {directionDestination && (
+          <MapDirectionsPanel
+            token={token ?? ""}
+            destination={directionDestination}
+            near={center}
+            routes={routes}
+            activeRoute={activeRoute}
+            onRoutes={(next, index) => {
+              setRoutes(next);
+              setActiveRoute(index);
+            }}
+            readPlaces={() => [
+              ...ownPlaces,
+              ...results,
+              ...(placesReader.current?.() ?? []),
+            ]}
+            onClose={closeDirections}
+          />
+        )}
+        <div className="map-style-control" role="group" aria-label="Lớp bản đồ">
+          <Button
+            variant="secondary"
+            disabled={!hasMap || mapFailed}
+            aria-pressed={style === "streets"}
+            onClick={() => setStyle("streets")}
+          >
+            Đường phố
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={!hasMap || mapFailed}
+            aria-pressed={style === "satellite"}
+            onClick={() => setStyle("satellite")}
+          >
+            Vệ tinh
+          </Button>
+        </div>
         {selected && (!hasMap || mapFailed) && (
           <MapSelectionOverlay
             key={selectionRevision}
             location={selected}
-            summaryHidden={manualOpen}
+            summaryHidden={manualOpen || !!directionDestination}
           />
         )}
-        <span ref={manualToggle} className="map-manual-toggle">
-          <Button
-            variant="secondary"
-            aria-expanded={manualOpen}
-            aria-controls={manualId}
-            onClick={() => setManualOpen((previous) => !previous)}
-          >
-            Nhập tọa độ
-          </Button>
-        </span>
+        {!directionDestination && (
+          <span ref={manualToggle} className="map-manual-toggle">
+            <Button
+              variant="secondary"
+              aria-expanded={manualOpen}
+              aria-controls={manualId}
+              onClick={() => setManualOpen((previous) => !previous)}
+            >
+              Nhập tọa độ
+            </Button>
+          </span>
+        )}
         {manualOpen && (
           <section
             id={manualId}
@@ -321,16 +592,20 @@ export function MapLocationDialog({
         <Button
           variant="secondary"
           className="map-save"
-          aria-label={saveLabel}
-          disabled={!selected || busy}
+          aria-label={mode === "explore" ? "Đóng bản đồ" : saveLabel}
+          disabled={mode === "pick" && (!selected || busy)}
           onClick={() => {
+            if (mode === "explore") {
+              onClose();
+              return;
+            }
             if (selected) {
               onSelect(selected);
               onClose();
             }
           }}
         >
-          Lưu
+          {mode === "explore" ? "Đóng" : saveLabel}
         </Button>
         <MapControls
           onLocate={locate}

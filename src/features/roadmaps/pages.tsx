@@ -16,7 +16,10 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { MapPicker } from "@/components/domain/map-picker";
-import { MapboxPreview } from "@/components/domain/mapbox-preview";
+import {
+  MapboxPreview,
+  RestaurantMapButton,
+} from "@/components/domain/mapbox-preview";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import {
@@ -605,7 +608,6 @@ export function RoadmapPage({ id }: { id: string }) {
           </div>
         </details>
         <MapboxPreview
-          key={`${day}-${restaurant?.id ?? "all"}`}
           locations={data.restaurants.filter((value) =>
             currentDay?.items.some((entry) => entry.restaurantId === value.id),
           )}
@@ -866,7 +868,7 @@ export function RoadmapPage({ id }: { id: string }) {
   );
 }
 export function RollDishPage() {
-  const { notify } = usePlatform(),
+  const { notify, data } = usePlatform(),
     { base } = useWorkspace(),
     [state, setState] = useState<"ready" | "rolling" | "revealed">("ready"),
     [selected, setSelected] = useState(2),
@@ -886,6 +888,19 @@ export function RollDishPage() {
       "Bánh cuốn",
     ],
     prices = [48000, 25000, 45000, 49000, 35000];
+  const servingRestaurants = data.restaurants.filter(
+    (restaurant) =>
+      restaurant.moderation === "visible" &&
+      data.dishes.some(
+        (dish) =>
+          dish.restaurantId === restaurant.id &&
+          dish.serving &&
+          dish.moderation === "visible" &&
+          dish.name
+            .toLocaleLowerCase("vi")
+            .startsWith(names[selected].toLocaleLowerCase("vi")),
+      ),
+  );
   return (
     <div className="container roll">
       <span className="eyebrow">Gợi ý bữa ăn · Roll Dish</span>
@@ -942,6 +957,9 @@ export function RollDishPage() {
               <p>Khoảng {money(prices[selected])}</p>
               <p>Hương vị Việt gần gũi cho bữa ăn hôm nay.</p>
               <div className="actions" style={{ justifyContent: "center" }}>
+                {!!servingRestaurants.length && (
+                  <RestaurantMapButton locations={servingRestaurants} />
+                )}
                 <ActionLink href={`${base}/restaurants`} secondary>
                   Xem quán ăn
                 </ActionLink>

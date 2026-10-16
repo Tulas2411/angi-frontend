@@ -3,13 +3,9 @@ import Image from "next/image";
 import { useRef, useState } from "react";
 import { Button } from "@/shared/ui";
 import { Icon } from "@/components/ui/primitives";
+import { safeMapWebsite } from "@/shared/maps/mapbox";
+import type { MapLocation } from "@/shared/maps/mapbox";
 import "./map-picker.css";
-
-interface MapLocation {
-  name: string;
-  latitude: number;
-  longitude: number;
-}
 
 export interface MapPinPosition {
   x: number;
@@ -24,10 +20,12 @@ export function MapSelectionOverlay({
   location,
   summaryHidden = false,
   position,
+  onDirections,
 }: {
   location: MapLocation;
   summaryHidden?: boolean;
   position?: MapPinPosition;
+  onDirections?: () => void;
 }) {
   const [pinInfo, setPinInfo] = useState(true);
   const [summary, setSummary] = useState(true);
@@ -112,7 +110,41 @@ export function MapSelectionOverlay({
             )}
             <div className="map-location-copy">
               <strong>{location.name}</strong>
+              {kind === "summary" && (
+                <>
+                  {(location.fullAddress || location.address) && (
+                    <p>{location.fullAddress ?? location.address}</p>
+                  )}
+                  {location.source && (
+                    <p>
+                      {location.source === "angi"
+                        ? "Nhà hàng trong ANGI"
+                        : "Địa điểm từ Mapbox"}
+                    </p>
+                  )}
+                  {location.phone && <p>{location.phone}</p>}
+                  {safeMapWebsite(location.website) && (
+                    <p>
+                      <a
+                        href={safeMapWebsite(location.website)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Website địa điểm
+                      </a>
+                    </p>
+                  )}
+                  {location.operationalStatus === "closed" && (
+                    <p>Địa điểm được ghi nhận đã đóng cửa.</p>
+                  )}
+                </>
+              )}
               <p>{coordinates}</p>
+              {kind === "summary" && onDirections && (
+                <Button variant="tertiary" onClick={onDirections}>
+                  Chỉ đường
+                </Button>
+              )}
             </div>
             <Button
               variant="icon"

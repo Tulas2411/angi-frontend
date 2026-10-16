@@ -10,6 +10,7 @@ export function RestaurantLocationPicker(props: {
   return (
     <MapLocationDialog
       {...props}
+      poiSearchOnly
       title="Chọn vị trí nhà hàng"
       mapLabel="Bản đồ chọn vị trí nhà hàng"
       saveLabel="Lưu vị trí"

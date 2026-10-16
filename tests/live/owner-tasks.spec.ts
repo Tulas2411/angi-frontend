@@ -143,7 +143,7 @@ test("ANGI-36: required fields, media limits, real image uploads, registration a
   await page.getByLabel("Số điện thoại nhà hàng").fill("0901234567");
   await page.getByLabel("Địa chỉ", { exact: false }).fill("24 Nguyễn Hữu Huân");
   await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
-  await page.getByLabel("Quận / huyện").fill("Quận Hoàn Kiếm");
+  await expect(page.getByLabel("Quận / huyện")).toHaveCount(0);
   await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
   const location = page.getByRole("dialog", { name: "Chọn vị trí nhà hàng" });
   await expect(

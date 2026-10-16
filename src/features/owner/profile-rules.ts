@@ -2,7 +2,6 @@ import type { Restaurant } from "@/features/platform/contracts";
 import type {
   OwnerRestaurantDto,
   RestaurantFormValues,
-  RestaurantLocation,
   UpdateRestaurantRequestDto,
 } from "./restaurant-types";
 
@@ -13,7 +12,6 @@ export function profileFormFromRestaurant(
     name: restaurant.name,
     phone: restaurant.phone ?? "",
     addressLine: restaurant.addressLine,
-    district: restaurant.district ?? "",
     provinceName: restaurant.provinceName ?? "",
     description: restaurant.description ?? "",
     email: restaurant.email ?? "",
@@ -25,7 +23,7 @@ export function profileFormFromRestaurant(
 
 export function buildProfilePatch(
   values: RestaurantFormValues,
-  location: RestaurantLocation,
+  location: Pick<OwnerRestaurantDto, "latitude" | "longitude"> | null,
   original: OwnerRestaurantDto,
   media: Pick<
     UpdateRestaurantRequestDto,
@@ -33,13 +31,7 @@ export function buildProfilePatch(
   > = {},
 ): UpdateRestaurantRequestDto {
   const patch: UpdateRestaurantRequestDto = {};
-  for (const key of [
-    "name",
-    "phone",
-    "addressLine",
-    "district",
-    "provinceName",
-  ] as const) {
+  for (const key of ["name", "phone", "addressLine", "provinceName"] as const) {
     const value = values[key].trim();
     if (value !== (original[key] ?? "").trim()) patch[key] = value;
   }
@@ -52,8 +44,16 @@ export function buildProfilePatch(
     )
       patch[key] = value;
   }
+  // Clear obsolete district data only when the owner edits administrative areas.
+  if (
+    original.district &&
+    (patch.provinceName !== undefined || patch.ward !== undefined)
+  )
+    patch.district = null;
   for (const key of ["latitude", "longitude"] as const) {
-    if (location[key] !== original[key]) patch[key] = location[key];
+    const coordinate = location?.[key];
+    if (typeof coordinate === "number" && coordinate !== original[key])
+      patch[key] = coordinate;
   }
   const priceLevel = values.priceLevel ? Number(values.priceLevel) : null;
   if (priceLevel !== original.priceLevel) patch.priceLevel = priceLevel;
@@ -81,7 +81,6 @@ export function validateProfilePatch(
     name: [200, "Tên nhà hàng"],
     phone: [20, "Số điện thoại"],
     addressLine: [255, "Địa chỉ"],
-    district: [100, "Quận / huyện"],
     provinceName: [100, "Tỉnh / thành phố"],
   } as const;
   for (const key of Object.keys(required) as (keyof typeof required)[]) {
@@ -96,6 +95,8 @@ export function validateProfilePatch(
     errors.description = "Mô tả không được vượt quá 2000 ký tự.";
   if (patch.ward && patch.ward.length > 100)
     errors.ward = "Phường / xã không được vượt quá 100 ký tự.";
+  if (patch.district && patch.district.length > 100)
+    errors.district = "Địa chỉ cũ không được vượt quá 100 ký tự.";
   if (patch.email && !/^[^\s@]+@[^\s@]+$/.test(patch.email))
     errors.email = "Email không đúng định dạng.";
   if (patch.website) {
@@ -157,8 +158,8 @@ export function profileToDemoView(
     description: restaurant.description ?? "",
     email: restaurant.email ?? "",
     website: restaurant.website ?? "",
-    latitude: restaurant.latitude,
-    longitude: restaurant.longitude,
+    latitude: restaurant.latitude ?? current.latitude,
+    longitude: restaurant.longitude ?? current.longitude,
     priceLevel: restaurant.priceLevel,
     image: restaurant.coverUrl ?? "",
     photos: [...restaurant.images],

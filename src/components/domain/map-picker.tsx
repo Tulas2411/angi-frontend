@@ -14,15 +14,18 @@ export function MapPicker({
   onClose,
   onSelect,
   initialLocation,
+  poiSearchOnly = false,
 }: {
   open: boolean;
   onClose: () => void;
   onSelect: (location: MapLocation) => void;
   initialLocation?: MapLocation;
+  poiSearchOnly?: boolean;
 }) {
   return open ? (
     <MapLocationDialog
       location={initialLocation ?? initialCenter}
+      poiSearchOnly={poiSearchOnly}
       onClose={onClose}
       onSelect={onSelect}
     />

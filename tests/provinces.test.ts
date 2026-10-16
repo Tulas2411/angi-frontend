@@ -35,14 +35,18 @@ describe("province catalog boundary", () => {
   });
   it("preserves official names, strips provider metadata and deduplicates", () => {
     expect(
-      readProvinceCatalog([...catalog, { name: " Thành phố Hà Nội " }]),
-    ).toEqual([{ name: "Thành phố Hà Nội" }, { name: "Tỉnh Điện Biên" }]);
+      readProvinceCatalog([
+        ...catalog,
+        { name: " Thành phố Hà Nội ", code: 1 },
+      ]),
+    ).toEqual(catalog);
     for (const payload of [
       null,
       {},
       [],
       [{ code: 1 }],
       [{ name: "" }],
+      [{ name: "Tỉnh thử nghiệm", code: 100 }],
       [{ name: "x".repeat(101) }],
     ])
       expect(() => readProvinceCatalog(payload)).toThrow();
@@ -51,14 +55,14 @@ describe("province catalog boundary", () => {
     expect(searchText("Tỉnh Điện Biên")).toContain(searchText("dien bien"));
     expect(searchText("Thành phố Đà Nẵng")).toContain(searchText("DA NANG"));
   });
-  it("uses the fixed V1 provider and returns an ANGI response", async () => {
+  it("uses the current V2 provider and preserves the province codes", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json(catalog));
     vi.stubGlobal("fetch", fetcher);
     const response = await GET();
     expect(response.status).toBe(200);
     expect((await response.json()).data).toEqual(readProvinceCatalog(catalog));
     expect(fetcher).toHaveBeenCalledWith(
-      "https://provinces.open-api.vn/api/v1/",
+      "https://provinces.open-api.vn/api/v2/",
       expect.objectContaining({ next: { revalidate: 86400 } }),
     );
   });
