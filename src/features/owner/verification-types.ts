@@ -40,6 +40,12 @@ export interface VerificationDto {
   reviewNote: string | null;
 }
 
+/** OWN-07 returns the complete history, newest first; no pagination parameters. */
+export interface GetVerificationStatusResponseDto {
+  verificationStatus: "unverified" | "pending" | "verified" | "rejected";
+  items: VerificationDto[];
+}
+
 export interface VerificationFormValues {
   legalName: string;
   businessLicenseNo: string;

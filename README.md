@@ -26,6 +26,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 | Owner business hours (F-45 / ANGI-48)                                                     | Connected to OWN-02/OWN-04; complete weekly schedules, multiple intervals and overnight hours |
 | Owner operating status (F-46 / ANGI-55)                                                   | Connected to OWN-02/OWN-05; three states, optional reason and suspension conflict handling    |
 | Owner verification submission (F-47 / ANGI-61)                                            | Connected to OWN-02/OWN-06 and private MEDIA-01 uploads; initial submission and latest result |
+| Owner verification status/history (F-48 / ANGI-65) | Connected to OWN-07; latest request, review feedback, complete history and read-only detail modals |
 | Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback                         |
 | Email verification/recovery, OAuth, invitations, routing and AI                           | UI/scaffold exists where designed; real integrations remain pending                           |
 
@@ -98,7 +99,7 @@ Open [the demo selector](http://localhost:3000/demo). It works without Docker or
 
 For design/component work, use [the component gallery](http://localhost:3000/dev/components) and [reproducible state scenarios](http://localhost:3000/dev/scenarios). Fixture changes reset on page reload or workspace remount.
 
-The default business mode is `live`. Owner restaurant registration, profile editing, business hours, operating status and verification submission use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
+The default business mode is `live`. Owner restaurant registration, profile editing, business hours, operating status, verification submission and history use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
 
 For F-43, log in as a Restaurant Owner and open `/restaurant/register`; owner root also checks whether a restaurant exists. The new-owner demo is `/dev/scenarios?state=owner-register-restaurant`. Required information includes business name/phone, address, province/ward and explicitly selected coordinates. Optional cover/gallery images upload through MEDIA-01 before OWN-01 receives numeric media IDs. Registration creates an unverified restaurant; sending verification documents is a separate task. Existing restaurants and registration conflicts prevent duplicate creation.
 
@@ -110,7 +111,11 @@ Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLI
 
 ProvinceField supplies [Provinces Open API V2](https://provinces.open-api.vn/) suggestions for restaurant address forms, itinerary destinations, header/restaurant location search and the gallery, including demos. The post-merger catalog has 34 provinces/cities. WardField loads wards directly by province; owner forms have no district input. Both support unaccented search, official-name selection, shared caching, manual entry and retry. The corresponding backend change accepts optional legacy districts. No new key or env setting is needed. See [setup details](docs/setup.md), [the address contract note](docs/address-entry-v2.vi.md), and run `npx playwright test --config=playwright.province.config.ts` for isolated checks.
 
-For F-47, open `/restaurant/verification` after Owner login. Use `/dev/scenarios?state=owner-verification-new` to prepare a mock initial submission. Legal information and at least one business license are required; documents upload privately through MEDIA-01 (`purpose=verification_doc`) before OWN-06 receives their numeric IDs. Sending and discarding use modals. Success shows the pending response; failed requests retain the draft. Full history and resubmission remain separate tasks. See [the Vietnamese manual guide and contract](docs/restaurant-verification.vi.md).
+For F-47, open `/restaurant/verification` after Owner login. Use `/dev/scenarios?state=owner-verification-new` to prepare a mock initial submission. Legal information and at least one business license are required; documents upload privately through MEDIA-01 (`purpose=verification_doc`) before OWN-06 receives their numeric IDs. Sending and discarding use modals. Success shows the pending response; failed requests retain the draft. F-48 now supplies full history through OWN-07; resubmission remains F-49. See [the Vietnamese manual guide and contract](docs/restaurant-verification.vi.md).
+
+For F-48, open `/restaurant/verification?tab=status`. OWN-07 returns the current restaurant verification flag and all requests, newest first. Review feedback, reviewer/date, private document links and previous-attempt details are visible in read-only modals. Refresh is manual. See [the Vietnamese F-48 guide](docs/verification-status.vi.md). The new task depends on the owner-committed F-47 branch until F-47 is merged into dev.
+
+Real local F-47/F-48 verification passed four browser cases, including private Cloudinary upload/download and persisted pending history. Moderator decision endpoints are absent in the current BE, so live approval/feedback transitions remain unverified. See [live results, limits and rerun instructions](docs/verification-live.vi.md); its separate opt-in config disables Mapbox.
 
 ### 4. Run real authentication when needed
 
@@ -231,6 +236,7 @@ Additional checks:
 | `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                       |
 | `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                           |
 | `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                              |
+| `npx playwright test --config=playwright.verification-status.config.ts` | F-48 GET/history/feedback, empty/errors, role guards, private URLs and mobile, plus F-47 regressions; local stub only |
 | `node scripts/verify-assets.mjs`                            | Local design assets and font/license verification                                                                      |
 | `npm run test:smoke`                                        | Existing real-auth integration checks; local backend/frontend and prepared test accounts required                      |
 

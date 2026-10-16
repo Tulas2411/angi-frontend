@@ -129,8 +129,8 @@ export function OwnerRestaurant({
   return <RestaurantProfilePage initialTab={initialTab} />;
 }
 
-export function VerificationPage() {
-  return <RestaurantVerificationPage />;
+export function VerificationPage({ initialTab }: { initialTab?: string }) {
+  return <RestaurantVerificationPage initialTab={initialTab} />;
 }
 function DishEditor({
   dish,

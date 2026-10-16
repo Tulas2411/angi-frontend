@@ -40,6 +40,8 @@ Visual review: inspected the generated 390px form and 1440px pending-status scre
 
 ## Remaining boundaries
 
+Follow-up on 2026-10-17: real F-47 submission/private upload and F-48 history were exercised against local Kestrel/PostgreSQL and Cloudinary. The live suite passed four cases, including private PDF delivery; see [live verification report](verification-live.vi.md). Historical stub counts below remain unchanged. F-48 is implemented in the dependent ANGI-65 branch; the remaining-boundary statements below describe the original F-47 delivery.
+
 - OWN-07 full history / F-48 and OWN-08 resubmission / F-49 remain separate integrations; the UI does not claim those actions work.
 - Live provider credentials, private storage, signed URL expiry and database persistence have not been exercised by this local stub suite. Follow the manual guide for those checks.
 - Discard/removal excludes a document from the draft; it does not delete uploaded server media, because no such operation belongs to this task.

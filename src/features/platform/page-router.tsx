@@ -159,7 +159,7 @@ export function PageRouter({
 
   // These operations do not depend on the AppData adapter.
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "verification")
-    return <VerificationPage />;
+    return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
 
   if (
     role === "RESTAURANT_OWNER" &&
@@ -269,7 +269,8 @@ export function PageRouter({
       return (
         <OwnerRestaurant initialTab={params.get("tab") ?? "information"} />
       );
-    if (area === "verification") return <VerificationPage />;
+    if (area === "verification")
+      return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
     if (area === "menu") return <OwnerMenuPage />;
     if (area === "reviews") return <OwnerReviewsPage />;
     if (area === "notifications") return <NotificationsPage />;

@@ -15,6 +15,7 @@ const allowedEndpoints = new Set([
   "PUT owner/restaurant/operating-status",
   "POST owner/restaurant",
   "POST owner/restaurant/verifications",
+  "GET owner/restaurant/verifications",
   "POST media",
 ]);
 

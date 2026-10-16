@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
@@ -21,14 +27,13 @@ import {
   verificationFromDemo,
 } from "@/mocks/restaurant-verification";
 import { VerificationDocumentUpload } from "./verification-document-upload";
+import { VerificationHistory } from "./verification-history";
 import {
   buildVerificationRequest,
   emptyVerificationForm,
   validateVerificationRequest,
-  verificationDocumentTypes,
   verificationErrorMessage,
   verificationFieldErrors,
-  verificationStatusLabels,
   verificationSubmissionBlock,
 } from "./verification-rules";
 import {
@@ -40,13 +45,18 @@ import type {
   VerificationUpload,
 } from "./restaurant-types";
 import type {
+  GetVerificationStatusResponseDto,
   SubmitVerificationRequestDto,
   VerificationDto,
   VerificationFormValues,
 } from "./verification-types";
 import "./restaurant-verification.css";
 
-export function RestaurantVerificationPage() {
+export function RestaurantVerificationPage({
+  initialTab,
+}: {
+  initialTab?: string;
+}) {
   const { base } = useWorkspace();
   const { mode, data, mutate } = usePlatform();
   const demo = mode === "demo";
@@ -55,14 +65,18 @@ export function RestaurantVerificationPage() {
       (item) => item.id === data.ownerRestaurantId,
     );
     const seed = owner ? ownerProfileFromDemo(owner, data.hours) : null;
-    const record = data.submissions.find(
+    const records = data.submissions.filter(
       (item) =>
         item.kind === "verification" &&
         item.restaurantId === data.ownerRestaurantId,
     );
-    if (seed && record)
-      seed.latestVerification = verificationFromDemo(record, seed.id);
-    return createMockVerificationService(seed);
+    const history = seed
+      ? records.map((record, index) =>
+          verificationFromDemo(record, seed.id, 21 + index),
+        )
+      : [];
+    if (seed && history.length) seed.latestVerification = history[0];
+    return createMockVerificationService(seed, history);
   });
   const service = demo ? mock : verificationService;
   const [restaurant, setRestaurant] = useState<OwnerRestaurantDto | null>(null);
@@ -71,6 +85,20 @@ export function RestaurantVerificationPage() {
   >("loading");
   const [attempt, setAttempt] = useState(0);
   const [error, setError] = useState("");
+  const onHistoryLoaded = useCallback(
+    (result: GetVerificationStatusResponseDto) => {
+      setRestaurant((current) =>
+        current
+          ? {
+              ...current,
+              verificationStatus: result.verificationStatus,
+              latestVerification: result.items[0] ?? null,
+            }
+          : current,
+      );
+    },
+    [],
+  );
   useEffect(() => {
     let ignore = false;
     service
@@ -123,6 +151,8 @@ export function RestaurantVerificationPage() {
   return (
     <VerificationEditor
       restaurant={restaurant}
+      initialTab={initialTab}
+      onHistoryLoaded={onHistoryLoaded}
       service={service}
       demo={demo}
       onReload={reload}
@@ -176,12 +206,16 @@ type Confirmation =
 
 function VerificationEditor({
   restaurant,
+  initialTab,
+  onHistoryLoaded,
   service,
   demo,
   onReload,
   onSaved,
 }: {
   restaurant: OwnerRestaurantDto;
+  initialTab?: string;
+  onHistoryLoaded: (result: GetVerificationStatusResponseDto) => void;
   service: VerificationService;
   demo: boolean;
   onReload: () => void;
@@ -191,7 +225,9 @@ function VerificationEditor({
   ) => Promise<void>;
 }) {
   const [tab, setTab] = useState(
-    verificationSubmissionBlock(restaurant) ? "status" : "new",
+    initialTab === "status" || verificationSubmissionBlock(restaurant)
+      ? "status"
+      : "new",
   );
   const [values, setValues] = useState<VerificationFormValues>({
     ...emptyVerificationForm,
@@ -204,7 +240,6 @@ function VerificationEditor({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [conflict, setConflict] = useState("");
-  const [saved, setSaved] = useState<VerificationDto | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ name: string } | null>(
     null,
@@ -228,7 +263,13 @@ function VerificationEditor({
   }, [busy, confirmation, focusRequest]);
   const blocked = busy || uploading;
   const stateBlock = conflict || verificationSubmissionBlock(restaurant);
-  const latest = saved ?? restaurant.latestVerification;
+  const publishHistory = useCallback(
+    (result: GetVerificationStatusResponseDto) => {
+      setConflict("");
+      onHistoryLoaded(result);
+    },
+    [onHistoryLoaded],
+  );
   const dirty = Object.values(values).some(Boolean) || documents.length > 0;
   function change(field: keyof VerificationFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
@@ -264,7 +305,6 @@ function VerificationEditor({
     try {
       const result = await service.submit(request);
       if (!alive.current) return;
-      setSaved(result);
       setFocusRequest(null);
       setValues({ ...emptyVerificationForm });
       setDocuments([]);
@@ -368,17 +408,11 @@ function VerificationEditor({
         ]}
       />
       {tab === "status" ? (
-        <Card title="Hồ sơ gần nhất">
-          {stateBlock && <Alert tone="info">{stateBlock}</Alert>}
-          {latest ? (
-            <VerificationDetails verification={latest} />
-          ) : (
-            <p>Chưa có hồ sơ xác minh để hiển thị.</p>
-          )}
-          {!stateBlock && (
-            <Button onClick={() => setTab("new")}>Chuẩn bị hồ sơ</Button>
-          )}
-        </Card>
+        <VerificationHistory
+          service={service}
+          onLoaded={publishHistory}
+          onPrepare={() => setTab("new")}
+        />
       ) : stateBlock ? (
         <Alert tone="info">{stateBlock}</Alert>
       ) : (
@@ -511,79 +545,6 @@ function VerificationEditor({
           </p>
         )}
       </ConfirmDialog>
-    </div>
-  );
-}
-
-function VerificationDetails({
-  verification,
-}: {
-  verification: VerificationDto;
-}) {
-  const date = (value: string) =>
-    Number.isNaN(Date.parse(value))
-      ? "Chưa có"
-      : new Date(value).toLocaleString("vi-VN", {
-          timeZone: "Asia/Ho_Chi_Minh",
-        });
-  return (
-    <div className="stack-sm verification-details">
-      <p>
-        Mã hồ sơ: #{verification.id} ·{" "}
-        <Badge>{verificationStatusLabels[verification.status]}</Badge>
-      </p>
-      <dl>
-        <dt>Tên pháp lý</dt>
-        <dd>{verification.legalName}</dd>
-        <dt>Số giấy phép kinh doanh</dt>
-        <dd>{verification.businessLicenseNo}</dd>
-        <dt>Mã số thuế</dt>
-        <dd>{verification.taxCode || "Chưa cung cấp"}</dd>
-        <dt>Ngày gửi</dt>
-        <dd>{date(verification.submittedAt)}</dd>
-        <dt>Ghi chú của bạn</dt>
-        <dd>{verification.ownerNote || "Không có"}</dd>
-        {verification.reviewedAt && (
-          <>
-            <dt>Ngày phản hồi</dt>
-            <dd>{date(verification.reviewedAt)}</dd>
-          </>
-        )}
-        {verification.reviewNote && (
-          <>
-            <dt>Phản hồi của người duyệt</dt>
-            <dd>{verification.reviewNote}</dd>
-          </>
-        )}
-      </dl>
-      <ul className="verification-document-links">
-        {verification.documents.map((document, index) => {
-          const label =
-            verificationDocumentTypes.find(
-              (type) => type.value === document.docType,
-            )?.label ?? "Tài liệu xác minh";
-          const safeUrl = /^https?:\/\//i.test(document.url)
-            ? document.url
-            : "";
-          return (
-            <li key={`${document.mediaId}-${index}`}>
-              {safeUrl ? (
-                <a href={safeUrl} target="_blank" rel="noopener noreferrer">
-                  {label} {index + 1}
-                </a>
-              ) : (
-                <span>
-                  {label} {index + 1} · Tài liệu minh họa
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      <p className="helper">
-        Nếu liên kết tài liệu hết hạn, dùng Tải lại trạng thái để lấy liên kết
-        mới.
-      </p>
     </div>
   );
 }

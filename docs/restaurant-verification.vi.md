@@ -61,6 +61,6 @@ Config để trống Mapbox token và chặn các request trình duyệt ra ngo�
 
 ## Giới hạn
 
-F-47 nộp hồ sơ lần đầu và hiển thị hồ sơ gần nhất từ OWN-02. Chưa kết nối danh sách lịch sử OWN-07 (F-48) hoặc gửi bổ sung OWN-08 (F-49). Không hiển thị nút gửi lại giả cho nhà hàng bị từ chối/cần bổ sung. Việc kiểm thử Cloudinary riêng tư, URL có chữ ký và lưu dữ liệu trên BE thật cần được thực hiện thủ công; kiểm tra bằng stub không chứng minh các dịch vụ thật hoạt động.
+F-47 nộp hồ sơ lần đầu; F-48 đã bổ sung trạng thái và toàn bộ lịch sử qua OWN-07 tại thẻ Trạng thái xác minh. Xem [hướng dẫn F-48](verification-status.vi.md). Chưa kết nối gửi bổ sung OWN-08 (F-49). Không hiển thị nút gửi lại giả cho nhà hàng bị từ chối/cần bổ sung. Kết quả kiểm thử Cloudinary, URL riêng tư và dữ liệu lưu trên BE được ghi riêng trong [báo cáo kiểm thử thật](verification-live.vi.md); bộ stub ở trên không chứng minh dịch vụ thật hoạt động. Cách chạy bộ live và cleanup nằm trong hướng dẫn F-48.
 
 Kết quả kiểm tra và lần đối chiếu API Design cuối cùng được ghi trong [báo cáo kỹ thuật F-47](restaurant-verification-evidence.md).

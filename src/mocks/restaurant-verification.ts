@@ -16,9 +16,10 @@ import {
 export function verificationFromDemo(
   record: Submission,
   restaurantId: number,
+  fallbackId = 21,
 ): VerificationDto {
   return {
-    id: Number(record.id.replace(/^verification-/, "")) || 21,
+    id: Number(record.id.replace(/^verification-/, "")) || fallbackId,
     restaurantId,
     status:
       record.status === "needs_changes"
@@ -40,18 +41,23 @@ export function verificationFromDemo(
       url: document.url ?? "",
     })),
     submittedAt: record.date,
-    previousId: null,
-    reviewedBy: null,
-    reviewedAt: null,
-    reviewNote: null,
+    previousId: record.previousId ?? null,
+    reviewedBy: record.reviewedBy ?? null,
+    reviewedAt: record.reviewedAt ?? null,
+    reviewNote: record.reviewNote ?? null,
   };
 }
 
 /** Local file metadata and wire-shaped responses; no upload or external storage. */
 export function createMockVerificationService(
   seed: OwnerRestaurantDto | null,
+  initialHistory?: VerificationDto[],
 ): VerificationService {
   let current = seed ? structuredClone(seed) : null;
+  const history = structuredClone(
+    initialHistory ??
+      (seed?.latestVerification ? [seed.latestVerification] : []),
+  ).filter((item) => item.restaurantId === seed?.id);
   let mediaId = 9000;
   const media = new Map<number, MediaFileDto>();
   return {
@@ -63,6 +69,22 @@ export function createMockVerificationService(
           "Bạn chưa đăng ký nhà hàng.",
         );
       return structuredClone(current);
+    },
+    getHistory: async () => {
+      if (!current)
+        throw new ApiError(
+          404,
+          "RESTAURANT_NOT_FOUND",
+          "Bạn chưa đăng ký nhà hàng.",
+        );
+      return {
+        verificationStatus: current.verificationStatus,
+        items: structuredClone(history).sort(
+          (a, b) =>
+            Date.parse(b.submittedAt) - Date.parse(a.submittedAt) ||
+            b.id - a.id,
+        ),
+      };
     },
     upload: async (file) => {
       if (!file.name.trim() || !file.type.trim() || file.size <= 0)
@@ -134,7 +156,7 @@ export function createMockVerificationService(
           { [`Documents[${invalid}].MediaId`]: ["Tải lại tài liệu xác minh."] },
         );
       const result: VerificationDto = {
-        id: 21,
+        id: Math.max(20, ...history.map((item) => item.id)) + 1,
         restaurantId: current.id,
         status: "pending",
         legalName: request.legalName.trim(),
@@ -156,6 +178,7 @@ export function createMockVerificationService(
         verificationStatus: "pending",
         latestVerification: result,
       };
+      history.unshift(result);
       return structuredClone(result);
     },
   };

@@ -80,6 +80,22 @@ test.beforeAll(async () => {
           current,
           current ? null : "RESTAURANT_NOT_FOUND",
         );
+    } else if (
+      request.url === "/api/v1/owner/restaurant/verifications" &&
+      request.method === "GET"
+    ) {
+      send(
+        current ? 200 : 404,
+        current
+          ? {
+              verificationStatus: current.verificationStatus,
+              items: current.latestVerification
+                ? [current.latestVerification]
+                : [],
+            }
+          : null,
+        current ? null : "RESTAURANT_NOT_FOUND",
+      );
     } else if (request.url === "/api/v1/media" && request.method === "POST") {
       uploads.push({ raw, contentType: request.headers["content-type"] ?? "" });
       if (uploads.length === failUploadAt)
@@ -569,7 +585,7 @@ test("anonymous, wrong roles, foreign Origin and unlisted methods cannot reach O
       })
     ).status(),
   ).toBe(404);
-  expect((await page.request.get(url)).status()).toBe(404);
+  expect((await page.request.get(url)).status()).toBe(200);
   expect(submissions).toHaveLength(0);
 });
 
