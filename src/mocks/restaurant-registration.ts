@@ -53,7 +53,7 @@ export function createMockRestaurantRegistrationService(): RestaurantRegistratio
           ? (media.get(request.coverMediaId)?.url ?? null)
           : null,
         addressLine: request.addressLine,
-        district: request.district,
+        district: request.district ?? null,
         provinceName: request.provinceName,
         latitude: request.latitude,
         longitude: request.longitude,

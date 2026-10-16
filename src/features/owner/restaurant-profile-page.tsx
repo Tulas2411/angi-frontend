@@ -16,6 +16,8 @@ import {
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import { ProvinceField } from "@/components/domain/province-field";
+import { WardField } from "@/components/domain/ward-field";
+import { provinceNameKey } from "@/shared/locations/provinces";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { MapPicker } from "@/components/domain/map-picker";
 import {
@@ -35,6 +37,10 @@ import {
 } from "./restaurant-profile-service";
 import { RestaurantImageUpload } from "./restaurant-image-upload";
 import { RestaurantLocationPicker } from "./restaurant-location-picker";
+import {
+  fillRestaurantFromPlace,
+  restaurantLocationFromProfile,
+} from "./restaurant-location-rules";
 import type {
   MediaFileDto,
   OwnerRestaurantDto,
@@ -171,11 +177,9 @@ function RestaurantProfileEditor({
   const [values, setValues] = useState(() =>
     profileFormFromRestaurant(restaurant),
   );
-  const [location, setLocation] = useState<RestaurantLocation>({
-    name: restaurant.name,
-    latitude: restaurant.latitude,
-    longitude: restaurant.longitude,
-  });
+  const [location, setLocation] = useState<RestaurantLocation | null>(() =>
+    restaurantLocationFromProfile(restaurant),
+  );
   const [cover, setCover] = useState<MediaFileDto[]>([]);
   const [gallery, setGallery] = useState<MediaFileDto[]>([]);
   const [clearCover, setClearCover] = useState(false);
@@ -235,18 +239,21 @@ function RestaurantProfileEditor({
   }
   function change(key: keyof RestaurantFormValues, value: string) {
     setFocusRequest(null);
-    setValues((current) => ({ ...current, [key]: value }));
+    setValues((current) => ({
+      ...current,
+      [key]: value,
+      ...(key === "provinceName" &&
+      provinceNameKey(value) !== provinceNameKey(current.provinceName)
+        ? { ward: "" }
+        : {}),
+    }));
     setErrors((current) => ({ ...current, [key]: "" }));
     setSuccess("");
   }
   function resetDraft() {
     setFocusRequest(null);
     setValues(profileFormFromRestaurant(restaurant));
-    setLocation({
-      name: restaurant.name,
-      latitude: restaurant.latitude,
-      longitude: restaurant.longitude,
-    });
+    setLocation(restaurantLocationFromProfile(restaurant));
     setCover([]);
     setGallery([]);
     setClearCover(false);
@@ -296,11 +303,7 @@ function RestaurantProfileEditor({
       await onSaved(saved);
       if (!active.current) return;
       setValues(profileFormFromRestaurant(saved));
-      setLocation({
-        name: saved.name,
-        latitude: saved.latitude,
-        longitude: saved.longitude,
-      });
+      setLocation(restaurantLocationFromProfile(saved));
       setCover([]);
       setGallery([]);
       setClearCover(false);
@@ -413,7 +416,7 @@ function RestaurantProfileEditor({
                     change("addressLine", event.target.value)
                   }
                 />
-                <div className="grid-3">
+                <div className="grid-2">
                   <ProvinceField
                     label="Tỉnh / thành phố"
                     name="provinceName"
@@ -422,21 +425,14 @@ function RestaurantProfileEditor({
                     error={errors.provinceName}
                     onChange={(value) => change("provinceName", value)}
                   />
-                  <Field
-                    label="Quận / huyện"
-                    name="district"
-                    maxLength={100}
-                    value={values.district}
-                    error={errors.district}
-                    onChange={(event) => change("district", event.target.value)}
-                  />
-                  <Field
+                  <WardField
                     label="Phường / xã"
                     name="ward"
+                    provinceName={values.provinceName}
                     maxLength={100}
                     value={values.ward}
                     error={errors.ward}
-                    onChange={(event) => change("ward", event.target.value)}
+                    onChange={(value) => change("ward", value)}
                   />
                 </div>
                 <Button
@@ -453,7 +449,9 @@ function RestaurantProfileEditor({
                   className={errors.location ? "field-error" : "helper"}
                 >
                   {errors.location ||
-                    `Tọa độ: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`}
+                    (location
+                      ? `Tọa độ: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+                      : "Chưa có tọa độ. Bạn có thể chọn vị trí trên bản đồ.")}
                 </p>
                 <SelectField
                   label="Mức giá (không bắt buộc)"
@@ -688,11 +686,13 @@ function RestaurantProfileEditor({
         (demo ? (
           <MapPicker
             open
-            initialLocation={location}
+            poiSearchOnly
+            initialLocation={location ?? undefined}
             onClose={closeMap}
             onSelect={(point) => {
               setFocusRequest(null);
               setLocation(point);
+              setValues((current) => fillRestaurantFromPlace(current, point));
               setErrors((current) => ({ ...current, location: "" }));
               setSuccess("");
             }}
@@ -704,6 +704,7 @@ function RestaurantProfileEditor({
             onSelect={(point) => {
               setFocusRequest(null);
               setLocation(point);
+              setValues((current) => fillRestaurantFromPlace(current, point));
               setErrors((current) => ({ ...current, location: "" }));
               setSuccess("");
             }}

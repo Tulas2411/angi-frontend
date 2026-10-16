@@ -27,6 +27,7 @@ import { money } from "@/features/platform/rules";
 import { pageSlice } from "@/features/platform/rules";
 import { ProvinceField } from "@/components/domain/province-field";
 import { matchesRestaurantLocation } from "@/shared/locations/restaurant-search";
+import { RestaurantMapButton } from "@/components/domain/mapbox-preview";
 
 export function DiscoveryPage() {
   const { data } = usePlatform(),
@@ -285,6 +286,19 @@ function DiscoveryResults({
           },
         ]}
       />
+      <div className="actions">
+        <RestaurantMapButton
+          locations={
+            kind === "restaurants"
+              ? restaurants
+              : data.restaurants.filter(
+                  (restaurant) =>
+                    restaurant.moderation === "visible" &&
+                    dishes.some((dish) => dish.restaurantId === restaurant.id),
+                )
+          }
+        />
+      </div>
       <div className="grid-3">
         {kind === "dishes"
           ? pageSlice(dishes, page, 6).items.map((d) => (
@@ -358,6 +372,10 @@ export function RestaurantDetail({ id }: { id: string }) {
             </p>
             <p>{restaurant.phone}</p>
             <div className="actions">
+              <RestaurantMapButton
+                locations={[restaurant]}
+                highlighted={restaurant}
+              />
               {user ? (
                 <>
                   <Button onClick={() => setReviewOpen(true)}>
@@ -727,8 +745,14 @@ export function DishDetail({ id }: { id: string }) {
                 <Badge>{restaurant.rating} / 5 sao</Badge>
               </div>
               <p className="helper">
-                📍 {restaurant.address}, {restaurant.district},{" "}
-                {restaurant.province}
+                📍{" "}
+                {[
+                  restaurant.address,
+                  restaurant.ward || restaurant.district,
+                  restaurant.province,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
               </p>
               <p className="helper">
                 📞 {restaurant.phone} · ✉️ {restaurant.email}
@@ -738,6 +762,10 @@ export function DishDetail({ id }: { id: string }) {
               )}
               <p>{restaurant.description}</p>
               <div className="actions">
+                <RestaurantMapButton
+                  locations={[restaurant]}
+                  highlighted={restaurant}
+                />
                 <ActionLink
                   href={`${base}/restaurants/${restaurant.id}`}
                   secondary

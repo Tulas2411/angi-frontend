@@ -129,6 +129,7 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 - Keep database and external-service secrets out of browser code and public assets. FE reaches backend operations through verified contracts, not direct database access.
 - Coordinate demo/gallery flags with the intended environment. Production previews require an explicit decision; real protected routes still require auth even in demo data mode.
 - Avoid introducing libraries already covered by native HTML, React or existing helpers. When a dependency is justified, review its footprint and update the npm lockfile with npm rather than editing it manually.
+- Mapbox usage policy from the owner (2026-10-16): do not probe tokens, open live maps or run provider/browser tests that consume Mapbox usage without an explicit request. For the current Mapbox delivery the owner requested code only and will perform all testing; leave tests/build/lint/typecheck unrun and report that fact. Documentation reads and offline API-contract reconciliation do not authorize provider calls.
 
 ## 13. Checks and evidence
 

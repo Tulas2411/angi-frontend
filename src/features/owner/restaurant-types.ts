@@ -1,3 +1,6 @@
+import type { MapLocation } from "@/shared/maps/mapbox";
+
+/** OWN-01/02/03/04 and MEDIA-01 wire contracts, API Design v1.8. */
 /** OWN-01/02/03/04/05 and MEDIA-01 wire contracts, API Design v1.8. */
 export type OperatingStatus =
   "open" | "temporarily_closed" | "permanently_closed";
@@ -31,7 +34,7 @@ export interface RegisterRestaurantRequestDto {
   name: string;
   phone: string;
   addressLine: string;
-  district: string;
+  district?: string | null;
   provinceName: string;
   latitude: number;
   longitude: number;
@@ -53,8 +56,8 @@ export interface OwnerRestaurantDto {
   addressLine: string;
   district: string | null;
   provinceName: string | null;
-  latitude: number;
-  longitude: number;
+  latitude: number | null;
+  longitude: number | null;
   priceLevel: number | null;
   ratingAvg: number;
   ratingCount: number;
@@ -83,7 +86,7 @@ export interface UpdateRestaurantRequestDto {
   name?: string;
   phone?: string;
   addressLine?: string;
-  district?: string;
+  district?: string | null;
   provinceName?: string;
   latitude?: number;
   longitude?: number;
@@ -105,11 +108,8 @@ export interface MediaFileDto {
   createdAt: string;
 }
 
-export interface RestaurantLocation {
-  name: string;
-  latitude: number;
-  longitude: number;
-}
+/** UI selection metadata is never spread into an owner API request. */
+export type RestaurantLocation = MapLocation;
 
 export interface RestaurantFormValues {
   name: string;
@@ -119,7 +119,6 @@ export interface RestaurantFormValues {
   description: string;
   addressLine: string;
   provinceName: string;
-  district: string;
   ward: string;
   priceLevel: string;
 }

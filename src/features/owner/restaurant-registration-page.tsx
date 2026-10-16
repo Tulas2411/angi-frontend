@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/primitives";
 import { MapPicker } from "@/components/domain/map-picker";
 import { ProvinceField } from "@/components/domain/province-field";
+import { WardField } from "@/components/domain/ward-field";
+import { provinceNameKey } from "@/shared/locations/provinces";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
@@ -25,6 +27,7 @@ import {
 import { restaurantService } from "./restaurant-service";
 import { RestaurantImageUpload } from "./restaurant-image-upload";
 import { RestaurantLocationPicker } from "./restaurant-location-picker";
+import { fillRestaurantFromPlace } from "./restaurant-location-rules";
 import type {
   MediaFileDto,
   OwnerRestaurantDto,
@@ -101,7 +104,14 @@ export function RestaurantRegistrationPage() {
     : undefined;
   const blocked = busy || coverPending || galleryPending;
   function update(field: keyof RestaurantFormValues, value: string) {
-    setValues((previous) => ({ ...previous, [field]: value }));
+    setValues((previous) => ({
+      ...previous,
+      [field]: value,
+      ...(field === "provinceName" &&
+      provinceNameKey(value) !== provinceNameKey(previous.provinceName)
+        ? { ward: "" }
+        : {}),
+    }));
     setErrors((previous) => ({ ...previous, [field]: "" }));
   }
   function closeMap() {
@@ -180,8 +190,8 @@ export function RestaurantRegistrationPage() {
             businessHours: restaurant.businessHours.map((hour) => ({
               ...hour,
             })),
-            latitude: restaurant.latitude,
-            longitude: restaurant.longitude,
+            latitude: restaurant.latitude ?? location.latitude,
+            longitude: restaurant.longitude ?? location.longitude,
             verification: restaurant.verificationStatus,
             moderation: restaurant.moderationStatus,
             operating: restaurant.operatingStatus,
@@ -357,7 +367,7 @@ export function RestaurantRegistrationPage() {
               error={errors.addressLine}
               onChange={(event) => update("addressLine", event.target.value)}
             />
-            <div className="grid-3">
+            <div className="grid-2">
               <ProvinceField
                 label="Tỉnh / thành phố"
                 name="provinceName"
@@ -367,22 +377,14 @@ export function RestaurantRegistrationPage() {
                 error={errors.provinceName}
                 onChange={(value) => update("provinceName", value)}
               />
-              <Field
-                label="Quận / huyện"
-                name="district"
-                value={values.district}
-                required
-                maxLength={100}
-                error={errors.district}
-                onChange={(event) => update("district", event.target.value)}
-              />
-              <Field
+              <WardField
                 label="Phường / xã"
                 name="ward"
+                provinceName={values.provinceName}
                 value={values.ward}
                 maxLength={100}
                 error={errors.ward}
-                onChange={(event) => update("ward", event.target.value)}
+                onChange={(value) => update("ward", value)}
               />
             </div>
             <div className="stack-sm">
@@ -486,10 +488,12 @@ export function RestaurantRegistrationPage() {
         (demo ? (
           <MapPicker
             open
+            poiSearchOnly
             initialLocation={location ?? undefined}
             onClose={closeMap}
             onSelect={(point) => {
               setLocation(point);
+              setValues((current) => fillRestaurantFromPlace(current, point));
               setErrors((previous) => ({ ...previous, location: "" }));
             }}
           />
@@ -499,6 +503,7 @@ export function RestaurantRegistrationPage() {
             onClose={closeMap}
             onSelect={(point) => {
               setLocation(point);
+              setValues((current) => fillRestaurantFromPlace(current, point));
               setErrors((previous) => ({ ...previous, location: "" }));
             }}
           />

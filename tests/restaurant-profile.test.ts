@@ -49,6 +49,7 @@ describe("OWN-03 partial updates", () => {
       description: null,
       website: null,
       ward: null,
+      district: null,
       priceLevel: null,
     });
   });
@@ -74,12 +75,25 @@ describe("OWN-03 partial updates", () => {
       }),
     ).toMatchObject({
       name: expect.any(String),
-      district: expect.any(String),
       phone: expect.any(String),
       website: expect.any(String),
       email: expect.any(String),
       priceLevel: expect.any(String),
     });
+  });
+  it("clears the legacy district only when administrative address values change", () => {
+    expect(
+      buildProfilePatch(
+        { ...values, ward: "Phường Hải Châu" },
+        location,
+        original,
+      ),
+    ).toEqual({ ward: "Phường Hải Châu", district: null });
+    expect(validateProfilePatch({ district: null })).toEqual({});
+    expect(validateProfilePatch({ district: "" })).toEqual({});
+    expect(
+      buildProfilePatch({ ...values, name: "Quán A" }, location, original),
+    ).not.toHaveProperty("district");
   });
   it("uses numeric uploaded IDs and intentional null/empty-array media removal", () => {
     expect(

@@ -1,13 +1,14 @@
 "use client";
-import Image from "next/image";
-import { useState } from "react";
-import { Alert, Button } from "@/shared/ui";
-import type { MapLocation } from "@/shared/maps/mapbox";
-import { MapControls } from "./map-overlays";
-import { useMapViewport } from "./use-map-viewport";
 
-/** Real cartography; the calling workspace still owns its business data. */
-export function MapboxPreview({
+import { useState } from "react";
+import { Button } from "@/shared/ui";
+import { isMapLocation } from "@/shared/maps/mapbox";
+import type { MapLocation } from "@/shared/maps/mapbox";
+import { MapLocationDialog } from "./map-location-dialog";
+import "./map-picker.css";
+
+/** ANGI coordinates are rendered directly; opening the page never loads a map. */
+export function RestaurantMapButton({
   locations,
   highlighted,
   showMarkers = true,
@@ -16,90 +17,49 @@ export function MapboxPreview({
   highlighted?: MapLocation;
   showMarkers?: boolean;
 }) {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  const { ref, size } = useMapViewport();
-  const [zoom, setZoom] = useState<number | null>(null);
-  const [failedUrl, setFailedUrl] = useState("");
-  const [attempt, setAttempt] = useState(0);
-  const [overview, setOverview] = useState(false);
-  const points = locations.filter(
-    (point, index, values) =>
-      Number.isFinite(point.latitude) &&
-      Number.isFinite(point.longitude) &&
-      Math.abs(point.latitude) <= 85 &&
-      Math.abs(point.longitude) <= 180 &&
-      values.findIndex(
-        (value) =>
-          value.latitude === point.latitude &&
-          value.longitude === point.longitude,
-      ) === index,
+  const [open, setOpen] = useState(false);
+  const points = locations
+    .filter(isMapLocation)
+    .map((point) => ({ ...point, source: "angi" as const }));
+  const selected =
+    highlighted && isMapLocation(highlighted)
+      ? { ...highlighted, source: "angi" as const }
+      : (points[0] ?? null);
+  return (
+    <>
+      <Button variant="secondary" onClick={() => setOpen(true)}>
+        Mở bản đồ tương tác{points.length ? ` (${points.length} quán)` : ""}
+      </Button>
+      {open && (
+        <MapLocationDialog
+          mode="explore"
+          title="Bản đồ khám phá địa điểm"
+          mapLabel="Bản đồ nhà hàng ANGI"
+          location={selected}
+          locations={showMarkers ? points : []}
+          onSelect={() => {}}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
   );
-  const active = overview ? undefined : highlighted;
-  const center = active ??
-    points[0] ?? { latitude: 21.0285, longitude: 105.8542 };
-  const markers = showMarkers
-    ? points
-        .map((point) => `pin-s+ff5e62(${point.longitude},${point.latitude})`)
-        .join(",")
-    : "";
-  const viewport =
-    !active && zoom === null && points.length > 1 && showMarkers
-      ? "auto"
-      : `${center.longitude},${center.latitude},${zoom ?? 13}`;
-  const url = token?.startsWith("pk.")
-    ? `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${markers ? markers + "/" : ""}${viewport}/${size.width}x${size.height}?access_token=${encodeURIComponent(token)}`
-    : "";
+}
+
+export function MapboxPreview(props: {
+  locations: MapLocation[];
+  highlighted?: MapLocation;
+  showMarkers?: boolean;
+}) {
   return (
     <div
-      ref={ref}
-      className="mapbox-preview"
-      aria-label="Bản đồ Mapbox các địa điểm trong lịch ăn"
+      className="mapbox-preview mapbox-preview-lazy"
+      aria-label="Bản đồ các địa điểm trong lịch ăn"
     >
-      {url && failedUrl !== url ? (
-        <Image
-          key={`${url}-${attempt}`}
-          src={url}
-          unoptimized
-          width={size.width}
-          height={size.height}
-          alt="Bản đồ Mapbox các địa điểm trong lịch ăn"
-          onError={() => setFailedUrl(url)}
-        />
-      ) : (
-        <div className="mapbox-preview-message">
-          <Alert tone="warning">
-            {url
-              ? "Không tải được bản đồ Mapbox. Vui lòng thử lại."
-              : "Chưa có cấu hình Mapbox cho giao diện."}
-          </Alert>
-          {url && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setFailedUrl("");
-                setAttempt((previous) => previous + 1);
-              }}
-            >
-              Thử lại bản đồ
-            </Button>
-          )}
-        </div>
-      )}
-      <MapControls
-        onLocate={() => {
-          setZoom(null);
-          setOverview(true);
-        }}
-        locateLabel="Xem toàn bộ địa điểm"
-        onZoomIn={() =>
-          setZoom((previous) => Math.min(18, (previous ?? 13) + 1))
-        }
-        onZoomOut={() =>
-          setZoom((previous) => Math.max(3, (previous ?? 13) - 1))
-        }
-        zoomInDisabled={!url || zoom === 18}
-        zoomOutDisabled={!url || zoom === 3}
-      />
+      <div className="mapbox-preview-message">
+        <strong>Khám phá quán trên bản đồ</strong>
+        <p>Xem vị trí, tìm địa điểm và chỉ đường khi bạn mở bản đồ.</p>
+        <RestaurantMapButton {...props} />
+      </div>
     </div>
   );
 }

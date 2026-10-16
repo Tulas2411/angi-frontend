@@ -106,13 +106,18 @@ export function createMockRestaurantProfileService(
         "name",
         "phone",
         "addressLine",
-        "district",
         "provinceName",
       ] as const) {
         const value = patch[key];
         if (value !== undefined) next[key] = value.trim();
       }
-      for (const key of ["description", "email", "website", "ward"] as const) {
+      for (const key of [
+        "description",
+        "email",
+        "website",
+        "ward",
+        "district",
+      ] as const) {
         const value = patch[key];
         if (value !== undefined) next[key] = value?.trim() || null;
       }

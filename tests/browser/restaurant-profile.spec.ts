@@ -1,4 +1,5 @@
 import { stubMapboxRendering } from "./mapbox-fixture";
+import { stubWardCatalogs } from "./locations-fixture";
 import { createServer, type Server } from "node:http";
 import { test, expect, type Page } from "@playwright/test";
 import type {
@@ -127,13 +128,14 @@ test.beforeEach(async ({ page }) => {
   delayPatch = false;
   uploads = 0;
   await stubMapboxRendering(page);
+  await stubWardCatalogs(page);
   await page.route("**/api/locations/provinces", (route) =>
     route.fulfill({
       json: {
         success: true,
         message: null,
         errorCode: null,
-        data: [{ name: "Thành phố Đà Nẵng" }],
+        data: [{ name: "Thành phố Đà Nẵng", code: 48 }],
       },
     }),
   );
@@ -237,7 +239,10 @@ test("province choices preserve unchanged profile values and PATCH the selected 
     route.fulfill({
       json: {
         success: true,
-        data: [{ name: "Thành phố Đà Nẵng" }, { name: "Tỉnh Điện Biên" }],
+        data: [
+          { name: "Thành phố Đà Nẵng", code: 48 },
+          { name: "Tỉnh Điện Biên", code: 11 },
+        ],
       },
     }),
   );
@@ -252,12 +257,12 @@ test("province choices preserve unchanged profile values and PATCH the selected 
   await page
     .getByRole("option", { name: "Tỉnh Điện Biên", exact: true })
     .click();
-  await page.getByLabel("Quận / huyện").fill("Huyện Điện Biên");
+  await expect(page.getByLabel("Quận / huyện")).toHaveCount(0);
   await page.getByLabel("Phường / xã").fill("");
   await save(page).click();
   await expect(save(page)).toBeDisabled();
   expect(patches).toEqual([
-    { provinceName: "Tỉnh Điện Biên", district: "Huyện Điện Biên", ward: null },
+    { provinceName: "Tỉnh Điện Biên", district: null, ward: null },
   ]);
   expect(current?.provinceName).toBe("Tỉnh Điện Biên");
 });

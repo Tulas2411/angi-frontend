@@ -56,7 +56,15 @@ export function RestaurantStatuses({ restaurant }: { restaurant: Restaurant }) {
     </div>
   );
 }
-export function DishCard({ dish, href, isDetailPage = false }: { dish: Dish; href: string; isDetailPage?: boolean }) {
+export function DishCard({
+  dish,
+  href,
+  isDetailPage = false,
+}: {
+  dish: Dish;
+  href: string;
+  isDetailPage?: boolean;
+}) {
   return (
     <Card className="domain-card">
       <Media src={dish.image} alt={dish.name} />
@@ -90,8 +98,8 @@ export function RestaurantCard({
       <Media src={restaurant.image} alt={restaurant.name} />
       <h3>{restaurant.name}</h3>
       <p className="helper">
-        {restaurant.district} · {restaurant.rating} / 5 ·{" "}
-        {verificationLabels[restaurant.verification]}
+        {restaurant.ward || restaurant.district || restaurant.province} ·{" "}
+        {restaurant.rating} / 5 · {verificationLabels[restaurant.verification]}
       </p>
       <ActionLink href={href} secondary>
         Xem chi tiết

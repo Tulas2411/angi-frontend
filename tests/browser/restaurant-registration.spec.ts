@@ -1,4 +1,5 @@
 import { stubMapboxRendering } from "./mapbox-fixture";
+import { stubWardCatalogs } from "./locations-fixture";
 import { createServer, type Server } from "node:http";
 import { test, expect, type Page } from "@playwright/test";
 import type {
@@ -24,7 +25,7 @@ function response(request: RegisterRestaurantRequestDto): OwnerRestaurantDto {
     slug: "bep-nha",
     addressLine: request.addressLine,
     provinceName: request.provinceName,
-    district: request.district,
+    district: request.district ?? null,
     ward: request.ward ?? null,
     latitude: request.latitude,
     longitude: request.longitude,
@@ -147,13 +148,14 @@ test.beforeEach(async ({ page }) => {
   requests = [];
   uploads = [];
   await stubMapboxRendering(page);
+  await stubWardCatalogs(page);
   await page.route("**/api/locations/provinces", (route) =>
     route.fulfill({
       json: {
         success: true,
         message: null,
         errorCode: null,
-        data: [{ name: "Thành phố Hà Nội" }],
+        data: [{ name: "Thành phố Hà Nội", code: 1 }],
       },
     }),
   );
@@ -168,12 +170,18 @@ async function login(page: Page, email = "owner@test.local") {
     email.startsWith("traveler") ? /\/demo\/traveler$/ : /\/restaurant$/,
   );
 }
-async function fill(page: Page) {
+async function fill(page: Page, useWardSuggestions = true) {
   await page.getByLabel("Tên nhà hàng", { exact: false }).fill("Bếp Nhà");
   await page.getByLabel("Số điện thoại nhà hàng").fill("02438262648");
   await page.getByLabel("Địa chỉ", { exact: false }).fill("24 Nguyễn Hữu Huân");
   await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
-  await page.getByLabel("Quận / huyện").fill("Quận Hoàn Kiếm");
+  await expect(page.getByLabel("Quận / huyện")).toHaveCount(0);
+  const ward = page.getByRole("combobox", { name: "Phường / xã" });
+  await ward.fill(useWardSuggestions ? "ba dinh" : "Phường Ba Đình");
+  if (useWardSuggestions)
+    await page
+      .getByRole("option", { name: "Phường Ba Đình", exact: true })
+      .click();
 }
 async function pickLocation(page: Page) {
   await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
@@ -270,11 +278,13 @@ test("multipart media and a numeric OWN-01 request preserve 201 and produce unve
   expect(requests[0]).toMatchObject({
     name: "Bếp Nhà",
     provinceName: "Thành phố Hà Nội",
+    ward: "Phường Ba Đình",
     latitude: 21.0285,
     longitude: 105.8542,
     coverMediaId: 9001,
   });
   expect(requests[0]).not.toHaveProperty("priceLevel");
+  expect(requests[0]).not.toHaveProperty("district");
   expect(uploads[0].type).toMatch(/^multipart\/form-data; boundary=/);
   expect(uploads[0].body).toContain('name="purpose"');
   expect(uploads[0].body).toContain("restaurant");
@@ -612,7 +622,7 @@ test("failed catalog and map retain manual entry; malformed uploads and foreign 
   await page.route("https://api.mapbox.com/**", (route) => route.abort());
   await login(page);
   await expect(page.getByText(/Chưa tải được gợi ý/)).toBeVisible();
-  await fill(page);
+  await fill(page, false);
   await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
   await expect(page.getByText(/Không tải được bản đồ/)).toBeVisible();
   await page
