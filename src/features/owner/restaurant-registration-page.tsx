@@ -194,8 +194,7 @@ export function RestaurantRegistrationPage() {
             longitude: restaurant.longitude ?? location.longitude,
             verification: restaurant.verificationStatus,
             moderation: restaurant.moderationStatus,
-            operating:
-              restaurant.operatingStatus === "open" ? "open" : "closed",
+            operating: restaurant.operatingStatus,
             rating: restaurant.ratingAvg,
           });
           next.ownerRestaurantId = id;

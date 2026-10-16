@@ -19,7 +19,8 @@ export interface Restaurant {
   description: string;
   image: string;
   verification: Verification;
-  operating: "open" | "closed";
+  // "closed" remains a legacy fixture value; new owner saves retain the exact status.
+  operating: "open" | "closed" | "temporarily_closed" | "permanently_closed";
   moderation: Visibility;
   rating: number;
   latitude: number;

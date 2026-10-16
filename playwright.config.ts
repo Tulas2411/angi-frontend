@@ -7,6 +7,7 @@ export default defineConfig({
     "restaurant-profile.spec.ts",
     "restaurant-business-hours.spec.ts",
     "mapbox.spec.ts",
+    "restaurant-operating-status.spec.ts",
   ],
   timeout: 60000,
   expect: { timeout: 10000 },

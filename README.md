@@ -24,6 +24,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 | Owner restaurant registration (F-43 / ANGI-36)                                            | Connected to OWN-01/OWN-02 and MEDIA-01; isolated mock registration is available              |
 | Owner restaurant profile (F-44 / ANGI-43)                                                 | Connected to OWN-02/OWN-03; information, location and image changes use verified DTOs         |
 | Owner business hours (F-45 / ANGI-48)                                                     | Connected to OWN-02/OWN-04; complete weekly schedules, multiple intervals and overnight hours |
+| Owner operating status (F-46 / ANGI-55)                                                   | Connected to OWN-02/OWN-05; three states, optional reason and suspension conflict handling    |
 | Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback                         |
 | Verification/recovery, OAuth, invitations, routing and AI                                 | UI/scaffold exists where designed; real integrations remain pending                           |
 
@@ -96,7 +97,7 @@ Open [the demo selector](http://localhost:3000/demo). It works without Docker or
 
 For design/component work, use [the component gallery](http://localhost:3000/dev/components) and [reproducible state scenarios](http://localhost:3000/dev/scenarios). Fixture changes reset on page reload or workspace remount.
 
-The default business mode is `live`. Owner restaurant registration and profile editing use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
+The default business mode is `live`. Owner restaurant registration, profile editing, business hours and operating status use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
 
 For F-43, log in as a Restaurant Owner and open `/restaurant/register`; owner root also checks whether a restaurant exists. The new-owner demo is `/dev/scenarios?state=owner-register-restaurant`. Required information includes business name/phone, address, province/ward and explicitly selected coordinates. Optional cover/gallery images upload through MEDIA-01 before OWN-01 receives numeric media IDs. Registration creates an unverified restaurant; sending verification documents is a separate task. Existing restaurants and registration conflicts prevent duplicate creation.
 
@@ -214,19 +215,20 @@ Build before standalone typecheck on a fresh checkout so Next.js route types exi
 
 Additional checks:
 
-| Command                                                     | Purpose/prerequisites                                                                                                |
-| ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `npm run format:check`                                      | Existing source/tests/scripts/docs formatting check                                                                  |
-| `npm exec prettier -- --check README.md AGENTS.md .agents`  | README and rule-document formatting                                                                                  |
-| `npm run test:browser`                                      | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000                                  |
-| `npx playwright test --config=playwright.owner.config.ts`   | F-43 integration, error, role, keyboard and responsive checks; isolated frontend 3001/API stub 5164                  |
-| `npx playwright test --config=playwright.profile.config.ts` | F-44 GET/PATCH, media, validation, role, modal and responsive checks; isolated source/server and API stub            |
-| `npx playwright test --config=playwright.hours.config.ts`   | F-45 full-week PUT, overnight intervals, errors, role/Origin, modals and responsive checks; same isolated test ports |
-| `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                     |
-| `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                         |
-| `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                            |
-| `node scripts/verify-assets.mjs`                            | Local design assets and font/license verification                                                                    |
-| `npm run test:smoke`                                        | Existing real-auth integration checks; local backend/frontend and prepared test accounts required                    |
+| Command                                                     | Purpose/prerequisites                                                                                                  |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `npm run format:check`                                      | Existing source/tests/scripts/docs formatting check                                                                    |
+| `npm exec prettier -- --check README.md AGENTS.md .agents`  | README and rule-document formatting                                                                                    |
+| `npm run test:browser`                                      | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000                                    |
+| `npx playwright test --config=playwright.owner.config.ts`   | F-43 integration, error, role, keyboard and responsive checks; isolated frontend 3001/API stub 5164                    |
+| `npx playwright test --config=playwright.profile.config.ts` | F-44 GET/PATCH, media, validation, role, modal and responsive checks; isolated source/server and API stub              |
+| `npx playwright test --config=playwright.hours.config.ts`   | F-45 full-week PUT, overnight intervals, errors, role/Origin, modals and responsive checks; same isolated test ports   |
+| `npx playwright test --config=playwright.status.config.ts`  | F-46 PUT, confirmation, three states, suspension, roles/Origin, draft retention and responsive checks; same test ports |
+| `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                       |
+| `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                           |
+| `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                              |
+| `node scripts/verify-assets.mjs`                            | Local design assets and font/license verification                                                                      |
+| `npm run test:smoke`                                        | Existing real-auth integration checks; local backend/frontend and prepared test accounts required                      |
 
 For browser checks, install Chromium. PowerShell example using a local cache:
 

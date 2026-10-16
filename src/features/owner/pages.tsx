@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
@@ -29,6 +28,7 @@ import { EmptyState } from "@/components/ui/primitives";
 import { RestaurantRegistrationPage } from "./restaurant-registration-page";
 import { RestaurantProfilePage } from "./restaurant-profile-page";
 import { RestaurantBusinessHoursPage } from "./restaurant-business-hours-page";
+import { RestaurantOperatingStatusPage } from "./restaurant-operating-status-page";
 
 export function OwnerOverview() {
   const { data } = usePlatform(),
@@ -124,76 +124,10 @@ export function OwnerRestaurant({
   );
   if (registering) return <RestaurantRegistrationPage />;
   if (initialTab === "hours") return <RestaurantBusinessHoursPage />;
-  if (initialTab === "status") return <OwnerOperatingStatusPreview />;
+  if (initialTab === "status") return <RestaurantOperatingStatusPage />;
   return <RestaurantProfilePage initialTab={initialTab} />;
 }
 
-// OWN-05 remains a fixture-only operating-status preview.
-function OwnerOperatingStatusPreview() {
-  const router = useRouter();
-  const { base } = useWorkspace();
-  const { data, mutate, busy } = usePlatform();
-  const restaurant = data.restaurants.find(
-    (item) => item.id === data.ownerRestaurantId,
-  );
-  const [confirm, setConfirm] = useState(false);
-  if (!restaurant) return <EmptyState title="Bạn chưa đăng ký nhà hàng" />;
-  return (
-    <div className="stack">
-      <PageHeading
-        title="Nhà hàng của tôi"
-        description={`${restaurant.name} · Bản minh họa`}
-      />
-      <Tabs
-        value="status"
-        onChange={(tab) => {
-          if (!busy && tab !== "status")
-            router.push(`${base}/profile?tab=${tab}`);
-        }}
-        items={[
-          { value: "information", label: "Thông tin" },
-          { value: "photos", label: "Hình ảnh" },
-          { value: "hours", label: "Giờ mở cửa" },
-          { value: "status", label: "Trạng thái" },
-        ]}
-      />
-      <RestaurantStatuses restaurant={restaurant} />
-      <Card title="Trạng thái hoạt động">
-        <p>Đóng / mở hoạt động độc lập với kết quả xác minh và kiểm duyệt.</p>
-        <Button
-          variant="secondary"
-          disabled={busy}
-          onClick={() => setConfirm(true)}
-        >
-          {restaurant.operating === "open"
-            ? "Tạm đóng nhà hàng"
-            : "Mở lại nhà hàng"}
-        </Button>
-      </Card>
-      <ConfirmDialog
-        open={confirm}
-        title="Cập nhật trạng thái hoạt động?"
-        loading={busy}
-        onClose={() => setConfirm(false)}
-        onConfirm={async () => {
-          await mutate((next) => {
-            const target = next.restaurants.find(
-              (item) => item.id === next.ownerRestaurantId,
-            );
-            if (target)
-              target.operating =
-                target.operating === "open" ? "closed" : "open";
-          });
-          setConfirm(false);
-        }}
-      >
-        <p>
-          Thông tin hoạt động của nhà hàng sẽ được cập nhật trong bản minh họa.
-        </p>
-      </ConfirmDialog>
-    </div>
-  );
-}
 export function VerificationPage() {
   const { data, mutate, busy } = usePlatform(),
     [tab, setTab] = useState("status"),
