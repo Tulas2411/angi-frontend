@@ -158,6 +158,9 @@ export function PageRouter({
     );
 
   // These operations do not depend on the AppData adapter.
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "verification")
+    return <VerificationPage />;
+
   if (
     role === "RESTAURANT_OWNER" &&
     (area === "register" || (mode === "live" && !area))
@@ -214,7 +217,8 @@ export function PageRouter({
       ) : (
         <DiscoveryList kind="restaurants" />
       );
-    if (area === "dishes") return id ? <DishDetail id={id} /> : <DiscoveryList kind="dishes" />;
+    if (area === "dishes")
+      return id ? <DishDetail id={id} /> : <DiscoveryList kind="dishes" />;
     if (
       role === "GUEST" &&
       area === "guides" &&
@@ -242,11 +246,7 @@ export function PageRouter({
     if (role === "TRAVELER") {
       if (area === "my-guides") return <BlogList mine />;
       if (area === "profile" || area === "account")
-        return id === "edit" ? (
-          <AccountPage profile />
-        ) : (
-          <ProfileViewPage />
-        );
+        return id === "edit" ? <AccountPage profile /> : <ProfileViewPage />;
       if (area === "preferences" || area === "survey")
         return <PreferencesPage survey={area === "survey"} />;
       if (area === "notifications") return <NotificationsPage />;

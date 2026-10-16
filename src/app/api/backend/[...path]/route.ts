@@ -14,6 +14,7 @@ const allowedEndpoints = new Set([
   "PUT owner/restaurant/business-hours",
   "PUT owner/restaurant/operating-status",
   "POST owner/restaurant",
+  "POST owner/restaurant/verifications",
   "POST media",
 ]);
 
@@ -50,7 +51,8 @@ async function handle(request: Request, context: Context) {
         if (
           (endpoint === "owner/restaurant" ||
             endpoint === "owner/restaurant/business-hours" ||
-            endpoint === "owner/restaurant/operating-status") &&
+            endpoint === "owner/restaurant/operating-status" ||
+            endpoint === "owner/restaurant/verifications") &&
           auth.user.role !== "RESTAURANT_OWNER"
         )
           throw new ApiError(

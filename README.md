@@ -25,8 +25,9 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 | Owner restaurant profile (F-44 / ANGI-43)                                                 | Connected to OWN-02/OWN-03; information, location and image changes use verified DTOs         |
 | Owner business hours (F-45 / ANGI-48)                                                     | Connected to OWN-02/OWN-04; complete weekly schedules, multiple intervals and overnight hours |
 | Owner operating status (F-46 / ANGI-55)                                                   | Connected to OWN-02/OWN-05; three states, optional reason and suspension conflict handling    |
+| Owner verification submission (F-47 / ANGI-61)                                            | Connected to OWN-02/OWN-06 and private MEDIA-01 uploads; initial submission and latest result |
 | Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback                         |
-| Verification/recovery, OAuth, invitations, routing and AI                                 | UI/scaffold exists where designed; real integrations remain pending                           |
+| Email verification/recovery, OAuth, invitations, routing and AI                           | UI/scaffold exists where designed; real integrations remain pending                           |
 
 A successful demo action changes local fixture state. It does not persist business data, send an email or authenticate the selected demo role. Backend API Design describes planned contracts; an entry in that workbook does not prove that an endpoint has been implemented.
 
@@ -97,7 +98,7 @@ Open [the demo selector](http://localhost:3000/demo). It works without Docker or
 
 For design/component work, use [the component gallery](http://localhost:3000/dev/components) and [reproducible state scenarios](http://localhost:3000/dev/scenarios). Fixture changes reset on page reload or workspace remount.
 
-The default business mode is `live`. Owner restaurant registration, profile editing, business hours and operating status use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
+The default business mode is `live`. Owner restaurant registration, profile editing, business hours, operating status and verification submission use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
 
 For F-43, log in as a Restaurant Owner and open `/restaurant/register`; owner root also checks whether a restaurant exists. The new-owner demo is `/dev/scenarios?state=owner-register-restaurant`. Required information includes business name/phone, address, province/ward and explicitly selected coordinates. Optional cover/gallery images upload through MEDIA-01 before OWN-01 receives numeric media IDs. Registration creates an unverified restaurant; sending verification documents is a separate task. Existing restaurants and registration conflicts prevent duplicate creation.
 
@@ -108,6 +109,8 @@ For F-45, open `/restaurant/profile?tab=hours` or `/demo/owner/profile?tab=hours
 Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables the shared Mapbox GL JS dialog: street/satellite layers, local search of loaded basemap POIs and ANGI restaurants, explicit Search Box searches and Directions routes. Restaurant discovery/detail, matching Roll Dish fixtures and itineraries expose **Mở bản đồ tương tác**; the itinerary no longer requests Static Images on page load. ANGI markers use existing coordinates and names. Opening a map and moving it can load provider resources; local POI filtering makes no additional search request. Search Box coverage, optional metadata and storage rights depend on the provider; permanent address geocoding retains `permanent=true`. See the [Vietnamese Mapbox usage and manual verification guide](docs/mapbox-features.vi.md). The owner will test this delivery; no token probes, live Mapbox calls or test/build checks were run.
 
 ProvinceField supplies [Provinces Open API V2](https://provinces.open-api.vn/) suggestions for restaurant address forms, itinerary destinations, header/restaurant location search and the gallery, including demos. The post-merger catalog has 34 provinces/cities. WardField loads wards directly by province; owner forms have no district input. Both support unaccented search, official-name selection, shared caching, manual entry and retry. The corresponding backend change accepts optional legacy districts. No new key or env setting is needed. See [setup details](docs/setup.md), [the address contract note](docs/address-entry-v2.vi.md), and run `npx playwright test --config=playwright.province.config.ts` for isolated checks.
+
+For F-47, open `/restaurant/verification` after Owner login. Use `/dev/scenarios?state=owner-verification-new` to prepare a mock initial submission. Legal information and at least one business license are required; documents upload privately through MEDIA-01 (`purpose=verification_doc`) before OWN-06 receives their numeric IDs. Sending and discarding use modals. Success shows the pending response; failed requests retain the draft. Full history and resubmission remain separate tasks. See [the Vietnamese manual guide and contract](docs/restaurant-verification.vi.md).
 
 ### 4. Run real authentication when needed
 
@@ -194,7 +197,7 @@ try {
 - Mutations validate Origin using `APP_URL`. Personalized responses are not cached. Login/logout use full navigation to clear cached protected routes.
 - The backend proxy has an exact method/path allowlist. Its current `me`/password entries are planned account operations, not working backend endpoints. Adding a client helper alone does not enable an operation; add verified DTOs, the allowed method/path and its Route Handler export together.
 
-The owner proxy allows `GET/POST/PATCH owner/restaurant` for Owner sessions and authenticated multipart `POST media`. Registration/upload preserve 201; profile GET/PATCH preserve 200. Field errors remain associated with the form and transport failures retain input for retry. These typed operation services bypass the pending whole-business adapter without substituting fixtures into live failures.
+The owner proxy allows `GET/POST/PATCH owner/restaurant`, `PUT owner/restaurant/business-hours`, `PUT owner/restaurant/operating-status` and `POST owner/restaurant/verifications` for Owner sessions, plus authenticated multipart `POST media`. Registration/upload/verification preserve 201; GET/PATCH/PUT preserve 200. Field errors remain associated with the form and transport failures retain input for retry. These typed operation services bypass the pending whole-business adapter without substituting fixtures into live failures.
 
 The canonical API workbook is maintained in `angi-backend/.docs/ANGI_API_Design_Ver*.xlsx` (currently v1.8 in the sibling checkout). Read the newest version and verify backend availability before connecting business APIs. Do not silently substitute demo data when a live call fails.
 
@@ -224,6 +227,7 @@ Additional checks:
 | `npx playwright test --config=playwright.profile.config.ts` | F-44 GET/PATCH, media, validation, role, modal and responsive checks; isolated source/server and API stub              |
 | `npx playwright test --config=playwright.hours.config.ts`   | F-45 full-week PUT, overnight intervals, errors, role/Origin, modals and responsive checks; same isolated test ports   |
 | `npx playwright test --config=playwright.status.config.ts`  | F-46 PUT, confirmation, three states, suspension, roles/Origin, draft retention and responsive checks; same test ports |
+| `npx playwright test --config=playwright.verification.config.ts` | F-47 private multipart, POST, field errors, conflicts, modals, roles/Origin and mobile; no external providers |
 | `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                       |
 | `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                           |
 | `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                              |
