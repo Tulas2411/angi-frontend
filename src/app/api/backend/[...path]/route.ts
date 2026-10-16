@@ -24,7 +24,13 @@ async function handle(request: Request, context: Context) {
   try {
     const { path } = await context.params;
     const endpoint = path.join("/");
-    if (!allowedEndpoints.has(`${request.method} ${endpoint}`)) {
+    const resubmission =
+      request.method === "POST" &&
+      /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
+    if (
+      !allowedEndpoints.has(`${request.method} ${endpoint}`) &&
+      !resubmission
+    ) {
       throw new ApiError(
         404,
         "ROUTE_NOT_FOUND",
@@ -51,9 +57,7 @@ async function handle(request: Request, context: Context) {
       await withAuth(session, (auth) => {
         if (
           (endpoint === "owner/restaurant" ||
-            endpoint === "owner/restaurant/business-hours" ||
-            endpoint === "owner/restaurant/operating-status" ||
-            endpoint === "owner/restaurant/verifications") &&
+            endpoint.startsWith("owner/restaurant/")) &&
           auth.user.role !== "RESTAURANT_OWNER"
         )
           throw new ApiError(

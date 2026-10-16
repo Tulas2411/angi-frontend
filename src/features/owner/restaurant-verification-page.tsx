@@ -35,6 +35,8 @@ import {
   verificationErrorMessage,
   verificationFieldErrors,
   verificationSubmissionBlock,
+  resubmittableVerification,
+  verificationResubmissionDraft,
 } from "./verification-rules";
 import {
   verificationService,
@@ -42,7 +44,7 @@ import {
 } from "./verification-service";
 import type {
   OwnerRestaurantDto,
-  VerificationUpload,
+  VerificationDocumentSelection,
 } from "./restaurant-types";
 import type {
   GetVerificationStatusResponseDto,
@@ -183,6 +185,7 @@ export function RestaurantVerificationPage({
               legalName: result.legalName,
               license: result.businessLicenseNo,
               taxCode: result.taxCode ?? "",
+              previousId: result.previousId,
               documents: result.documents.map((document) => ({
                 type: document.docType,
                 name:
@@ -199,8 +202,13 @@ export function RestaurantVerificationPage({
 }
 
 type Confirmation =
-  | { kind: "submit"; request: SubmitVerificationRequestDto }
-  | { kind: "remove"; document: VerificationUpload }
+  | {
+      kind: "submit";
+      request: SubmitVerificationRequestDto;
+      previousId: number | null;
+    }
+  | { kind: "remove"; document: VerificationDocumentSelection }
+  | { kind: "resubmit"; previous: VerificationDto }
   | { kind: "discard" }
   | { kind: "reload" };
 
@@ -221,7 +229,7 @@ function VerificationEditor({
   onReload: () => void;
   onSaved: (
     result: VerificationDto,
-    documents: VerificationUpload[],
+    documents: VerificationDocumentSelection[],
   ) => Promise<void>;
 }) {
   const [tab, setTab] = useState(
@@ -232,7 +240,12 @@ function VerificationEditor({
   const [values, setValues] = useState<VerificationFormValues>({
     ...emptyVerificationForm,
   });
-  const [documents, setDocuments] = useState<VerificationUpload[]>([]);
+  const [documents, setDocuments] = useState<VerificationDocumentSelection[]>(
+    [],
+  );
+  const [resubmission, setResubmission] = useState<VerificationDto | null>(
+    null,
+  );
   const [uploadRevision, setUploadRevision] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -262,7 +275,13 @@ function VerificationEditor({
     else feedback.current?.focus();
   }, [busy, confirmation, focusRequest]);
   const blocked = busy || uploading;
-  const stateBlock = conflict || verificationSubmissionBlock(restaurant);
+  const stateBlock =
+    conflict ||
+    (resubmission
+      ? resubmittableVerification(restaurant)?.id === resubmission.id
+        ? ""
+        : "Hồ sơ này không còn được phép gửi lại. Tải lại trạng thái để xem hồ sơ mới nhất."
+      : verificationSubmissionBlock(restaurant));
   const publishHistory = useCallback(
     (result: GetVerificationStatusResponseDto) => {
       setConflict("");
@@ -271,6 +290,19 @@ function VerificationEditor({
     [onHistoryLoaded],
   );
   const dirty = Object.values(values).some(Boolean) || documents.length > 0;
+  function startResubmission(previous: VerificationDto) {
+    const draft = verificationResubmissionDraft(previous);
+    setResubmission(previous);
+    setValues(draft.values);
+    setDocuments(draft.documents);
+    setUploadRevision((value) => value + 1);
+    setErrors({});
+    setError("");
+    setSuccess("");
+    setConflict("");
+    setFocusRequest({ name: "legalName" });
+    setTab("new");
+  }
   function change(field: keyof VerificationFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: "" }));
@@ -286,7 +318,10 @@ function VerificationEditor({
     event.preventDefault();
     if (blocked || stateBlock || submitting.current) return;
     const request = buildVerificationRequest(values, documents);
-    const invalid = validateVerificationRequest(request);
+    const invalid = validateVerificationRequest(
+      request,
+      resubmission ? "resubmit" : "initial",
+    );
     setErrors(invalid);
     setError("");
     setSuccess("");
@@ -295,25 +330,40 @@ function VerificationEditor({
       return;
     }
     setFocusRequest(null);
-    setConfirmation({ kind: "submit", request });
+    setConfirmation({
+      kind: "submit",
+      request,
+      previousId: resubmission?.id ?? null,
+    });
   }
-  async function send(request: SubmitVerificationRequestDto) {
+  async function send(
+    request: SubmitVerificationRequestDto,
+    previousId: number | null,
+  ) {
     if (submitting.current || stateBlock || uploading) return;
     submitting.current = true;
     setBusy(true);
     setError("");
     try {
-      const result = await service.submit(request);
+      const result =
+        previousId === null
+          ? await service.submit(request)
+          : await service.resubmit(previousId, request);
       if (!alive.current) return;
       setFocusRequest(null);
       setValues({ ...emptyVerificationForm });
       setDocuments([]);
+      setResubmission(null);
       setConfirmation(null);
       setTab("status");
       setSuccess(
-        demo
-          ? "Đã gửi hồ sơ minh họa. Trạng thái: Chờ duyệt."
-          : "Đã gửi hồ sơ xác minh. Trạng thái: Chờ duyệt.",
+        previousId !== null
+          ? demo
+            ? "Đã gửi lại hồ sơ minh họa. Trạng thái: Chờ duyệt."
+            : "Đã gửi lại hồ sơ xác minh. Trạng thái: Chờ duyệt."
+          : demo
+            ? "Đã gửi hồ sơ minh họa. Trạng thái: Chờ duyệt."
+            : "Đã gửi hồ sơ xác minh. Trạng thái: Chờ duyệt.",
       );
       await onSaved(result, documents);
     } catch (caught) {
@@ -332,6 +382,8 @@ function VerificationEditor({
             "RESTAURANT_ALREADY_VERIFIED",
             "VERIFICATION_RESUBMIT_REQUIRED",
             "RESTAURANT_NOT_FOUND",
+            "VERIFICATION_NOT_RESUBMITTABLE",
+            "VERIFICATION_NOT_FOUND",
           ].includes(caught.errorCode)
         ) {
           setConflict(verificationErrorMessage(caught));
@@ -347,7 +399,12 @@ function VerificationEditor({
   function confirm() {
     if (!confirmation || blocked) return;
     if (confirmation.kind === "submit") {
-      void send(confirmation.request);
+      void send(confirmation.request, confirmation.previousId);
+      return;
+    }
+    if (confirmation.kind === "resubmit") {
+      startResubmission(confirmation.previous);
+      setConfirmation(null);
       return;
     }
     if (confirmation.kind === "remove") {
@@ -365,6 +422,10 @@ function VerificationEditor({
       setDocuments([]);
       setErrors({});
       setError("");
+      if (resubmission) {
+        setResubmission(null);
+        setTab("status");
+      }
     }
     setUploadRevision((value) => value + 1);
     setConfirmation(null);
@@ -404,7 +465,10 @@ function VerificationEditor({
         }}
         items={[
           { value: "status", label: "Trạng thái xác minh" },
-          { value: "new", label: "Hồ sơ xác minh" },
+          {
+            value: "new",
+            label: resubmission ? "Gửi lại hồ sơ" : "Hồ sơ xác minh",
+          },
         ]}
       />
       {tab === "status" ? (
@@ -412,11 +476,30 @@ function VerificationEditor({
           service={service}
           onLoaded={publishHistory}
           onPrepare={() => setTab("new")}
+          onResubmit={(previous) => {
+            if (resubmission?.id === previous.id) setTab("new");
+            else if (dirty) setConfirmation({ kind: "resubmit", previous });
+            else startResubmission(previous);
+          }}
         />
       ) : stateBlock ? (
         <Alert tone="info">{stateBlock}</Alert>
       ) : (
-        <Card title="Hồ sơ xác minh">
+        <Card
+          title={resubmission ? "Gửi lại hồ sơ xác minh" : "Hồ sơ xác minh"}
+        >
+          {resubmission && (
+            <div className="stack-sm">
+              <p>
+                Gửi lại từ hồ sơ #{resubmission.id}. Hồ sơ cũ và phản hồi của
+                người duyệt được giữ trong lịch sử.
+              </p>
+              <Alert tone="warning">
+                {resubmission.reviewNote ||
+                  "Hồ sơ trước cần được chỉnh sửa hoặc bổ sung tài liệu."}
+              </Alert>
+            </div>
+          )}
           <form ref={form} className="stack" onSubmit={prepare} noValidate>
             <div className="grid-2">
               <Field
@@ -460,6 +543,7 @@ function VerificationEditor({
                 errors={errors}
                 service={service}
                 onPending={setUploading}
+                resubmitting={!!resubmission}
                 onRemove={(document) =>
                   setConfirmation({ kind: "remove", document })
                 }
@@ -486,7 +570,7 @@ function VerificationEditor({
             </Alert>
             <div className="actions">
               <Button type="submit" disabled={blocked}>
-                Gửi hồ sơ xác minh
+                {resubmission ? "Gửi lại hồ sơ xác minh" : "Gửi hồ sơ xác minh"}
               </Button>
               <Button
                 variant="secondary"
@@ -503,7 +587,9 @@ function VerificationEditor({
         open={!!confirmation}
         title={
           confirmation?.kind === "submit"
-            ? "Gửi hồ sơ xác minh?"
+            ? confirmation.previousId !== null
+              ? "Gửi lại hồ sơ xác minh?"
+              : "Gửi hồ sơ xác minh?"
             : confirmation?.kind === "remove"
               ? "Bỏ tài liệu khỏi hồ sơ?"
               : confirmation?.kind === "reload"
@@ -512,7 +598,9 @@ function VerificationEditor({
         }
         label={
           confirmation?.kind === "submit"
-            ? "Xác nhận gửi hồ sơ"
+            ? confirmation.previousId !== null
+              ? "Xác nhận gửi lại hồ sơ"
+              : "Xác nhận gửi hồ sơ"
             : confirmation?.kind === "remove"
               ? "Bỏ tài liệu"
               : "Bỏ thay đổi"

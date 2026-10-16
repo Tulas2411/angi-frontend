@@ -15,9 +15,15 @@ import {
   VerificationDetails,
   verificationDateLabel,
 } from "./verification-details";
-import { verificationStatusLabels } from "./verification-rules";
+import {
+  resubmittableVerification,
+  verificationStatusLabels,
+} from "./verification-rules";
 import type { VerificationService } from "./verification-service";
-import type { GetVerificationStatusResponseDto } from "./verification-types";
+import type {
+  GetVerificationStatusResponseDto,
+  VerificationDto,
+} from "./verification-types";
 
 type HistoryState =
   | { status: "loading" }
@@ -29,10 +35,12 @@ export function VerificationHistory({
   service,
   onLoaded,
   onPrepare,
+  onResubmit,
 }: {
   service: Pick<VerificationService, "getHistory">;
   onLoaded: (result: GetVerificationStatusResponseDto) => void;
   onPrepare: () => void;
+  onResubmit: (previous: VerificationDto) => void;
 }) {
   const { base } = useWorkspace();
   const [state, setState] = useState<HistoryState>({ status: "loading" });
@@ -88,6 +96,10 @@ export function VerificationHistory({
     );
   const { items, verificationStatus } = state.data;
   const latest = items[0];
+  const resubmittable = resubmittableVerification({
+    verificationStatus,
+    latestVerification: latest ?? null,
+  });
   const selected = items.find((item) => item.id === selectedId);
   return (
     <div className="stack verification-history">
@@ -119,8 +131,13 @@ export function VerificationHistory({
         {verificationStatus === "rejected" && (
           <Alert tone="warning">
             Xem phản hồi của người duyệt để biết nội dung cần chỉnh sửa hoặc bổ
-            sung. Chức năng gửi lại hồ sơ sẽ được bổ sung ở bước tiếp theo.
+            sung.
           </Alert>
+        )}
+        {resubmittable && (
+          <Button onClick={() => onResubmit(resubmittable)}>
+            Gửi lại hồ sơ
+          </Button>
         )}
         {verificationStatus === "unverified" && (
           <Button onClick={onPrepare}>Chuẩn bị hồ sơ</Button>

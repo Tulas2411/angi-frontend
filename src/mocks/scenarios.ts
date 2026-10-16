@@ -143,12 +143,14 @@ export const scenarios: Record<string, Scenario> = {
     role: "RESTAURANT_OWNER",
     segments: ["verification"],
     node: "465:51278",
-    apply: (d) => {
-      const s = d.submissions.find((s) => s.kind === "verification")!;
-      s.status = "needs_changes";
-      s.reviewNote = "Bổ sung giấy phép còn hiệu lực.";
-      d.restaurants[0].verification = "needs_changes";
-    },
+    apply: (data) => applyVerificationHistoryScenario(data, "needs_more_info"),
+  },
+  "owner-verification-rejected": {
+    label: "Owner · Gửi lại hồ sơ bị từ chối",
+    role: "RESTAURANT_OWNER",
+    segments: ["verification"],
+    node: "465:51278",
+    apply: (data) => applyVerificationHistoryScenario(data, "rejected"),
   },
   "owner-menu-draft": {
     label: "Owner · Bản chỉnh sửa thực đơn",

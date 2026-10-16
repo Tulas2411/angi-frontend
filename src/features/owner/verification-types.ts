@@ -16,6 +16,9 @@ export interface SubmitVerificationRequestDto {
   documents: { docType: VerificationDocumentType; mediaId: number }[];
 }
 
+/** OWN-08 replaces the complete dossier. Unlike OWN-06, no license document is required. */
+export type ResubmitVerificationRequestDto = SubmitVerificationRequestDto;
+
 export interface VerificationDto {
   id: number;
   restaurantId: number;

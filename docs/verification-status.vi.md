@@ -14,7 +14,7 @@
 - Lịch sử hiển thị mới nhất trước theo thứ tự BE trả về. **Xem hồ sơ #...** mở popup chi tiết chỉ đọc; nếu có `previousId` trong lịch sử, có thể xem tiếp hồ sơ trước.
 - URL tài liệu có chữ ký chỉ được mở khi bấm liên kết; không tự tải ảnh/PDF hoặc avatar người duyệt. **Tải lại lịch sử** gọi lại OWN-07 để lấy trạng thái và URL mới. Không polling tự động.
 - `items: []` là chưa có hồ sơ. `404 RESTAURANT_NOT_FOUND` là chưa có nhà hàng. Lỗi dịch vụ có nút thử lại và không bị hiển thị như lịch sử rỗng.
-- Nhà hàng chưa xác minh có thể chuyển sang chuẩn bị hồ sơ F-47. Gửi bổ sung qua OWN-08 thuộc F-49 và chưa được triển khai trong task này.
+- Nhà hàng chưa xác minh có thể chuyển sang chuẩn bị hồ sơ F-47. F-49 đã bổ sung **Gửi lại hồ sơ** cho hồ sơ mới nhất bị từ chối/cần bổ sung qua OWN-08; xem [hướng dẫn gửi lại](verification-resubmission.vi.md).
 
 ## API
 

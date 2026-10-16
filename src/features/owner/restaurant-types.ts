@@ -120,6 +120,18 @@ export interface VerificationUpload {
   media: MediaFileDto;
 }
 
+/** OWN-07 supplies IDs/URLs only; do not invent filenames, MIME types or file sizes. */
+export interface RetainedVerificationDocument {
+  key: string;
+  fileName: string;
+  docType: VerificationDocumentType;
+  media: Pick<MediaFileDto, "id" | "url">;
+  retained: true;
+}
+
+export type VerificationDocumentSelection =
+  VerificationUpload | RetainedVerificationDocument;
+
 /** UI selection metadata is never spread into an owner API request. */
 export type RestaurantLocation = MapLocation;
 

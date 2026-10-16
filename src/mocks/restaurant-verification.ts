@@ -4,12 +4,16 @@ import type {
   MediaFileDto,
 } from "@/features/owner/restaurant-types";
 import type { VerificationService } from "@/features/owner/verification-service";
-import type { VerificationDto } from "@/features/owner/verification-types";
+import type {
+  VerificationDto,
+  SubmitVerificationRequestDto,
+} from "@/features/owner/verification-types";
 import type { Submission } from "@/features/platform/contracts";
 import {
   validateVerificationFile,
   validateVerificationRequest,
   verificationDocumentTypes,
+  resubmittableVerification,
 } from "@/features/owner/verification-rules";
 
 /** Translate legacy demo labels explicitly; the server DTO keeps numeric IDs. */
@@ -58,8 +62,114 @@ export function createMockVerificationService(
     initialHistory ??
       (seed?.latestVerification ? [seed.latestVerification] : []),
   ).filter((item) => item.restaurantId === seed?.id);
-  let mediaId = 9000;
-  const media = new Map<number, MediaFileDto>();
+  let mediaId = Math.max(
+    9000,
+    ...history.flatMap((item) =>
+      item.documents.map((document) => document.mediaId),
+    ),
+  );
+  const media = new Map(
+    history.flatMap((item) =>
+      item.documents.map(
+        (document) => [document.mediaId, document.url] as const,
+      ),
+    ),
+  );
+  function createSubmission(
+    request: SubmitVerificationRequestDto,
+    previousId: number | null,
+  ): VerificationDto {
+    const errors = validateVerificationRequest(
+      request,
+      previousId === null ? "initial" : "resubmit",
+    );
+    if (Object.keys(errors).length)
+      throw new ApiError(
+        400,
+        "VALIDATION_FAILED",
+        "Kiểm tra thông tin hồ sơ.",
+        Object.fromEntries(
+          Object.entries(errors).map(([key, value]) => [key, [value]]),
+        ),
+      );
+    if (!current)
+      throw new ApiError(
+        404,
+        "RESTAURANT_NOT_FOUND",
+        "Bạn chưa đăng ký nhà hàng.",
+      );
+    if (previousId === null && current.verificationStatus !== "unverified") {
+      const code =
+        current.verificationStatus === "verified"
+          ? "RESTAURANT_ALREADY_VERIFIED"
+          : current.verificationStatus === "rejected"
+            ? "VERIFICATION_RESUBMIT_REQUIRED"
+            : "VERIFICATION_ALREADY_PENDING";
+      throw new ApiError(
+        409,
+        code,
+        "Trạng thái nhà hàng không cho phép nộp hồ sơ lần đầu.",
+      );
+    }
+    if (previousId !== null) {
+      if (!history.some((item) => item.id === previousId))
+        throw new ApiError(
+          404,
+          "VERIFICATION_NOT_FOUND",
+          "Không tìm thấy hồ sơ xác minh.",
+        );
+      const latest = [...history].sort(
+        (a, b) =>
+          Date.parse(b.submittedAt) - Date.parse(a.submittedAt) || b.id - a.id,
+      )[0];
+      if (
+        resubmittableVerification({ ...current, latestVerification: latest })
+          ?.id !== previousId
+      )
+        throw new ApiError(
+          409,
+          "VERIFICATION_NOT_RESUBMITTABLE",
+          "Chỉ được gửi lại hồ sơ mới nhất bị từ chối hoặc cần bổ sung.",
+        );
+    }
+    const invalid = request.documents.findIndex(
+      (document) => !media.has(document.mediaId),
+    );
+    if (invalid !== -1)
+      throw new ApiError(
+        400,
+        "VALIDATION_FAILED",
+        "Tài liệu không thuộc tài khoản này.",
+        {
+          [`Documents[${invalid}].MediaId`]: ["Tải lại tài liệu xác minh."],
+        },
+      );
+    const result: VerificationDto = {
+      id: Math.max(20, ...history.map((item) => item.id)) + 1,
+      restaurantId: current.id,
+      status: "pending",
+      legalName: request.legalName.trim(),
+      businessLicenseNo: request.businessLicenseNo.trim(),
+      taxCode: request.taxCode?.trim() || null,
+      ownerNote: request.ownerNote?.trim() || null,
+      documents: request.documents.map((document) => ({
+        ...document,
+        url: media.get(document.mediaId) ?? "",
+      })),
+      previousId,
+      submittedAt: new Date().toISOString(),
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewNote: null,
+    };
+    current = {
+      ...current,
+      verificationStatus: "pending",
+      latestVerification: result,
+    };
+    history.unshift(result);
+    return structuredClone(result);
+  }
   return {
     getOwnerRestaurant: async () => {
       if (!current)
@@ -112,74 +222,11 @@ export function createMockVerificationService(
         purpose: "verification_doc",
         createdAt: new Date().toISOString(),
       };
-      media.set(result.id, result);
+      media.set(result.id, result.url);
       return { ...result };
     },
-    submit: async (request) => {
-      const errors = validateVerificationRequest(request);
-      if (Object.keys(errors).length)
-        throw new ApiError(
-          400,
-          "VALIDATION_FAILED",
-          "Kiểm tra thông tin hồ sơ.",
-          Object.fromEntries(
-            Object.entries(errors).map(([key, value]) => [key, [value]]),
-          ),
-        );
-      if (!current)
-        throw new ApiError(
-          404,
-          "RESTAURANT_NOT_FOUND",
-          "Bạn chưa đăng ký nhà hàng.",
-        );
-      if (current.verificationStatus !== "unverified") {
-        const code =
-          current.verificationStatus === "verified"
-            ? "RESTAURANT_ALREADY_VERIFIED"
-            : current.verificationStatus === "rejected"
-              ? "VERIFICATION_RESUBMIT_REQUIRED"
-              : "VERIFICATION_ALREADY_PENDING";
-        throw new ApiError(
-          409,
-          code,
-          "Trạng thái nhà hàng không cho phép nộp hồ sơ lần đầu.",
-        );
-      }
-      const invalid = request.documents.findIndex(
-        (document) => !media.has(document.mediaId),
-      );
-      if (invalid !== -1)
-        throw new ApiError(
-          400,
-          "VALIDATION_FAILED",
-          "Tài liệu không thuộc phiên tải lên này.",
-          { [`Documents[${invalid}].MediaId`]: ["Tải lại tài liệu xác minh."] },
-        );
-      const result: VerificationDto = {
-        id: Math.max(20, ...history.map((item) => item.id)) + 1,
-        restaurantId: current.id,
-        status: "pending",
-        legalName: request.legalName.trim(),
-        businessLicenseNo: request.businessLicenseNo.trim(),
-        taxCode: request.taxCode?.trim() || null,
-        ownerNote: request.ownerNote?.trim() || null,
-        documents: request.documents.map((document) => ({
-          ...document,
-          url: "",
-        })),
-        previousId: null,
-        submittedAt: new Date().toISOString(),
-        reviewedBy: null,
-        reviewedAt: null,
-        reviewNote: null,
-      };
-      current = {
-        ...current,
-        verificationStatus: "pending",
-        latestVerification: result,
-      };
-      history.unshift(result);
-      return structuredClone(result);
-    },
+    submit: async (request) => createSubmission(request, null),
+    resubmit: async (verificationId, request) =>
+      createSubmission(request, verificationId),
   };
 }

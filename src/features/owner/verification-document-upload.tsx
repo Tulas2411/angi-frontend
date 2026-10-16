@@ -9,7 +9,8 @@ import {
   verificationDocumentTypes,
 } from "./verification-rules";
 import type { VerificationService } from "./verification-service";
-import type { VerificationUpload } from "./restaurant-types";
+import type { VerificationDocumentSelection } from "./restaurant-types";
+import { verificationDocumentUrl } from "./verification-details";
 
 export function VerificationDocumentUpload({
   documents,
@@ -19,14 +20,16 @@ export function VerificationDocumentUpload({
   onChange,
   onPending,
   onRemove,
+  resubmitting = false,
 }: {
-  documents: VerificationUpload[];
+  documents: VerificationDocumentSelection[];
   disabled: boolean;
   errors: Record<string, string>;
   service: Pick<VerificationService, "upload">;
-  onChange: (documents: VerificationUpload[]) => void;
+  onChange: (documents: VerificationDocumentSelection[]) => void;
   onPending: (pending: boolean) => void;
-  onRemove: (document: VerificationUpload) => void;
+  onRemove: (document: VerificationDocumentSelection) => void;
+  resubmitting?: boolean;
 }) {
   const id = useId();
   const alive = useRef(true);
@@ -92,8 +95,10 @@ export function VerificationDocumentUpload({
   return (
     <div className="verification-documents">
       <p id={`${id}-help`} className="helper">
-        Ảnh JPG, PNG, WEBP tối đa 5 MB; PDF tối đa 10 MB. Cần ít nhất một giấy
-        phép kinh doanh.
+        Ảnh JPG, PNG, WEBP tối đa 5 MB; PDF tối đa 10 MB.{" "}
+        {resubmitting
+          ? "Chọn bộ tài liệu đầy đủ cho lần gửi lại, gồm ít nhất một tài liệu."
+          : "Cần ít nhất một giấy phép kinh doanh."}
       </p>
       <div className="verification-document-grid">
         {documents.map((document, index) => (
@@ -116,11 +121,30 @@ export function VerificationDocumentUpload({
                 ×
               </Button>
             </div>
-            <p className="helper">
-              {document.media.mimeType === "application/pdf" ? "PDF" : "Ảnh"} ·{" "}
-              {(document.media.sizeBytes / 1024 / 1024).toFixed(1)} MB · Đã tải
-              lên
-            </p>
+            {"retained" in document ? (
+              <>
+                <p className="helper">
+                  Tài liệu từ hồ sơ trước · Sẽ được giữ trong lần gửi lại
+                </p>
+                {verificationDocumentUrl(document.media.url) && (
+                  <a
+                    href={
+                      verificationDocumentUrl(document.media.url) ?? undefined
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Mở tài liệu #{document.media.id}
+                  </a>
+                )}
+              </>
+            ) : (
+              <p className="helper">
+                {document.media.mimeType === "application/pdf" ? "PDF" : "Ảnh"}{" "}
+                · {(document.media.sizeBytes / 1024 / 1024).toFixed(1)} MB · Đã
+                tải lên
+              </p>
+            )}
             <SelectField
               label={`Loại tài liệu · ${document.fileName}`}
               name={`documents[${index}].docType`}

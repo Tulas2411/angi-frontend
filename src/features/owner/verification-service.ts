@@ -2,6 +2,7 @@ import { api } from "@/shared/api/client";
 import type { MediaFileDto, OwnerRestaurantDto } from "./restaurant-types";
 import type {
   GetVerificationStatusResponseDto,
+  ResubmitVerificationRequestDto,
   SubmitVerificationRequestDto,
   VerificationDto,
 } from "./verification-types";
@@ -11,6 +12,10 @@ export interface VerificationService {
   getHistory: () => Promise<GetVerificationStatusResponseDto>;
   upload: (file: File) => Promise<MediaFileDto>;
   submit: (request: SubmitVerificationRequestDto) => Promise<VerificationDto>;
+  resubmit: (
+    verificationId: number,
+    request: ResubmitVerificationRequestDto,
+  ) => Promise<VerificationDto>;
 }
 
 export const verificationService: VerificationService = {
@@ -25,4 +30,9 @@ export const verificationService: VerificationService = {
   },
   submit: (request) =>
     api.post<VerificationDto>("owner/restaurant/verifications", request),
+  resubmit: (verificationId, request) =>
+    api.post<VerificationDto>(
+      `owner/restaurant/verifications/${verificationId}/resubmit`,
+      request,
+    ),
 };
