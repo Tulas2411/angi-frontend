@@ -10,7 +10,11 @@ The modal uses a lazily loaded Mapbox GL JS renderer with native wheel zoom and 
 
 ## F-47 verification submission
 
-ANGI-61 uses `/restaurant/verification`, with an unverified mock at `/dev/scenarios?state=owner-verification-new`. Legal fields, five document types, JPG/PNG/WEBP/PDF upload, required business license, modal confirmations and pending/read-only outcomes follow OWN-06 and MEDIA-01. Latest verification details come from OWN-02; full history and resubmission remain separate tasks. Responsive checks use the existing UI system; no new pixel-equality claim is made. See [contract and manual verification](restaurant-verification.vi.md).
+ANGI-61 uses `/restaurant/verification`, with an unverified mock at `/dev/scenarios?state=owner-verification-new`. Legal fields, five document types, JPG/PNG/WEBP/PDF upload, required business license, modal confirmations and pending/read-only outcomes follow OWN-06 and MEDIA-01. F-48 now supplies the latest verification and full history through OWN-07; resubmission remains F-49. Responsive checks use the existing UI system; no new pixel-equality claim is made. See [contract and manual verification](restaurant-verification.vi.md).
+
+## F-48 verification status and history
+
+ANGI-65 extends the existing Owner verification family (`465:51167`). The status tab calls OWN-07, displays restaurant/request states separately, keeps newest-first history and opens older requests and previous-attempt links in a read-only shared Dialog. Review notes, reviewer/date, nullable fields, private-document links, loading/empty/missing/error and manual refresh are covered. The existing legal form and modal confirmations remain F-47. Responsive checks use the current UI system, without a new pixel-equality claim. See [manual checks and contract](verification-status.vi.md).
 
 ## Province suggestions
 

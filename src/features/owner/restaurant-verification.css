@@ -77,6 +77,27 @@
 .verification-document-links {
   padding-left: 20px;
 }
+.verification-history-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.verification-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.verification-history-item > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 @media (max-width: 600px) {
   .restaurant-verification-page .grid-2 {
     grid-template-columns: minmax(0, 1fr);

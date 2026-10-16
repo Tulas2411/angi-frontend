@@ -1,6 +1,7 @@
 import type { AppData } from "@/features/platform/contracts";
 import type { RoleCode } from "@/features/auth/types";
 import { initialData } from "./fixtures";
+import { applyVerificationHistoryScenario } from "./verification-history";
 export interface Scenario {
   label: string;
   role: RoleCode;
@@ -116,6 +117,27 @@ export const scenarios: Record<string, Scenario> = {
       d.restaurants[0].verification = "unverified";
     },
   },
+  "owner-verification-history": {
+    label: "Owner · Lịch sử xác minh",
+    role: "RESTAURANT_OWNER",
+    segments: ["verification"],
+    node: "465:51167",
+    apply: (data) => applyVerificationHistoryScenario(data),
+  },
+  "owner-verification-approved": {
+    label: "Owner · Hồ sơ đã được duyệt",
+    role: "RESTAURANT_OWNER",
+    segments: ["verification"],
+    node: "465:51167",
+    apply: (data) => applyVerificationHistoryScenario(data, "approved"),
+  },
+  "owner-verification-feedback": {
+    label: "Owner · Phản hồi cần bổ sung",
+    role: "RESTAURANT_OWNER",
+    segments: ["verification"],
+    node: "465:51278",
+    apply: (data) => applyVerificationHistoryScenario(data, "needs_more_info"),
+  },
   "owner-verification-supplement": {
     label: "Owner · Bổ sung hồ sơ",
     role: "RESTAURANT_OWNER",
@@ -124,7 +146,7 @@ export const scenarios: Record<string, Scenario> = {
     apply: (d) => {
       const s = d.submissions.find((s) => s.kind === "verification")!;
       s.status = "needs_changes";
-      s.note = "Bổ sung giấy phép còn hiệu lực.";
+      s.reviewNote = "Bổ sung giấy phép còn hiệu lực.";
       d.restaurants[0].verification = "needs_changes";
     },
   },

@@ -189,6 +189,14 @@ export interface Submission {
   legalName?: string;
   license?: string;
   taxCode?: string;
+  previousId?: number | null;
+  reviewedBy?: {
+    id: number;
+    displayName: string;
+    avatarUrl: string | null;
+  } | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
   documents?: { type: string; name: string; mediaId?: number; url?: string }[];
 }
 export interface AppData {
