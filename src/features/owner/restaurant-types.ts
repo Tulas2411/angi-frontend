@@ -1,6 +1,19 @@
 import type { MapLocation } from "@/shared/maps/mapbox";
 
 /** OWN-01/02/03/04 and MEDIA-01 wire contracts, API Design v1.8. */
+/** OWN-01/02/03/04/05 and MEDIA-01 wire contracts, API Design v1.8. */
+export type OperatingStatus =
+  "open" | "temporarily_closed" | "permanently_closed";
+
+export interface UpdateOperatingStatusRequestDto {
+  operatingStatus: OperatingStatus;
+  note?: string | null;
+}
+
+export interface UpdateOperatingStatusResponseDto {
+  operatingStatus: OperatingStatus;
+}
+
 export interface BusinessHourDto {
   dayOfWeek: number;
   openTime: string;
@@ -48,7 +61,7 @@ export interface OwnerRestaurantDto {
   priceLevel: number | null;
   ratingAvg: number;
   ratingCount: number;
-  operatingStatus: "open" | "temporarily_closed" | "permanently_closed";
+  operatingStatus: OperatingStatus;
   isOpenNow: boolean;
   distanceKm: number | null;
   description: string | null;

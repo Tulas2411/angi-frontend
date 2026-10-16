@@ -48,6 +48,8 @@ Province suggestions use the public [Provinces Open API V2 catalog](https://prov
 
 F-45 uses the hours tab at `/restaurant/profile?tab=hours` or `/demo/owner/profile?tab=hours`. Load through OWN-02 and save through OWN-04 PUT. The request is the complete `{ hours: [...] }` schedule; `[]` clears it. Multiple intervals per day and overnight opening are supported with validation across days and the circular week. Use Vietnam time (`HH:mm`, UTC+7), with Sunday encoded as 0. The response supplies saved `hours` and `isOpenNow`; this schedule flag does not change the separately managed operating status. Confirmation modals protect removal, clearing, cancellation and dirty tab exits. Live errors never substitute fixtures. Deploy with OWN-02 and OWN-04 available in BE.
 
+F-46 uses the status tab at `/restaurant/profile?tab=status` or `/demo/owner/profile?tab=status`. Load current states through OWN-02; save the selected operating state through OWN-05 PUT only after modal confirmation. All three documented states are supported, with an optional reason up to 500 characters. A reason alone does not update an unchanged status. The response supplies only `operatingStatus`; hours and verification/moderation remain unchanged. `RESTAURANT_SUSPENDED` prevents reopening without discarding the draft or logging the owner out. Suspended restaurants can still close. Demo status changes remain in provider memory during navigation and reset on reload/remount. Deploy with OWN-02 and OWN-05 available in BE.
+
 ```powershell
 npm run build
 npm run typecheck
@@ -65,7 +67,7 @@ npm run test:browser
 
 Playwright starts a dev server or reuses port 3000. Screenshot scripts expect that server to be running:
 
-Run F-43 with `npx playwright test --config=playwright.owner.config.ts`, F-44 with `npx playwright test --config=playwright.profile.config.ts` and F-45 with `npx playwright test --config=playwright.hours.config.ts`. All three snapshot source/assets into ignored `.cache` workspaces before starting frontend port 3001 and an API stub at 5164 with test-only auth. They copy no private env file and do not reuse an existing frontend, so your regular preview can stay running. Run these suites sequentially because they use the same test ports. `node scripts/owner-test-server.mjs --build` similarly builds an isolated snapshot. Keep `PLAYWRIGHT_BROWSERS_PATH` consistent with your Chromium installation.
+Run F-43 with `npx playwright test --config=playwright.owner.config.ts`, F-44 with `npx playwright test --config=playwright.profile.config.ts`, F-45 with `npx playwright test --config=playwright.hours.config.ts` and F-46 with `npx playwright test --config=playwright.status.config.ts`. All four snapshot source/assets into ignored `.cache` workspaces before starting frontend port 3001 and an API stub at 5164 with test-only auth. They copy no private env file and do not reuse an existing frontend, so your regular preview can stay running. Run these suites sequentially because they use the same test ports. `node scripts/owner-test-server.mjs --build` similarly builds an isolated snapshot. Keep `PLAYWRIGHT_BROWSERS_PATH` consistent with your Chromium installation.
 
 ```powershell
 npm run test:visual

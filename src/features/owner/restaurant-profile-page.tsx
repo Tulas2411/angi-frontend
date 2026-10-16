@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Card } from "@/shared/ui";
+import { Alert, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   ConfirmDialog,
@@ -171,7 +171,7 @@ function RestaurantProfileEditor({
 }) {
   const router = useRouter();
   const { base } = useWorkspace();
-  const tab = ["information", "photos", "hours", "status"].includes(initialTab)
+  const tab = ["information", "photos"].includes(initialTab)
     ? initialTab
     : "information";
   const [values, setValues] = useState(() =>
@@ -265,7 +265,7 @@ function RestaurantProfileEditor({
   function changeTab(next: string) {
     if (blocked || next === tab) return;
     const navigate = () => router.push(`${base}/profile?tab=${next}`);
-    if (dirty && (next === "hours" || (demo && next === "status")))
+    if (dirty && ["hours", "status"].includes(next))
       setConfirmation({
         title: "Bỏ thay đổi chưa lưu?",
         description:
@@ -667,50 +667,7 @@ function RestaurantProfileEditor({
             </Button>
           </div>
         </form>
-      ) : (
-        <Card title="Trạng thái nhà hàng" className="stack">
-          <p>
-            Xác minh:{" "}
-            <Badge>
-              {
-                {
-                  unverified: "Chưa xác minh",
-                  pending: "Đang chờ xác minh",
-                  verified: "Đã xác minh",
-                  rejected: "Bị từ chối",
-                }[restaurant.verificationStatus]
-              }
-            </Badge>
-          </p>
-          <p>
-            Hoạt động:{" "}
-            <Badge>
-              {
-                {
-                  open: "Đang hoạt động",
-                  temporarily_closed: "Tạm đóng",
-                  permanently_closed: "Đóng cửa vĩnh viễn",
-                }[restaurant.operatingStatus]
-              }
-            </Badge>
-          </p>
-          <p>
-            Kiểm duyệt:{" "}
-            <Badge>
-              {
-                {
-                  visible: "Hiển thị",
-                  hidden: "Bị ẩn",
-                  suspended: "Bị đình chỉ",
-                }[restaurant.moderationStatus]
-              }
-            </Badge>
-          </p>
-          <p className="helper">
-            Các trạng thái được quản lý độc lập với thông tin hồ sơ.
-          </p>
-        </Card>
-      )}
+      ) : null}
       <ConfirmDialog
         open={!!confirmation}
         title={confirmation?.title ?? "Xác nhận thay đổi"}
