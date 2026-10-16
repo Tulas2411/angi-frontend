@@ -1,0 +1,91 @@
+.verification-summary {
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.verification-document-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  gap: 16px;
+}
+.verification-document {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+}
+.verification-file-name {
+  overflow-wrap: anywhere;
+  min-width: 0;
+  font-size: 14px;
+}
+.verification-document .verification-remove {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-height: 28px;
+  min-width: 28px;
+  padding: 4px;
+  opacity: 0.65;
+}
+.verification-add-document {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  min-height: 150px;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--muted);
+}
+.verification-add-document > span:first-child {
+  font-size: 32px;
+}
+.verification-add-document input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.verification-add-document:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.verification-add-document:has(input:disabled) {
+  opacity: 0.5;
+}
+.verification-add-document input:disabled {
+  cursor: default;
+}
+.verification-details dl {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 3fr);
+  gap: 10px 20px;
+}
+.verification-details dt {
+  color: var(--muted);
+}
+.verification-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.verification-document-links {
+  padding-left: 20px;
+}
+@media (max-width: 600px) {
+  .restaurant-verification-page .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .verification-details dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+  .verification-details dd {
+    margin-bottom: 10px;
+  }
+}

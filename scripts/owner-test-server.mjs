@@ -73,27 +73,32 @@ await writeFile(
     `turbopack: { root: ${JSON.stringify(workspace)},`,
   ),
 );
-const child = spawn(
-  process.execPath,
-  [
-    join(workspace, "node_modules/next/dist/bin/next"),
-    ...(process.argv.includes("--build")
-      ? ["build"]
-      : ["dev", "--port", "3001"]),
-  ],
-  {
-    cwd: preview,
-    env: process.env,
-    stdio: "inherit",
-    windowsHide: true,
-  },
-);
+const production = process.argv.includes("--production");
+let child;
+let stopping = false;
+function launch(args) {
+  child = spawn(
+    process.execPath,
+    [join(workspace, "node_modules/next/dist/bin/next"), ...args],
+    { cwd: preview, env: process.env, stdio: "inherit", windowsHide: true },
+  );
+  child.on("error", (error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+  child.on("exit", (code) => {
+    if (!stopping && production && args[0] === "build" && code === 0)
+      launch(["start", "--port", "3001"]);
+    else process.exitCode = code ?? 1;
+  });
+}
 for (const signal of ["SIGINT", "SIGTERM"])
-  process.on(signal, () => child.kill(signal));
-child.on("error", (error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
-child.on("exit", (code) => {
-  process.exitCode = code ?? 0;
-});
+  process.on(signal, () => {
+    stopping = true;
+    child.kill(signal);
+  });
+launch(
+  production || process.argv.includes("--build")
+    ? ["build"]
+    : ["dev", "--port", "3001"],
+);

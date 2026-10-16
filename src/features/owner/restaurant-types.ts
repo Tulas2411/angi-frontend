@@ -1,4 +1,8 @@
 import type { MapLocation } from "@/shared/maps/mapbox";
+import type {
+  VerificationDocumentType,
+  VerificationDto,
+} from "./verification-types";
 
 /** OWN-01/02/03/04 and MEDIA-01 wire contracts, API Design v1.8. */
 /** OWN-01/02/03/04/05 and MEDIA-01 wire contracts, API Design v1.8. */
@@ -75,7 +79,7 @@ export interface OwnerRestaurantDto {
   myReview: unknown | null;
   verificationStatus: "unverified" | "pending" | "verified" | "rejected";
   moderationStatus: "visible" | "hidden" | "suspended";
-  latestVerification: unknown | null;
+  latestVerification: VerificationDto | null;
   openMenuSubmission: { id: number; status: "draft" | "pending" } | null;
   createdAt: string;
   updatedAt: string;
@@ -106,6 +110,14 @@ export interface MediaFileDto {
   sizeBytes: number;
   purpose: string;
   createdAt: string;
+}
+
+/** Uploaded private file metadata used only while preparing a verification. */
+export interface VerificationUpload {
+  key: string;
+  fileName: string;
+  docType: VerificationDocumentType;
+  media: MediaFileDto;
 }
 
 /** UI selection metadata is never spread into an owner API request. */

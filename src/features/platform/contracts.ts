@@ -189,7 +189,7 @@ export interface Submission {
   legalName?: string;
   license?: string;
   taxCode?: string;
-  documents?: { type: string; name: string }[];
+  documents?: { type: string; name: string; mediaId?: number; url?: string }[];
 }
 export interface AppData {
   ownerRestaurantId?: string;
