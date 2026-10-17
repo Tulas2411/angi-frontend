@@ -1,0 +1,74 @@
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-4, 1rem);
+}
+.menu-dish-row,
+.menu-history-row {
+  display: flex;
+  gap: var(--space-4, 1rem);
+  align-items: center;
+  flex-wrap: wrap;
+  padding-block: var(--space-4, 1rem);
+  border-bottom: 1px solid var(--line);
+}
+.menu-dish-row > .media {
+  width: 8rem;
+  flex: 0 0 8rem;
+  aspect-ratio: 4/3;
+  border-radius: var(--radius-md);
+}
+.menu-dish-copy {
+  flex: 1;
+  min-width: min(100%, 12rem);
+  overflow-wrap: anywhere;
+}
+.menu-dish-copy p {
+  white-space: pre-wrap;
+}
+.menu-history-row > div {
+  flex: 1;
+  min-width: min(100%, 15rem);
+  overflow-wrap: anywhere;
+}
+.menu-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3, 0.75rem);
+  max-height: 14rem;
+  overflow-y: auto;
+}
+.menu-workspace {
+  min-width: 0;
+}
+.menu-workspace .tabs {
+  flex-wrap: wrap;
+}
+.menu-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-3, 0.75rem);
+}
+.menu-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.menu-meta dt {
+  font-weight: 600;
+}
+.menu-pagination {
+  flex-wrap: wrap;
+  gap: var(--space-3, 0.75rem);
+}
+@media (max-width: 600px) {
+  .menu-dish-row > .actions {
+    width: 100%;
+  }
+  .menu-dish-row > .media {
+    width: 5rem;
+    flex-basis: 5rem;
+  }
+}

@@ -158,6 +158,9 @@ export function PageRouter({
     );
 
   // These operations do not depend on the AppData adapter.
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "menu")
+    return <OwnerMenuPage />;
+
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "verification")
     return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
 

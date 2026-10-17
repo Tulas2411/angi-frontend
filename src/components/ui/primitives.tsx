@@ -294,8 +294,16 @@ export function Dialog({
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
+    const returnFocus =
+      open && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
+    return () => {
+      if (dialog.open) dialog.close();
+      if (returnFocus?.isConnected) returnFocus.focus();
+    };
   }, [open]);
   return (
     <dialog

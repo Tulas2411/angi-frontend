@@ -28,6 +28,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 | Owner verification submission (F-47 / ANGI-61)                                            | Connected to OWN-02/OWN-06 and private MEDIA-01 uploads; initial submission and latest result |
 | Owner verification status/history (F-48 / ANGI-65) | Connected to OWN-07; latest request, review feedback, complete history and read-only detail modals |
 | Owner verification resubmission (F-49 / ANGI-68) | Connected to OWN-08; edit/reuse/replace documents, new pending attempt linked to the latest rejected/needs_more_info request |
+| Owner menu management (F-50 / ANGI-80)                                                    | Connected to OWN-09..16/18, CAT-02 and dish MEDIA-01; availability, isolated draft CRUD, paginated history and cancellation  |
 | Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback                         |
 | Email verification/recovery, OAuth, invitations, routing and AI                           | UI/scaffold exists where designed; real integrations remain pending                           |
 
@@ -117,6 +118,8 @@ For F-47, open `/restaurant/verification` after Owner login. Use `/dev/scenarios
 For F-48, open `/restaurant/verification?tab=status`. OWN-07 returns the current restaurant verification flag and all requests, newest first. Review feedback, reviewer/date, private document links and previous-attempt details are visible in read-only modals. Refresh is manual. See [the Vietnamese F-48 guide](docs/verification-status.vi.md).
 
 For F-49, select **Gửi lại hồ sơ** on the latest rejected/needs-more-info attempt. Its legal values and documents are prefilled; retain or replace documents and confirm the new submission in a modal. OWN-08 requires at least one document, without OWN-06's license-document requirement. Real local checks covered both resubmission states with actual API/PostgreSQL/Cloudinary and explicitly prepared review fixtures. See [F-49 usage, API discrepancies, test evidence and rerun steps](docs/verification-resubmission.vi.md).
+
+For F-50, open `/restaurant/menu` after Owner login. Availability changes apply immediately after confirmation. Verified restaurants can create one draft, add/edit/remove proposed dishes with catalog tags and dish-purpose media, inspect changes/history and cancel draft/pending submissions. Draft edits leave the active menu unchanged. F-51's review submission is separate. See [the F-50 Vietnamese guide, BE endpoint audit and verification evidence](docs/restaurant-menu.vi.md). No new application env variables are needed.
 
 Real local F-47/F-48 verification passed four browser cases, including private Cloudinary upload/download and persisted pending history. Moderator decision endpoints are absent in the current BE, so live approval/feedback transitions remain unverified. See [live results, limits and rerun instructions](docs/verification-live.vi.md); its separate opt-in config disables Mapbox.
 

@@ -61,6 +61,8 @@ npm run lint
 npm test
 ```
 
+F-50 uses `/restaurant/menu` and the isolated `/demo/owner/menu` preview. Deploy with OWN-09..16/18 plus OWN-02, CAT-02 and MEDIA-01 available. Draft creation, item deletion and cancellation have no body; cancellation returns 200. Only drafts are editable; active availability uses its own PUT. See [menu usage, exact contract, test prerequisites and rerun commands](restaurant-menu.vi.md). Its opt-in local live suite requires the guarded backend `docker/local/Seed --set-menu-fixture` helper and uses fresh `angi_local` accounts. This helper prepares prerequisites only; it does not implement Moderator verification. F-51 submission is outside this delivery. No new application env keys or dependencies.
+
 Build first on a fresh checkout so Next can generate route types. Browser validation:
 
 ```powershell

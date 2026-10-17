@@ -20,6 +20,7 @@ interface PlatformContext {
   busy: boolean;
   status: "loading" | "ready" | "unavailable";
   reload: () => Promise<void>;
+  getDemoResource: <T>(key: string, create: () => T) => T;
 }
 const Context = createContext<PlatformContext | null>(null);
 export function PlatformProvider({
@@ -38,6 +39,7 @@ export function PlatformProvider({
       mode === "demo" ? "ready" : "loading",
     );
   const current = useRef(data),
+    demoResources = useRef(new Map<string, unknown>()),
     queue = useRef<Promise<void>>(Promise.resolve()),
     pending = useRef(0);
   const service = useMemo(
@@ -73,6 +75,11 @@ export function PlatformProvider({
       setStatus("unavailable");
     }
   }
+  function getDemoResource<T>(key: string, create: () => T): T {
+    if (!demoResources.current.has(key))
+      demoResources.current.set(key, create());
+    return demoResources.current.get(key) as T;
+  }
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(""), 6000);
@@ -106,7 +113,16 @@ export function PlatformProvider({
   }
   return (
     <Context.Provider
-      value={{ data, mode, mutate, notify: setToast, busy, status, reload }}
+      value={{
+        data,
+        mode,
+        mutate,
+        notify: setToast,
+        busy,
+        status,
+        reload,
+        getDemoResource,
+      }}
     >
       {children}
       {toast && (

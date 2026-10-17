@@ -103,7 +103,7 @@ export const api = {
   getPublic: <T>(path: string) => request<T>(path, {}, false),
   upload: <T>(path: string, body: FormData) =>
     request<T>(`backend/${path}`, { method: "POST", body }),
-  post: <T>(path: string, body: unknown) =>
+  post: <T>(path: string, body?: unknown) =>
     request<T>(`backend/${path}`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -118,4 +118,6 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(body),
     }),
+  delete: <T>(path: string) =>
+    request<T>(`backend/${path}`, { method: "DELETE" }),
 };

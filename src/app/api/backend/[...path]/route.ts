@@ -1,6 +1,7 @@
 import { backend, getSession, withAuth } from "@/features/auth/server";
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
+import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -17,6 +18,7 @@ const allowedEndpoints = new Set([
   "POST owner/restaurant/verifications",
   "GET owner/restaurant/verifications",
   "POST media",
+  "GET tags",
 ]);
 
 async function handle(request: Request, context: Context) {
@@ -24,12 +26,14 @@ async function handle(request: Request, context: Context) {
   try {
     const { path } = await context.params;
     const endpoint = path.join("/");
+    const menuOperation = ownerMenuOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
     if (
       !allowedEndpoints.has(`${request.method} ${endpoint}`) &&
-      !resubmission
+      !resubmission &&
+      !menuOperation
     ) {
       throw new ApiError(
         404,
@@ -39,7 +43,7 @@ async function handle(request: Request, context: Context) {
     }
     if (request.method !== "GET") checkOrigin(request);
     let body: unknown;
-    if (request.method !== "GET") {
+    if (request.method !== "GET" && menuOperation?.body !== false) {
       if (endpoint === "media") {
         try {
           body = await request.formData();
@@ -71,7 +75,7 @@ async function handle(request: Request, context: Context) {
           token: auth.accessToken,
         });
       }),
-      request.method === "POST" ? 201 : 200,
+      menuOperation?.status ?? (request.method === "POST" ? 201 : 200),
     );
   } catch (error) {
     return fail(error, session);
@@ -81,3 +85,4 @@ export const GET = handle;
 export const PATCH = handle;
 export const PUT = handle;
 export const POST = handle;
+export const DELETE = handle;

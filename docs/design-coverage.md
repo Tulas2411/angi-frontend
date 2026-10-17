@@ -341,6 +341,8 @@ Manual review covers spacing, fonts, assets/crop, table alignment, overlays and 
 
 ## External blockers
 
+F-50 (ANGI-80) replaces the Owner menu fixture-only screen with `/restaurant/menu` backed by OWN-09..16/18 and a matching isolated demo adapter. Existing Owner tokens/cards/tabs/dialogs/image-upload tiles cover active availability, draft item forms, diff markers/removals, paginated history, reviewed feedback, cancellation, errors and read-only non-drafts. Desktop/mobile and keyboard evidence is recorded in [the menu report](restaurant-menu.vi.md). There is no new Figma node assignment or pixel-equality claim. The old fake review-submission action is removed; OWN-17 belongs to F-51.
+
 F-43 (ANGI-36) is implemented in `src/features/owner/restaurant-registration-page.tsx` at `/restaurant/register`, with the new-owner fixture scenario `/dev/scenarios?state=owner-register-restaurant`. It uses verified API Design v1.8 OWN-01/OWN-02 and MEDIA-01 from the sibling backend checkout. Cover/gallery upload, mandatory coordinates, field errors, duplicate guards and unverified success are separate from owner profile editing. Layout reuses the owner's UI tokens and controls; desktop/mobile evidence is recorded in [verification.md](verification.md). No pixel-equality claim or new Figma node assignment is made.
 
 The latest API workbook is available under `angi-backend/.docs`. Owner registration/profile/hours/status/media and existing authentication are connected; other business integrations remain pending and require endpoint-by-endpoint verification against the backend implementation.
