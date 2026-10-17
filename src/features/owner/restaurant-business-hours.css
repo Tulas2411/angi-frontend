@@ -1,0 +1,110 @@
+.registration-page.business-hours-page {
+  max-width: var(--content-width);
+}
+.business-hours-page .business-hours-card {
+  gap: var(--space-4);
+  box-shadow: var(--shadow);
+}
+.business-hours-week {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.business-hours-day {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr) auto;
+  align-items: center;
+  gap: var(--space-6);
+  min-height: 96px;
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.business-hours-summary {
+  min-width: 0;
+}
+.business-hours-summary p {
+  margin: 0;
+}
+.business-hours-intervals > span {
+  display: inline-block;
+  white-space: pre-wrap;
+}
+.business-hours-summary .helper {
+  margin-top: var(--space-1);
+}
+.business-hours-day-actions,
+.business-hours-week-actions {
+  display: flex;
+  gap: var(--space-3);
+}
+.business-hours-day-actions .button {
+  min-width: 140px;
+}
+.business-hours-notice {
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  font-size: 14px;
+}
+.business-hours-notice p {
+  margin: 0;
+}
+.business-hours-notice p + p {
+  margin-top: var(--space-2);
+}
+.business-hours-week-actions > .button:first-child {
+  flex: 1;
+}
+.business-hours-week-actions > .button:last-child {
+  min-width: 180px;
+}
+.business-hours-slot {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--space-4);
+}
+.business-hours-slot legend {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+.business-hours-slot-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+@media (max-width: 1000px) {
+  .business-hours-day {
+    grid-template-columns: minmax(90px, 1fr) minmax(0, 3fr);
+    gap: var(--space-3);
+  }
+  .business-hours-day-actions {
+    grid-column: 2;
+  }
+  .business-hours-day-actions .button {
+    min-width: 0;
+    flex: 1;
+  }
+}
+@media (max-width: 600px) {
+  .business-hours-page .business-hours-card {
+    padding: var(--space-4);
+  }
+  .business-hours-day {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .business-hours-day-name {
+    font-weight: 600;
+  }
+  .business-hours-day-actions {
+    grid-column: 1;
+  }
+  .business-hours-week-actions {
+    flex-direction: column;
+  }
+  .business-hours-week-actions > .button:last-child {
+    min-width: 0;
+  }
+  .business-hours-slot-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

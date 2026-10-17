@@ -475,9 +475,13 @@ test("demo edits remain isolated, survive workspace navigation and fit desktop/m
   ).toBe(true);
   await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
   await page
+    .getByRole("button", { name: "Chỉnh giờ · Thứ hai", exact: true })
+    .click();
+  await page
     .getByLabel(/^Giờ mở ·/)
     .first()
     .fill("05:15");
+  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Bỏ thay đổi giờ mở cửa chưa lưu?" }),
@@ -485,7 +489,9 @@ test("demo edits remain isolated, survive workspace navigation and fit desktop/m
   await page
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
-  await expect(page.getByLabel(/^Giờ mở ·/).first()).toHaveValue("05:15");
+  await expect(
+    page.getByRole("listitem", { name: "Thứ hai", exact: true }),
+  ).toContainText("05:15");
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await page
     .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })

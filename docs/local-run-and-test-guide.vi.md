@@ -256,8 +256,8 @@ Sau khi đăng ký hoặc khi dùng Owner đã có nhà hàng, mở <http://loca
 | Đổi thứ ba thành `01:00–05:00` rồi lưu                                      | Báo chồng lấn với khoảng qua đêm thứ hai; không ghi lịch sai              |
 | Nhập giờ mở bằng giờ đóng                                                   | Báo lỗi; không diễn giải thành mở 24 giờ                                  |
 | Thử thứ bảy `23:00–02:00`, chủ nhật `01:00–03:00`                           | Báo chồng lấn qua ranh giới tuần                                          |
-| Chỉnh giờ rồi bấm **Hủy thay đổi** → xác nhận **Bỏ thay đổi**               | Modal xuất hiện và form trở về giá trị đã lưu                             |
-| Bấm **Xóa lịch tuần** → xác nhận, sau đó bấm lưu                            | Lưu lịch rỗng; tải lại vẫn chưa khai báo giờ                              |
+| Chỉnh giờ → **Áp dụng**, rồi bấm **Hủy** → **Bỏ thay đổi**               | Modal xuất hiện và form trở về giá trị đã lưu                             |
+| Xóa từng khoảng trong modal ngày → **Áp dụng**; **Lưu cả tuần** → **Lưu lịch trống**                            | Lưu lịch rỗng; tải lại vẫn chưa khai báo giờ                              |
 | Thu nhỏ trình duyệt về chiều rộng khoảng 390 px                             | Có thể nhập/lưu, không tràn ngang toàn trang                              |
 
 Lưu lịch gửi **PUT `/api/backend/owner/restaurant/business-hours`**, BE tương ứng **OWN-04**. Request thay toàn bộ lịch bằng `{ "hours": [...] }`, lịch rỗng là `{ "hours": [] }`. Mỗi khoảng có `dayOfWeek`, `openTime`, `closeTime`; Chủ nhật là `0`, thứ hai là `1`, giờ `HH:mm` theo Việt Nam UTC+7. Phản hồi thành công **200**, có `hours` và `isOpenNow`.
