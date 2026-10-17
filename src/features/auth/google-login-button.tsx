@@ -4,12 +4,20 @@ import { api } from "@/shared/api/client";
 import { getErrorMessage } from "@/shared/api/error";
 import { useState } from "react";
 import { Alert } from "@/shared/ui";
+import { HOME_BY_ROLE } from "./roles";
+import type { RegisterableRole } from "./types";
 
 interface GoogleLoginButtonProps {
   onSuccess?: (isNewUser: boolean) => void;
   onError?: (message: string) => void;
   disabled?: boolean;
   variant?: "full" | "icon-only";
+  /**
+   * Role to assign when Google login creates a new account. The backend
+   * accepts only TRAVELER or RESTAURANT_OWNER. Existing accounts keep
+   * their persisted role, so this value is ignored on subsequent sign-ins.
+   */
+  role?: RegisterableRole;
 }
 
 export function GoogleLoginButton({
@@ -17,6 +25,7 @@ export function GoogleLoginButton({
   onError,
   disabled,
   variant = "full",
+  role,
 }: GoogleLoginButtonProps) {
   const [error, setError] = useState<string | null>(null);
   const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
@@ -30,12 +39,13 @@ export function GoogleLoginButton({
     }
     setError(null);
     try {
-      const result = await api.googleLogin({ idToken: token });
-      void result;
+      const result = await api.googleLogin({ idToken: token, role });
       onSuccess?.(result.isNewUser);
       // Full navigation clears cached protected content after the session changes.
+      // The backend returns the persisted role (existing user) or the role we
+      // just requested (new user), so we always redirect to the correct home.
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign("/demo/traveler");
+      window.location.assign(HOME_BY_ROLE[result.user.role]);
     } catch (err) {
       const msg = getErrorMessage(err);
       setError(msg);
@@ -71,7 +81,6 @@ export function GoogleLoginButton({
           text="signin_with"
           shape="rectangular"
           logo_alignment="left"
-          width="100%"
         />
       </div>
       {error && <Alert>{error}</Alert>}

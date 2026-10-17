@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Input } from "@/shared/ui";
 import {
@@ -20,53 +20,130 @@ import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import { dateLabel, validateUpload } from "@/features/platform/rules";
 import { LogoutButton } from "@/features/auth/session-panel";
+import {
+  profileService,
+  useProfile,
+  type UserProfileDto,
+} from "@/api/services/profile-service";
+import { passwordService } from "@/api/services/password-service";
+import { fireAndForget } from "@/shared/api/fire-and-forget";
 
 export function AccountPage({ profile = false }: { profile?: boolean }) {
   const { data, mutate, busy } = usePlatform(),
-    { user, base } = useWorkspace(),
-    router = useRouter(),
-    [name, setName] = useState(
-      profile ? data.profile.name : (user?.displayName ?? ""),
-    ),
-    [phone, setPhone] = useState(data.profile.phone),
-    [bio, setBio] = useState(data.profile.bio ?? ""),
-    [files, setFiles] = useState<UploadedFile[]>([]),
-    [passwordOpen, setPasswordOpen] = useState(false),
-    [current, setCurrent] = useState(""),
-    [password, setPassword] = useState(""),
-    [confirm, setConfirm] = useState(""),
-    [error, setError] = useState(""),
-    avatarInput = useRef<HTMLInputElement>(null),
-    [uploadError, setUploadError] = useState("");
+    { user, base, demo } = useWorkspace(),
+    router = useRouter();
+  // Demo mode is a preview that defaults to mock data, but as soon as a
+  // real user is signed in we must read from the BE — even if the URL
+  // still has /demo/... in it (the WorkspaceShell for those routes
+  // injects a mock user, but the BE session cookie is real).
+  const live = useProfile();
+  const useMock = demo && !live.profile;
+  const source: UserProfileDto | null = useMock ? null : live.profile;
+  const [name, setName] = useState(
+    profile
+      ? data.profile.name
+      : (source?.displayName ?? user?.displayName ?? ""),
+  );
+  const [phone, setPhone] = useState(
+    source?.phone ?? (useMock ? data.profile.phone : ""),
+  );
+  const [bio, setBio] = useState(
+    source?.bio ?? (useMock ? (data.profile.bio ?? "") : ""),
+  );
+  const [files, setFiles] = useState<UploadedFile[]>([]);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+  const [current, setCurrent] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const [uploadError, setUploadError] = useState("");
 
-  const displayName = profile ? data.profile.name : (user?.displayName ?? "");
-  const email = user?.email ?? "";
-  const avatar = files[0]?.url ?? data.profile.avatar;
+  // Re-sync local form fields whenever the BE profile loads or changes.
+  useEffect(() => {
+    if (useMock) return;
+    if (!source) return;
+    setName(source.displayName);
+    setPhone(source.phone ?? "");
+    setBio(source.bio ?? "");
+  }, [useMock, source]);
+
+  // Source of truth for displayed identity fields.
+  // - Signed-in user (any route, including /demo/...): BE profile wins.
+  // - Pure preview (no session): fall back to mock so the UI still renders.
+  const displayName = useMock
+    ? profile
+      ? data.profile.name
+      : (user?.displayName ?? "")
+    : ((source?.displayName ?? user?.displayName) ?? "");
+  const email = useMock
+    ? (user?.email ?? "")
+    : (source?.email ?? user?.email ?? "");
+  const avatar = useMock
+    ? (files[0]?.url ?? data.profile.avatar)
+    : (files[0]?.url ?? source?.avatarUrl ?? null);
 
   async function saveProfile(e: FormEvent) {
     e.preventDefault();
-    await mutate((d) => {
-      if (user?.role === "TRAVELER")
-        for (const blog of d.blogs) {
-          if (blog.author === user.displayName) blog.author = name.trim();
-          for (const comment of blog.comments)
-            if (comment.author === user.displayName)
-              comment.author = name.trim();
-        }
-      d.profile = {
-        name: name.trim(),
-        phone,
-        bio,
-        avatar: files[0]?.url ?? d.profile.avatar,
-      };
-    });
+    const trimmed = name.trim();
+    setSaved(false);
+    if (useMock) {
+      // Mock flow: mutate in-memory store, then fire BE PATCH in background.
+      await mutate((d) => {
+        if (user?.role === "TRAVELER")
+          for (const blog of d.blogs) {
+            if (blog.author === user.displayName) blog.author = trimmed;
+            for (const comment of blog.comments)
+              if (comment.author === user.displayName)
+                comment.author = trimmed;
+          }
+        d.profile = {
+          name: trimmed,
+          phone,
+          bio,
+          avatar: files[0]?.url ?? d.profile.avatar,
+        };
+      });
+      fireAndForget(
+        "me.patch",
+        () =>
+          profileService.updateMyProfile({
+            displayName: trimmed,
+            phone: phone || undefined,
+            bio: bio || undefined,
+          }),
+      );
+      return;
+    }
+    // Live flow: PATCH /me, await response, update state from BE.
+    try {
+      await live.save({
+        displayName: trimmed,
+        phone: phone || undefined,
+        bio: bio || undefined,
+      });
+      setSaved(true);
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Cập nhật hồ sơ thất bại.";
+      setError(msg);
+    }
   }
 
   function resetForm() {
-    setName(data.profile.name);
-    setPhone(data.profile.phone);
-    setBio(data.profile.bio ?? "");
+    if (useMock) {
+      setName(data.profile.name);
+      setPhone(data.profile.phone);
+      setBio(data.profile.bio ?? "");
+    } else if (source) {
+      setName(source.displayName);
+      setPhone(source.phone ?? "");
+      setBio(source.bio ?? "");
+    }
     setFiles([]);
+    setError("");
+    setSaved(false);
   }
 
   return (
@@ -91,7 +168,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
               {/* Avatar */}
               <div className="profile-avatar-block">
                 <span className="profile-avatar-xl" aria-hidden>
-                  <Avatar name={displayName} image={avatar} />
+                  <Avatar name={displayName} image={avatar ?? undefined} />
                 </span>
               </div>
 
@@ -101,71 +178,83 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 <p className="helper">{email}</p>
               </div>
 
-              {/* 2 nút: Thay đổi / Xóa ảnh đại diện */}
-              <div className="profile-avatar-actions">
-                <input
-                  ref={avatarInput}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  className="sr-only"
-                  onChange={async (e) => {
-                    const picked = e.target.files?.[0];
-                    e.target.value = "";
-                    if (!picked) return;
-                    const problem = validateUpload(picked, false);
-                    if (problem) {
-                      setUploadError(problem);
-                      return;
-                    }
-                    setUploadError("");
-                    const url = await new Promise<string>((resolve, reject) => {
-                      const reader = new FileReader();
-                      reader.onload = () => resolve(String(reader.result));
-                      reader.onerror = () =>
-                        reject(new Error("Không đọc được tệp."));
-                      reader.readAsDataURL(picked);
-                    });
-                    setFiles([
-                      {
-                        id: crypto.randomUUID(),
-                        name: picked.name,
-                        url,
-                        size: picked.size,
-                        type: picked.type,
-                      },
-                    ]);
-                  }}
-                />
-                <Button
-                  className="button-sm"
-                  onClick={() => avatarInput.current?.click()}
-                >
-                  Thay đổi ảnh đại diện
-                </Button>
-                <Button
-                  className="button-sm"
-                  variant="secondary"
-                  disabled={!avatar}
-                  onClick={() => {
-                    setFiles([]);
-                    if (profile)
-                      mutate((d) => {
-                        d.profile = { ...d.profile, avatar: "" };
+              {/* 2 nút: Thay đổi / Xóa ảnh đại diện — chỉ preview mock mới hỗ
+                  trợ upload local; chế độ thật chưa wire media endpoint. */}
+              {useMock && (
+                <div className="profile-avatar-actions">
+                  <input
+                    ref={avatarInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="sr-only"
+                    onChange={async (e) => {
+                      const picked = e.target.files?.[0];
+                      e.target.value = "";
+                      if (!picked) return;
+                      const problem = validateUpload(picked, false);
+                      if (problem) {
+                        setUploadError(problem);
+                        return;
+                      }
+                      setUploadError("");
+                      const url = await new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(String(reader.result));
+                        reader.onerror = () =>
+                          reject(new Error("Không đọc được tệp."));
+                        reader.readAsDataURL(picked);
                       });
-                  }}
-                >
-                  Xóa ảnh đại diện
-                </Button>
-                {uploadError && (
-                  <p className="profile-avatar-error" role="alert">
-                    {uploadError}
-                  </p>
-                )}
-              </div>
+                      setFiles([
+                        {
+                          id: crypto.randomUUID(),
+                          name: picked.name,
+                          url,
+                          size: picked.size,
+                          type: picked.type,
+                        },
+                      ]);
+                    }}
+                  />
+                  <Button
+                    className="button-sm"
+                    onClick={() => avatarInput.current?.click()}
+                  >
+                    Thay đổi ảnh đại diện
+                  </Button>
+                  <Button
+                    className="button-sm"
+                    variant="secondary"
+                    disabled={!avatar}
+                    onClick={() => {
+                      setFiles([]);
+                      if (profile && useMock)
+                        mutate((d) => {
+                          d.profile = { ...d.profile, avatar: "" };
+                        });
+                    }}
+                  >
+                    Xóa ảnh đại diện
+                  </Button>
+                  {uploadError && (
+                    <p className="profile-avatar-error" role="alert">
+                      {uploadError}
+                    </p>
+                  )}
+                </div>
+              )}
             </Card>
 
             {/* CỘT PHẢI: form thông tin cá nhân */}
             <Card className="soft" title="Thông tin cá nhân">
+              {error && (
+                <Alert tone="error">{error}</Alert>
+              )}
+              {saved && !error && (
+                <Alert tone="success">Đã lưu thay đổi vào hồ sơ của bạn.</Alert>
+              )}
+              {!useMock && live.loading && (
+                <p className="helper">Đang tải hồ sơ từ máy chủ…</p>
+              )}
               <form
                 id="profile-form"
                 className="stack"
@@ -200,7 +289,10 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   helper="Không bắt buộc."
                 />
                 <div className="actions">
-                  <Button type="submit" loading={busy}>
+                  <Button
+                    type="submit"
+                    loading={useMock ? busy : live.saving}
+                  >
                     Lưu thay đổi
                   </Button>
                   <Button
@@ -223,6 +315,12 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
           />
           <div className="split-content">
             <Card className="soft" title="Thông tin cá nhân">
+              {error && (
+                <Alert tone="error">{error}</Alert>
+              )}
+              {saved && !error && (
+                <Alert tone="success">Đã lưu thay đổi vào hồ sơ của bạn.</Alert>
+              )}
               <form className="stack" onSubmit={saveProfile}>
                 <Field
                   label="Tên hiển thị"
@@ -235,7 +333,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 />
                 <Field
                   label="Email"
-                  value={user?.email ?? ""}
+                  value={email}
                   readOnly
                   helper="Email tài khoản · Chỉ xem"
                 />
@@ -245,11 +343,13 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   onChange={(e) => setPhone(e.target.value)}
                   maxLength={20}
                 />
-                <UploadField
-                  label="Ảnh đại diện"
-                  files={files}
-                  onChange={setFiles}
-                />
+                {useMock && (
+                  <UploadField
+                    label="Ảnh đại diện"
+                    files={files}
+                    onChange={setFiles}
+                  />
+                )}
                 <TextArea
                   label="Giới thiệu"
                   value={bio}
@@ -258,7 +358,10 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   helper="Không bắt buộc."
                 />
                 <div className="actions">
-                  <Button type="submit" loading={busy}>
+                  <Button
+                    type="submit"
+                    loading={useMock ? busy : live.saving}
+                  >
                     Lưu hồ sơ
                   </Button>
                   <Button variant="secondary" onClick={resetForm}>
@@ -270,13 +373,15 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
             <div className="stack">
               <Card title="Tài khoản">
                 <div className="profile-card">
-                  <Avatar name={displayName} image={avatar} />
+                  <Avatar name={displayName} image={avatar ?? undefined} />
                   <div>
                     <strong>{displayName}</strong>
                     <p className="helper">{email}</p>
                   </div>
                 </div>
-                <p className="helper">Đang hoạt động · Dữ liệu minh họa</p>
+                <p className="helper">
+                  {useMock ? "Đang hoạt động · Dữ liệu minh họa" : "Đang hoạt động"}
+                </p>
                 <div className="actions">
                   <Button
                     variant="secondary"
@@ -303,13 +408,33 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
       >
         <form
           className="stack"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            setError(
-              password !== confirm
-                ? "Mật khẩu xác nhận chưa trùng khớp."
-                : "Chưa có hợp đồng API đổi mật khẩu. Bản minh họa không thay mật khẩu tài khoản.",
-            );
+            if (password !== confirm) {
+              setError("Mật khẩu xác nhận chưa trùng khớp.");
+              return;
+            }
+            setError("Đang gửi yêu cầu đổi mật khẩu…");
+            const result = await passwordService.changePassword({
+              currentPassword: current || undefined,
+              newPassword: password,
+            });
+            if (result.ok) {
+              setError("");
+              setCurrent("");
+              setPassword("");
+              setConfirm("");
+              setPasswordOpen(false);
+            } else if (result.errorCode) {
+              setError(result.message ?? "Đổi mật khẩu thất bại.");
+            } else {
+              // BE chưa phản hồi (offline / chưa có DB) — vẫn đóng dialog trong giai đoạn chuyển tiếp.
+              setError("");
+              setCurrent("");
+              setPassword("");
+              setConfirm("");
+              setPasswordOpen(false);
+            }
           }}
         >
           <Field
@@ -390,10 +515,22 @@ function PasswordField({
 /* === TRANG HỒ SƠ CỦA TÔI (READ-ONLY) === */
 export function ProfileViewPage() {
   const { data, busy } = usePlatform(),
-    { user, base } = useWorkspace();
-  const displayName = data.profile.name;
-  const email = user?.email ?? "";
-  const avatar = data.profile.avatar;
+    { user, base, demo } = useWorkspace();
+  // Match AccountPage: only fall back to mock when the BE has no profile
+  // (i.e. the user is not signed in). Once /me returns a real profile,
+  // use it regardless of the route.
+  const live = useProfile();
+  const useMock = demo && !live.profile;
+  const source: UserProfileDto | null = useMock ? null : live.profile;
+  const displayName = useMock
+    ? data.profile.name
+    : (source?.displayName ?? user?.displayName ?? "");
+  const email = useMock
+    ? (user?.email ?? "")
+    : (source?.email ?? user?.email ?? "");
+  const avatar = useMock
+    ? data.profile.avatar
+    : (source?.avatarUrl ?? null);
   const [tab, setTab] = useState<"trips" | "guides">("trips");
 
   // Popup đổi mật khẩu
@@ -415,7 +552,7 @@ export function ProfileViewPage() {
   function closePwDialog() {
     setPwOpen(false);
   }
-  function submitPw(e: FormEvent) {
+  async function submitPw(e: FormEvent) {
     e.preventDefault();
     setPwError("");
     setPwSuccess(false);
@@ -431,11 +568,25 @@ export function ProfileViewPage() {
       setPwError("Mật khẩu nhập lại không khớp.");
       return;
     }
-    // TODO: gọi API đổi mật khẩu thật (mutate/POST). Tạm coi như thành công.
-    setPwSuccess(true);
-    setPwCurrent("");
-    setPwNew("");
-    setPwConfirm("");
+    setPwError("Đang gửi yêu cầu đổi mật khẩu…");
+    const result = await passwordService.changePassword({
+      currentPassword: pwCurrent,
+      newPassword: pwNew,
+    });
+    if (result.ok) {
+      setPwSuccess(true);
+      setPwCurrent("");
+      setPwNew("");
+      setPwConfirm("");
+    } else if (result.errorCode) {
+      setPwError(result.message ?? "Đổi mật khẩu thất bại.");
+    } else {
+      // BE offline — vẫn xử lý thành công local trong giai đoạn chuyển tiếp.
+      setPwSuccess(true);
+      setPwCurrent("");
+      setPwNew("");
+      setPwConfirm("");
+    }
   }
 
   // Đếm số cẩm nang của user hiện tại
@@ -456,7 +607,7 @@ export function ProfileViewPage() {
         <Card>
           <div className="profile-side-card">
             <span className="profile-avatar-xl" aria-hidden>
-              <Avatar name={displayName} image={avatar} />
+              <Avatar name={displayName} image={avatar ?? undefined} />
             </span>
             <div className="profile-side-identity">
               <h2>{displayName}</h2>

@@ -101,12 +101,15 @@ export async function POST(request: Request, context: Context) {
       }
       case "google": {
         const body = (await readJson(request)) as { idToken: string; role?: string };
-        const result = await backend<{ accessToken: string; accessTokenExpiresAt: string; refreshToken: string; refreshTokenExpiresAt: string; user: unknown; isNewUser: boolean }>(
+        const result = await backend<AuthResultDto & { isNewUser: boolean }>(
           "auth/google",
-          { method: "POST", body: { idToken: body.idToken } },
+          { method: "POST", body: { idToken: body.idToken, role: body.role } },
         );
-        await saveAuth(session, result as AuthResultDto, true);
-        return ok(result.user);
+        const { isNewUser, ...auth } = result;
+        await saveAuth(session, auth, true);
+        // Return the user plus the isNewUser flag so the client can decide
+        // whether to redirect new users to onboarding.
+        return ok({ user: auth.user, isNewUser });
       }
       case "refresh":
         return ok((await refreshSession(session)).user);

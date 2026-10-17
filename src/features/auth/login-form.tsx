@@ -16,17 +16,10 @@ export default function LoginForm() {
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const [remember, setRemember] = useState(true);
 
-  async function handleGoogleSuccess(isNewUser: boolean) {
+  function handleGoogleSuccess(_isNewUser: boolean) {
+    // GoogleLoginButton redirects to HOME_BY_ROLE[user.role] once the
+    // backend responds, so this handler intentionally has nothing to do.
     setSocialError(null);
-    if (isNewUser) {
-      // Full navigation clears cached protected content after the session changes.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign("/choose-role");
-    } else {
-      // Full navigation clears cached protected content after the session changes.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.assign("/demo/traveler");
-    }
   }
 
   function handleGoogleError(message: string) {
@@ -69,6 +62,7 @@ export default function LoginForm() {
 
       <div className="login-social">
         <GoogleLoginButton
+          role="TRAVELER"
           onSuccess={handleGoogleSuccess}
           onError={handleGoogleError}
           disabled={busy}

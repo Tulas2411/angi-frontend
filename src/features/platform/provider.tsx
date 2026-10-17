@@ -16,6 +16,13 @@ interface PlatformContext {
   data: AppData;
   mode: DataMode;
   mutate: (update: (data: AppData) => void, message?: string) => Promise<void>;
+  /**
+   * Apply a state change without triggering the toast/busy UX. Use for
+   * background sync from the BE (e.g. keeping `data.profile` aligned
+   * with the authenticated session) where the user should not see a
+   * "Đã lưu" toast.
+   */
+  setSilent: (update: (data: AppData) => void) => void;
   notify: (message: string) => void;
   busy: boolean;
   status: "loading" | "ready" | "unavailable";
@@ -111,12 +118,50 @@ export function PlatformProvider({
       });
     return operation;
   }
+  /**
+   * Apply a state change without the toast/busy UX. Used to push
+   * authenticated session data into the platform store so the rest of
+   * the app can read it through the existing `data.*` shape.
+   *
+   * The data service `save` is called when the contract is available
+   * (demo service keeps a local copy), but for the live service it
+   * throws `UnavailableContractError` because there is no generic
+   * write-back endpoint. In that case we just keep the in-memory update
+   * and skip the service round-trip — this method is *only* for local
+   * state sync, never a real backend write.
+   */
+  function setSilent(update: (data: AppData) => void) {
+    const operation = queue.current.then(async () => {
+      const next = structuredClone(current.current);
+      update(next);
+      let saved = next;
+      try {
+        saved = await service.save(next);
+      } catch (err) {
+        // Live service throws UnavailableContractError — that is fine
+        // for a session-sync write. Keep the in-memory state we just
+        // computed and move on. Any other error also keeps the local
+        // state, since this is a background sync, not a real write.
+        if (
+          !(err instanceof Error) ||
+          !err.message.includes("chưa có hợp đồng API")
+        ) {
+          // eslint-disable-next-line no-console
+          console.warn("[platform:setSilent] save failed:", err);
+        }
+      }
+      current.current = saved;
+      setData(saved);
+    });
+    queue.current = operation.catch(() => undefined);
+  }
   return (
     <Context.Provider
       value={{
         data,
         mode,
         mutate,
+        setSilent,
         notify: setToast,
         busy,
         status,

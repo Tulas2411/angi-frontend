@@ -1,8 +1,8 @@
 "use client";
 import type {
   AuthUserDto,
+  GoogleLoginClientDto,
   GoogleLoginRequestDto,
-  GoogleLoginResponseDto,
   LoginRequestDto,
   RegisterAccountRequestDto,
   RegisterAccountResponseDto,
@@ -91,7 +91,7 @@ export const api = {
       false,
     ),
   googleLogin: (body: GoogleLoginRequestDto) =>
-    request<GoogleLoginResponseDto>(
+    request<GoogleLoginClientDto>(
       "auth/google",
       { method: "POST", body: JSON.stringify(body) },
       false,

@@ -2,6 +2,7 @@ import { backend, getSession, withAuth } from "@/features/auth/server";
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
+import { publicOperation } from "@/shared/api/public-proxy";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -27,13 +28,15 @@ async function handle(request: Request, context: Context) {
     const { path } = await context.params;
     const endpoint = path.join("/");
     const menuOperation = ownerMenuOperation(request.method, endpoint);
+    const publicOp = publicOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
     if (
       !allowedEndpoints.has(`${request.method} ${endpoint}`) &&
       !resubmission &&
-      !menuOperation
+      !menuOperation &&
+      !publicOp
     ) {
       throw new ApiError(
         404,
@@ -57,6 +60,29 @@ async function handle(request: Request, context: Context) {
       } else body = await readJson(request);
     }
     const query = new URL(request.url).search;
+    // Public-but-anonymous endpoints — bỏ qua withAuth (BE đã cho phép AllowAnonymous).
+    if (publicOp?.allowGuest) {
+      return ok(
+        await backend<unknown>(`${endpoint}${query}`, {
+          method: request.method,
+          body,
+        }),
+        publicOp.status,
+      );
+    }
+    // Public-yet-authenticated endpoints (roll dish, impressions, …) — vẫn chạy withAuth.
+    if (publicOp && !publicOp.allowGuest) {
+      return ok(
+        await withAuth(session, (auth) =>
+          backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          }),
+        ),
+        publicOp.status,
+      );
+    }
     return ok(
       await withAuth(session, (auth) => {
         if (

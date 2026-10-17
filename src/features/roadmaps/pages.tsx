@@ -31,6 +31,7 @@ import {
 import type { ItineraryItem } from "@/features/platform/contracts";
 import { TripExpenses } from "./expenses";
 import { ProvinceField } from "@/components/domain/province-field";
+import { rollDishService } from "@/api/services/roll-dish-service";
 
 export function TripList() {
   const { data, mutate } = usePlatform(),
@@ -971,6 +972,10 @@ export function RollDishPage() {
               loading={state === "rolling"}
               onClick={() => {
                 setState("rolling");
+                // F-18: gọi BE song song (fire-and-forget) — UI vẫn dùng kết quả mock.
+                void rollDishService.roll({
+                  maxPrice: filter === "budget" ? 50000 : undefined,
+                });
                 const reduce = window.matchMedia(
                   "(prefers-reduced-motion: reduce)",
                 ).matches;
