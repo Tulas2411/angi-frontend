@@ -139,6 +139,10 @@ export function openMenuId(error: unknown): number | null {
 }
 export function menuErrorMessage(error: unknown) {
   const messages: Record<string, string> = {
+    MENU_EMPTY:
+      "Bản thực đơn chưa có món. Hãy thêm ít nhất một món trước khi gửi duyệt.",
+    MENU_UNCHANGED:
+      "Bản thực đơn chưa có thay đổi so với thực đơn đang bán. Hãy cập nhật món trước khi gửi duyệt.",
     RESTAURANT_NOT_FOUND: "Bạn chưa đăng ký nhà hàng.",
     RESTAURANT_NOT_VERIFIED:
       "Nhà hàng cần được xác minh trước khi tạo bản nháp thực đơn.",

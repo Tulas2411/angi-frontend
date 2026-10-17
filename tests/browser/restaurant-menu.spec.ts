@@ -536,7 +536,7 @@ test("proxy enforces session, owner role, Origin and exact method allowlist", as
   ).toBe(403);
   expect(
     (
-      await page.request.post(`${base}/14/submit`, {
+      await page.request.post(`${base}/14/approve`, {
         headers: { Origin: "http://localhost:3001" },
         data: {},
       })

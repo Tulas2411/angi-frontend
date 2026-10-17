@@ -25,6 +25,7 @@ Completing a task, passing checks, or following a Git convention is never permis
 
 - Use the actual assigned Jira key; the example is not a ticket assignment. Do not invent keys.
 - Create the branch from the latest `dev`. One branch = one task.
+- Create feature branches with `git switch --no-track -c <feature-branch> origin/dev`. A feature branch must never use `origin/dev` or `origin/main` as its upstream. When the human publishes it, use `git push --set-upstream origin <feature-branch>` so it tracks the same-name remote branch.
 - Never commit or push to `main` or `dev` directly; never force-push a shared branch.
 - Pull `dev` into the branch before starting work and before opening the pull request.
 - Resolve conflicts locally on the branch (pull `dev`, fix, build, test), never in the GitHub web editor for code files. If the intended resolution in someone else's code is unclear, ask instead of choosing.
@@ -127,7 +128,7 @@ Never use `Closes #12`: the team uses Jira for tasks, not GitHub Issues.
 
 ## 5. Pull requests
 
-- Base branch `dev`. Only the release pull request from `dev` targets `main`.
+- Default base branch `dev`; release pull requests from `dev` target `main`. An explicit owner instruction can select a different base for a delivery. For ANGI-86 the owner requested a separate feature branch and a human-reviewed merge into `main`; report the additional `dev` commits included because this feature depends on F-50.
 - Title: the commit format (`feat(auth): add login form`); it becomes the squash commit message.
 - Description starts with `Jira: <actual-Jira-key>`, then: what changed, why, how to verify. For technical work without an assigned task, state `Jira: none (technical work)`.
 - Include relevant UI states, API/role coverage and integration limits. Add screenshots for visual changes when helpful; exclude private data.

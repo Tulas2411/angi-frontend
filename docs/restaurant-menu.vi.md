@@ -1,5 +1,7 @@
 # F-50 — Quản lý thực đơn nhà hàng (ANGI-80)
 
+Phần bên dưới ghi phạm vi và kết quả tại mốc F-50. Chức năng gửi duyệt OWN-17 hiện được bổ sung riêng ở [F-51 / ANGI-86](menu-approval.vi.md); các câu mô tả OWN-17 chưa được triển khai ở bản F-50 là thông tin lịch sử của lượt đó.
+
 Nhánh FE: `feat/ANGI-80-manage-restaurant-menu`, tạo từ `origin/dev` tại `80600a5f9cccf19c0bd37874b76e15161f04f45f`. Thay đổi để nguyên chưa stage/commit/push.
 
 ## Kiểm tra mức độ sẵn sàng của BE

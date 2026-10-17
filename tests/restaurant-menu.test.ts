@@ -143,7 +143,6 @@ describe("F-50 contracts", () => {
     for (const path of [
       `${base}/0`,
       `${base}/-1`,
-      `${base}/1/submit`,
       `${base}/1/items/0`,
       `${base}/1/items/2/extra`,
       `${base}/1/approve`,
