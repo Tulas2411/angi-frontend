@@ -20,6 +20,7 @@ import type {
   MenuItemDto,
   OwnerMenuDishDto,
   OwnerMenuDto,
+  MenuSubmissionDto,
 } from "./menu-types";
 import { restaurantMenuService } from "./menu-service";
 import {
@@ -30,6 +31,7 @@ import {
 } from "./menu-rules";
 import { MenuItemEditor } from "./menu-item-editor";
 import { MenuHistory } from "./menu-history";
+import { MenuApprovalSubmit } from "./menu-approval-submit";
 import "./restaurant-menu.css";
 
 type Confirmation =
@@ -69,6 +71,9 @@ export function RestaurantMenuPage() {
   const [confirm, setConfirm] = useState<Confirmation | null>(null),
     [editor, setEditor] = useState<{ item?: MenuItemDto } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
+  const [approvalNotes, setApprovalNotes] = useState<Record<number, string>>(
+    {},
+  );
   const active = useRef(true),
     locked = useRef(false),
     detailSequence = useRef(0);
@@ -202,6 +207,30 @@ export function RestaurantMenuPage() {
         setHistoryVersion((value) => value + 1);
       }
     });
+  }
+  function submitted(result: MenuSubmissionDto) {
+    setDetail((previous) =>
+      previous?.id === result.id ? { ...previous, ...result } : previous,
+    );
+    updateMenu((menu) => ({
+      ...menu,
+      openSubmission:
+        result.status === "draft" || result.status === "pending"
+          ? { id: result.id, status: result.status }
+          : null,
+    }));
+    setApprovalNotes((previous) => {
+      const next = { ...previous };
+      delete next[result.id];
+      return next;
+    });
+    setHistoryVersion((value) => value + 1);
+    setProblem("");
+    setSuccess(
+      result.status === "pending"
+        ? "Đã gửi thực đơn để duyệt. Trạng thái: Chờ duyệt."
+        : `Trạng thái thực đơn: ${menuStatusLabels[result.status]}.`,
+    );
   }
   const menu = state.menu,
     restaurant = state.restaurant,
@@ -427,6 +456,39 @@ export function RestaurantMenuPage() {
                           ? "Bạn đang chỉnh sửa bản nháp. Các thay đổi chỉ được áp dụng vào thực đơn đang bán sau khi được nộp và duyệt."
                           : "Bản thực đơn này chỉ được xem, không thể sửa món."}
                       </Alert>
+                      {editable && (
+                        <MenuApprovalSubmit
+                          detail={detail}
+                          note={
+                            approvalNotes[detail.id] ?? detail.ownerNote ?? ""
+                          }
+                          onNoteChange={(value) =>
+                            setApprovalNotes((previous) => ({
+                              ...previous,
+                              [detail.id]: value,
+                            }))
+                          }
+                          service={service}
+                          disabled={disabled}
+                          onSubmitted={submitted}
+                          onRefresh={() => {
+                            void open(detail.id);
+                            void service
+                              .getMenu()
+                              .then((menu) => {
+                                if (active.current)
+                                  setState((previous) => ({
+                                    ...previous,
+                                    menu,
+                                  }));
+                              })
+                              .catch((error) => {
+                                if (active.current)
+                                  setProblem(menuErrorMessage(error));
+                              });
+                          }}
+                        />
+                      )}
                       <dl className="menu-meta">
                         <div>
                           <dt>Ngày tạo</dt>

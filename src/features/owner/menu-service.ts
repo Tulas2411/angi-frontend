@@ -11,6 +11,7 @@ import type {
   MenuWithItemsDto,
   OwnerMenuDto,
   PatchMenuItemDto,
+  SubmitMenuRequestDto,
 } from "./menu-types";
 export interface RestaurantMenuService {
   getRestaurant(): Promise<OwnerRestaurantDto>;
@@ -35,6 +36,7 @@ export interface RestaurantMenuService {
   ): Promise<MenuItemDto>;
   remove(id: number, itemId: number): Promise<null>;
   cancel(id: number): Promise<MenuSubmissionDto>;
+  submit(id: number, body: SubmitMenuRequestDto): Promise<MenuSubmissionDto>;
   upload(file: File): Promise<MediaFileDto>;
 }
 const base = "owner/restaurant/menu-submissions";
@@ -59,6 +61,7 @@ export const restaurantMenuService: RestaurantMenuService = {
     api.patch(`${base}/${id}/items/${itemId}`, body),
   remove: (id, itemId) => api.delete(`${base}/${id}/items/${itemId}`),
   cancel: (id) => api.post(`${base}/${id}/cancel`),
+  submit: (id, body) => api.post(`${base}/${id}/submit`, body),
   upload: (file) => {
     const body = new FormData();
     body.set("file", file);

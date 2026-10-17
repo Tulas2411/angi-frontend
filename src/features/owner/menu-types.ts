@@ -51,6 +51,10 @@ export interface MenuSubmissionDto {
   reviewNote: string | null;
   createdAt: string;
 }
+/** OWN-17: optional note only; submission ID belongs in the URL. */
+export interface SubmitMenuRequestDto {
+  ownerNote?: string;
+}
 export interface MenuItemDto {
   id: number;
   sourceDishId: number | null;

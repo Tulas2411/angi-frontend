@@ -61,7 +61,9 @@ npm run lint
 npm test
 ```
 
-F-50 uses `/restaurant/menu` and the isolated `/demo/owner/menu` preview. Deploy with OWN-09..16/18 plus OWN-02, CAT-02 and MEDIA-01 available. Draft creation, item deletion and cancellation have no body; cancellation returns 200. Only drafts are editable; active availability uses its own PUT. See [menu usage, exact contract, test prerequisites and rerun commands](restaurant-menu.vi.md). Its opt-in local live suite requires the guarded backend `docker/local/Seed --set-menu-fixture` helper and uses fresh `angi_local` accounts. This helper prepares prerequisites only; it does not implement Moderator verification. F-51 submission is outside this delivery. No new application env keys or dependencies.
+F-50 uses `/restaurant/menu` and the isolated `/demo/owner/menu` preview. Deploy with OWN-09..16/18 plus OWN-02, CAT-02 and MEDIA-01 available. Draft creation, item deletion and cancellation have no body; cancellation returns 200. Only drafts are editable; active availability uses its own PUT. See [menu usage, exact contract, test prerequisites and rerun commands](restaurant-menu.vi.md). Its opt-in local live suite requires the guarded backend `docker/local/Seed --set-menu-fixture` helper and uses fresh `angi_local` accounts. This helper prepares prerequisites only; it does not implement Moderator verification. No new application env keys or dependencies. F-51 is integrated separately below.
+
+F-51 uses the same menu route with OWN-17 POST `menu-submissions/{id}/submit`; a confirmation modal collects an optional note and the 200 response marks the same submission pending. Only drafts with changes can begin submission. The server still enforces empty/unchanged/ownership/status rules, and errors retain the note. Run the local stub suite with `npx playwright test --config=playwright.menu-approval.config.ts`; the separate opt-in live suite uses fresh `angi_local` owners and disables Mapbox. See [F-51 usage, live prerequisites and verification](menu-approval.vi.md). No new application env variables or dependencies.
 
 Build first on a fresh checkout so Next can generate route types. Browser validation:
 

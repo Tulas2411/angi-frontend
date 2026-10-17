@@ -11,6 +11,10 @@ import { ApiError } from "@/shared/api/error";
 import { ownerProfileFromDemo } from "./restaurant-profile";
 import { createMockRestaurantRegistrationService } from "./restaurant-registration";
 import { menuItemRequest, menuItemValues } from "@/features/owner/menu-rules";
+import {
+  menuApprovalIssue,
+  validateMenuOwnerNote,
+} from "@/features/owner/menu-approval-rules";
 
 /** Numeric IDs are explicit demo IDs; live code never derives IDs from fixture names or URLs. */
 export function createMockRestaurantMenuService(
@@ -273,6 +277,31 @@ export function createMockRestaurantMenuService(
         );
       result.status = "cancelled";
       menu.openSubmission = null;
+      return structuredClone(metadata(result));
+    },
+    async submit(id, body) {
+      const error = validateMenuOwnerNote(body.ownerNote ?? "");
+      if (error)
+        throw new ApiError(
+          400,
+          "VALIDATION_FAILED",
+          "Vui lòng kiểm tra ghi chú.",
+          { OwnerNote: [error] },
+        );
+      const result = editable(id);
+      const issue = menuApprovalIssue(result);
+      if (issue)
+        throw new ApiError(
+          400,
+          issue,
+          issue === "MENU_EMPTY"
+            ? "Bản menu không được để trống."
+            : "Bản menu chưa có thay đổi.",
+        );
+      result.status = "pending";
+      result.ownerNote = body.ownerNote?.trim() || null;
+      result.submittedAt = new Date().toISOString();
+      menu.openSubmission = { id, status: "pending" };
       return structuredClone(metadata(result));
     },
     async upload(file) {

@@ -1,4 +1,4 @@
-/** OWN-09..16/18 only. OWN-17 belongs to the separate submit-for-review task. */
+/** Exact OWN-09..18 operations. Submit-for-review preserves its JSON body and 200 response. */
 export function ownerMenuOperation(method: string, endpoint: string) {
   const base = "owner/restaurant/menu-submissions";
   if (method === "GET" && endpoint === "owner/restaurant/menu")
@@ -15,6 +15,11 @@ export function ownerMenuOperation(method: string, endpoint: string) {
     /^owner\/restaurant\/menu-submissions\/[1-9]\d*$/.test(endpoint)
   )
     return { body: false, status: 200 };
+  if (
+    method === "POST" &&
+    /^owner\/restaurant\/menu-submissions\/[1-9]\d*\/submit$/.test(endpoint)
+  )
+    return { body: true, status: 200 };
   if (
     method === "POST" &&
     /^owner\/restaurant\/menu-submissions\/[1-9]\d*\/items$/.test(endpoint)
