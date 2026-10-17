@@ -20,6 +20,7 @@ describe("OWN-04 weekly hours", () => {
   it("accepts multiple intervals, empty schedules and overnight hours with touching boundaries", () => {
     for (const hours of [
       [],
+      [hour(0, "00:00", "23:59")],
       [hour(1, "06:00", "13:30"), hour(1, "13:30", "21:00")],
       [hour(1, "22:00", "02:00"), hour(2, "02:00", "05:00")],
     ]) {
@@ -48,6 +49,10 @@ describe("OWN-04 weekly hours", () => {
       [hour(1.5, "06:00", "13:30")],
       [hour(1, "6:00", "13:30")],
       [hour(1, "24:00", "13:30")],
+      [hour(1, "", "13:30")],
+      [hour(1, "06:00", "")],
+      [hour(1, "06:60", "13:30")],
+      [hour(1, "06:00:01", "13:30")],
       [hour(1, "06:00", "06:00")],
     ])
       expect(validateBusinessHours(hours).errorCode).toBe("VALIDATION_FAILED");

@@ -5,6 +5,15 @@ import type {
   UpdateBusinessHoursRequestDto,
 } from "../../src/features/owner/restaurant-types";
 import { ownerRestaurantSample } from "../fixtures/owner-restaurant";
+import {
+  addSlot,
+  applyDay,
+  closing,
+  dayRow,
+  editDay,
+  opening,
+  saveWeek,
+} from "../helpers/business-hours";
 
 let server: Server;
 let current: OwnerRestaurantDto | null;
@@ -107,11 +116,7 @@ test.beforeEach(async () => {
   nextError = null;
 });
 
-const save = (page: Page) => page.locator('button[type="submit"]');
-const opening = (page: Page, day = "Thứ hai", slot = 1) =>
-  page.getByLabel(`Giờ mở · ${day} · khung ${slot} *`, { exact: true });
-const closing = (page: Page, day = "Thứ hai", slot = 1) =>
-  page.getByLabel(`Giờ đóng · ${day} · khung ${slot} *`, { exact: true });
+const save = saveWeek;
 async function login(page: Page, traveler = false) {
   await page.goto("/login");
   await page
@@ -121,65 +126,58 @@ async function login(page: Page, traveler = false) {
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(
     traveler ? /\/demo\/traveler$/ : /\/restaurant$/,
-    {
-      timeout: 30000,
-    },
   );
-  if (!traveler)
-    await expect(
-      page.getByRole("heading", { name: "Bạn đã có nhà hàng" }),
-    ).toBeVisible();
 }
 async function openHours(page: Page) {
   await login(page);
   await page.goto("/restaurant/profile?tab=hours");
-  await expect(opening(page)).toHaveValue("06:00");
-}
-async function addSlot(
-  page: Page,
-  day: string,
-  slot: number,
-  open: string,
-  close: string,
-) {
-  await page
-    .getByRole("button", { name: `Thêm khung giờ · ${day}`, exact: true })
-    .click();
-  await opening(page, day, slot).fill(open);
-  await closing(page, day, slot).fill(close);
+  await expect(
+    page.getByRole("heading", { name: "Lịch phục vụ trong tuần", exact: true }),
+  ).toBeVisible();
 }
 
-test("OWN-02 loads hours; OWN-04 PUT replaces the full week with multiple/overnight intervals", async ({
+test.beforeEach(async ({ page, context }) => {
+  await context.route("**/*", (route) =>
+    ["localhost", "127.0.0.1"].includes(new URL(route.request().url()).hostname)
+      ? route.continue()
+      : route.abort(),
+  );
+  page.on("dialog", async (dialog) => {
+    await dialog.dismiss();
+    throw new Error(`Unexpected native ${dialog.type()}`);
+  });
+  page.on("pageerror", (error) => {
+    throw error;
+  });
+});
+
+test("compact week loads OWN-02; day edits stay local until OWN-04 saves the complete week", async ({
   page,
 }) => {
   await openHours(page);
+  await expect(dayRow(page)).toContainText("06:00–13:30");
   await expect(save(page)).toBeDisabled();
+  await expect(page.getByLabel(/^Giờ mở ·/)).toHaveCount(0);
   await addSlot(page, "Thứ hai", 2, "22:00", "02:00");
   await addSlot(page, "Thứ ba", 1, "02:00", "05:00");
   await addSlot(page, "Chủ nhật", 1, "09:00", "12:00");
-  await expect(
-    page.getByText("Đóng vào ngày hôm sau.", { exact: true }),
-  ).toBeVisible();
-  const updated = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/api/backend/owner/restaurant/business-hours") &&
-      response.request().method() === "PUT",
-  );
+  expect(requests).toHaveLength(0);
+  await expect(dayRow(page)).toContainText("22:00–02:00 hôm sau");
+  await expect(dayRow(page)).toContainText("Đóng lúc 02:00 ngày hôm sau.");
   await save(page).click();
-  expect((await updated).status()).toBe(200);
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
-  expect(requests).toEqual([
-    {
-      hours: [
-        { dayOfWeek: 1, openTime: "06:00", closeTime: "13:30" },
-        { dayOfWeek: 1, openTime: "22:00", closeTime: "02:00" },
-        { dayOfWeek: 2, openTime: "02:00", closeTime: "05:00" },
-        { dayOfWeek: 0, openTime: "09:00", closeTime: "12:00" },
-      ],
-    },
-  ]);
+  expect(requests).toHaveLength(1);
+  expect(requests[0].hours).toHaveLength(4);
+  expect(requests[0].hours).toEqual(
+    expect.arrayContaining([
+      { dayOfWeek: 1, openTime: "06:00", closeTime: "13:30" },
+      { dayOfWeek: 1, openTime: "22:00", closeTime: "02:00" },
+      { dayOfWeek: 2, openTime: "02:00", closeTime: "05:00" },
+      { dayOfWeek: 0, openTime: "09:00", closeTime: "12:00" },
+    ]),
+  );
   expect(current).toMatchObject({
     name: ownerRestaurantSample.name,
     operatingStatus: "open",
@@ -187,56 +185,135 @@ test("OWN-02 loads hours; OWN-04 PUT replaces the full week with multiple/overni
     moderationStatus: "visible",
     images: ownerRestaurantSample.images,
   });
-  await expect(
-    page.getByText("Theo lịch đã lưu: ngoài giờ mở cửa.", { exact: true }),
-  ).toBeVisible();
   await expect(save(page)).toBeDisabled();
   await page.reload();
-  await expect(opening(page, "Thứ hai", 2)).toHaveValue("22:00");
-  await expect(opening(page, "Chủ nhật")).toHaveValue("09:00");
+  await expect(dayRow(page)).toContainText("22:00–02:00 hôm sau");
 });
 
-test("local and server validation keep drafts, map indexed errors and allow retry", async ({
+test("day validation requires both times, rejects equal times and focuses the invalid field", async ({
   page,
 }) => {
   await openHours(page);
+  await editDay(page);
+  await closing(page).fill("");
+  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
+  await expect(closing(page)).toHaveAttribute("aria-invalid", "true");
+  await expect(closing(page)).toBeFocused();
+  await expect(
+    page.getByText("Nhập giờ đóng theo dạng HH:mm.", { exact: true }),
+  ).toBeVisible();
   await closing(page).fill("06:00");
-  await save(page).click();
+  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
   await expect(
     page.getByText("Giờ mở và giờ đóng phải khác nhau.", { exact: true }),
   ).toBeVisible();
-  await expect(closing(page)).toBeFocused();
-  expect(requests).toHaveLength(0);
   await closing(page).fill("13:30");
-  await addSlot(page, "Thứ hai", 2, "13:00", "17:00");
-  await save(page).click();
-  await expect(
-    page.getByText(
-      "Các khung giờ không được chồng lên nhau, kể cả qua nửa đêm.",
-      { exact: true },
-    ),
-  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Thêm khoảng giờ", exact: true })
+    .click();
+  await closing(page, "Thứ hai", 2).fill("21:00");
+  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
+  await expect(opening(page, "Thứ hai", 2)).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await expect(opening(page, "Thứ hai", 2)).toBeFocused();
   expect(requests).toHaveLength(0);
-  await opening(page, "Thứ hai", 2).fill("17:00");
-  await closing(page, "Thứ hai", 2).fill("22:00");
+});
+
+for (const example of [
+  {
+    first: "Thứ hai",
+    day: "Thứ hai",
+    open: "23:00",
+    close: "03:00",
+    corrected: "03:00",
+    end: "05:00",
+  },
+  {
+    first: "Thứ hai",
+    day: "Thứ ba",
+    open: "01:00",
+    close: "03:00",
+    corrected: "02:00",
+    end: "05:00",
+  },
+  {
+    first: "Thứ bảy",
+    day: "Chủ nhật",
+    open: "01:00",
+    close: "03:00",
+    corrected: "02:00",
+    end: "05:00",
+  },
+  {
+    first: "Chủ nhật",
+    day: "Thứ hai",
+    open: "01:00",
+    close: "03:00",
+    corrected: "02:00",
+    end: "05:00",
+  },
+])
+  test(`rejects overlap ${example.first} / ${example.day}, allows adjoining hours`, async ({
+    page,
+  }) => {
+    current!.businessHours = [];
+    await openHours(page);
+    await addSlot(page, example.first, 1, "22:00", "02:00");
+    const slot = example.day === example.first ? 2 : 1;
+    await page
+      .getByRole("button", {
+        name: `Thêm khoảng · ${example.day}`,
+        exact: true,
+      })
+      .click();
+    await opening(page, example.day, slot).fill(example.open);
+    await closing(page, example.day, slot).fill(example.close);
+    await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: /Các (khoảng|khung)/ }),
+    ).toContainText("không được chồng nhau");
+    await expect(
+      page.getByRole("alert").filter({ hasText: /Các (khoảng|khung)/ }),
+    ).toContainText(example.first);
+    await expect(
+      page.getByRole("alert").filter({ hasText: /Các (khoảng|khung)/ }),
+    ).toContainText(example.day);
+    expect(requests).toHaveLength(0);
+    await opening(page, example.day, slot).fill(example.corrected);
+    await closing(page, example.day, slot).fill(example.end);
+    await applyDay(page);
+    await expect(save(page)).toBeEnabled();
+  });
+
+test("backend errors preserve the week, identify the day/field and allow correction and retry", async ({
+  page,
+}) => {
+  await openHours(page);
+  await addSlot(page, "Thứ hai", 2, "17:00", "22:00");
   nextError = { errorCode: "INVALID_BUSINESS_HOURS" };
   await save(page).click();
   await expect(
-    page.getByText(
-      "Các khung giờ không được chồng lên nhau, kể cả qua nửa đêm.",
-      { exact: true },
-    ),
-  ).toBeVisible();
-  await expect(opening(page, "Thứ hai", 2)).toHaveValue("17:00");
+    page.getByRole("alert").filter({ hasText: /Các (khoảng|khung)/ }),
+  ).toContainText("Các khung giờ không được chồng lên nhau");
+  await expect(dayRow(page)).toContainText("17:00–22:00");
   nextError = {
     errorCode: "VALIDATION_FAILED",
     errors: { "Hours[1].CloseTime": ["Giờ đóng cửa chưa hợp lệ."] },
   };
   await save(page).click();
+  await expect(dayRow(page)).toContainText("Giờ đóng cửa chưa hợp lệ.");
   await expect(
-    page.getByText("Giờ đóng cửa chưa hợp lệ.", { exact: true }),
-  ).toBeVisible();
-  await expect(closing(page, "Thứ hai", 2)).toBeFocused();
+    page.getByRole("button", { name: "Chỉnh giờ · Thứ hai", exact: true }),
+  ).toBeFocused();
+  await editDay(page);
+  await expect(closing(page, "Thứ hai", 2)).toHaveAttribute(
+    "aria-invalid",
+    "true",
+  );
+  await closing(page, "Thứ hai", 2).fill("21:00");
+  await applyDay(page);
   await save(page).click();
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
@@ -244,66 +321,106 @@ test("local and server validation keep drafts, map indexed errors and allow retr
   expect(requests).toHaveLength(3);
 });
 
-test("saving blocks duplicates; modal cancellation restores the latest save and empty hours clear the week", async ({
+test("modal Escape/discard returns focus; weekly cancel restores saved hours and duplicate saves are blocked", async ({
   page,
 }) => {
-  const nativeDialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    nativeDialogs.push(dialog.type());
-    await dialog.dismiss();
-  });
   await openHours(page);
+  await editDay(page);
+  await expect(opening(page)).toBeFocused();
   await opening(page).fill("07:00");
+  await page.keyboard.press("Escape");
+  const discard = page.getByRole("dialog", {
+    name: "Bỏ thay đổi của ngày này?",
+    exact: true,
+  });
+  await expect(discard).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(discard).not.toBeVisible();
+  await expect(opening(page)).toHaveValue("07:00");
+  await page.keyboard.press("Escape");
+  await discard
+    .getByRole("button", { name: "Bỏ thay đổi", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Chỉnh giờ · Thứ hai", exact: true }),
+  ).toBeFocused();
+  await expect(dayRow(page)).toContainText("06:00–13:30");
+  await editDay(page);
+  await opening(page).fill("07:00");
+  await applyDay(page);
   delay = true;
   await save(page).click();
   await expect(save(page)).toBeDisabled();
-  await page.locator("form").dispatchEvent("submit");
+  await save(page).evaluate((button) =>
+    button
+      .closest("form")!
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
   expect(requests).toHaveLength(1);
-  delay = false;
+  await editDay(page);
   await opening(page).fill("08:00");
-  await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
+  await applyDay(page);
+  await page.getByRole("button", { name: "Hủy", exact: true }).click();
   await page
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
-  await expect(opening(page)).toHaveValue("08:00");
-  await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
-  await page.keyboard.press("Escape");
-  await expect(
-    page.getByRole("button", { name: "Hủy thay đổi", exact: true }),
-  ).toBeFocused();
-  await expect(opening(page)).toHaveValue("08:00");
-  await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Bỏ thay đổi", exact: true })
-    .click();
-  await expect(opening(page)).toHaveValue("07:00");
+  await expect(dayRow(page)).toContainText("08:00–13:30");
+  await page.getByRole("button", { name: "Hủy", exact: true }).click();
+  await page.getByRole("button", { name: "Bỏ thay đổi", exact: true }).click();
+  await expect(dayRow(page)).toContainText("07:00–13:30");
   await expect(save(page)).toBeDisabled();
+});
+
+test("deleting the last interval and saving an empty week require modals and retain operating status", async ({
+  page,
+}) => {
+  await openHours(page);
+  await editDay(page);
   await page
-    .getByRole("button", { name: "Xóa lịch tuần", exact: true })
+    .getByRole("button", { name: "Xóa khoảng 1 · Thứ hai", exact: true })
     .click();
   await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Xóa lịch tuần", exact: true })
+    .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
-  expect(requests).toHaveLength(1);
+  await expect(opening(page)).toHaveValue("06:00");
+  await page
+    .getByRole("button", { name: "Xóa khoảng 1 · Thứ hai", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Xóa khoảng", exact: true }).click();
+  await applyDay(page);
+  await expect(dayRow(page)).toContainText("Chưa khai báo giờ");
   await save(page).click();
+  const empty = page.getByRole("dialog", {
+    name: "Lưu lịch tuần trống?",
+    exact: true,
+  });
+  await expect(empty).toBeVisible();
+  expect(requests).toHaveLength(0);
+  await empty
+    .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
+    .click();
+  await save(page).click();
+  await empty
+    .getByRole("button", { name: "Lưu lịch trống", exact: true })
+    .click();
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
-  expect(requests[1]).toEqual({ hours: [] });
+  expect(requests).toEqual([{ hours: [] }]);
+  expect(current!.operatingStatus).toBe("open");
   await page.reload();
   await expect(
-    page.getByText("Bạn chưa khai báo giờ mở cửa.", { exact: true }),
+    page.getByText("Chưa khai báo giờ", { exact: true }),
+  ).toHaveCount(7);
+  await expect(
+    page.getByText("Chưa khai báo không có nghĩa là đóng cửa", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel(/^Giờ mở ·/)).toHaveCount(0);
-  expect(nativeDialogs).toEqual([]);
 });
 
-test("loading errors retry without fixture fallback and missing owners can register", async ({
+test("GET errors retry without demo fallback and missing owners can register", async ({
   page,
 }) => {
   await login(page);
@@ -312,10 +429,9 @@ test("loading errors retry without fixture fallback and missing owners can regis
   await expect(
     page.getByRole("heading", { name: "Chưa tải được giờ mở cửa" }),
   ).toBeVisible();
-  await expect(page.getByLabel(/^Giờ mở ·/)).toHaveCount(0);
   failGet = false;
   await page.getByRole("button", { name: "Thử lại", exact: true }).click();
-  await expect(opening(page)).toHaveValue("06:00");
+  await expect(dayRow(page)).toContainText("06:00–13:30");
   current = null;
   await page.reload();
   await expect(
@@ -327,28 +443,21 @@ test("loading errors retry without fixture fallback and missing owners can regis
   await expect(page).toHaveURL(/\/restaurant\/register$/);
 });
 
-test("route, role, origin and exact method restrictions still protect OWN-04", async ({
+test("role, origin and exact method restrictions protect OWN-04", async ({
   page,
 }) => {
   await login(page, true);
   await page.goto("/restaurant/profile?tab=hours");
   await expect(page).toHaveURL(/\/demo\/traveler$/);
-  expect(
-    (
-      await page.request.put("/api/backend/owner/restaurant/business-hours", {
-        headers: { origin: "http://localhost:3001" },
-        data: { hours: [] },
-      })
-    ).status(),
-  ).toBe(403);
-  expect(
-    (
-      await page.request.put("/api/backend/owner/restaurant/business-hours", {
-        headers: { origin: "https://foreign.example" },
-        data: { hours: [] },
-      })
-    ).status(),
-  ).toBe(403);
+  for (const origin of ["http://localhost:3001", "https://foreign.example"])
+    expect(
+      (
+        await page.request.put("/api/backend/owner/restaurant/business-hours", {
+          headers: { origin },
+          data: { hours: [] },
+        })
+      ).status(),
+    ).toBe(403);
   expect(
     (
       await page.request.patch("/api/backend/owner/restaurant/business-hours", {
@@ -365,25 +474,13 @@ test("route, role, origin and exact method restrictions still protect OWN-04", a
   expect(requests).toHaveLength(0);
 });
 
-test("live profile and hours drafts require modal confirmation before switching editors", async ({
+test("applied day drafts require a modal before switching profile tabs", async ({
   page,
 }) => {
   await openHours(page);
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
-  await page.getByLabel("Tên nhà hàng").fill("Chưa lưu");
-  await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Bỏ thay đổi chưa lưu?" }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
-    .click();
-  await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Chưa lưu");
-  await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })
-    .click();
+  await editDay(page);
   await opening(page).fill("07:30");
+  await applyDay(page);
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Bỏ thay đổi giờ mở cửa chưa lưu?" }),
@@ -391,7 +488,7 @@ test("live profile and hours drafts require modal confirmation before switching 
   await page
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
-  await expect(opening(page)).toHaveValue("07:30");
+  await expect(dayRow(page)).toContainText("07:30–13:30");
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await page
     .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })
@@ -402,51 +499,75 @@ test("live profile and hours drafts require modal confirmation before switching 
   expect(requests).toHaveLength(0);
 });
 
-test("demo supports multiple slots across navigation with no live PUT and fits desktop/mobile", async ({
+test("reference layout and day dialogs fit desktop/mobile and keyboard Tab stays in the modal", async ({
   page,
 }) => {
-  const errors: string[] = [];
-  page.on("pageerror", (error) => errors.push(error.message));
-  await page.setViewportSize({ width: 1440, height: 1000 });
+  current!.businessHours = [1, 2, 3, 4, 5]
+    .flatMap((dayOfWeek) => [
+      { dayOfWeek, openTime: "11:00", closeTime: "14:00" },
+      { dayOfWeek, openTime: "17:00", closeTime: "21:00" },
+    ])
+    .concat([{ dayOfWeek: 6, openTime: "18:00", closeTime: "02:00" }]);
+  await page.setViewportSize({ width: 1440, height: 1200 });
+  await openHours(page);
+  await expect(dayRow(page, "Chủ nhật")).toContainText("Chưa khai báo giờ");
+  await page.screenshot({
+    path: "artifacts/owner-hours-desktop.png",
+    fullPage: true,
+  });
+  for (const width of [390, 320]) {
+    await page.setViewportSize({ width, height: 844 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await editDay(page);
+    await expect(opening(page)).toBeFocused();
+    for (let index = 0; index < 12; index++) {
+      await page.keyboard.press("Tab");
+      expect(
+        await page.evaluate(
+          () => !!document.activeElement?.closest("dialog[open]"),
+        ),
+      ).toBe(true);
+    }
+    expect(
+      await page
+        .getByRole("dialog", { name: "Chỉnh giờ · Thứ hai", exact: true })
+        .evaluate((dialog) => dialog.scrollWidth <= dialog.clientWidth),
+    ).toBe(true);
+    if (width === 390)
+      await page.screenshot({
+        path: "artifacts/owner-hours-day-mobile.png",
+        fullPage: true,
+      });
+    await page
+      .getByRole("button", { name: "Đóng hộp thoại", exact: true })
+      .click();
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "artifacts/owner-hours-mobile.png",
+    fullPage: true,
+  });
+});
+
+test("demo preserves multiple intervals across profile navigation without a live PUT", async ({
+  page,
+}) => {
   await page.goto("/demo/owner/profile?tab=hours");
-  await expect(opening(page)).toHaveValue("07:00");
+  await editDay(page);
   await closing(page).fill("13:30");
+  await applyDay(page);
   await addSlot(page, "Thứ hai", 2, "17:00", "22:00");
   await save(page).click();
   await expect(
     page.getByText("Đã lưu giờ mở cửa trong bản minh họa.", { exact: true }),
   ).toBeVisible();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
-    path: "artifacts/owner-hours-desktop.png",
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
-    path: "artifacts/owner-hours-mobile.png",
-    fullPage: true,
-  });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Bếp Nhà");
   await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await expect(opening(page, "Thứ hai", 2)).toHaveValue("17:00");
-  await page
-    .getByRole("button", { name: "Bỏ khung giờ · Thứ hai · 2", exact: true })
-    .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Bỏ khung giờ", exact: true })
-    .click();
-  await expect(opening(page, "Thứ hai", 2)).toHaveCount(0);
-  await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
-  await page.getByRole("button", { name: "Bỏ thay đổi", exact: true }).click();
-  await expect(opening(page, "Thứ hai", 2)).toHaveValue("17:00");
+  await expect(dayRow(page)).toContainText("17:00–22:00");
   expect(requests).toHaveLength(0);
-  expect(errors).toEqual([]);
 });

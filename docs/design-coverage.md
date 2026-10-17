@@ -12,6 +12,10 @@ The modal uses a lazily loaded Mapbox GL JS renderer with native wheel zoom and 
 
 ANGI-61 uses `/restaurant/verification`, with an unverified mock at `/dev/scenarios?state=owner-verification-new`. Legal fields, five document types, JPG/PNG/WEBP/PDF upload, required business license, modal confirmations and pending/read-only outcomes follow OWN-06 and MEDIA-01. F-48 supplies the latest verification and full history through OWN-07; F-49 adds resubmission. Responsive checks use the existing UI system; no new pixel-equality claim is made. See [contract and manual verification](restaurant-verification.vi.md).
 
+## ANGI-48 business-hours layout revision
+
+The F-45 weekly-hours screen follows the owner's 2026-10-17 screenshot: one Monday–Sunday card, per-day edit/add actions, compact intervals with explicit overnight text, undeclared-day explanation and an in-card weekly save/cancel footer. Shared day dialogs validate the entire weekly draft; destructive/discard decisions remain shared confirmation modals. Desktop and mobile screenshots and contract evidence are linked in the [business-hours guide](business-hours.vi.md). This reference is the supplied screenshot, not a new Figma export.
+
 ## F-48 verification status and history
 
 ANGI-65 extends the existing Owner verification family (`465:51167`). The status tab calls OWN-07, displays restaurant/request states separately, keeps newest-first history and opens older requests and previous-attempt links in a read-only shared Dialog. Review notes, reviewer/date, nullable fields, private-document links, loading/empty/missing/error and manual refresh are covered. The existing legal form and modal confirmations remain F-47. Responsive checks use the current UI system, without a new pixel-equality claim. See [manual checks and contract](verification-status.vi.md).

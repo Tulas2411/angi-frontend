@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { execFileSync } from "node:child_process";
+import { addSlot, clearDay, dayRow, saveWeek } from "../helpers/business-hours";
 
 test("real BE: auth smoke, role guards, session rotation and logout", () => {
   test.setTimeout(180000);
@@ -82,23 +83,13 @@ test("real BE: owner registers, edits profile, saves overnight hours and confirm
   await page.reload();
   await expect(page.getByLabel("Tên nhà hàng")).toHaveValue(updated);
   await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Thêm khung giờ · Thứ hai", exact: true })
-    .click();
-  await page
-    .getByLabel("Giờ mở · Thứ hai · khung 1 *", { exact: true })
-    .fill("22:00");
-  await page
-    .getByLabel("Giờ đóng · Thứ hai · khung 1 *", { exact: true })
-    .fill("02:00");
-  await page.locator('button[type="submit"]').click();
+  await addSlot(page, "Thứ hai", 1, "22:00", "02:00");
+  await saveWeek(page).click();
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
   await page.reload();
-  await expect(
-    page.getByLabel("Giờ mở · Thứ hai · khung 1 *", { exact: true }),
-  ).toHaveValue("22:00");
+  await expect(dayRow(page)).toContainText("22:00–02:00 hôm sau");
   const persisted = await page.request.get("/api/backend/owner/restaurant");
   expect(persisted.status()).toBe(200);
   const restaurant = (await persisted.json()).data;
@@ -108,26 +99,22 @@ test("real BE: owner registers, edits profile, saves overnight hours and confirm
   ]);
   expect(restaurant.verificationStatus).toBe("unverified");
   expect(restaurant.coverUrl).toMatch(/^https:\/\//);
+  await clearDay(page);
+  await saveWeek(page).click();
   await page
-    .getByRole("button", { name: "Xóa lịch tuần", exact: true })
+    .getByRole("button", { name: "Lưu lịch trống", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Xóa lịch tuần", exact: true })
-    .click();
-  await page.locator('button[type="submit"]').click();
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();
   await expect(
-    page.getByRole("button", { name: "Thêm khung giờ · Thứ hai", exact: true }),
+    page.getByRole("button", { name: "Thêm khoảng · Thứ hai", exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("Bạn chưa khai báo giờ mở cửa.", { exact: true }),
-  ).toBeVisible();
+    page.getByText("Chưa khai báo giờ", { exact: true }),
+  ).toHaveCount(7);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,

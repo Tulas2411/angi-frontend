@@ -1,7 +1,7 @@
 import { defineConfig } from "@playwright/test";
-import profileConfig from "./playwright.profile.config";
+import profileConfig from "./playwright.verification.config";
 
-/** OWN-04 uses the same isolated server/session setup as OWN-02/03. Run sequentially. */
+/** Isolated production build + API stub, empty Mapbox token. Run sequentially. */
 export default defineConfig({
   ...profileConfig,
   testMatch: "restaurant-business-hours.spec.ts",

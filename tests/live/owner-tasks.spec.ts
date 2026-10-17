@@ -1,4 +1,14 @@
 import { test, expect, type Page } from "@playwright/test";
+import {
+  addSlot,
+  applyDay,
+  clearDay,
+  closing,
+  dayRow,
+  editDay,
+  opening,
+  saveWeek,
+} from "../helpers/business-hours";
 import type {
   OwnerRestaurantDto,
   BusinessHourDto,
@@ -50,23 +60,6 @@ async function saved(page: Page): Promise<OwnerRestaurantDto> {
   const result = await page.request.get("/api/backend/owner/restaurant");
   expect(result.status()).toBe(200);
   return (await result.json()).data;
-}
-async function addSlot(
-  page: Page,
-  day: string,
-  slot: number,
-  open: string,
-  close: string,
-) {
-  await page
-    .getByRole("button", { name: `Thêm khung giờ · ${day}`, exact: true })
-    .click();
-  await page
-    .getByLabel(`Giờ mở · ${day} · khung ${slot} *`, { exact: true })
-    .fill(open);
-  await page
-    .getByLabel(`Giờ đóng · ${day} · khung ${slot} *`, { exact: true })
-    .fill(close);
 }
 async function screenshot(page: Page, name: string) {
   await page.screenshot({
@@ -307,12 +300,25 @@ test("ANGI-36: real backend enforces required coordinates, image type/size and g
 
 test("ANGI-48: multiple/day, overnight, adjacent-day and week-boundary hours persist", async ({
   page,
+  context,
 }) => {
+  await context.route("**/*", (route) =>
+    ["localhost", "127.0.0.1"].includes(new URL(route.request().url()).hostname)
+      ? route.continue()
+      : route.abort(),
+  );
+  const mapbox: string[] = [];
+  page.on("request", (request) => {
+    if (/mapbox/i.test(new URL(request.url()).hostname))
+      mapbox.push("unexpected map request");
+  });
+  page.on("pageerror", (error) => {
+    throw error;
+  });
   await login(page, ownerEmail("hours"));
+  const before = await saved(page);
   await page.goto("/restaurant/profile?tab=hours");
-  await expect(
-    page.getByRole("button", { name: "Thêm khung giờ · Thứ hai", exact: true }),
-  ).toBeVisible();
+  await expect(dayRow(page)).toContainText("Chưa khai báo giờ");
   await addSlot(page, "Thứ hai", 1, "06:00", "11:00");
   await addSlot(page, "Thứ hai", 2, "22:00", "02:00");
   await addSlot(page, "Thứ ba", 1, "02:00", "05:00");
@@ -323,7 +329,7 @@ test("ANGI-48: multiple/day, overnight, adjacent-day and week-boundary hours per
       value.url().endsWith("/api/backend/owner/restaurant/business-hours") &&
       value.request().method() === "PUT",
   );
-  await page.locator('button[type="submit"]').click();
+  await saveWeek(page).click();
   const result = await response;
   expect(result.status()).toBe(200);
   const data = (await result.json()).data;
@@ -333,25 +339,33 @@ test("ANGI-48: multiple/day, overnight, adjacent-day and week-boundary hours per
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
   expect((await saved(page)).businessHours).toEqual(data.hours);
+  const after = await saved(page);
+  expect(after.operatingStatus).toBe(before.operatingStatus);
+  expect(after.verificationStatus).toBe(before.verificationStatus);
+  expect(after.moderationStatus).toBe(before.moderationStatus);
   await page.reload();
-  await expect(
-    page.getByLabel("Giờ mở · Thứ hai · khung 2 *", { exact: true }),
-  ).toHaveValue("22:00");
+  await expect(dayRow(page)).toContainText("22:00–02:00 hôm sau");
+  await expect(dayRow(page, "Thứ ba")).toContainText("02:00–05:00");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(
-    page.getByLabel("Giờ đóng · Thứ bảy · khung 1 *", { exact: true }),
-  ).toHaveValue("01:00");
+  await expect(dayRow(page, "Thứ bảy")).toContainText("23:00–01:00 hôm sau");
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+  expect(mapbox).toEqual([]);
   await screenshot(page, "hours-mobile");
 });
 
 test("ANGI-48: invalid/equal/overlapping intervals are rejected; cancel and empty-week use modals", async ({
   page,
+  context,
 }) => {
+  await context.route("**/*", (route) =>
+    ["localhost", "127.0.0.1"].includes(new URL(route.request().url()).hostname)
+      ? route.continue()
+      : route.abort(),
+  );
   await login(page, ownerEmail("hours"));
   const initial: BusinessHourDto[] = [
     { dayOfWeek: 1, openTime: "09:00", closeTime: "12:00" },
@@ -359,37 +373,47 @@ test("ANGI-48: invalid/equal/overlapping intervals are rejected; cancel and empt
   await mutate(page, "owner/restaurant/business-hours", "PUT", {
     hours: initial,
   });
+  const before = await saved(page);
   await page.goto("/restaurant/profile?tab=hours");
-  await expect(
-    page.getByLabel("Giờ mở · Thứ hai · khung 1 *", { exact: true }),
-  ).toHaveValue("09:00");
   let writes = 0;
   page.on("request", (request) => {
     if (request.method() === "PUT" && request.url().endsWith("/business-hours"))
       writes++;
   });
-  await page
-    .getByLabel("Giờ đóng · Thứ hai · khung 1 *", { exact: true })
-    .fill("09:00");
-  await page.locator('button[type="submit"]').click();
+  await editDay(page);
+  await closing(page).fill("09:00");
+  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
   await expect(
     page.getByText("Giờ mở và giờ đóng phải khác nhau.", { exact: true }),
   ).toBeVisible();
+  await closing(page).fill("12:00");
   await page
-    .getByLabel("Giờ đóng · Thứ hai · khung 1 *", { exact: true })
-    .fill("12:00");
-  await addSlot(page, "Thứ hai", 2, "11:00", "13:00");
-  await page.locator('button[type="submit"]').click();
+    .getByRole("button", { name: "Thêm khoảng giờ", exact: true })
+    .click();
+  await opening(page, "Thứ hai", 2).fill("11:00");
+  await closing(page, "Thứ hai", 2).fill("13:00");
+  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
   await expect(
-    page.getByText(
-      "Các khung giờ không được chồng lên nhau, kể cả qua nửa đêm.",
-      { exact: true },
-    ),
-  ).toBeVisible();
+    page.getByRole("alert").filter({ hasText: /Các (khoảng|khung)/ }),
+  ).toContainText("không được chồng nhau");
   expect(writes).toBe(0);
   expect((await saved(page)).businessHours).toEqual(initial);
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Bỏ thay đổi", exact: true }).click();
   for (const hours of [
+    [{ dayOfWeek: 7, openTime: "09:00", closeTime: "12:00" }],
+    [{ dayOfWeek: 1, openTime: "24:00", closeTime: "12:00" }],
     [{ dayOfWeek: 1, openTime: "09:00", closeTime: "09:00" }],
+  ])
+    await mutate(
+      page,
+      "owner/restaurant/business-hours",
+      "PUT",
+      { hours },
+      400,
+      "VALIDATION_FAILED",
+    );
+  for (const hours of [
     [
       { dayOfWeek: 1, openTime: "22:00", closeTime: "02:00" },
       { dayOfWeek: 2, openTime: "01:00", closeTime: "03:00" },
@@ -405,36 +429,32 @@ test("ANGI-48: invalid/equal/overlapping intervals are rejected; cancel and empt
       "PUT",
       { hours },
       400,
+      "INVALID_BUSINESS_HOURS",
     );
   expect((await saved(page)).businessHours).toEqual(initial);
-  await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await editDay(page);
+  await opening(page).fill("08:00");
+  await applyDay(page);
+  await page.getByRole("button", { name: "Hủy", exact: true }).click();
+  await page.getByRole("button", { name: "Bỏ thay đổi", exact: true }).click();
+  await expect(dayRow(page)).toContainText("09:00–12:00");
+  await clearDay(page);
+  await saveWeek(page).click();
   await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Bỏ thay đổi", exact: true })
+    .getByRole("button", { name: "Lưu lịch trống", exact: true })
     .click();
-  await expect(
-    page.getByLabel("Giờ mở · Thứ hai · khung 1 *", { exact: true }),
-  ).toHaveValue("09:00");
-  await expect(page.getByLabel(/^Giờ mở ·/)).toHaveCount(1);
-  await page
-    .getByRole("button", { name: "Xóa lịch tuần", exact: true })
-    .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Xóa lịch tuần", exact: true })
-    .click();
-  await page.locator('button[type="submit"]').click();
   await expect(
     page.getByText("Đã lưu giờ mở cửa.", { exact: true }),
   ).toBeVisible();
   await page.reload();
   await expect(
-    page.getByText("Bạn chưa khai báo giờ mở cửa.", { exact: true }),
-  ).toBeVisible();
-  expect((await saved(page)).businessHours).toEqual([]);
+    page.getByText("Chưa khai báo giờ", { exact: true }),
+  ).toHaveCount(7);
+  const after = await saved(page);
+  expect(after.businessHours).toEqual([]);
+  expect(after.operatingStatus).toBe(before.operatingStatus);
+  expect(after.verificationStatus).toBe(before.verificationStatus);
 });
-
 test("ANGI-55: all three statuses, confirmation cancellation, 500-char note and persistence", async ({
   page,
 }) => {

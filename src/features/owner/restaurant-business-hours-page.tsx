@@ -6,7 +6,6 @@ import {
   ActionLink,
   ConfirmDialog,
   EmptyState,
-  Field,
   Skeleton,
   Tabs,
 } from "@/components/ui/primitives";
@@ -30,6 +29,8 @@ import type {
   OwnerRestaurantDto,
   UpdateBusinessHoursResponseDto,
 } from "./restaurant-types";
+import { BusinessHoursDayDialog } from "./business-hours-day-dialog";
+import "./restaurant-business-hours.css";
 
 export function RestaurantBusinessHoursPage() {
   const { base } = useWorkspace();
@@ -130,7 +131,6 @@ export function RestaurantBusinessHoursPage() {
   );
 }
 
-type DraftHour = BusinessHourDto & { id: string };
 type Confirmation = {
   title: string;
   label: string;
@@ -155,13 +155,13 @@ function BusinessHoursEditor({
     hours: sortBusinessHours(restaurant.businessHours),
     isOpenNow: restaurant.isOpenNow,
   }));
-  const sequence = useRef(restaurant.businessHours.length);
-  const [draft, setDraft] = useState<DraftHour[]>(() =>
-    sortBusinessHours(restaurant.businessHours).map((hour, index) => ({
-      ...hour,
-      id: `hour-${index}`,
-    })),
+  const [draft, setDraft] = useState<BusinessHourDto[]>(() =>
+    sortBusinessHours(restaurant.businessHours),
   );
+  const [editingDay, setEditingDay] = useState<{
+    day: (typeof businessDays)[number];
+    add: boolean;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
@@ -174,13 +174,7 @@ function BusinessHoursEditor({
   const submitting = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   const feedback = useRef<HTMLDivElement>(null);
-  const hours: BusinessHourDto[] = draft.map(
-    ({ dayOfWeek, openTime, closeTime }) => ({
-      dayOfWeek,
-      openTime,
-      closeTime,
-    }),
-  );
+  const hours = draft;
   const dirty =
     JSON.stringify(sortBusinessHours(hours)) !== JSON.stringify(saved.hours);
   useEffect(() => {
@@ -191,10 +185,13 @@ function BusinessHoursEditor({
   }, []);
   useEffect(() => {
     if (busy || !focusRequest) return;
-    const control = form.current?.elements.namedItem(focusRequest.name);
-    if (control instanceof HTMLElement) control.focus();
+    const index = /^hours\[(\d+)\]/.exec(focusRequest.name)?.[1];
+    const day =
+      index === undefined ? undefined : draft[Number(index)]?.dayOfWeek;
+    const button = form.current?.elements.namedItem(`edit-day-${day}`);
+    if (button instanceof HTMLElement) button.focus();
     else feedback.current?.focus();
-  }, [busy, focusRequest]);
+  }, [busy, focusRequest, draft]);
   function edited() {
     setFocusRequest(null);
     setErrors({});
@@ -202,12 +199,7 @@ function BusinessHoursEditor({
     setSuccess("");
   }
   function restore(result: UpdateBusinessHoursResponseDto) {
-    setDraft(
-      sortBusinessHours(result.hours).map((hour) => ({
-        ...hour,
-        id: `hour-${sequence.current++}`,
-      })),
-    );
+    setDraft(sortBusinessHours(result.hours));
     edited();
   }
   function changeTab(tab: string) {
@@ -225,8 +217,7 @@ function BusinessHoursEditor({
   function focusError(fields: Record<string, string>) {
     setFocusRequest({ name: Object.keys(fields)[0] ?? "" });
   }
-  async function save(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function persist() {
     if (busy || submitting.current || !dirty) return;
     const { errors: invalid, errorCode } = validateBusinessHours(hours);
     setSuccess("");
@@ -275,11 +266,24 @@ function BusinessHoursEditor({
       if (active.current) setBusy(false);
     }
   }
+  function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || submitting.current || !dirty) return;
+    if (!hours.length) {
+      setConfirmation({
+        title: "Lưu lịch tuần trống?",
+        label: "Lưu lịch trống",
+        description:
+          "Cả tuần sẽ hiển thị Chưa khai báo giờ. Thao tác này không đổi trạng thái hoạt động của nhà hàng.",
+        action: () => void persist(),
+      });
+    } else void persist();
+  }
   return (
-    <div className="stack registration-page">
+    <div className="stack registration-page business-hours-page">
       <PageHeading
-        title="Nhà hàng của tôi"
-        description={`${restaurant.name} · Cập nhật lịch mở cửa trong tuần.`}
+        title="Giờ mở cửa"
+        description="Lưu toàn bộ lịch trong tuần theo giờ Việt Nam. Một ngày có thể có nhiều khoảng phục vụ."
       />
       <Tabs
         value="hours"
@@ -291,15 +295,6 @@ function BusinessHoursEditor({
           { value: "status", label: "Trạng thái" },
         ]}
       />
-      <p className="helper">
-        Giờ Việt Nam (UTC+7). Một ngày có thể có nhiều khung. Giờ đóng sớm hơn
-        giờ mở nghĩa là đóng vào ngày hôm sau; khung đó thuộc ngày bắt đầu.
-      </p>
-      <Alert tone="info">
-        {saved.hours.length
-          ? `Theo lịch đã lưu: ${saved.isOpenNow ? "đang trong giờ mở cửa" : "ngoài giờ mở cửa"}.`
-          : "Bạn chưa khai báo giờ mở cửa."}
-      </Alert>
       {success && <Alert tone="success">{success}</Alert>}
       {error && (
         <div ref={feedback} tabIndex={-1}>
@@ -307,153 +302,147 @@ function BusinessHoursEditor({
           {errors.hours && <p className="field-error">{errors.hours}</p>}
         </div>
       )}
-      <form
-        className="stack"
-        noValidate
-        ref={form}
-        onSubmit={save}
-        aria-busy={busy}
-      >
-        <fieldset className="registration-fields stack" disabled={busy}>
-          {businessDays.map((day) => {
-            const slots = draft
-              .map((hour, index) => ({ hour, index }))
-              .filter(({ hour }) => hour.dayOfWeek === day.dayOfWeek);
-            return (
-              <Card key={day.dayOfWeek} title={day.label} className="stack-sm">
-                {!slots.length && (
-                  <p className="helper">
-                    Không có khung giờ bắt đầu trong ngày này.
-                  </p>
-                )}
-                {slots.map(({ hour, index }, position) => (
-                  <div className="stack-sm" key={hour.id}>
-                    <div className="grid-3">
-                      <Field
-                        label={`Giờ mở · ${day.label} · khung ${position + 1}`}
-                        name={`hours[${index}].openTime`}
-                        type="time"
-                        step={60}
-                        required
-                        value={hour.openTime}
-                        error={
-                          errors[`hours[${index}].openTime`] ??
-                          errors[`hours[${index}]`] ??
-                          errors[`hours[${index}].dayOfWeek`]
-                        }
-                        onChange={(event) => {
-                          setDraft((current) =>
-                            current.map((row) =>
-                              row.id === hour.id
-                                ? { ...row, openTime: event.target.value }
-                                : row,
-                            ),
-                          );
-                          edited();
-                        }}
-                      />
-                      <Field
-                        label={`Giờ đóng · ${day.label} · khung ${position + 1}`}
-                        name={`hours[${index}].closeTime`}
-                        type="time"
-                        step={60}
-                        required
-                        value={hour.closeTime}
-                        error={errors[`hours[${index}].closeTime`]}
-                        onChange={(event) => {
-                          setDraft((current) =>
-                            current.map((row) =>
-                              row.id === hour.id
-                                ? { ...row, closeTime: event.target.value }
-                                : row,
-                            ),
-                          );
-                          edited();
-                        }}
-                      />
+      <form ref={form} noValidate onSubmit={save} aria-busy={busy}>
+        <Card title="Lịch phục vụ trong tuần" className="business-hours-card">
+          <fieldset className="registration-fields" disabled={busy}>
+            <legend className="sr-only">Giờ phục vụ theo từng ngày</legend>
+            <ul className="business-hours-week">
+              {businessDays.map((day) => {
+                const slots = draft
+                  .map((hour, index) => ({ hour, index }))
+                  .filter(({ hour }) => hour.dayOfWeek === day.dayOfWeek)
+                  .sort((a, b) =>
+                    a.hour.openTime.localeCompare(b.hour.openTime),
+                  );
+                const messages = slots.flatMap(({ index }) =>
+                  Object.entries(errors)
+                    .filter(
+                      ([key]) =>
+                        key === `hours[${index}]` ||
+                        key.startsWith(`hours[${index}].`),
+                    )
+                    .map(([, message]) => message),
+                );
+                const errorId = `business-hours-error-${day.dayOfWeek}`;
+                return (
+                  <li
+                    key={day.dayOfWeek}
+                    className="business-hours-day"
+                    aria-labelledby={`business-day-${day.dayOfWeek}`}
+                  >
+                    <span
+                      id={`business-day-${day.dayOfWeek}`}
+                      className="business-hours-day-name"
+                    >
+                      {day.label}
+                    </span>
+                    <div className="business-hours-summary">
+                      {slots.length ? (
+                        <>
+                          <p className="business-hours-intervals">
+                            {slots.map(({ hour }, index) => (
+                              <span key={index}>
+                                {index > 0 && <span aria-hidden> · </span>}
+                                {hour.openTime}–{hour.closeTime}
+                                {hour.closeTime < hour.openTime
+                                  ? " hôm sau"
+                                  : ""}
+                              </span>
+                            ))}
+                          </p>
+                          {slots
+                            .filter(
+                              ({ hour }) => hour.closeTime < hour.openTime,
+                            )
+                            .map(({ hour }, index) => (
+                              <p className="helper" key={index}>
+                                Đóng lúc {hour.closeTime} ngày hôm sau.
+                              </p>
+                            ))}
+                        </>
+                      ) : (
+                        <p>Chưa khai báo giờ</p>
+                      )}
+                      {!!messages.length && (
+                        <p className="field-error" id={errorId}>
+                          {[...new Set(messages)].join(" ")}
+                        </p>
+                      )}
+                    </div>
+                    <div className="business-hours-day-actions">
                       <Button
                         variant="secondary"
-                        onClick={() =>
-                          setConfirmation({
-                            title: "Bỏ khung giờ này?",
-                            label: "Bỏ khung giờ",
-                            description: `${day.label}: khung ${position + 1} sẽ được bỏ khi lưu lịch tuần.`,
-                            action: () => {
-                              setDraft((current) =>
-                                current.filter((row) => row.id !== hour.id),
-                              );
-                              edited();
-                            },
-                          })
-                        }
+                        name={`edit-day-${day.dayOfWeek}`}
+                        aria-label={`Chỉnh giờ · ${day.label}`}
+                        aria-describedby={messages.length ? errorId : undefined}
+                        onClick={() => setEditingDay({ day, add: false })}
                       >
-                        Bỏ khung giờ · {day.label} · {position + 1}
+                        Chỉnh giờ
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        aria-label={`Thêm khoảng · ${day.label}`}
+                        onClick={() => setEditingDay({ day, add: true })}
+                      >
+                        Thêm khoảng
                       </Button>
                     </div>
-                    {hour.openTime &&
-                      hour.closeTime &&
-                      hour.closeTime < hour.openTime && (
-                        <p className="helper">Đóng vào ngày hôm sau.</p>
-                      )}
-                  </div>
-                ))}
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    const added: DraftHour = {
-                      id: `hour-${sequence.current++}`,
-                      dayOfWeek: day.dayOfWeek,
-                      openTime: "",
-                      closeTime: "",
-                    };
-                    setDraft((current) => [...current, added]);
-                    edited();
-                  }}
-                >
-                  Thêm khung giờ · {day.label}
-                </Button>
-              </Card>
-            );
-          })}
-          <Button
-            variant="destructive"
-            disabled={!draft.length}
-            onClick={() =>
-              setConfirmation({
-                title: "Xóa toàn bộ lịch tuần?",
-                label: "Xóa lịch tuần",
-                description:
-                  "Sau khi lưu, nhà hàng sẽ không có giờ mở cửa được khai báo.",
-                action: () => {
-                  setDraft([]);
-                  edited();
-                },
-              })
-            }
-          >
-            Xóa lịch tuần
-          </Button>
-        </fieldset>
-        <div className="actions registration-actions">
-          <Button type="submit" loading={busy} disabled={!dirty}>
-            Lưu giờ mở cửa
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!dirty || busy}
-            onClick={() =>
-              setConfirmation({
-                title: "Bỏ thay đổi giờ mở cửa chưa lưu?",
-                label: "Bỏ thay đổi",
-                description: "Lịch tuần sẽ được khôi phục về lần lưu gần nhất.",
-                action: () => restore(saved),
-              })
-            }
-          >
-            Hủy thay đổi
-          </Button>
-        </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </fieldset>
+          <aside className="business-hours-notice">
+            <p>
+              <span aria-hidden>ⓘ </span>
+              <strong>Chưa khai báo không có nghĩa là đóng cửa</strong>
+            </p>
+            <p>
+              Ngày không có khoảng giờ sẽ hiển thị “Chưa khai báo giờ”. Xóa hết
+              lịch không đồng nghĩa với đóng cửa cả tuần.
+            </p>
+          </aside>
+          <div className="business-hours-week-actions">
+            <Button type="submit" loading={busy} disabled={!dirty}>
+              Lưu cả tuần
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!dirty || busy}
+              onClick={() =>
+                setConfirmation({
+                  title: "Bỏ thay đổi giờ mở cửa chưa lưu?",
+                  label: "Bỏ thay đổi",
+                  description:
+                    "Lịch tuần sẽ được khôi phục về lần lưu gần nhất.",
+                  action: () => restore(saved),
+                })
+              }
+            >
+              Hủy
+            </Button>
+          </div>
+        </Card>
       </form>
+      {editingDay && (
+        <BusinessHoursDayDialog
+          day={editingDay.day}
+          add={editingDay.add}
+          week={draft}
+          initialErrors={errors}
+          onClose={() => setEditingDay(null)}
+          onApply={(dayHours) => {
+            setDraft([
+              ...draft.filter(
+                (hour) => hour.dayOfWeek !== editingDay.day.dayOfWeek,
+              ),
+              ...dayHours,
+            ]);
+            edited();
+            setEditingDay(null);
+          }}
+        />
+      )}
       <ConfirmDialog
         open={!!confirmation}
         title={confirmation?.title ?? "Xác nhận thay đổi"}

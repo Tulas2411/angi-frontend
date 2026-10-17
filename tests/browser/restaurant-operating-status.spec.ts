@@ -490,7 +490,9 @@ test("demo preserves permanent closure across workspace tabs, supports reopening
     .getByRole("link", { name: "Quản lý nhà hàng", exact: true })
     .click();
   await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await expect(page.getByLabel(/^Giờ mở ·/).first()).toHaveValue("07:00");
+  await expect(
+    page.getByRole("listitem", { name: "Thứ hai", exact: true }),
+  ).toContainText("07:00");
   await page.getByRole("tab", { name: "Trạng thái", exact: true }).click();
   await expect(selected(page)).toHaveValue("permanently_closed");
   await selected(page).selectOption("open");
