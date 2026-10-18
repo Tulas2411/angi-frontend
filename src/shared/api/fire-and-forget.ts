@@ -24,7 +24,6 @@ export function fireAndForget<T>(
     })
     .catch((error: unknown) => {
       if (isExpectedOfflineError(error)) return;
-      // eslint-disable-next-line no-console
       console.warn(`[be:${label}]`, describeError(error));
     });
 }
@@ -38,7 +37,6 @@ export async function fireAndCollect<T>(
     return await task();
   } catch (error) {
     if (!isExpectedOfflineError(error)) {
-      // eslint-disable-next-line no-console
       console.warn(`[be:${label}]`, describeError(error));
     }
     return undefined;

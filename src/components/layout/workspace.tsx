@@ -17,7 +17,6 @@ import type { AppData, DataMode } from "@/features/platform/contracts";
 import { Avatar, Icon, ActionLink } from "@/components/ui/primitives";
 import Brand from "@/components/brand";
 import { ProvinceField } from "@/components/domain/province-field";
-import { api } from "@/shared/api/client";
 import { useProfile } from "@/api/services/profile-service";
 
 export const navigation: Record<RoleCode, [string, string][]> = {

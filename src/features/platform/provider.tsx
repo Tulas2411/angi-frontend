@@ -146,7 +146,6 @@ export function PlatformProvider({
           !(err instanceof Error) ||
           !err.message.includes("chưa có hợp đồng API")
         ) {
-          // eslint-disable-next-line no-console
           console.warn("[platform:setSilent] save failed:", err);
         }
       }

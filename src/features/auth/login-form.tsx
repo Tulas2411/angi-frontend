@@ -16,7 +16,7 @@ export default function LoginForm() {
   const [fields, setFields] = useState<Record<string, string[]>>({});
   const [remember, setRemember] = useState(true);
 
-  function handleGoogleSuccess(_isNewUser: boolean) {
+  function handleGoogleSuccess() {
     // GoogleLoginButton redirects to HOME_BY_ROLE[user.role] once the
     // backend responds, so this handler intentionally has nothing to do.
     setSocialError(null);

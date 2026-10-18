@@ -76,8 +76,6 @@ export function useProfile() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
     api
       .get<UserProfileDto>("me")
       .then((data) => {

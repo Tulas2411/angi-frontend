@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Input } from "@/shared/ui";
 import {
@@ -39,17 +39,21 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
   const live = useProfile();
   const useMock = demo && !live.profile;
   const source: UserProfileDto | null = useMock ? null : live.profile;
-  const [name, setName] = useState(
-    profile
-      ? data.profile.name
-      : (source?.displayName ?? user?.displayName ?? ""),
-  );
-  const [phone, setPhone] = useState(
-    source?.phone ?? (useMock ? data.profile.phone : ""),
-  );
-  const [bio, setBio] = useState(
-    source?.bio ?? (useMock ? (data.profile.bio ?? "") : ""),
-  );
+  const defaults = {
+    name:
+      source?.displayName ??
+      (profile ? data.profile.name : user?.displayName ?? ""),
+    phone: source?.phone ?? (useMock ? data.profile.phone : ""),
+    bio: source?.bio ?? (useMock ? data.profile.bio ?? "" : ""),
+  };
+  const [draft, setDraft] = useState<{
+    source: UserProfileDto | null;
+    name: string;
+    phone: string;
+    bio: string;
+  } | null>(null);
+  // A new backend response supplies fresh defaults without mirroring it in an effect.
+  const { name, phone, bio } = draft?.source === source ? draft : defaults;
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [current, setCurrent] = useState("");
@@ -60,14 +64,13 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
   const avatarInput = useRef<HTMLInputElement>(null);
   const [uploadError, setUploadError] = useState("");
 
-  // Re-sync local form fields whenever the BE profile loads or changes.
-  useEffect(() => {
-    if (useMock) return;
-    if (!source) return;
-    setName(source.displayName);
-    setPhone(source.phone ?? "");
-    setBio(source.bio ?? "");
-  }, [useMock, source]);
+  function updateDraft(fields: Partial<typeof defaults>) {
+    setDraft((current) => ({
+      ...(current?.source === source ? current : defaults),
+      ...fields,
+      source,
+    }));
+  }
 
   // Source of truth for displayed identity fields.
   // - Signed-in user (any route, including /demo/...): BE profile wins.
@@ -133,13 +136,13 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
 
   function resetForm() {
     if (useMock) {
-      setName(data.profile.name);
-      setPhone(data.profile.phone);
-      setBio(data.profile.bio ?? "");
+      updateDraft({
+        name: data.profile.name,
+        phone: data.profile.phone,
+        bio: data.profile.bio ?? "",
+      });
     } else if (source) {
-      setName(source.displayName);
-      setPhone(source.phone ?? "");
-      setBio(source.bio ?? "");
+      setDraft(null);
     }
     setFiles([]);
     setError("");
@@ -263,7 +266,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 <Field
                   label="Tên hiển thị"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => updateDraft({ name: e.target.value })}
                   minLength={2}
                   maxLength={100}
                   required
@@ -278,13 +281,13 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 <Field
                   label="Số điện thoại"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => updateDraft({ phone: e.target.value })}
                   maxLength={20}
                 />
                 <TextArea
                   label="Giới thiệu"
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={(e) => updateDraft({ bio: e.target.value })}
                   maxLength={500}
                   helper="Không bắt buộc."
                 />
@@ -325,7 +328,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 <Field
                   label="Tên hiển thị"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => updateDraft({ name: e.target.value })}
                   minLength={2}
                   maxLength={100}
                   required
@@ -340,7 +343,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 <Field
                   label="Số điện thoại"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) => updateDraft({ phone: e.target.value })}
                   maxLength={20}
                 />
                 {useMock && (
@@ -353,7 +356,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                 <TextArea
                   label="Giới thiệu"
                   value={bio}
-                  onChange={(e) => setBio(e.target.value)}
+                  onChange={(e) => updateDraft({ bio: e.target.value })}
                   maxLength={500}
                   helper="Không bắt buộc."
                 />

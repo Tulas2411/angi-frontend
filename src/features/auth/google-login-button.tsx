@@ -44,7 +44,6 @@ export function GoogleLoginButton({
       // Full navigation clears cached protected content after the session changes.
       // The backend returns the persisted role (existing user) or the role we
       // just requested (new user), so we always redirect to the correct home.
-      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.assign(HOME_BY_ROLE[result.user.role]);
     } catch (err) {
       const msg = getErrorMessage(err);
