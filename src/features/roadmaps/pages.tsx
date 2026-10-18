@@ -31,6 +31,7 @@ import {
 import type { ItineraryItem } from "@/features/platform/contracts";
 import { TripExpenses } from "./expenses";
 import { ProvinceField } from "@/components/domain/province-field";
+import { rollDishService } from "@/api/services/roll-dish-service";
 
 export function TripList() {
   const { data, mutate } = usePlatform(),
@@ -925,31 +926,53 @@ export function RollDishPage() {
         </EmptyState>
       ) : (
         <>
-          <img
-            className="roll-marker"
-            src="/assets/figma/roll-marker.svg"
-            alt="Mốc chọn món ở giữa"
-          />
-          <div className="roll-track" aria-busy={state === "rolling"}>
-            {names.map((_, position) => {
-              const i =
-                state === "revealed"
-                  ? (position + selected - 2 + names.length) % names.length
-                  : position;
-              const name = names[i];
-              return (
-                <Card
-                  key={name}
-                  className={
-                    state === "revealed" && position === 2 ? "selected" : ""
-                  }
+          <div
+            className={`roll-track${state === "revealed" ? " is-revealed" : ""}`}
+            aria-busy={state === "rolling"}
+            data-state={state}
+          >
+            <span className="roll-marker" aria-hidden="true" />
+            {(() => {
+              // Khi đang rolling, render 2 lần dãy card để tạo hiệu ứng chạy vô tận (marquee).
+              // Khi revealed, dùng logic căn giữa như cũ để đặt selected vào vị trí marker.
+              const offsets = state === "revealed" ? [0] : [0, 1];
+              return offsets.map((dup) => (
+                <div
+                  key={dup}
+                  className="roll-strip"
+                  aria-hidden={dup === 1 ? "true" : undefined}
                 >
-                  <Media src={`/assets/figma/roll-${i}.png`} alt={name} />
-                  <h3>{name}</h3>
-                  <p className="helper">{money(prices[i])} · Giá tham khảo</p>
-                </Card>
-              );
-            })}
+                  {names.map((_, position) => {
+                    const i =
+                      state === "revealed"
+                        ? (position + selected - 2 + names.length) %
+                          names.length
+                        : position;
+                    const name = names[i];
+                    const isSelected =
+                      state === "revealed" && position === 2;
+                    return (
+                      <Card
+                        key={`${dup}-${name}`}
+                        className={
+                          isSelected
+                            ? "selected"
+                            : state === "revealed"
+                              ? "dimmed"
+                              : ""
+                        }
+                      >
+                        <Media src={`/assets/figma/roll-${i}.png`} alt={name} />
+                        <h3>{name}</h3>
+                        <p className="helper">
+                          {money(prices[i])} · Giá tham khảo
+                        </p>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ));
+            })()}
           </div>
           {state === "revealed" ? (
             <Card className="roll-result" title="Chốt món này nhé!">
@@ -971,6 +994,10 @@ export function RollDishPage() {
               loading={state === "rolling"}
               onClick={() => {
                 setState("rolling");
+                // F-18: gọi BE song song (fire-and-forget) — UI vẫn dùng kết quả mock.
+                void rollDishService.roll({
+                  maxPrice: filter === "budget" ? 50000 : undefined,
+                });
                 const reduce = window.matchMedia(
                   "(prefers-reduced-motion: reduce)",
                 ).matches;
@@ -986,7 +1013,7 @@ export function RollDishPage() {
                     setState("revealed");
                     notify("Đã chọn món trong bản minh họa.");
                   },
-                  reduce ? 50 : 700,
+                  reduce ? 50 : 2500,
                 );
               }}
             >

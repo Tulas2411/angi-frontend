@@ -17,6 +17,7 @@ import type { AppData, DataMode } from "@/features/platform/contracts";
 import { Avatar, Icon, ActionLink } from "@/components/ui/primitives";
 import Brand from "@/components/brand";
 import { ProvinceField } from "@/components/domain/province-field";
+import { useProfile } from "@/api/services/profile-service";
 
 export const navigation: Record<RoleCode, [string, string][]> = {
   TRAVELER: [
@@ -355,13 +356,44 @@ export function WorkspaceShell({
 }
 function ProfileIdentity({ children }: { children: ReactNode }) {
   const scope = useWorkspace(),
-    { data, mode } = usePlatform();
+    { data, mode, setSilent } = usePlatform();
+  // Always pull the BE profile when signed in. `useProfile()` returns
+  // `null` for `profile` when /me fails (no session, network error), so
+  // the `!live.profile` guard keeps the mock in place for unauthenticated
+  // previews. Once a real user is signed in (any route, including
+  // /demo/...) their data flows into the platform store and the rest of
+  // the app reads the real session.
+  const live = useProfile();
+  // Track the last `id` we synced so we only push into the platform
+  // store when the BE actually returns a different user (e.g. login,
+  // logout, switch account). Without this guard the hook returns a new
+  // object reference every render and we'd loop `setSilent → data →
+  // render → setSilent ...` until React throws "Too many re-renders".
+  const lastSyncedId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!live.profile) return;
+    if (lastSyncedId.current === live.profile.id) return;
+    lastSyncedId.current = live.profile.id;
+    setSilent((d) => {
+      d.profile = {
+        name: live.profile!.displayName,
+        phone: live.profile!.phone ?? "",
+        bio: live.profile!.bio ?? "",
+        avatar: live.profile!.avatarUrl ?? "",
+      };
+    });
+  }, [live.profile, setSilent]);
   const user =
     scope.user && mode === "demo"
       ? {
           ...scope.user,
           displayName: data.profile.name,
-          avatarUrl: data.profile.avatar ?? null,
+          // In demo mode the layout injects a mock user, but when a real
+          // user is signed in we want the BE email/avatar to win too.
+          email: live.profile?.email ?? scope.user.email,
+          avatarUrl: data.profile.avatar
+            ? data.profile.avatar
+            : (live.profile?.avatarUrl ?? null),
         }
       : scope.user;
   return (

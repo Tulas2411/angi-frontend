@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -28,6 +28,9 @@ import { pageSlice } from "@/features/platform/rules";
 import { ProvinceField } from "@/components/domain/province-field";
 import { matchesRestaurantLocation } from "@/shared/locations/restaurant-search";
 import { RestaurantMapButton } from "@/components/domain/mapbox-preview";
+import { dishBrowseService } from "@/api/services/dish-browse-service";
+import { dishDetailService } from "@/api/services/dish-detail-service";
+import { restaurantDetailService } from "@/api/services/restaurant-detail-service";
 
 export function DiscoveryPage() {
   const { data } = usePlatform(),
@@ -231,6 +234,18 @@ function DiscoveryResults({
     [search, setSearch] = useState(initialQuery),
     [filter, setFilter] = useState("all"),
     [page, setPage] = useState(1);
+  // F-12: gọi BE song song (fire-and-forget) mỗi khi search/filter thay đổi.
+  useEffect(() => {
+    if (kind !== "dishes") return;
+    const handle = window.setTimeout(() => {
+      void dishBrowseService.browse({
+        q: search || undefined,
+        maxPrice: filter === "budget" ? 50000 : undefined,
+        limit: 24,
+      });
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [kind, search, filter]);
   const dishes = data.dishes.filter(
     (d) =>
       d.moderation === "visible" &&
@@ -340,6 +355,14 @@ export function RestaurantDetail({ id }: { id: string }) {
     [text, setText] = useState(""),
     [reportOpen, setReportOpen] = useState(false),
     [reason, setReason] = useState("Sai thông tin");
+  // F-16: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết.
+  useEffect(() => {
+    const numericId = Number(id);
+    if (!Number.isFinite(numericId) || numericId <= 0) return;
+    void restaurantDetailService.getDetail(numericId, { include: "menu,reviews" });
+    void restaurantDetailService.getMenu(numericId);
+    void restaurantDetailService.getReviews(numericId, { page: 1, pageSize: 20 });
+  }, [id]);
   const restaurant = data.restaurants.find(
     (r) => r.id === id && r.moderation === "visible",
   );
@@ -544,6 +567,12 @@ export function DishDetail({ id }: { id: string }) {
     [reportOpen, setReportOpen] = useState(false),
     [reason, setReason] = useState("Sai thông tin"),
     [text, setText] = useState("");
+  // F-13: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết món.
+  useEffect(() => {
+    const numericId = Number(id);
+    if (!Number.isFinite(numericId) || numericId <= 0) return;
+    void dishDetailService.getDetail(numericId);
+  }, [id]);
   const visibleDishes = data.dishes.filter((d) => d.id === id),
     dish =
       visibleDishes.find((d) => d.moderation === "visible") || visibleDishes[0];
