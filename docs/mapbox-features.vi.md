@@ -33,7 +33,7 @@ Search Box hiện công bố hỗ trợ Mỹ, Canada và châu Âu; tài liệu 
 1. Bấm kết quả, nhãn POI hoặc marker để chọn vị trí. Thẻ thông tin hiện tên, địa chỉ/điện thoại/website nếu có, nguồn dữ liệu và tọa độ.
 2. Dấu X trên thẻ cạnh ghim và thẻ dưới cùng chỉ ẩn thẻ tương ứng; ghim và tọa độ vẫn giữ nguyên. Bấm ghim để hiện lại.
 3. **Đường phố / Vệ tinh** thay lớp nền trong cùng bản đồ, giữ lựa chọn và các lớp quán/tuyến đường.
-4. Trong form Owner, bấm **Lưu vị trí** mới đưa lựa chọn về bản nháp. POI chỉ điền tên, địa chỉ đường, điện thoại, website vào các ô còn trống; thông tin đã nhập được giữ lại. Tỉnh/thành, phường/xã tiếp tục dùng Provinces Open API V2, không lấy cấu trúc quận/huyện cũ từ Mapbox.
+4. Trong form Owner, bấm **Lưu vị trí** mới đưa lựa chọn về bản nháp. Từ ngày 18/10/2026, bước này tra địa chỉ theo tọa độ để điền số nhà/đường, tỉnh/thành và phường/xã; địa chỉ cũ được thay khi có dữ liệu mới. Tên quán/điện thoại/website chỉ được điền từ POI nếu còn trống. Tỉnh/thành và phường/xã được đối chiếu với Provinces Open API V2, không dùng quận/huyện cũ để suy đoán phường/xã. Dữ liệu không đủ sẽ có thông báo để người dùng kiểm tra. Xem [chi tiết luồng tự điền địa chỉ](map-address-prefill.vi.md).
 5. Gửi đăng ký/lưu hồ sơ vẫn qua validation và các API OWN-01/OWN-03 hiện có. Đóng modal hoặc chọn điểm không tự ghi vào backend. Chế độ khám phá chỉ có nút Đóng.
 
 Quán ANGI dùng tọa độ và tên có sẵn; không cần geocode lại từng quán. Các POI tìm được từ Mapbox không tự trở thành nhà hàng ANGI hoặc kết quả recommendation.

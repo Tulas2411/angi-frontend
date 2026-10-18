@@ -19,7 +19,6 @@ import { ProvinceField } from "@/components/domain/province-field";
 import { WardField } from "@/components/domain/ward-field";
 import { provinceNameKey } from "@/shared/locations/provinces";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { MapPicker } from "@/components/domain/map-picker";
 import {
   createMockRestaurantProfileService,
   ownerProfileFromDemo,
@@ -453,6 +452,11 @@ function RestaurantProfileEditor({
                       ? `Tọa độ: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
                       : "Chưa có tọa độ. Bạn có thể chọn vị trí trên bản đồ.")}
                 </p>
+                {location?.addressNotice && (
+                  <p className="helper" role="status">
+                    {location.addressNotice}
+                  </p>
+                )}
                 <SelectField
                   label="Mức giá (không bắt buộc)"
                   name="priceLevel"
@@ -682,34 +686,25 @@ function RestaurantProfileEditor({
       >
         <p>{confirmation?.description}</p>
       </ConfirmDialog>
-      {mapOpen &&
-        (demo ? (
-          <MapPicker
-            open
-            poiSearchOnly
-            initialLocation={location ?? undefined}
-            onClose={closeMap}
-            onSelect={(point) => {
-              setFocusRequest(null);
-              setLocation(point);
-              setValues((current) => fillRestaurantFromPlace(current, point));
-              setErrors((current) => ({ ...current, location: "" }));
-              setSuccess("");
-            }}
-          />
-        ) : (
-          <RestaurantLocationPicker
-            location={location}
-            onClose={closeMap}
-            onSelect={(point) => {
-              setFocusRequest(null);
-              setLocation(point);
-              setValues((current) => fillRestaurantFromPlace(current, point));
-              setErrors((current) => ({ ...current, location: "" }));
-              setSuccess("");
-            }}
-          />
-        ))}
+      {mapOpen && (
+        <RestaurantLocationPicker
+          location={location}
+          onClose={closeMap}
+          onSelect={(point) => {
+            setFocusRequest(null);
+            setLocation(point);
+            setValues((current) => fillRestaurantFromPlace(current, point));
+            setErrors((current) => ({
+              ...current,
+              location: "",
+              addressLine: "",
+              provinceName: "",
+              ward: "",
+            }));
+            setSuccess("");
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -1,3 +1,11 @@
+export interface MapAddressContext {
+  countryCode?: string;
+  region?: string;
+  place?: string;
+  locality?: string;
+  neighborhood?: string;
+}
+
 export interface MapLocation {
   id?: string;
   name: string;
@@ -11,6 +19,10 @@ export interface MapLocation {
   source?: "angi" | "mapbox";
   featureType?: string;
   operationalStatus?: string;
+  addressContext?: MapAddressContext;
+  /** Canonical V2 administrative names, resolved only in an address-entry flow. */
+  addressDetails?: { provinceName: string; ward: string };
+  addressNotice?: string;
 }
 
 export type MapStyle = "streets" | "satellite";
@@ -47,6 +59,21 @@ function record(value: unknown): Record<string, unknown> {
 }
 function textValue(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+function readAddressContext(
+  properties: Record<string, unknown>,
+): MapAddressContext {
+  const context = record(properties.context);
+  const name = (key: string) =>
+    textValue(record(context[key]).name) ??
+    (properties.feature_type === key ? textValue(properties.name) : undefined);
+  return {
+    countryCode: textValue(record(context.country).country_code)?.toLowerCase(),
+    region: name("region"),
+    place: name("place"),
+    locality: name("locality"),
+    neighborhood: name("neighborhood"),
+  };
 }
 export function safeMapWebsite(value: unknown): string | undefined {
   const text = textValue(value);
@@ -184,6 +211,7 @@ export function readMapPlaces(payload: unknown): MapLocation[] {
       website: safeMapWebsite(metadata.website),
       featureType: textValue(properties.feature_type),
       operationalStatus: textValue(properties.operational_status),
+      addressContext: readAddressContext(properties),
       categories: Array.isArray(properties.poi_category)
         ? properties.poi_category.filter(
             (value): value is string => typeof value === "string",
@@ -192,6 +220,106 @@ export function readMapPlaces(payload: unknown): MapLocation[] {
     });
   }
   return result;
+}
+
+/** Reverse results describe the pin; their nearby feature coordinates must not move it. */
+export function readMapAddress(
+  payload: unknown,
+  selected: MapLocation,
+): MapLocation | null {
+  const features = record(payload).features;
+  if (!Array.isArray(features))
+    throw new Error("Dữ liệu địa chỉ không hợp lệ.");
+  const priorities: Record<string, number> = {
+    address: 0,
+    street: 1,
+    neighborhood: 2,
+    locality: 3,
+    place: 4,
+    region: 5,
+    country: 6,
+  };
+  const properties = features
+    .flatMap((feature: unknown) => {
+      const item = record(feature);
+      const geometry = record(item.geometry);
+      const coordinates = geometry.coordinates;
+      if (
+        geometry.type !== "Point" ||
+        !Array.isArray(coordinates) ||
+        typeof coordinates[0] !== "number" ||
+        typeof coordinates[1] !== "number" ||
+        !isMapLocation({ longitude: coordinates[0], latitude: coordinates[1] })
+      )
+        return [];
+      const value = record(item.properties);
+      const context = readAddressContext(value);
+      if (context.countryCode && context.countryCode !== "vn") return [];
+      return typeof value.feature_type === "string" &&
+        Object.hasOwn(priorities, value.feature_type)
+        ? [value]
+        : [];
+    })
+    .sort(
+      (a, b) =>
+        priorities[String(a.feature_type)] - priorities[String(b.feature_type)],
+    );
+  if (!properties.length) return null;
+  const context: MapAddressContext = {};
+  for (const item of properties) {
+    const next = readAddressContext(item);
+    context.countryCode ??= next.countryCode;
+    context.region ??= next.region;
+    context.place ??= next.place;
+    context.locality ??= next.locality;
+    context.neighborhood ??= next.neighborhood;
+  }
+  const detail = properties[0];
+  const address = record(record(detail.context).address);
+  const addressLine =
+    textValue(address.name) ??
+    ([textValue(address.address_number), textValue(address.street_name)]
+      .filter(Boolean)
+      .join(" ") ||
+      undefined);
+  const street =
+    addressLine ??
+    (["address", "street"].includes(String(detail.feature_type))
+      ? textValue(detail.name)
+      : undefined);
+  return {
+    ...selected,
+    address: street,
+    fullAddress:
+      textValue(detail.full_address) ??
+      ([street, textValue(detail.place_formatted)].filter(Boolean).join(", ") ||
+        undefined),
+    addressContext: context,
+  };
+}
+
+/** Called only when an Owner saves a new pin, never on map movement or typing. */
+export async function reverseMapAddress(
+  selected: MapLocation,
+  token: string,
+  signal: AbortSignal,
+): Promise<MapLocation | null> {
+  if (!isMapLocation(selected)) throw new Error("Vị trí không hợp lệ.");
+  const params = new URLSearchParams({
+    longitude: String(selected.longitude),
+    latitude: String(selected.latitude),
+    access_token: token,
+    country: "vn",
+    language: "vi",
+    permanent: "true",
+  });
+  return readMapAddress(
+    await mapboxJson(
+      `https://api.mapbox.com/search/geocode/v6/reverse?${params}`,
+      signal,
+    ),
+    selected,
+  );
 }
 
 /** One explicit submit = one request. No typeahead, map-move search or automatic fallback. */

@@ -197,6 +197,89 @@ async function pickLocation(page: Page) {
   await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
 }
 
+test("saving a pin prefills the street and current province/ward, replacing the previous address only in the draft", async ({
+  page,
+}) => {
+  let reverseRequests = 0;
+  await page.route(
+    "https://api.mapbox.com/search/geocode/v6/reverse**",
+    (route) => {
+      reverseRequests++;
+      const url = new URL(route.request().url());
+      expect(url.searchParams.get("latitude")).toBe("21.04");
+      expect(url.searchParams.get("longitude")).toBe("105.83");
+      return route.fulfill({
+        json: {
+          features: [
+            {
+              type: "Feature",
+              geometry: { type: "Point", coordinates: [105.8301, 21.0401] },
+              properties: {
+                feature_type: "address",
+                name: "18 Hoàng Hoa Thám",
+                context: {
+                  address: { name: "18 Hoàng Hoa Thám" },
+                  region: { name: "Hà Nội" },
+                  locality: { name: "Ngọc Hà" },
+                  country: { country_code: "VN" },
+                },
+              },
+            },
+          ],
+        },
+      });
+    },
+  );
+  await login(page);
+  await page.getByLabel("Địa chỉ", { exact: false }).fill("Địa chỉ cũ");
+  await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
+  await page
+    .getByRole("combobox", { name: "Phường / xã" })
+    .fill("Phường Ba Đình");
+  await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
+  const dialog = page.getByRole("dialog", { name: "Chọn vị trí nhà hàng" });
+  await dialog
+    .getByRole("button", { name: "Nhập tọa độ", exact: true })
+    .click();
+  await dialog.getByLabel("Vĩ độ").fill("21.04");
+  await dialog.getByLabel("Kinh độ").fill("105.83");
+  await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page.getByLabel("Địa chỉ", { exact: false })).toHaveValue(
+    "18 Hoàng Hoa Thám",
+  );
+  await expect(page.getByLabel("Tỉnh / thành phố")).toHaveValue(
+    "Thành phố Hà Nội",
+  );
+  await expect(page.getByRole("combobox", { name: "Phường / xã" })).toHaveValue(
+    "Phường Ngọc Hà",
+  );
+  await expect(page.getByText("Đã chọn: 21.040000, 105.830000")).toBeVisible();
+  expect(reverseRequests).toBe(1);
+  expect(requests).toHaveLength(0);
+});
+
+test("a failed reverse lookup preserves the pin and manual address and shows an inline explanation", async ({
+  page,
+}) => {
+  await page.route(
+    "https://api.mapbox.com/search/geocode/v6/reverse**",
+    (route) => route.fulfill({ status: 503 }),
+  );
+  await login(page);
+  await page.getByLabel("Địa chỉ", { exact: false }).fill("Địa chỉ tự nhập");
+  await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
+  await pickLocation(page);
+  await expect(page.getByLabel("Địa chỉ", { exact: false })).toHaveValue(
+    "Địa chỉ tự nhập",
+  );
+  await expect(page.getByLabel("Tỉnh / thành phố")).toHaveValue(
+    "Thành phố Hà Nội",
+  );
+  await expect(page.getByText(/Chưa tự lấy được địa chỉ/)).toBeVisible();
+  expect(requests).toHaveLength(0);
+});
+
 test("required fields and explicit location prevent accidental registration", async ({
   page,
 }) => {
