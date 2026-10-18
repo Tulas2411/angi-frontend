@@ -27,6 +27,7 @@ export function MapLocationDialog({
   mode = "pick",
   locations = [],
   poiSearchOnly = false,
+  prepareSelection,
 }: {
   title?: string;
   mapLabel?: string;
@@ -37,6 +38,10 @@ export function MapLocationDialog({
   mode?: "pick" | "explore";
   locations?: MapLocation[];
   poiSearchOnly?: boolean;
+  prepareSelection?: (
+    point: MapLocation,
+    signal: AbortSignal,
+  ) => Promise<MapLocation>;
 }) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   const hasMap = !!token?.startsWith("pk.");
@@ -72,12 +77,14 @@ export function MapLocationDialog({
   const [activeRoute, setActiveRoute] = useState(0);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [mapFailed, setMapFailed] = useState(false);
   const [manualOpen, setManualOpen] = useState(!hasMap);
   const [selectionRevision, setSelectionRevision] = useState(0);
   const manualToggle = useRef<HTMLSpanElement>(null);
   const manualId = useId();
   const searchController = useRef<AbortController | null>(null);
+  const saveController = useRef<AbortController | null>(null);
   const placesReader = useRef<(() => MapLocation[]) | null>(null);
   const active = useRef(true);
   const locateRevision = useRef(0);
@@ -87,6 +94,7 @@ export function MapLocationDialog({
       active.current = false;
       locateRevision.current += 1;
       searchController.current?.abort();
+      saveController.current?.abort();
     };
   }, []);
   const valid =
@@ -140,6 +148,9 @@ export function MapLocationDialog({
     }
   }
   function resetSearch() {
+    saveController.current?.abort();
+    saveController.current = null;
+    setSaving(false);
     locateRevision.current += 1;
     searchController.current?.abort();
     searchController.current = null;
@@ -152,6 +163,7 @@ export function MapLocationDialog({
       (!category && !query.trim()) ||
       !token ||
       busy ||
+      saving ||
       searchController.current
     )
       return;
@@ -222,7 +234,7 @@ export function MapLocationDialog({
     }
   }
   function locate() {
-    if (busy) return;
+    if (busy || saving) return;
     if (!navigator.geolocation) {
       setError("Trình duyệt không hỗ trợ vị trí. Nhập tọa độ địa điểm.");
       return;
@@ -277,8 +289,46 @@ export function MapLocationDialog({
     setRoutes([]);
     setActiveRoute(0);
   }
+  function closeDialog() {
+    // Invalidate immediately; passive unmount cleanup may run after a pending response.
+    saveController.current?.abort();
+    saveController.current = null;
+    searchController.current?.abort();
+    locateRevision.current += 1;
+    onClose();
+  }
+  async function saveSelection() {
+    if (!selected || busy || saveController.current) return;
+    const controller = new AbortController();
+    saveController.current = controller;
+    setSaving(true);
+    setError("");
+    try {
+      const point = prepareSelection
+        ? await prepareSelection(selected, controller.signal)
+        : selected;
+      if (
+        !active.current ||
+        controller.signal.aborted ||
+        saveController.current !== controller
+      )
+        return;
+      onSelect(point);
+      closeDialog();
+    } catch {
+      if (active.current && !controller.signal.aborted)
+        setError(
+          "Chưa hoàn tất lưu vị trí. Vui lòng thử lại; tọa độ bạn chọn vẫn được giữ nguyên.",
+        );
+    } finally {
+      if (active.current && saveController.current === controller) {
+        saveController.current = null;
+        setSaving(false);
+      }
+    }
+  }
   return (
-    <Dialog open title={title} onClose={onClose} map>
+    <Dialog open title={title} onClose={closeDialog} map>
       <div
         className={`map-surface mapbox-location-surface${poiSearchOnly ? " map-poi-only-surface" : ""}`}
       >
@@ -483,6 +533,11 @@ export function MapLocationDialog({
               Đang lấy vị trí…
             </p>
           )}
+          {saving && prepareSelection && (
+            <p className="map-busy" role="status">
+              Đang lấy địa chỉ cho vị trí đã chọn…
+            </p>
+          )}
           {error && <Alert>{error}</Alert>}
         </div>
         {directionDestination && (
@@ -593,23 +648,21 @@ export function MapLocationDialog({
           variant="secondary"
           className="map-save"
           aria-label={mode === "explore" ? "Đóng bản đồ" : saveLabel}
+          loading={saving}
           disabled={mode === "pick" && (!selected || busy)}
           onClick={() => {
             if (mode === "explore") {
-              onClose();
+              closeDialog();
               return;
             }
-            if (selected) {
-              onSelect(selected);
-              onClose();
-            }
+            void saveSelection();
           }}
         >
           {mode === "explore" ? "Đóng" : saveLabel}
         </Button>
         <MapControls
           onLocate={locate}
-          locating={busy}
+          locating={busy || saving}
           onZoomIn={() => setZoom((previous) => Math.min(18, previous + 1))}
           onZoomOut={() => setZoom((previous) => Math.max(3, previous - 1))}
           zoomInDisabled={!hasMap || mapFailed || zoom >= 18}

@@ -10,7 +10,6 @@ import {
   Skeleton,
   TextArea,
 } from "@/components/ui/primitives";
-import { MapPicker } from "@/components/domain/map-picker";
 import { ProvinceField } from "@/components/domain/province-field";
 import { WardField } from "@/components/domain/ward-field";
 import { provinceNameKey } from "@/shared/locations/provinces";
@@ -406,6 +405,11 @@ export function RestaurantRegistrationPage() {
                     ? `Đã chọn: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
                     : "Chọn vị trí chính xác của nhà hàng để khách có thể tìm đường.")}
               </p>
+              {location?.addressNotice && (
+                <p className="helper" role="status">
+                  {location.addressNotice}
+                </p>
+              )}
             </div>
             <SelectField
               label="Mức giá (không bắt buộc)"
@@ -484,30 +488,23 @@ export function RestaurantRegistrationPage() {
       >
         <p>Thông tin và ảnh bạn đã chọn sẽ bị bỏ nếu hủy đăng ký.</p>
       </ConfirmDialog>
-      {mapOpen &&
-        (demo ? (
-          <MapPicker
-            open
-            poiSearchOnly
-            initialLocation={location ?? undefined}
-            onClose={closeMap}
-            onSelect={(point) => {
-              setLocation(point);
-              setValues((current) => fillRestaurantFromPlace(current, point));
-              setErrors((previous) => ({ ...previous, location: "" }));
-            }}
-          />
-        ) : (
-          <RestaurantLocationPicker
-            location={location}
-            onClose={closeMap}
-            onSelect={(point) => {
-              setLocation(point);
-              setValues((current) => fillRestaurantFromPlace(current, point));
-              setErrors((previous) => ({ ...previous, location: "" }));
-            }}
-          />
-        ))}
+      {mapOpen && (
+        <RestaurantLocationPicker
+          location={location}
+          onClose={closeMap}
+          onSelect={(point) => {
+            setLocation(point);
+            setValues((current) => fillRestaurantFromPlace(current, point));
+            setErrors((previous) => ({
+              ...previous,
+              location: "",
+              addressLine: "",
+              provinceName: "",
+              ward: "",
+            }));
+          }}
+        />
+      )}
     </div>
   );
 }

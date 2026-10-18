@@ -32,22 +32,28 @@ export function restaurantLocationFromProfile(
     phone: restaurant.phone ?? undefined,
     website: restaurant.website ?? undefined,
     source: "angi",
+    addressContext: {
+      region: restaurant.provinceName ?? undefined,
+      locality: restaurant.ward ?? undefined,
+      countryCode: "vn",
+    },
   };
 }
 
-/** Only fill blank draft fields after the owner explicitly saves a POI selection. */
+/** Saving a new pin replaces the address draft; unrelated business fields fill only if blank. */
 export function fillRestaurantFromPlace(
   values: RestaurantFormValues,
   point: RestaurantLocation,
 ): RestaurantFormValues {
-  if (point.source !== "mapbox" || point.featureType !== "poi") return values;
+  const poi = point.source === "mapbox" && point.featureType === "poi";
   return {
     ...values,
-    name: values.name.trim() ? values.name : point.name,
-    addressLine: values.addressLine.trim()
-      ? values.addressLine
-      : (point.address ?? ""),
-    phone: values.phone.trim() ? values.phone : (point.phone ?? ""),
-    website: values.website.trim() ? values.website : (point.website ?? ""),
+    addressLine: point.address?.trim() || values.addressLine,
+    provinceName: point.addressDetails?.provinceName ?? values.provinceName,
+    ward: point.addressDetails?.ward ?? values.ward,
+    name: poi && !values.name.trim() ? point.name : values.name,
+    phone: poi && !values.phone.trim() ? (point.phone ?? "") : values.phone,
+    website:
+      poi && !values.website.trim() ? (point.website ?? "") : values.website,
   };
 }
