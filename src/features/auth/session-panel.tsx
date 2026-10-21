@@ -23,22 +23,14 @@ export function LogoutButton() {
     }
   }
   return (
-    <div>
-      <Button
-        variant="secondary"
-        type="button"
-        onClick={logout}
-        disabled={busy}
-        className="px-4 py-2"
-      >
-        {busy ? "Đang đăng xuất..." : "Đăng xuất"}
-      </Button>
-      {error && (
-        <div className="mt-2">
-          <Alert>{error}</Alert>
-        </div>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={logout}
+      disabled={busy}
+      className="logout-link"
+    >
+      {busy ? "Đang đăng xuất…" : "Đăng xuất"}
+    </button>
   );
 }
 export default function SessionPanel({

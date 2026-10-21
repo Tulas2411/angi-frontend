@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
+  CardActionButton,
+  CardActionLink,
   ConfirmDialog,
   EmptyState,
   Field,
@@ -80,19 +82,27 @@ export function BlogList({ mine = false }: { mine?: boolean }) {
       />
       <div className="grid-3">
         {pageSlice(blogs, page, 6).items.map((b) => (
-          <div className="stack-sm" key={b.id}>
-            <BlogCard blog={b} href={`${base}/guides/${b.id}`} />
-            {mine && (
-              <div className="actions">
-                <ActionLink href={`${base}/guides/${b.id}/edit`} secondary>
-                  Chỉnh sửa
-                </ActionLink>
-                <Button variant="destructive" onClick={() => setRemove(b.id)}>
-                  Xóa bài viết
-                </Button>
-              </div>
-            )}
-          </div>
+          <BlogCard
+            key={b.id}
+            blog={b}
+            href={`${base}/guides/${b.id}`}
+            actions={
+              mine ? (
+                <>
+                  <CardActionLink
+                    href={`${base}/guides/${b.id}/edit`}
+                    icon="edit"
+                    label="Chỉnh sửa bài viết"
+                  />
+                  <CardActionButton
+                    icon="trash"
+                    label="Xóa bài viết"
+                    onClick={() => setRemove(b.id)}
+                  />
+                </>
+              ) : undefined
+            }
+          />
         ))}
       </div>
       {!blogs.length && (

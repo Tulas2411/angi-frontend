@@ -842,11 +842,51 @@ td .button {
   position: absolute;
   right: 8px;
   top: 8px;
-  background: white;
-  border: 1px solid var(--ink);
+  background: rgb(255 255 255 / 0.92);
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
   min-width: 36px;
   min-height: 36px;
-  padding: 4px;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.upload-tile .button-icon:hover {
+  background: #a12e32;
+  border-color: #a12e32;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+
+.upload-tile .button-icon:active {
+  transform: translateY(0);
+}
+
+.upload-tile .button-icon .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.upload-tile .button-icon .icon img {
+  width: 18px;
+  height: 18px;
+  transition: filter 0.15s;
+}
+
+/* Icon đen → trắng khi nút đỏ. */
+.upload-tile .button-icon:hover .icon img {
+  filter: invert(1) brightness(1.6);
 }
 .upload-tile p {
   font-size: 12px;
@@ -1048,6 +1088,38 @@ td .button {
 }
 .account-menu a:hover {
   background: var(--control);
+}
+
+.account-menu .logout-link {
+  display: block;
+  text-align: left;
+  padding: 12px;
+  border-radius: 12px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  /* <button> không tự kế thừa font từ body → dùng font: inherit
+     để chữ khớp đúng với các link còn lại trong menu. */
+  font: inherit;
+  line-height: inherit;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.account-menu .logout-link:hover {
+  background: var(--control);
+}
+
+.account-menu .logout-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.account-menu .logout-link:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
 /* ============ Bell CTA in header ============ */
@@ -3231,4 +3303,91 @@ form.grid-3 > .button {
 .blog-card-link {
   align-self: flex-start;
   flex-shrink: 0;
+}
+
+/* === Nút hành động nổi trên ảnh bìa của BlogCard (Chỉnh sửa / Xóa) === */
+.blog-card-media {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.blog-card-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+}
+
+.card-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.92);
+  color: var(--ink);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.12);
+  transition:
+    background 0.15s,
+    transform 0.15s,
+    color 0.15s,
+    box-shadow 0.15s;
+}
+
+.card-action .icon img {
+  width: 18px;
+  height: 18px;
+}
+
+.card-action:hover {
+  background: var(--ink);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 0.18);
+}
+
+/* SVG stroke cố định màu đen → đảo màu khi nền nút chuyển sang đen. */
+.card-action:hover .icon img {
+  filter: invert(1) brightness(1.6);
+}
+
+.card-action:active {
+  transform: translateY(0);
+}
+
+.card-action:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Nút xóa: đỏ khi hover để phân biệt ngay với nút sửa. */
+.card-action-trash:hover {
+  background: #a12e32;
+  border-color: #a12e32;
+  color: white;
+}
+
+/* Trỏ chuột lên card thì nút hiện dần (card thường không cần nút). */
+@media (hover: hover) {
+  .blog-card-overlay .card-action {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  .blog-card:hover .blog-card-overlay .card-action,
+  .blog-card-overlay .card-action:focus-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

@@ -25,6 +25,8 @@ export function Icon({
     | "Plus"
     | "Minus"
     | "X"
+    | "edit"
+    | "trash"
     | "LocateFixed";
 }) {
   return (
@@ -74,6 +76,52 @@ export function ActionLink({
     >
       {children}
     </Link>
+  );
+}
+/**
+ * Nút tròn nổi trên ảnh bìa của card (chỉnh sửa / xóa).
+ * - `CardActionLink` dùng cho hành động điều hướng (Chỉnh sửa).
+ * - `CardActionButton` dùng cho hành động phá huỷ (Xóa) — đỏ khi hover.
+ */
+export function CardActionLink({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: "edit" | "trash";
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`card-action card-action-${icon}`}
+      aria-label={label}
+      title={label}
+    >
+      <Icon name={icon} />
+    </Link>
+  );
+}
+export function CardActionButton({
+  onClick,
+  icon,
+  label,
+}: {
+  onClick: () => void;
+  icon: "edit" | "trash";
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`card-action card-action-${icon}`}
+      aria-label={label}
+      title={label}
+    >
+      <Icon name={icon} />
+    </button>
   );
 }
 export function Field({
@@ -811,7 +859,7 @@ export function UploadField({
               aria-label={`Bỏ ${file.name}`}
               onClick={() => onChange(files.filter((f) => f.id !== file.id))}
             >
-              ×
+              <Icon name="trash" />
             </Button>
             <p>{file.name}</p>
             <span className="helper">

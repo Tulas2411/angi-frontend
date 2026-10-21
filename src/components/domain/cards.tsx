@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import { Badge, Card } from "@/shared/ui";
 import { ActionLink, Avatar, Media } from "@/components/ui/primitives";
 import type {
@@ -107,10 +108,24 @@ export function RestaurantCard({
     </Card>
   );
 }
-export function BlogCard({ blog, href }: { blog: Blog; href: string }) {
+export function BlogCard({
+  blog,
+  href,
+  actions,
+}: {
+  blog: Blog;
+  href: string;
+  /** Nút hành động nổi trên ảnh (chỉ dùng ở trang "bài viết của tôi"). */
+  actions?: ReactNode;
+}) {
   return (
     <Card className="domain-card blog-card">
-      <Media src={blog.image} alt={blog.title} />
+      <div className="blog-card-media">
+        <Media src={blog.image} alt={blog.title} />
+        {actions && (
+          <div className="blog-card-overlay">{actions}</div>
+        )}
+      </div>
       <div className="blog-card-body">
         <h3 className="blog-card-title">{blog.title}</h3>
         <p className="blog-card-excerpt">{blog.content.split("\n")[0]}</p>
