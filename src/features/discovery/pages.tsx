@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
+  Choice,
   EmptyState,
   Field,
   Tabs,
@@ -11,6 +12,8 @@ import {
   Dialog,
   SelectField,
   TextArea,
+  UploadField,
+  type UploadedFile,
 } from "@/components/ui/primitives";
 import {
   BlogCard,
@@ -31,6 +34,17 @@ import { RestaurantMapButton } from "@/components/domain/mapbox-preview";
 import { dishBrowseService } from "@/api/services/dish-browse-service";
 import { dishDetailService } from "@/api/services/dish-detail-service";
 import { restaurantDetailService } from "@/api/services/restaurant-detail-service";
+
+/** Các lý do người dùng chọn khi báo cáo một nhà hàng. */
+const RESTAURANT_REPORT_REASONS = [
+  "Thông tin không chính xác",
+  "Đã đóng cửa",
+  "Nội dung rác",
+  "Nội dung xúc phạm",
+  "Vệ sinh không đảm bảo",
+  "Lừa đảo",
+  "Khác",
+] as const;
 
 export function DiscoveryPage() {
   const { data } = usePlatform(),
@@ -354,7 +368,9 @@ export function RestaurantDetail({ id }: { id: string }) {
     [rating, setRating] = useState("5"),
     [text, setText] = useState(""),
     [reportOpen, setReportOpen] = useState(false),
-    [reason, setReason] = useState("Sai thông tin");
+    [reason, setReason] = useState<string>(RESTAURANT_REPORT_REASONS[0]),
+    [reportText, setReportText] = useState(""),
+    [reportEvidence, setReportEvidence] = useState<UploadedFile[]>([]);
   // F-16: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết.
   useEffect(() => {
     const numericId = Number(id);
@@ -408,7 +424,7 @@ export function RestaurantDetail({ id }: { id: string }) {
                     variant="secondary"
                     onClick={() => setReportOpen(true)}
                   >
-                    Báo cáo thông tin
+                    Báo cáo nhà hàng
                   </Button>
                 </>
               ) : (
@@ -529,29 +545,43 @@ export function RestaurantDetail({ id }: { id: string }) {
                   targetId: id,
                   reporter: user!.displayName,
                   reason,
-                  description: text,
+                  description: reportText.trim(),
+                  evidence: reportEvidence.map((f) => f.url!).filter(Boolean),
                   status: "open",
                   date: "2026-10-09",
                 }),
               "Đã nhận báo cáo trong bản minh họa.",
             );
             setReportOpen(false);
-            setText("");
+            setReportText("");
+            setReportEvidence([]);
           }}
         >
-          <SelectField
-            label="Lý do"
-            value={reason}
-            onChange={setReason}
-            options={["Sai thông tin", "Vệ sinh", "Nội dung không phù hợp"].map(
-              (v) => ({ value: v, label: v }),
-            )}
-          />
+          <fieldset className="report-reasons">
+            <legend>Lý do báo cáo</legend>
+            {RESTAURANT_REPORT_REASONS.map((r) => (
+              <Choice
+                key={r}
+                kind="radio"
+                name="restaurant-report-reason"
+                label={r}
+                checked={reason === r}
+                onChange={() => setReason(r)}
+              />
+            ))}
+          </fieldset>
           <TextArea
-            label="Thông tin bổ sung"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            label="Mô tả chi tiết"
+            value={reportText}
+            onChange={(e) => setReportText(e.target.value)}
             maxLength={1000}
+            helper="Mô tả cụ thể giúp bộ phận kiểm duyệt xử lý nhanh hơn."
+          />
+          <UploadField
+            label="Ảnh bằng chứng"
+            files={reportEvidence}
+            max={5}
+            onChange={setReportEvidence}
           />
           <Button type="submit" loading={busy}>
             Gửi báo cáo
