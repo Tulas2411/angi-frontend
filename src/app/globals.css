@@ -1048,6 +1048,324 @@ td .button {
 .account-menu a:hover {
   background: var(--control);
 }
+
+/* ============ Bell CTA in header ============ */
+.bell-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+.bell-cta:hover {
+  background: var(--control);
+}
+.bell-cta.is-active {
+  background: var(--control);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.bell-cta.is-active .icon img {
+  filter: brightness(0);
+}
+.bell-cta-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Icon chuông to, đúng kích cỡ như trong ảnh */
+  width: 28px;
+  height: 28px;
+}
+.bell-cta-icon .icon {
+  transform: scale(0.7);
+  width: 28px;
+  height: 28px;
+}
+.bell-cta .notification-badge {
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px var(--card);
+}
+.bell-cta.is-active .notification-badge {
+  background: var(--coral);
+  color: #fff;
+  box-shadow: 0 0 0 2px var(--control);
+}
+
+/* ============ Notifications page (F-09) ============ */
+.notifications-page {
+  padding-block: 32px 56px;
+  max-width: 800px;
+  margin-inline: auto;
+}
+.notifications-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.notifications-head h1 {
+  font-family: var(--font-heading);
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 0;
+}
+.notifications-head p {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}
+.notifications-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+.notifications-tab {
+  appearance: none;
+  background: #f0edf5;
+  border: 1px solid #d4cfe4;
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.notifications-tab.is-active {
+  background: var(--ink);
+  color: #fff;
+  border-color: var(--ink);
+}
+.notifications-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.notifications-item {
+  /* Card item riêng lẻ trong card lớn */
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  transition: background 0.15s;
+}
+.notifications-item:last-child {
+  border-bottom: 0;
+}
+.notifications-item:hover {
+  background: var(--control);
+}
+.notifications-item + .notifications-item {
+  margin-top: 0;
+}
+.notifications-link {
+  display: block;
+  padding: 16px 12px;
+  text-decoration: none;
+  color: inherit;
+}
+/* Layout item: body (link) ở trên, action buttons (CTA + mark) nằm DƯỚI text */
+.notifications-row {
+  display: block;
+}
+.notifications-link {
+  display: block;
+  padding: 16px 12px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+}
+.notifications-link:hover {
+  background: transparent;
+}
+.notifications-inner {
+  display: block;
+  min-width: 0;
+}
+.notifications-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+@media (max-width: 640px) {
+  .notifications-actions {
+    flex-wrap: wrap;
+  }
+}
+.notifications-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--coral);
+  flex: 0 0 8px;
+  margin-top: 1px;
+}
+.notifications-text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.notifications-meta {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+/* Badge "Đã đọc" bên phải — pill nhỏ */
+.notifications-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Nút "Đánh dấu đã đọc" bên phải cho chưa đọc */
+.notifications-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+}
+.notifications-item .notifications-actions {
+  margin-top: 10px;
+  padding: 0 12px 14px;
+  justify-content: flex-start;
+}
+.notifications-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--ink);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.notifications-cta:hover {
+  background: #000;
+}
+.notifications-item.is-unread .notifications-cta {
+  box-shadow: 0 4px 12px rgba(34, 34, 34, 0.18);
+}
+.notifications-item.is-read .notifications-cta {
+  background: var(--control);
+  color: var(--ink);
+  border-color: var(--line);
+}
+.notifications-mark {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 7px 4px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.notifications-mark:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+/* Trạng thái đã đọc: mờ hơn, text không đậm */
+.notifications-item.is-read .notifications-title {
+  font-weight: 400;
+  color: var(--muted);
+}
+.notifications-item.is-read .notifications-text {
+  color: var(--muted);
+}
+.notifications-item.is-read .notifications-meta {
+  color: var(--muted);
+  opacity: 0.7;
+}
+.notifications-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+/* Pagination */
+.notifications-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 24px;
+}
+.notifications-pagination button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.notifications-pagination button:hover:not(:disabled) {
+  background: var(--control);
+}
+.notifications-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.notifications-pagination .page-info {
+  font-size: 13px;
+  color: var(--ink);
+  font-weight: 600;
+}
+.notifications-pagination .page-info-meta {
+  color: var(--muted);
+  font-weight: 400;
+}
 .workspace {
   padding-block: 24px 56px;
 }

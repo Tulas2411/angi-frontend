@@ -1,5 +1,6 @@
 "use client";
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card, Input } from "@/shared/ui";
 import {
@@ -9,7 +10,6 @@ import {
   ConfirmDialog,
   Dialog,
   Field,
-  Tabs,
   UploadField,
   Avatar,
   Icon,
@@ -18,7 +18,11 @@ import {
 } from "@/components/ui/primitives";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
-import { dateLabel, validateUpload } from "@/features/platform/rules";
+import {
+  dateLabel,
+  relativeTimeLabel,
+  validateUpload,
+} from "@/features/platform/rules";
 import { LogoutButton } from "@/features/auth/session-panel";
 import {
   profileService,
@@ -27,6 +31,7 @@ import {
 } from "@/api/services/profile-service";
 import { passwordService } from "@/api/services/password-service";
 import { fireAndForget } from "@/shared/api/fire-and-forget";
+import { notificationService } from "@/api/services/notification-service";
 
 export function AccountPage({ profile = false }: { profile?: boolean }) {
   const { data, mutate, busy } = usePlatform(),
@@ -910,92 +915,267 @@ export function PreferencesPage({ survey = false }: { survey?: boolean }) {
 }
 
 export function NotificationsPage() {
-  const { data, mutate, busy } = usePlatform(),
-    { user, base } = useWorkspace(),
-    [filter, setFilter] = useState("all"),
-    [selected, setSelected] = useState<string[]>([]);
-  const notices = data.notices.filter((n) => n.role === user?.role),
-    unread = notices.filter((n) => !n.read).length,
-    shown = notices.filter((n) => filter !== "unread" || !n.read);
-  async function read(ids: string[]) {
-    await mutate((d) => {
+  const { mutate } = usePlatform(),
+    { user, base } = useWorkspace();
+  // Map role workspace sang key nhóm trong mock (mặc định TRAVELER nếu GUEST)
+  const roleKey: "TRAVELER" | "RESTAURANT_OWNER" | "MOD" | "ADMIN" =
+    !user || user.role === "TRAVELER"
+      ? "TRAVELER"
+      : (user.role as Exclude<typeof user.role, "TRAVELER">);
+  const [tab, setTab] = useState<"all" | "unread">("all");
+  const [items, setItems] = useState<
+    import("@/api/services/notification-service").NotificationItem[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  /** Số thông báo trên mỗi trang. */
+  const PAGE_SIZE = 10;
+  // Mọi request có id để bỏ qua response cũ khi user đổi tab nhanh.
+  const requestIdRef = useRef(0);
+  // Tải lần đầu + khi đổi tab.
+  // Lưu ý: chỉ setState SAU await (react-hooks/set-state-in-effect),
+  // `loading` được bật ở event handler khi đổi tab.
+  useEffect(() => {
+    const id = ++requestIdRef.current;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await notificationService.list({
+          page: 1,
+          pageSize: PAGE_SIZE,
+          read: tab === "unread" ? false : undefined,
+        });
+        if (cancelled || id !== requestIdRef.current) return;
+        setItems(res.items);
+        setPage(1);
+        setTotalPages(res.totalPages);
+        setTotalItems(res.totalItems);
+      } catch {
+        if (cancelled || id !== requestIdRef.current) return;
+        setItems([]);
+        setTotalPages(1);
+        setTotalItems(0);
+      } finally {
+        if (!cancelled && id === requestIdRef.current) setLoading(false);
+      }
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, roleKey]);
+  /** Đổi tab: bật loading ngay rồi để effect fetch nạp lại trang 1. */
+  function changeTab(next: "all" | "unread") {
+    if (next === tab) return;
+    setLoading(true);
+    setTab(next);
+  }
+  /** Chuyển trang (gọi từ event handler nên setState đồng bộ ở đây OK). */
+  async function load(p: number) {
+    const total = totalPages;
+    if (p < 1 || p > total) return;
+    const id = ++requestIdRef.current;
+    setLoading(true);
+    try {
+      const res = await notificationService.list({
+        page: p,
+        pageSize: PAGE_SIZE,
+        read: tab === "unread" ? false : undefined,
+      });
+      if (id !== requestIdRef.current) return;
+      setItems(res.items);
+      setPage(p);
+      setTotalPages(res.totalPages);
+      setTotalItems(res.totalItems);
+    } catch {
+      if (id !== requestIdRef.current) return;
+      setItems([]);
+      setTotalPages(1);
+      setTotalItems(0);
+    } finally {
+      if (id === requestIdRef.current) setLoading(false);
+    }
+  }
+  const unread = items.filter((n) => !n.read).length;
+  const canPrev = page > 1;
+  const canNext = page < totalPages;
+  async function markRead(ids: number[]) {
+    if (ids.length === 0) return;
+    setItems((prev) =>
+      prev.map((n) => (ids.includes(n.id) ? { ...n, read: true } : n)),
+    );
+    try {
+      await notificationService.markRead({ notificationIds: ids });
+    } catch {
+      // fallback mock — bỏ qua.
+    }
+  }
+  async function markAllRead() {
+    const ids = items.filter((n) => !n.read).map((n) => n.id);
+    if (ids.length === 0) return;
+    await markRead(ids);
+    void mutate((d) => {
+      const myRole = roleKey;
       d.notices.forEach((n) => {
-        if (ids.includes(n.id)) n.read = true;
+        if (n.role === myRole && (ids as unknown as string[]).includes(n.id))
+          n.read = true;
       });
     }, "Đã đánh dấu thông báo đã đọc.");
-    setSelected([]);
   }
   return (
-    <div
-      className={
-        user?.role === "TRAVELER" ? "container workspace stack" : "stack"
-      }
-    >
-      <PageHeading
-        title="Thông báo của bạn"
-        description="Cập nhật mới nhất xuất hiện trước."
-        action={
-          <Button
-            variant="secondary"
-            disabled={!unread || busy}
-            onClick={() => void read(notices.map((n) => n.id))}
-          >
-            Đánh dấu tất cả đã đọc
-          </Button>
-        }
-      />
-      <div className="between">
-        <span>{unread} chưa đọc</span>
-        <Tabs
-          value={filter}
-          onChange={setFilter}
-          items={[
-            { value: "all", label: "Tất cả" },
-            { value: "unread", label: "Chưa đọc" },
-          ]}
-        />
-      </div>
-      {selected.length > 0 && (
-        <Button onClick={() => void read(selected)} disabled={busy}>
-          Đánh dấu {selected.length} mục đã đọc
+    <div className="container workspace notifications-page stack">
+      <header className="notifications-head">
+        <div>
+          <h1>Thông báo</h1>
+          <p>
+            {unread > 0
+              ? `${unread} thông báo chưa đọc`
+              : "Bạn đã xem hết thông báo"}
+          </p>
+        </div>
+        <Button
+          variant="secondary"
+          disabled={unread === 0 || loading}
+          onClick={() => void markAllRead()}
+        >
+          Đánh dấu tất cả đã đọc
         </Button>
+      </header>
+
+      <div className="notifications-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "all"}
+          className={`notifications-tab ${tab === "all" ? "is-active" : ""}`}
+          onClick={() => changeTab("all")}
+        >
+          Tất cả
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "unread"}
+          className={`notifications-tab ${tab === "unread" ? "is-active" : ""}`}
+          onClick={() => changeTab("unread")}
+        >
+          Chưa đọc
+        </button>
+      </div>
+
+      <ul className="notifications-list" role="list">
+        {loading && (
+          <li className="notifications-empty">Đang tải thông báo…</li>
+        )}
+        {!loading && items.length === 0 && (
+          <li className="notifications-empty">
+            {tab === "unread"
+              ? "Bạn đã xem hết thông báo."
+              : "Chưa có thông báo nào."}
+          </li>
+        )}
+        {!loading &&
+          items.map((n) => (
+            <NotificationRow
+              key={n.id}
+              item={n}
+              base={base}
+              onMarkRead={() => void markRead([n.id])}
+            />
+          ))}
+      </ul>
+
+      {!loading && items.length > 0 && (
+        <nav className="notifications-pagination" aria-label="Phân trang">
+          <button
+            type="button"
+            onClick={() => void load(page - 1)}
+            disabled={!canPrev}
+          >
+            ‹ Trang trước
+          </button>
+          <span className="page-info">
+            Trang {page} / {totalPages}
+            <span className="page-info-meta">
+              {" "}· {totalItems} thông báo · mỗi trang {PAGE_SIZE}
+            </span>
+          </span>
+          <button
+            type="button"
+            onClick={() => void load(page + 1)}
+            disabled={!canNext}
+          >
+            Trang sau ›
+          </button>
+        </nav>
       )}
-      <Card title="Thông báo mới nhất">
-        {shown.map((n) => (
-          <article className="review" key={n.id}>
-            <div className="between">
-              <Choice
-                label={n.title}
-                checked={selected.includes(n.id)}
-                onChange={(v) =>
-                  setSelected((s) =>
-                    v ? [...s, n.id] : s.filter((x) => x !== n.id),
-                  )
-                }
-              />
-              {!n.read && <strong className="helper">● Chưa đọc</strong>}
-            </div>
-            <p>{n.body}</p>
-            <p className="helper">{dateLabel(n.date)}</p>
-            <div className="actions">
-              {n.destination && (
-                <ActionLink href={`${base}/${n.destination}`} secondary>
-                  Xem nội dung liên quan
-                </ActionLink>
-              )}
-              {!n.read && (
-                <Button variant="tertiary" onClick={() => void read([n.id])}>
-                  Đánh dấu đã đọc
-                </Button>
-              )}
-              {!n.destination && (
-                <span className="helper">Thông báo này chưa có điểm đến.</span>
-              )}
-            </div>
-          </article>
-        ))}
-        {shown.length === 0 && <p>Không còn thông báo chưa đọc.</p>}
-      </Card>
     </div>
+  );
+}
+
+function NotificationRow({
+  item,
+  base,
+  onMarkRead,
+}: {
+  item: import("@/api/services/notification-service").NotificationItem;
+  base: string;
+  onMarkRead: () => void;
+}) {
+  const href = item.destination
+    ? `${base}/${item.destination}`
+    : `${base}/notifications`;
+  // Nhãn + đích cho CTA chính tuỳ loại thông báo
+  const ctaLabel = (() => {
+    const dest = item.destination ?? "";
+    if (dest.startsWith("roadmaps/")) return "Xem lịch ăn";
+    if (dest.startsWith("reviews/")) return "Xem đánh giá";
+    if (dest.startsWith("guides/")) return "Xem bài viết";
+    if (dest.startsWith("verification")) return "Xem hồ sơ";
+    if (dest.startsWith("menu")) return "Xem thực đơn";
+    if (dest.startsWith("restaurants/")) return "Xem nhà hàng";
+    return "Mở";
+  })();
+  return (
+    <li className={`notifications-item ${item.read ? "is-read" : "is-unread"}`}>
+      <div className="notifications-row">
+        <Link href={href} className="notifications-link" onClick={onMarkRead}>
+          <div className="notifications-inner">
+            <div className="notifications-body">
+              <span className="notifications-title">
+                {!item.read && <span className="notifications-dot" aria-hidden />}
+                {item.title}
+              </span>
+              <span className="notifications-text">{item.body}</span>
+              <span className="notifications-meta">
+                {relativeTimeLabel(item.createdAt)}
+                <span aria-hidden> · </span>
+                {dateLabel(item.createdAt)}
+              </span>
+            </div>
+          </div>
+        </Link>
+        <div className="notifications-actions">
+          <Link href={href} className="notifications-cta" onClick={onMarkRead}>
+            {ctaLabel}
+          </Link>
+          {!item.read && (
+            <button
+              type="button"
+              className="notifications-mark"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMarkRead();
+              }}
+            >
+              Đánh dấu đã đọc
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
   );
 }

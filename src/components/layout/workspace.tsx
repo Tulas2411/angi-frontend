@@ -18,6 +18,7 @@ import { Avatar, Icon, ActionLink } from "@/components/ui/primitives";
 import Brand from "@/components/brand";
 import { ProvinceField } from "@/components/domain/province-field";
 import { useProfile } from "@/api/services/profile-service";
+import { notificationService } from "@/api/services/notification-service";
 
 export const navigation: Record<RoleCode, [string, string][]> = {
   TRAVELER: [
@@ -129,6 +130,28 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
   useEffect(() => {
     if (menuRef.current) menuRef.current.removeAttribute("open");
   }, [path]);
+  // Số thông báo chưa đọc lấy từ NotificationService (BE live → fallback
+  // mock nếu DB/endpoint chưa có). Refresh nhẹ mỗi 60s để badge cập
+  // nhật ngay cả khi user không mở trang.
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const refresh = () => {
+      notificationService
+        .unreadCount()
+        .then((res) => {
+          if (!cancelled) setUnread(res.unreadCount);
+        })
+        .catch(() => undefined);
+    };
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [user]);
   return (
     <header className={`container header ${traveler ? "" : "header-staff"}`}>
       <Brand href={base || "/"} />
@@ -181,8 +204,23 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
       >
         {user ? (
           <>
-            <Link href={`${base}/notifications`} aria-label="Thông báo">
-              <Icon name="bell" />
+            <Link
+              href={`${base}/notifications`}
+              className={`bell-cta ${path.startsWith(`${base}/notifications`) ? "is-active" : ""}`}
+              aria-label={
+                unread > 0
+                  ? `Thông báo, ${unread} chưa đọc`
+                  : "Thông báo"
+              }
+            >
+              <span className="bell-cta-icon">
+                <Icon name="bell" />
+                {unread > 0 && (
+                  <span className="notification-badge" aria-hidden>
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </span>
             </Link>
             <details className="account-menu" ref={menuRef}>
               <summary aria-label={`Tài khoản ${user.displayName}`}>
