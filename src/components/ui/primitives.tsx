@@ -64,15 +64,17 @@ export function ActionLink({
   href,
   children,
   secondary = false,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
   secondary?: boolean;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`button button-${secondary ? "secondary" : "primary"}`}
+      className={`button button-${secondary ? "secondary" : "primary"} ${className}`}
     >
       {children}
     </Link>
@@ -119,6 +121,7 @@ export function CardActionButton({
       className={`card-action card-action-${icon}`}
       aria-label={label}
       title={label}
+      suppressHydrationWarning
     >
       <Icon name={icon} />
     </button>
@@ -161,6 +164,7 @@ export function TextArea({
   error,
   id: suppliedId,
   value,
+  className = "",
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string;
@@ -179,9 +183,10 @@ export function TextArea({
         {...props}
         id={id}
         value={value}
-        className="input textarea"
+        className={`input textarea ${className}`.trim()}
         aria-invalid={!!error}
         aria-describedby={`${id}-help`}
+        suppressHydrationWarning
       />
       <div className="between helper" id={`${id}-help`}>
         <span className={error ? "field-error" : ""}>{error || helper}</span>
@@ -224,6 +229,7 @@ export function SelectField({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        suppressHydrationWarning
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -266,6 +272,7 @@ export function Choice({
         disabled={disabled}
         name={name}
         value={value}
+        suppressHydrationWarning
       />
       <span
         className={kind === "switch" ? "switch-track" : "choice-mark"}
@@ -311,6 +318,7 @@ export function Tabs({
             onChange(items[next].value);
             document.getElementById(`${id}-${items[next].value}`)?.focus();
           }}
+          suppressHydrationWarning
         >
           {item.label}
         </button>
@@ -714,6 +722,7 @@ export function Combobox({
                   onChange(o);
                   setOpen(false);
                 }}
+                suppressHydrationWarning
               >
                 {o}
               </button>
@@ -845,6 +854,7 @@ export function UploadField({
           upload(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
+        suppressHydrationWarning
       />
       <div className="upload-grid">
         {files.map((file) => (
@@ -878,6 +888,7 @@ export function UploadField({
               e.preventDefault();
               if (!progress) upload(Array.from(e.dataTransfer.files));
             }}
+            suppressHydrationWarning
           >
             <span aria-hidden>＋</span>Chọn {documents ? "tài liệu" : "ảnh"}
           </button>

@@ -24,6 +24,11 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={`button button-${variant} ${className}`}
+      // Browser extensions (McAfee Web Advisor, password managers) inject
+      // `fdprocessedid` onto <button> before React hydrates, which triggers a
+      // hydration mismatch. suppressHydrationWarning only silences this
+      // element's own attributes; it never hides real content mismatches.
+      suppressHydrationWarning
     >
       {loading && <span aria-hidden>⌛</span>}
       {loading ? "Đang xử lý…" : children}
@@ -34,7 +39,15 @@ export function Input({
   className = "",
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`input ${className}`} />;
+  return (
+    <input
+      {...props}
+      className={`input ${className}`}
+      // See the note on Button: extensions may add `fdprocessedid` to
+      // <input> before hydration.
+      suppressHydrationWarning
+    />
+  );
 }
 export function Card({
   title,

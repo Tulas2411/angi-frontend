@@ -47,7 +47,7 @@ export interface UpdateProfileRequestDto {
 export const profileService = {
   /** Fire-and-forget read; trả về profile nếu BE có, hoặc undefined nếu lỗi. */
   async getMyProfile(): Promise<UserProfileDto | undefined> {
-    return fireAndCollect("me.get", () => api.get<UserProfileDto>("me"));
+    return fireAndCollect("me.get", () => api.getOptional<UserProfileDto>("me"));
   },
 
   /** Fire-and-forget update; trả về profile mới nếu BE có, hoặc undefined. */
@@ -76,8 +76,11 @@ export function useProfile() {
 
   useEffect(() => {
     let active = true;
+    // `getOptional` (không tự redirect khi 401) — trang công khai vẫn gọi hook
+    // này qua ProfileIdentity; nếu dùng `get` thì khách chưa đăng nhập sẽ bị
+    // đẩy sang /login khi mở trang chi tiết món ăn.
     api
-      .get<UserProfileDto>("me")
+      .getOptional<UserProfileDto>("me")
       .then((data) => {
         if (!active) return;
         setProfile(data);

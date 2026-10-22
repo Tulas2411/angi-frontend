@@ -168,6 +168,8 @@ export interface Report {
   reporter: string;
   reason: string;
   description: string;
+  /** Ảnh bằng chứng do người báo cáo đính kèm (bản minh họa). */
+  evidence?: string[];
   status: "open" | "claimed" | "resolved" | "dismissed";
   assignee?: string;
   date: string;

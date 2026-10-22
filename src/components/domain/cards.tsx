@@ -2,6 +2,7 @@
 import type { ReactNode } from "react";
 import { Badge, Card } from "@/shared/ui";
 import { ActionLink, Avatar, Media } from "@/components/ui/primitives";
+import { useWorkspace } from "@/components/layout/workspace";
 import type {
   Blog,
   Dish,
@@ -66,6 +67,9 @@ export function DishCard({
   href: string;
   isDetailPage?: boolean;
 }) {
+  // `base` giữ đúng tiền tố của không gian hiện tại (rỗng ở live, /demo/xxx ở demo)
+  // để nút "Xem chi tiết" không bật ra khỏi workspace.
+  const { base } = useWorkspace();
   return (
     <Card className="domain-card">
       <Media src={dish.image} alt={dish.name} />
@@ -75,7 +79,7 @@ export function DishCard({
       </p>
       <div className="actions">
         {isDetailPage ? (
-          <ActionLink href={`/dishes/${dish.id}`} secondary>
+          <ActionLink href={`${base}/dishes/${dish.id}`} secondary>
             Xem chi tiết
           </ActionLink>
         ) : (
