@@ -3527,6 +3527,227 @@ form.grid-3 > .button {
     opacity: 1;
     transform: translateY(0);
   }
+
+  .blog-my-overlay .card-action {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+
+  .blog-my-card:hover .blog-my-overlay .card-action,
+  .blog-my-overlay .card-action:focus-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* === Trang "Bài viết của tôi": mỗi bài viết nằm trong một card nhỏ riêng === */
+.blog-hub-mine {
+  gap: 20px;
+  padding: 24px;
+}
+
+.blog-hub-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.blog-hub-head h2 {
+  margin: 0 0 4px;
+}
+
+.blog-hub-head .helper {
+  margin: 0;
+}
+
+/* Nút "Viết cẩm nang" nằm ở góc trên bên phải của card lớn. */
+.blog-hub-create {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 13px;
+  min-height: 38px;
+}
+
+.blog-my-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Card nhỏ nằm NGANG: ảnh bìa bên trái, nội dung bên phải. */
+.blog-my-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  box-sizing: border-box;
+  height: 100%;
+  overflow: hidden;
+  border: 1.5px solid var(--line);
+  border-radius: 20px;
+  background: var(--card);
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.blog-my-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
+}
+
+/* Ảnh bìa — dùng chung một định dạng (44/25) cho mọi card nhỏ
+   để các card luôn có cùng kích thước. */
+.blog-my-media {
+  position: relative;
+  display: block;
+  width: 220px;
+  flex: 0 0 220px;
+  aspect-ratio: 44 / 25;
+  align-self: center;
+  overflow: hidden;
+  background: var(--control);
+}
+
+.blog-my-media .media {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+  margin: 0;
+}
+
+/* Nút tròn Chỉnh sửa / Xóa nổi ở góc trên phải card nhỏ. */
+.blog-my-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+}
+
+.blog-my-overlay .card-action {
+  width: 36px;
+  height: 36px;
+}
+
+.blog-my-overlay .card-action .icon img {
+  width: 16px;
+  height: 16px;
+}
+
+.blog-my-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+  min-width: 0;
+  flex: 1;
+}
+
+.blog-my-title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 21px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  min-height: calc(2 * 21px);
+  flex-shrink: 0;
+}
+
+/* Hàng dưới của card: avatar + tên/ngày + like/bình luận (nút nằm ở góc dưới bên phải card). */
+.blog-my-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: auto;
+  padding-top: 12px;
+  padding-right: 132px;
+  min-width: 0;
+}
+
+.avatar.blog-my-avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.blog-my-author-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.blog-my-author {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-my-date {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.blog-my-stat {
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Nút "Xem bài viết" nằm ở góc dưới bên phải card
+   (góc trên bên phải đã dành cho nút Chỉnh sửa / Xóa). */
+.blog-my-view {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: auto;
+  flex-shrink: 0;
+  padding: 6px 14px;
+  font-size: 12px;
+  min-height: 32px;
+}
+
+/* Thu hẹp ảnh bìa khi khung card nhỏ hơn. */
+@media (max-width: 900px) {
+  .blog-my-media {
+    width: 180px;
+    flex-basis: 180px;
+  }
+}
+
+/* Trên màn hình hẹp, card nhỏ quay lại dọc cho dễ đọc. */
+@media (max-width: 640px) {
+  .blog-my-card {
+    flex-direction: column;
+  }
+
+  .blog-my-media {
+    width: 100%;
+    flex: 0 0 auto;
+    align-self: stretch;
+  }
+
+  .blog-my-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 /* === Header trang chi tiết bài viết (tác giả + ngày + nút thao tác) === */
