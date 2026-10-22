@@ -10,7 +10,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="vi">
-      <body className="min-h-screen antialiased">
+      {/* Browser extensions (McAfee Web Advisor, password managers) can add
+          attributes to <html>/<body> before hydration. suppressHydrationWarning
+          only affects this element's own attributes. */}
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         <GoogleProvider>{children}</GoogleProvider>
       </body>
     </html>

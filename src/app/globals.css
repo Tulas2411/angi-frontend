@@ -477,6 +477,31 @@ textarea:focus-visible,
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Nhóm lý do báo cáo trong hộp thoại (radio dọc). */
+.report-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 4px 0 0;
+  border: 0;
+  min-width: 0;
+}
+/* Mỗi lý do nằm trên một dòng riêng. */
+.report-reasons > .choice {
+  display: flex;
+  width: 100%;
+}
+.report-reasons legend {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 8px;
+}
 .switch-track {
   width: 44px;
   height: 24px;
@@ -1221,7 +1246,10 @@ td .button {
   font-weight: 600;
   color: var(--ink);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 .notifications-tab.is-active {
   background: var(--ink);
@@ -1355,7 +1383,9 @@ td .button {
   text-decoration: none;
   border: 1px solid var(--ink);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
   white-space: nowrap;
 }
 .notifications-cta:hover {
@@ -1608,6 +1638,113 @@ td .button {
   border-radius: 20px;
   padding: 16px;
   margin-top: 16px;
+}
+
+/* --- Bình luận trong cẩm nang: mỗi bình luận là một card nhỏ --- */
+.comment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.comment-card {
+  position: relative;
+  background: var(--control);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.comment-card:hover {
+  border-color: var(--ink);
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.06);
+}
+.comment-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 38px;
+}
+.comment-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+}
+.comment-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 18px;
+  min-width: 0;
+}
+.comment-meta strong {
+  font-size: 14px;
+}
+.comment-meta .helper {
+  font-size: 12px;
+}
+.comment-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+/* Nút xóa dạng icon thùng rác, đặt ở góc trên phải của card bình luận. */
+.comment-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 30px;
+  height: 30px;
+  min-height: 0;
+  min-width: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
+}
+.comment-delete .icon img {
+  width: 15px;
+  height: 15px;
+}
+.comment-delete:hover {
+  background: #a12e32;
+  border-color: #a12e32;
+  color: white;
+}
+.comment-delete:hover .icon img {
+  filter: invert(1) brightness(1.6);
+}
+.comment-delete:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+/* Ô nhập bình luận gọn hơn so với textarea mặc định. */
+.textarea-compact {
+  min-height: 76px;
+  line-height: 22px;
+  padding: 10px 14px;
 }
 .status-grid {
   display: grid;
@@ -3389,5 +3526,98 @@ form.grid-3 > .button {
   .blog-card-overlay .card-action:focus-visible {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* === Header trang chi tiết bài viết (tác giả + ngày + nút thao tác) === */
+.blog-detail-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.blog-detail-author {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.avatar.blog-detail-avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.blog-detail-author-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.blog-detail-author-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.blog-detail-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.blog-detail-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 1.5px solid transparent;
+  border-radius: 24px;
+  background: var(--control);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 20px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+a.blog-detail-pill:hover {
+  border-color: var(--ink);
+}
+
+.blog-detail-pill-action {
+  cursor: pointer;
+}
+
+.blog-detail-pill-action:hover {
+  border-color: var(--ink);
+}
+
+.blog-detail-pill-action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.blog-detail-pill-action[aria-pressed="true"] {
+  background: var(--ink);
+  color: white;
+}
+
+@media (max-width: 760px) {
+  .blog-detail-meta {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

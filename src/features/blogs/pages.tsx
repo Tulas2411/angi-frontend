@@ -5,11 +5,15 @@ import { useRouter } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
+  Avatar,
   CardActionButton,
   CardActionLink,
+  Choice,
   ConfirmDialog,
+  Dialog,
   EmptyState,
   Field,
+  Icon,
   Media,
   Pagination,
   Tabs,
@@ -27,6 +31,15 @@ import {
   snapshotTrip,
 } from "@/features/platform/rules";
 import type { Trip } from "@/features/platform/contracts";
+
+/** Các lý do người dùng chọn khi báo cáo một bài viết cộng đồng. */
+const REPORT_REASONS = [
+  "Nội dung không phù hợp",
+  "Sai thông tin",
+  "Nội dung xúc phạm",
+  "Thông tin không chính xác ",
+  "Khác",
+] as const;
 
 export function BlogList({ mine = false }: { mine?: boolean }) {
   const { data, mutate } = usePlatform(),
@@ -186,7 +199,11 @@ export function BlogDetail({ id }: { id: string }) {
   const { data, mutate, busy } = usePlatform(),
     { base, user } = useWorkspace(),
     [comment, setComment] = useState(""),
-    [remove, setRemove] = useState<string | null>(null);
+    [remove, setRemove] = useState<string | null>(null),
+    [reportOpen, setReportOpen] = useState(false),
+    [reportReason, setReportReason] = useState<string>(REPORT_REASONS[0]),
+    [reportText, setReportText] = useState(""),
+    [reportEvidence, setReportEvidence] = useState<UploadedFile[]>([]);
   const blog = data.blogs.find(
     (b) => b.id === id && b.moderation === "visible",
   );
@@ -205,10 +222,52 @@ export function BlogDetail({ id }: { id: string }) {
       <p className="helper">
         <Link href={`${base}/guides`}>Cẩm nang</Link> / Chi tiết
       </p>
-      <PageHeading
-        title={blog.title}
-        description={`${blog.author} · ${dateLabel(blog.date)} · Nội dung minh họa`}
-      />
+      <PageHeading title={blog.title} />
+      <div className="blog-detail-meta">
+        <div className="blog-detail-author">
+          <Avatar name={blog.author} className="blog-detail-avatar" />
+          <div className="blog-detail-author-text">
+            <strong className="blog-detail-author-name">{blog.author}</strong>
+            <span className="helper">{dateLabel(blog.date)}</span>
+          </div>
+        </div>
+        <div className="blog-detail-pills">
+          <button
+            type="button"
+            className="blog-detail-pill blog-detail-pill-action"
+            aria-pressed={blog.liked}
+            disabled={!user}
+            onClick={() =>
+              void mutate(
+                (d) => {
+                  const b = d.blogs.find((b) => b.id === id)!;
+                  b.likes += b.liked ? -1 : 1;
+                  b.liked = !b.liked;
+                },
+                blog.liked ? "Đã bỏ thích bài viết." : "Đã thích bài viết.",
+              )
+            }
+          >
+            {blog.liked ? "♥ Đã thích" : "♡ Thích"} · {blog.likes}
+          </button>
+          <span className="blog-detail-pill">
+            💬 Bình luận · {comments.length}
+          </span>
+          {user ? (
+            <button
+              type="button"
+              className="blog-detail-pill blog-detail-pill-action"
+              onClick={() => setReportOpen(true)}
+            >
+              Báo cáo bài viết
+            </button>
+          ) : (
+            <ActionLink href="/login" className="blog-detail-pill">
+              Báo cáo bài viết
+            </ActionLink>
+          )}
+        </div>
+      </div>
       <div className="split-content">
         <article className="stack">
           <Media src={blog.image} alt={blog.title} />
@@ -219,30 +278,9 @@ export function BlogDetail({ id }: { id: string }) {
           {blog.photos.map((photo, i) => (
             <Media key={photo} src={photo} alt={`Ảnh trải nghiệm ${i + 1}`} />
           ))}
-          <div className="actions">
-            <Button
-              variant={blog.liked ? "primary" : "secondary"}
-              aria-pressed={blog.liked}
-              disabled={!user}
-              onClick={() =>
-                void mutate(
-                  (d) => {
-                    const b = d.blogs.find((b) => b.id === id)!;
-                    b.likes += b.liked ? -1 : 1;
-                    b.liked = !b.liked;
-                  },
-                  blog.liked ? "Đã bỏ thích bài viết." : "Đã thích bài viết.",
-                )
-              }
-            >
-              {blog.liked ? "♥ Đã thích" : "♡ Thích"} · {blog.likes}
-            </Button>
-            {!user && (
-              <ActionLink href="/login" secondary>
-                Đăng nhập để tương tác
-              </ActionLink>
-            )}
-          </div>
+          <Alert tone="info">
+            Nội dung minh họa — thông tin trong bài viết mang tính tham khảo.
+          </Alert>
           <Card title={`Bình luận · ${comments.length}`}>
             {user && (
               <form
@@ -265,6 +303,7 @@ export function BlogDetail({ id }: { id: string }) {
                 }}
               >
                 <TextArea
+                  className="textarea-compact"
                   label="Bình luận của bạn"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
@@ -276,18 +315,38 @@ export function BlogDetail({ id }: { id: string }) {
                 </Button>
               </form>
             )}
-            {comments.map((c) => (
-              <div className="review" key={c.id}>
-                <strong>{c.author}</strong>
-                <p className="helper">{dateLabel(c.date)}</p>
-                <p>{c.text}</p>
-                {c.author === user?.displayName && (
-                  <Button variant="tertiary" onClick={() => setRemove(c.id)}>
-                    Xóa bình luận
-                  </Button>
-                )}
-              </div>
-            ))}
+            {comments.length === 0 && (
+              <p className="helper">
+                Chưa có bình luận nào. Hãy là người đầu tiên.
+              </p>
+            )}
+            <div className="comment-list">
+              {comments.map((c) => (
+                <article className="comment-card" key={c.id}>
+                  <header className="comment-head">
+                    <span className="comment-avatar" aria-hidden>
+                      {c.author.trim().charAt(0).toUpperCase() || "?"}
+                    </span>
+                    <span className="comment-meta">
+                      <strong>{c.author}</strong>
+                      <span className="helper">{dateLabel(c.date)}</span>
+                    </span>
+                    {c.author === user?.displayName && (
+                      <button
+                        type="button"
+                        className="comment-delete"
+                        aria-label={`Xóa bình luận của ${c.author}`}
+                        title="Xóa bình luận"
+                        onClick={() => setRemove(c.id)}
+                      >
+                        <Icon name="trash" />
+                      </button>
+                    )}
+                  </header>
+                  <p className="comment-text">{c.text}</p>
+                </article>
+              ))}
+            </div>
           </Card>
         </article>
         <aside className="sticky-card">
@@ -318,8 +377,68 @@ export function BlogDetail({ id }: { id: string }) {
           setRemove(null);
         }}
       >
-        <p>Bình luận sẽ bị xóa khỏi bản minh họa.</p>
+        <p>Bạn có chắc chắn muốn xóa bình luận này không?</p>
       </ConfirmDialog>
+      <Dialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        title="Báo cáo bài viết"
+      >
+        <form
+          className="stack"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            await mutate(
+              (d) =>
+                d.reports.unshift({
+                  id: crypto.randomUUID(),
+                  target: "blog",
+                  targetId: id,
+                  reporter: user!.displayName,
+                  reason: reportReason,
+                  description: reportText.trim(),
+                  evidence: reportEvidence.map((f) => f.url!).filter(Boolean),
+                  status: "open",
+                  date: new Date().toISOString().slice(0, 10),
+                }),
+              "Đã nhận báo cáo trong bản minh họa.",
+            );
+            setReportOpen(false);
+            setReportText("");
+            setReportEvidence([]);
+          }}
+        >
+          <fieldset className="report-reasons">
+            <legend>Lý do báo cáo</legend>
+            {REPORT_REASONS.map((r) => (
+              <Choice
+                key={r}
+                kind="radio"
+                name="blog-report-reason"
+                label={r}
+                checked={reportReason === r}
+                onChange={() => setReportReason(r)}
+              />
+            ))}
+          </fieldset>
+          <TextArea
+            label="Mô tả chi tiết"
+            value={reportText}
+            onChange={(e) => setReportText(e.target.value)}
+            maxLength={1000}
+            helper="Mô tả cụ thể giúp bộ phận kiểm duyệt xử lý nhanh hơn."
+          />
+          <UploadField
+            label="Ảnh bằng chứng"
+            files={reportEvidence}
+            max={5}
+            onChange={setReportEvidence}
+          />
+          <Button type="submit" loading={busy}>
+            Gửi báo cáo
+          </Button>
+        </form>
+      </Dialog>
     </div>
   );
 }

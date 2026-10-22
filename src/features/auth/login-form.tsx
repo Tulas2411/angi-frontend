@@ -72,6 +72,7 @@ export default function LoginForm() {
           className="login-social-btn login-social-btn--facebook"
           onClick={() => social("facebook")}
           disabled={busy}
+          suppressHydrationWarning
         >
           <FacebookIcon />
           <span>Tiếp tục với Facebook</span>
@@ -81,6 +82,7 @@ export default function LoginForm() {
           className="login-social-btn login-social-btn--apple"
           onClick={() => social("apple")}
           disabled={busy}
+          suppressHydrationWarning
         >
           <AppleIcon />
           <span>Tiếp tục với Apple</span>
@@ -146,6 +148,7 @@ export default function LoginForm() {
               checked={remember}
               onChange={(e) => setRemember(e.target.checked)}
               disabled={busy}
+              suppressHydrationWarning
             />
             <span>Ghi nhớ đăng nhập</span>
           </label>
@@ -154,7 +157,12 @@ export default function LoginForm() {
           </Link>
         </div>
 
-        <button type="submit" disabled={busy} className="login-submit">
+        <button
+          type="submit"
+          disabled={busy}
+          className="login-submit"
+          suppressHydrationWarning
+        >
           {busy ? "Đang đăng nhập..." : "Đăng nhập"}
         </button>
       </form>

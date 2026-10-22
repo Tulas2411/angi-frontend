@@ -23,14 +23,24 @@ export function LogoutButton() {
     }
   }
   return (
-    <button
-      type="button"
-      onClick={logout}
-      disabled={busy}
-      className="logout-link"
-    >
-      {busy ? "Đang đăng xuất…" : "Đăng xuất"}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={logout}
+        disabled={busy}
+        className="logout-link"
+        // Browser extensions add `fdprocessedid` to <button> before hydration,
+        // which causes a hydration mismatch on the account menu.
+        suppressHydrationWarning
+      >
+        {busy ? "Đang đăng xuất…" : "Đăng xuất"}
+      </button>
+      {error && (
+        <p className="helper field-error" role="alert">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 export default function SessionPanel({

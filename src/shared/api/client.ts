@@ -100,6 +100,16 @@ export const api = {
   refresh: () => request<AuthUserDto>("auth/refresh", { method: "POST" }),
   logout: () => request<null>("auth/logout", { method: "POST" }),
   get: <T>(path: string) => request<T>(`backend/${path}`),
+  /**
+   * Gọi endpoint BE nhưng KHÔNG tự chuyển hướng khi BE trả 401.
+   *
+   * Dùng cho các lệnh "hỏi thăm" (probe) như `GET /me` trên trang công khai:
+   * khách chưa đăng nhập vẫn xem được trang, chỉ là không có thông tin hồ sơ.
+   * Nếu dùng `get` thì 401 sẽ kích hoạt `window.location.replace("/login")`
+   * và server đồng thời xoá cookie phiên → người dùng đang đăng nhập bị
+   * đẩy ra trang đăng nhập.
+   */
+  getOptional: <T>(path: string) => request<T>(`backend/${path}`, {}, false),
   getPublic: <T>(path: string) => request<T>(path, {}, false),
   upload: <T>(path: string, body: FormData) =>
     request<T>(`backend/${path}`, { method: "POST", body }),
