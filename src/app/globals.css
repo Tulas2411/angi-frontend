@@ -651,6 +651,140 @@ textarea:focus-visible,
 .dialog-wide {
   width: min(960px, calc(100% - 32px));
 }
+/* === Popup "Viết đánh giá" (chi tiết nhà hàng) === */
+.dialog-actions-review {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+.dialog-actions-review > .button {
+  flex: 2 1 0;
+  min-width: 0;
+}
+.dialog-actions-review > .button:last-child {
+  flex: 1 1 0;
+}
+.write-review {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.write-review-lead {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 22px;
+}
+.write-review-label {
+  font-size: 14px;
+  line-height: 20px;
+}
+/* Hàng sao: mỗi ô là một nút radio, sao được chọn thì tô đậm. */
+.write-review-stars {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.write-review-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1.5px solid transparent;
+  border-radius: 24px;
+  background: var(--control);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 20px;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+.write-review-star:hover {
+  border-color: var(--ink);
+}
+/* Sao chưa chọn chỉ là nét mảnh, giống bản thiết kế. */
+.write-review-star .write-review-star-icon path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+/* Sao đang chọn đổi sang nền đậm + nét trắng cho nổi bật. */
+.write-review-star.is-selected {
+  background: var(--ink);
+  color: white;
+}
+.write-review-star.is-selected .write-review-star-icon path {
+  fill: currentColor;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+.write-review-star-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.write-review-star:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.write-review-stars-caption {
+  color: var(--muted);
+}
+/* Ảnh thực tế: lưới ô vuông ngắn hơn ô mặc định của UploadField. */
+.write-review-photos .upload-field {
+  gap: 12px;
+}
+.write-review-photos .upload-grid {
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 12px;
+}
+.write-review-photos .upload-tile .media,
+.write-review-photos .upload-drop {
+  aspect-ratio: 1 / 1;
+  height: auto;
+  min-height: 0;
+  border-radius: 18px;
+}
+.write-review-photos .upload-tile .button-icon {
+  right: 6px;
+  top: 6px;
+  min-width: 30px;
+  min-height: 30px;
+  width: 30px;
+  height: 30px;
+}
+.write-review-photos .upload-tile .button-icon .icon img {
+  width: 15px;
+  height: 15px;
+}
+.write-review-photos .upload-tile p {
+  margin-top: 6px;
+}
+.write-review-photos .upload-drop {
+  padding: 12px;
+  font-size: 12px;
+  line-height: 18px;
+  gap: 6px;
+}
+.write-review-photos .upload-drop > span {
+  font-size: 24px;
+}
+.write-review-photos .upload-tile .helper {
+  font-size: 11px;
+  line-height: 16px;
+}
+@media (max-width: 480px) {
+  .write-review-stars {
+    gap: 6px;
+  }
+  .write-review-star {
+    padding: 8px 10px;
+  }
+}
 .dialog-drawer {
   width: min(760px, 100%);
   height: 100dvh;

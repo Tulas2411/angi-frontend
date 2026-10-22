@@ -31,6 +31,7 @@ import { pageSlice } from "@/features/platform/rules";
 import { ProvinceField } from "@/components/domain/province-field";
 import { matchesRestaurantLocation } from "@/shared/locations/restaurant-search";
 import { RestaurantMapButton } from "@/components/domain/mapbox-preview";
+import { WriteReviewDialog } from "@/components/domain/review-dialog";
 import { dishBrowseService } from "@/api/services/dish-browse-service";
 import { dishDetailService } from "@/api/services/dish-detail-service";
 import { restaurantDetailService } from "@/api/services/restaurant-detail-service";
@@ -365,8 +366,6 @@ export function RestaurantDetail({ id }: { id: string }) {
     { base, user } = useWorkspace(),
     [tab, setTab] = useState("menu"),
     [reviewOpen, setReviewOpen] = useState(false),
-    [rating, setRating] = useState("5"),
-    [text, setText] = useState(""),
     [reportOpen, setReportOpen] = useState(false),
     [reason, setReason] = useState<string>(RESTAURANT_REPORT_REASONS[0]),
     [reportText, setReportText] = useState(""),
@@ -482,52 +481,27 @@ export function RestaurantDetail({ id }: { id: string }) {
           </Alert>
         </Card>
       )}
-      <Dialog
+      <WriteReviewDialog
         open={reviewOpen}
+        busy={busy}
         onClose={() => setReviewOpen(false)}
-        title="Chia sẻ trải nghiệm"
-      >
-        <form
-          className="stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await mutate((d) =>
+        onSubmit={async ({ rating, text }) => {
+          await mutate(
+            (d) =>
               d.reviews.unshift({
                 id: crypto.randomUUID(),
                 restaurantId: id,
                 author: user!.displayName,
-                rating: Number(rating),
-                text: text.trim(),
-                date: "2026-10-09T12:00:00+07:00",
+                rating,
+                text,
+                date: new Date().toISOString(),
                 moderation: "visible",
               }),
-            );
-            setReviewOpen(false);
-            setText("");
-            setTab("reviews");
-          }}
-        >
-          <SelectField
-            label="Số sao"
-            value={rating}
-            onChange={setRating}
-            options={[1, 2, 3, 4, 5].map((v) => ({
-              value: String(v),
-              label: `${v} / 5 sao`,
-            }))}
-          />
-          <TextArea
-            label="Đánh giá"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            required
-            maxLength={1000}
-          />
-          <Button type="submit" loading={busy}>
-            Đăng đánh giá minh họa
-          </Button>
-        </form>
-      </Dialog>
+            "Đã gửi đánh giá trong bản minh họa.",
+          );
+          setTab("reviews");
+        }}
+      />
       <Dialog
         open={reportOpen}
         onClose={() => setReportOpen(false)}
