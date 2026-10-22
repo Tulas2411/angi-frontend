@@ -130,6 +130,32 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
   useEffect(() => {
     if (menuRef.current) menuRef.current.removeAttribute("open");
   }, [path]);
+  // Đóng dropdown khi bấm ra vùng khác, cuộn trang, hoặc nhấn Esc —
+  // không cần bấm lại avatar.
+  useEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const close = () => menu.removeAttribute("open");
+    const onPointerDown = (e: PointerEvent) => {
+      if (!menu.contains(e.target as Node)) close();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        close();
+        (menu.querySelector("summary") as HTMLElement | null)?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("blur", close);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("resize", close);
+    };
+  }, [user]);
   // Số thông báo chưa đọc lấy từ NotificationService (BE live → fallback
   // mock nếu DB/endpoint chưa có). Refresh nhẹ mỗi 60s để badge cập
   // nhật ngay cả khi user không mở trang.
@@ -245,18 +271,10 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
                 {user.role === "TRAVELER" && (
                   <>
                     <Link href={`${base}/roadmaps`}>Lịch ăn của tôi</Link>
-                    <Link href={`${base}/preferences`}>Khẩu vị của tôi</Link>
                     <Link href={`${base}/my-guides`}>Bài viết của tôi</Link>
                   </>
                 )}
-                {demo ? (
-                  <>
-                    <Link href="/demo">Về bản minh họa</Link>
-                    <LogoutButton />
-                  </>
-                ) : (
-                  <LogoutButton />
-                )}
+                <LogoutButton />
               </div>
             </details>
           </>
