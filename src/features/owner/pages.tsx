@@ -1,16 +1,12 @@
 "use client";
 import { useState } from "react";
-import { Alert, Button, Card } from "@/shared/ui";
+import { Alert, Card } from "@/shared/ui";
 import {
   ActionLink,
-  Dialog,
   Media,
-  SelectField,
-  TextArea,
 } from "@/components/ui/primitives";
 import {
   RestaurantStatuses,
-  ReviewContent,
   submissionLabels,
 } from "@/components/domain/cards";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
@@ -127,97 +123,4 @@ export function VerificationPage({ initialTab }: { initialTab?: string }) {
 }
 export function OwnerMenuPage() {
   return <RestaurantMenuPage />;
-}
-
-export function OwnerReviewsPage() {
-  const { data, mutate, busy } = usePlatform(),
-    [filter, setFilter] = useState("all"),
-    [stars, setStars] = useState("all"),
-    [reply, setReply] = useState<string | null>(null),
-    [text, setText] = useState("");
-  const rows = data.reviews.filter(
-    (r) =>
-      (filter === "all" || !r.reply) &&
-      (stars === "all" || r.rating === Number(stars)),
-  );
-  return (
-    <div className="stack">
-      <PageHeading
-        title="Lắng nghe thực khách"
-        description="Đọc đánh giá và phản hồi từng trải nghiệm."
-      />
-      <div className="grid-2">
-        <SelectField
-          label="Phản hồi"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: "Tất cả" },
-            { value: "unanswered", label: "Chưa phản hồi" },
-          ]}
-        />
-        <SelectField
-          label="Số sao"
-          value={stars}
-          onChange={setStars}
-          options={[
-            { value: "all", label: "Mọi mức sao" },
-            ...[1, 2, 3, 4, 5].map((v) => ({
-              value: String(v),
-              label: `${v} sao`,
-            })),
-          ]}
-        />
-      </div>
-      <Card title={`${rows.length} đánh giá minh họa`}>
-        {rows.map((r) => (
-          <article className="review" key={r.id}>
-            <ReviewContent review={r} />
-            <Button
-              variant="secondary"
-              disabled={r.moderation !== "visible"}
-              onClick={() => {
-                setReply(r.id);
-                setText(r.reply ?? "");
-              }}
-            >
-              {r.reply ? "Sửa phản hồi" : "Phản hồi"}
-            </Button>
-            {r.moderation !== "visible" && (
-              <p className="helper">Chỉ phản hồi đánh giá đang hiển thị.</p>
-            )}
-          </article>
-        ))}
-      </Card>
-      <Dialog
-        open={!!reply}
-        onClose={() => setReply(null)}
-        title="Phản hồi thực khách"
-      >
-        <form
-          className="stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await mutate((d) => {
-              const r = d.reviews.find((r) => r.id === reply)!;
-              r.reply = text.trim();
-              r.replyModeration = "visible";
-            });
-            setReply(null);
-          }}
-        >
-          <TextArea
-            label="Phản hồi của nhà hàng"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={1000}
-            required
-          />
-          <Button type="submit" loading={busy}>
-            Lưu phản hồi
-          </Button>
-        </form>
-      </Dialog>
-    </div>
-  );
 }
