@@ -64,15 +64,17 @@ export function ActionLink({
   href,
   children,
   secondary = false,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
   secondary?: boolean;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`button button-${secondary ? "secondary" : "primary"}`}
+      className={`button button-${secondary ? "secondary" : "primary"} ${className}`}
     >
       {children}
     </Link>
