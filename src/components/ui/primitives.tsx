@@ -407,13 +407,15 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 export function Avatar({
   name,
   image,
+  className = "",
 }: {
   name: string;
   image?: string | null;
+  className?: string;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   return (
-    <span className="avatar">
+    <span className={`avatar ${className}`}>
       {image && image !== failed ? (
         <img src={image} alt={name} onError={() => setFailed(image)} />
       ) : (

@@ -197,6 +197,7 @@ textarea:focus-visible,
 .grid-4 {
   display: grid;
   gap: 24px;
+  align-items: stretch;
 }
 .grid-2 {
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3106,4 +3107,128 @@ form.grid-3 > .button {
   .profile-info-list {
     grid-template-columns: 1fr;
   }
+}
+
+/* === Blog Card (cẩm nang) === */
+/* Card không set height cố định; grid cha dùng subgrid-free layout + min-height
+   để các card tự co giãn theo nội dung và bằng nhau trong cùng hàng. */
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: 100%;
+}
+
+.blog-card .media {
+  flex-shrink: 0;
+  height: 180px;
+  aspect-ratio: auto;
+  margin: 0;
+  border-radius: 20px 20px 0 0;
+}
+
+.blog-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-height: 0;
+}
+
+.blog-card-title {
+  margin: 0;
+  font-size: 18px;
+  line-height: 24px;
+  /* tối đa 2 dòng, dài hơn thì cắt bằng ... */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  /* luôn chừa đúng 2 dòng để card nào cũng cao bằng nhau */
+  min-height: calc(2 * 24px);
+  flex-shrink: 0;
+}
+
+.blog-card-excerpt {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 20px;
+  /* tối đa 3 dòng, dài hơn thì cắt bằng ... */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  margin: 0;
+  /* luôn chừa đúng 3 dòng; text ngắn sẽ để trắng phần dưới */
+  min-height: calc(3 * 20px);
+  flex-shrink: 0;
+}
+
+.blog-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  /* đẩy footer xuống đáy card khi nội dung ngắn */
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+.blog-card-author {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.avatar.blog-card-avatar {
+  width: 36px;
+  height: 36px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.blog-card-author-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.blog-card-author-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  /* truncate khi tên dài */
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-card-date {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.blog-card-stats {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.blog-card-stat {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.blog-card-link {
+  align-self: flex-start;
+  flex-shrink: 0;
 }

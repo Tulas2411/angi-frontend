@@ -109,23 +109,33 @@ export function RestaurantCard({
 }
 export function BlogCard({ blog, href }: { blog: Blog; href: string }) {
   return (
-    <div className="stack-sm">
-      <Card className="domain-card">
-        <Media src={blog.image} alt={blog.title} />
-        <h3>{blog.title}</h3>
-        <p>{blog.content.split("\n")[0]}</p>
-        <ActionLink href={href} secondary>
-          Đọc cẩm nang
-        </ActionLink>
-      </Card>
-      <p className="helper">
-        {blog.author} · {dateLabel(blog.date)}
-        <br />
-        {blog.likes} lượt thích ·{" "}
-        {blog.comments.filter((c) => c.moderation === "visible").length} bình
-        luận{blog.trip && " · Có lịch ăn"}
-      </p>
-    </div>
+    <Card className="domain-card blog-card">
+      <Media src={blog.image} alt={blog.title} />
+      <div className="blog-card-body">
+        <h3 className="blog-card-title">{blog.title}</h3>
+        <p className="blog-card-excerpt">{blog.content.split("\n")[0]}</p>
+        <div className="blog-card-footer">
+          <div className="blog-card-author">
+            <Avatar name={blog.author} className="blog-card-avatar" />
+            <div className="blog-card-author-meta">
+              <span className="blog-card-author-name">{blog.author}</span>
+              <span className="blog-card-date">{dateLabel(blog.date)}</span>
+            </div>
+          </div>
+          <div className="blog-card-stats">
+            <span className="blog-card-stat">
+              ♥ {blog.likes}
+            </span>
+            <span className="blog-card-stat">
+              💬 {blog.comments.filter((c) => c.moderation === "visible").length}
+            </span>
+          </div>
+        </div>
+      </div>
+      <ActionLink href={href} secondary className="blog-card-link">
+        Đọc cẩm nang
+      </ActionLink>
+    </Card>
   );
 }
 export function ReviewContent({
