@@ -1,15 +1,10 @@
-import { Suspense } from "react";
-import { PageRouter } from "@/features/platform/page-router";
-import { WorkspaceScope } from "@/components/layout/workspace";
-import { Skeleton } from "@/components/ui/primitives";
+﻿import type { Metadata } from "next";
 import { requireUser } from "@/features/auth/server";
+import { OwnerOverviewPage } from "@/features/owner/owner-overview-page";
+
+export const metadata: Metadata = { title: "Tổng quan nhà hàng" };
+
 export default async function Page() {
   await requireUser(["RESTAURANT_OWNER"]);
-  return (
-    <WorkspaceScope base="/restaurant">
-      <Suspense fallback={<Skeleton />}>
-        <PageRouter role="RESTAURANT_OWNER" />
-      </Suspense>
-    </WorkspaceScope>
-  );
+  return <OwnerOverviewPage />;
 }

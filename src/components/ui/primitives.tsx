@@ -10,54 +10,18 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { Button, Input } from "@/shared/ui";
-import { pageSlice, validateUpload } from "@/features/platform/rules";
 import { searchText } from "@/shared/text/search";
+
+/** Local SVG icons from the design export (decorative; never the only label). */
 export function Icon({
   name,
 }: {
-  name:
-    | "search"
-    | "bell"
-    | "calendar"
-    | "warning"
-    | "success"
-    | "motorcycle"
-    | "Plus"
-    | "Minus"
-    | "X"
-    | "edit"
-    | "trash"
-    | "LocateFixed";
+  name: "search" | "X" | "Plus" | "Minus" | "LocateFixed";
 }) {
   return (
     <span className={`icon icon-${name}`} aria-hidden>
       <img src={`/assets/figma/${name}.svg`} alt="" />
     </span>
-  );
-}
-export function Breadcrumbs({
-  items,
-}: {
-  items: readonly { label: string; href?: string }[];
-}) {
-  return (
-    <nav className="breadcrumbs" aria-label="Đường dẫn trang">
-      <ol>
-        {items.map((item, index) => (
-          <li key={`${item.label}-${index}`}>
-            {item.href ? (
-              <Link href={item.href}>{item.label}</Link>
-            ) : (
-              <span
-                aria-current={index === items.length - 1 ? "page" : undefined}
-              >
-                {item.label}
-              </span>
-            )}
-          </li>
-        ))}
-      </ol>
-    </nav>
   );
 }
 export function ActionLink({
@@ -74,57 +38,10 @@ export function ActionLink({
   return (
     <Link
       href={href}
-      className={`button button-${secondary ? "secondary" : "primary"} ${className}`}
+      className={`button button-${secondary ? "secondary" : "primary"} ${className}`.trim()}
     >
       {children}
     </Link>
-  );
-}
-/**
- * Nút tròn nổi trên ảnh bìa của card (chỉnh sửa / xóa).
- * - `CardActionLink` dùng cho hành động điều hướng (Chỉnh sửa).
- * - `CardActionButton` dùng cho hành động phá huỷ (Xóa) — đỏ khi hover.
- */
-export function CardActionLink({
-  href,
-  icon,
-  label,
-}: {
-  href: string;
-  icon: "edit" | "trash";
-  label: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className={`card-action card-action-${icon}`}
-      aria-label={label}
-      title={label}
-    >
-      <Icon name={icon} />
-    </Link>
-  );
-}
-export function CardActionButton({
-  onClick,
-  icon,
-  label,
-}: {
-  onClick: () => void;
-  icon: "edit" | "trash";
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`card-action card-action-${icon}`}
-      aria-label={label}
-      title={label}
-      suppressHydrationWarning
-    >
-      <Icon name={icon} />
-    </button>
   );
 }
 export function Field({
@@ -152,6 +69,51 @@ export function Field({
         aria-invalid={!!error}
         aria-describedby={helper || error ? `${id}-help` : undefined}
       />
+      <p className={error ? "field-error" : "helper"} id={`${id}-help`}>
+        {error || helper}
+      </p>
+    </div>
+  );
+}
+/** Password input with an accessible show/hide toggle. */
+export function PasswordField({
+  label,
+  helper,
+  error,
+  id: suppliedId,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  label: string;
+  helper?: string;
+  error?: string;
+}) {
+  const generated = useId(),
+    id = suppliedId ?? generated,
+    [shown, setShown] = useState(false);
+  return (
+    <div className="field">
+      <label htmlFor={id}>
+        {label}
+        {props.required && " *"}
+      </label>
+      <div className="password-row">
+        <Input
+          {...props}
+          id={id}
+          type={shown ? "text" : "password"}
+          aria-invalid={!!error}
+          aria-describedby={helper || error ? `${id}-help` : undefined}
+        />
+        <Button
+          variant="secondary"
+          aria-pressed={shown}
+          aria-controls={id}
+          disabled={props.disabled}
+          onClick={() => setShown((value) => !value)}
+        >
+          {shown ? "Ẩn" : "Hiện"}
+        </Button>
+      </div>
       <p className={error ? "field-error" : "helper"} id={`${id}-help`}>
         {error || helper}
       </p>
@@ -335,6 +297,8 @@ export function Dialog({
   wide = false,
   map = false,
   drawer = false,
+  focusField = false,
+  className = "",
 }: {
   open: boolean;
   onClose: () => void;
@@ -344,6 +308,9 @@ export function Dialog({
   wide?: boolean;
   map?: boolean;
   drawer?: boolean;
+  /** Forms move initial focus to their first field instead of the close button. */
+  focusField?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
     titleId = useId();
@@ -354,17 +321,25 @@ export function Dialog({
       open && document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      if (focusField)
+        dialog
+          .querySelector<HTMLElement>(
+            ".dialog-content :is(input, textarea, select)",
+          )
+          ?.focus();
+    }
     if (!open && dialog.open) dialog.close();
     return () => {
       if (dialog.open) dialog.close();
       if (returnFocus?.isConnected) returnFocus.focus();
     };
-  }, [open]);
+  }, [open, focusField]);
   return (
     <dialog
       ref={ref}
-      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""}`}
+      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();
@@ -445,7 +420,7 @@ export function EmptyState({
         ◎
       </span>
       <h3>{title}</h3>
-      <p>{children}</p>
+      {children && <p>{children}</p>}
       {action}
     </div>
   );
@@ -471,7 +446,7 @@ export function Avatar({
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   return (
-    <span className={`avatar ${className}`}>
+    <span className={`avatar ${className}`.trim()}>
       {image && image !== failed ? (
         <img src={image} alt={name} onError={() => setFailed(image)} />
       ) : (
@@ -480,6 +455,7 @@ export function Avatar({
     </span>
   );
 }
+/** Image from a backend record; a missing or broken image shows a neutral placeholder. */
 export function Media({
   src,
   alt,
@@ -491,7 +467,7 @@ export function Media({
 }) {
   const [failed, setFailed] = useState<string>();
   return (
-    <div className={`media ${className}`}>
+    <div className={`media ${className}`.trim()}>
       {src && src !== failed ? (
         <img src={src} alt={alt} onError={() => setFailed(src)} />
       ) : (
@@ -501,109 +477,6 @@ export function Media({
         </div>
       )}
     </div>
-  );
-}
-export function Pagination({
-  total,
-  page,
-  size = 5,
-  onChange,
-}: {
-  total: number;
-  page: number;
-  size?: number;
-  onChange: (value: number) => void;
-}) {
-  const {
-    first,
-    last,
-    pages,
-    page: current,
-  } = pageSlice(Array.from({ length: total }), page, size);
-  return (
-    <div className="pagination">
-      <span className="helper">
-        {first}–{last} trên {total} mục · Trang {current} / {pages}
-      </span>
-      <div className="actions">
-        <Button
-          variant="secondary"
-          disabled={current <= 1}
-          onClick={() => onChange(current - 1)}
-        >
-          Trang trước
-        </Button>
-        <Button
-          variant="secondary"
-          disabled={current >= pages}
-          onClick={() => onChange(current + 1)}
-        >
-          Trang sau
-        </Button>
-      </div>
-    </div>
-  );
-}
-export function DataTable<T extends { id: string }>({
-  rows,
-  columns,
-  caption,
-  page = 1,
-  onPage,
-  size = 5,
-}: {
-  rows: T[];
-  columns: { label: string; render: (row: T) => ReactNode }[];
-  caption: string;
-  page?: number;
-  onPage?: (value: number) => void;
-  size?: number;
-}) {
-  const shown = onPage ? pageSlice(rows, page, size).items : rows;
-  return (
-    <>
-      <div
-        className="table-scroll"
-        tabIndex={0}
-        role="region"
-        aria-label={caption}
-      >
-        <table style={{ minWidth: Math.max(420, columns.length * 150) }}>
-          <caption className="sr-only">{caption}</caption>
-          <thead>
-            <tr>
-              {columns.map((col) => (
-                <th key={col.label} scope="col">
-                  {col.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {shown.map((row) => (
-              <tr key={row.id}>
-                {columns.map((col) => (
-                  <td key={col.label}>{col.render(row)}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {rows.length === 0 && (
-        <EmptyState title="Không có kết quả">
-          Thử thay đổi bộ lọc hoặc từ khóa.
-        </EmptyState>
-      )}
-      {onPage && (
-        <Pagination
-          total={rows.length}
-          page={page}
-          size={size}
-          onChange={onPage}
-        />
-      )}
-    </>
   );
 }
 export function Combobox({
@@ -736,197 +609,5 @@ export function Combobox({
         </p>
       )}
     </div>
-  );
-}
-export interface UploadedFile {
-  id: string;
-  name: string;
-  url?: string;
-  size: number;
-  type: string;
-}
-export function UploadField({
-  label,
-  files,
-  onChange,
-  documents = false,
-  max = 1,
-}: {
-  label: string;
-  files: UploadedFile[];
-  onChange: (files: UploadedFile[]) => void;
-  documents?: boolean;
-  max?: number;
-}) {
-  const [error, setError] = useState(""),
-    [progress, setProgress] = useState(0),
-    [pending, setPending] = useState<File[]>([]),
-    input = useRef<HTMLInputElement>(null),
-    timer = useRef<ReturnType<typeof setInterval> | null>(null),
-    id = useId();
-  useEffect(
-    () => () => {
-      if (timer.current) clearInterval(timer.current);
-    },
-    [],
-  );
-  function upload(picked: File[]) {
-    if (files.length + picked.length > max) {
-      setError(`Tối đa ${max} tệp. Bỏ tệp cũ trước khi chọn tệp mới.`);
-      return;
-    }
-    const problem = picked
-      .map((f) => validateUpload(f, documents))
-      .find(Boolean);
-    if (problem) {
-      setError(problem);
-      return;
-    }
-    setError("");
-    setPending(picked);
-    setProgress(1);
-    let value = 1;
-    timer.current = setInterval(async () => {
-      value += 33;
-      setProgress(Math.min(100, value));
-      if (value >= 100) {
-        if (timer.current) clearInterval(timer.current);
-        try {
-          const next = await Promise.all(
-            picked.map(async (file) => {
-              const url = file.type.startsWith("image/")
-                ? await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(String(reader.result));
-                    reader.onerror = () =>
-                      reject(new Error("Không đọc được tệp."));
-                    reader.readAsDataURL(file);
-                  })
-                : undefined;
-              return {
-                id: crypto.randomUUID(),
-                name: file.name,
-                url,
-                size: file.size,
-                type: file.type,
-              };
-            }),
-          );
-          onChange([...files, ...next]);
-        } catch (error) {
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Không đọc được tệp. Chọn lại để thử.",
-          );
-        } finally {
-          setProgress(0);
-          setPending([]);
-        }
-      }
-    }, 140);
-  }
-  return (
-    <div className="upload-field">
-      <div className="between">
-        <label htmlFor={id}>{label}</label>
-        <span className="helper">
-          {files.length} / {max}
-        </span>
-      </div>
-      <p className="helper">
-        JPG, PNG, WEBP tối đa 5 MB{documents && "; PDF tối đa 10 MB"}. Tải tệp
-        trong bản minh họa.
-      </p>
-      <input
-        id={id}
-        ref={input}
-        type="file"
-        className="sr-only"
-        accept={
-          documents
-            ? "image/jpeg,image/png,image/webp,application/pdf"
-            : "image/jpeg,image/png,image/webp"
-        }
-        multiple={max > 1}
-        disabled={progress > 0}
-        onChange={(e) => {
-          upload(Array.from(e.target.files ?? []));
-          e.target.value = "";
-        }}
-        suppressHydrationWarning
-      />
-      <div className="upload-grid">
-        {files.map((file) => (
-          <div className="upload-tile" key={file.id}>
-            {file.url ? (
-              <Media src={file.url} alt={file.name} />
-            ) : (
-              <div className="file-preview">PDF</div>
-            )}
-            <Button
-              variant="icon"
-              aria-label={`Bỏ ${file.name}`}
-              onClick={() => onChange(files.filter((f) => f.id !== file.id))}
-            >
-              <Icon name="trash" />
-            </Button>
-            <p>{file.name}</p>
-            <span className="helper">
-              {(file.size / 1024 / 1024).toFixed(1)} MB · Đã chọn
-            </span>
-          </div>
-        ))}
-        {files.length < max && (
-          <button
-            className="upload-drop"
-            type="button"
-            onClick={() => input.current?.click()}
-            disabled={progress > 0}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (!progress) upload(Array.from(e.dataTransfer.files));
-            }}
-            suppressHydrationWarning
-          >
-            <span aria-hidden>＋</span>Chọn {documents ? "tài liệu" : "ảnh"}
-          </button>
-        )}
-      </div>
-      {progress > 0 && (
-        <div role="status">
-          <label>
-            Tải {pending.length} tệp: {progress}%
-            <progress value={progress} max={100} />
-          </label>
-        </div>
-      )}
-      {error && (
-        <p role="alert" className="field-error">
-          {error}{" "}
-          <Button variant="tertiary" onClick={() => input.current?.click()}>
-            Chọn lại
-          </Button>
-        </p>
-      )}
-    </div>
-  );
-}
-export function Tooltip({
-  text,
-  children,
-}: {
-  text: string;
-  children: ReactNode;
-}) {
-  const id = useId();
-  return (
-    <span className="tooltip" tabIndex={0} aria-describedby={id}>
-      {children}
-      <span role="tooltip" id={id}>
-        {text}
-      </span>
-    </span>
   );
 }

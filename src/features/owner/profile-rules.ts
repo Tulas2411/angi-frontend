@@ -1,4 +1,3 @@
-import type { Restaurant } from "@/features/platform/contracts";
 import type {
   OwnerRestaurantDto,
   RestaurantFormValues,
@@ -140,28 +139,4 @@ export function validateProfilePatch(
   )
     errors.imageMediaIds = "Chọn tối đa 10 ảnh đã tải lên, không trùng nhau.";
   return errors;
-}
-
-/** Preserve fixture IDs, related entities, and independently managed statuses. */
-export function profileToDemoView(
-  current: Restaurant,
-  restaurant: OwnerRestaurantDto,
-): Restaurant {
-  return {
-    ...current,
-    name: restaurant.name,
-    phone: restaurant.phone ?? "",
-    address: restaurant.addressLine,
-    district: restaurant.district ?? "",
-    province: restaurant.provinceName ?? "",
-    ward: restaurant.ward ?? "",
-    description: restaurant.description ?? "",
-    email: restaurant.email ?? "",
-    website: restaurant.website ?? "",
-    latitude: restaurant.latitude ?? current.latitude,
-    longitude: restaurant.longitude ?? current.longitude,
-    priceLevel: restaurant.priceLevel,
-    image: restaurant.coverUrl ?? "",
-    photos: [...restaurant.images],
-  };
 }

@@ -60,6 +60,7 @@ await symlink(
   join(preview, "node_modules"),
   process.platform === "win32" ? "junction" : "dir",
 );
+const production = process.argv.includes("--production");
 const config = await readFile(
   join(sourceRef ? preview : workspace, "next.config.ts"),
   "utf8",
@@ -70,10 +71,11 @@ await writeFile(
   join(preview, "next.config.ts"),
   config.replace(
     "turbopack: {",
-    `turbopack: { root: ${JSON.stringify(workspace)},`,
+    // `next dev` runs effects twice (Strict Mode), which changes request counts that production
+    // never produces; keep the dev-served suite equivalent to a production build.
+    `${production || process.argv.includes("--build") ? "" : "reactStrictMode: false,"} turbopack: { root: ${JSON.stringify(workspace)},`,
   ),
 );
-const production = process.argv.includes("--production");
 let child;
 let stopping = false;
 function launch(args) {

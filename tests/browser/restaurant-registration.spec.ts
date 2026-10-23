@@ -161,14 +161,17 @@ test.beforeEach(async ({ page }) => {
   );
 });
 
-async function login(page: Page, email = "owner@test.local") {
+/** Signs in; owners without a restaurant then open the registration form. */
+async function login(page: Page, email = "owner@test.local", openForm = true) {
   await page.goto("/login");
-  await page.getByLabel("Email", { exact: true }).fill(email);
-  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
+  await page.getByLabel(/^Email/).fill(email);
+  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(
-    email.startsWith("traveler") ? /\/demo\/traveler$/ : /\/restaurant$/,
+    email.startsWith("traveler") ? /\/$/ : /\/restaurant$/,
   );
+  if (openForm && !email.startsWith("traveler") && !restaurant)
+    await page.goto("/restaurant/register");
 }
 async function fill(page: Page, useWardSuggestions = true) {
   await page.getByLabel("Tên nhà hàng", { exact: false }).fill("Bếp Nhà");
@@ -195,6 +198,8 @@ async function pickLocation(page: Page) {
   await dialog.getByLabel("Vĩ độ").fill("21.0285");
   await dialog.getByLabel("Kinh độ").fill("105.8542");
   await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
+  // The dialog's own search field also matches address labels until it has unmounted.
+  await expect(page.locator("dialog[open]")).toHaveCount(0);
 }
 
 test("saving a pin prefills the street and current province/ward, replacing the previous address only in the draft", async ({
@@ -269,7 +274,22 @@ test("a failed reverse lookup preserves the pin and manual address and shows an 
   await login(page);
   await page.getByLabel("Địa chỉ", { exact: false }).fill("Địa chỉ tự nhập");
   await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
+  // Close the province suggestions, which overlay the location button.
+  await page.keyboard.press("Escape");
   await pickLocation(page);
+  await page.waitForTimeout(2500);
+  console.log(
+    "DIALOGS",
+    JSON.stringify(
+      await page.locator("dialog").evaluateAll((els) =>
+        els.map((e) => ({
+          open: (e as HTMLDialogElement).open,
+          cls: e.className,
+          text: (e as HTMLElement).innerText.slice(0, 120),
+        })),
+      ),
+    ),
+  );
   await expect(page.getByLabel("Địa chỉ", { exact: false })).toHaveValue(
     "Địa chỉ tự nhập",
   );
@@ -434,12 +454,12 @@ test("existing owners and non-owner sessions cannot register another restaurant"
   });
   await login(page);
   await expect(
-    page.getByRole("heading", { name: "Bạn đã có nhà hàng" }),
+    page.getByRole("heading", { name: "Quán hiện có", level: 1 }),
   ).toBeVisible();
   await page.context().clearCookies();
   await login(page, "traveler@test.local");
   await page.goto("/restaurant/register");
-  await expect(page).toHaveURL(/\/demo\/traveler$/);
+  await expect(page).toHaveURL(/\/$/);
   const denied = await page.request.post("/api/backend/owner/restaurant", {
     headers: { origin: "http://localhost:3001" },
     data: {},
@@ -448,97 +468,25 @@ test("existing owners and non-owner sessions cannot register another restaurant"
   expect(requests).toHaveLength(0);
 });
 
-test("demo registration is isolated and responsive", async ({ page }) => {
-  const pageErrors: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/dev/scenarios?state=owner-register-restaurant");
-  await fill(page);
-  await page.getByLabel("Tên nhà hàng").fill("Quán thử nghiệm ANGI");
-  await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByRole("button", { name: "Lưu", exact: true }).click();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
-    path: "artifacts/owner-register-mobile.png",
-    fullPage: true,
-  });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page
-    .getByRole("button", { name: "Đăng ký nhà hàng", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Đăng ký nhà hàng thành công" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Quán thử nghiệm ANGI" }),
-  ).toBeVisible();
-  expect(requests).toHaveLength(0);
-  expect(uploads).toHaveLength(0);
-  expect(pageErrors).toEqual([]);
-});
-
-test("cancellation uses a modal, preserves input when dismissed and returns only after confirmation", async ({
+test("map keyboard selection and explicit place search produce explicit coordinates", async ({
   page,
 }) => {
-  const nativeDialogs: string[] = [];
-  page.on("dialog", async (dialog) => {
-    nativeDialogs.push(dialog.type());
-    await dialog.dismiss();
-  });
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/demo");
-  await page.goto("/dev/scenarios?state=owner-register-restaurant");
-  await fill(page);
-  await page.getByLabel("Ảnh bìa", { exact: true }).setInputFiles({
-    name: "cover.png",
-    mimeType: "image/png",
-    buffer: png,
-  });
-  await expect(page.getByRole("button", { name: /Bỏ ảnh bìa/ })).toBeVisible();
-  const cancel = page.getByRole("button", { name: "Hủy", exact: true });
-  const modal = page.getByRole("dialog", { name: "Hủy đăng ký nhà hàng?" });
-  await cancel.click();
-  await expect(modal).toBeVisible();
-  await page.screenshot({ path: "artifacts/owner-cancel-modal-desktop.png" });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({ path: "artifacts/owner-cancel-modal-mobile.png" });
-  await modal
-    .getByRole("button", { name: "Tiếp tục đăng ký", exact: true })
-    .click();
-  await expect(modal).toBeHidden();
-  await expect(cancel).toBeFocused();
-  await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Bếp Nhà");
-  await expect(page.getByRole("button", { name: /Bỏ ảnh bìa/ })).toBeVisible();
-  await cancel.click();
-  await expect(modal).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(modal).toBeHidden();
-  await expect(cancel).toBeFocused();
-  await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Bếp Nhà");
-  await cancel.click();
-  await modal.getByRole("button", { name: "Hủy đăng ký", exact: true }).click();
-  await expect(page).toHaveURL(/\/demo$/);
-  expect(nativeDialogs).toEqual([]);
-  expect(requests).toHaveLength(0);
-});
-
-test("map keyboard selection and permanent address search produce explicit coordinates", async ({
-  page,
-}) => {
-  await page.route("https://api.mapbox.com/search/geocode/**", (route) => {
+  let searches = 0;
+  await page.route("https://api.mapbox.com/search/searchbox/**", (route) => {
+    searches++;
     const url = new URL(route.request().url());
-    expect(url.searchParams.get("permanent")).toBe("true");
+    expect(url.searchParams.get("q")).toBe("Nhà hàng thử nghiệm");
+    expect(url.searchParams.get("country")).toBe("vn");
     return route.fulfill({
       json: {
         features: [
           {
-            geometry: { coordinates: [106.7009, 10.7769] },
-            properties: { full_address: "Nhà hàng thử nghiệm" },
+            geometry: { type: "Point", coordinates: [106.7009, 10.7769] },
+            properties: {
+              mapbox_id: "test-place-1",
+              name: "Nhà hàng thử nghiệm",
+              full_address: "1 Đường thử nghiệm, Thành phố Hồ Chí Minh",
+            },
           },
         ],
       },
@@ -553,6 +501,9 @@ test("map keyboard selection and permanent address search produce explicit coord
   await expect(map).toHaveAttribute("aria-busy", "false");
   await map.locator("canvas").focus();
   await page.keyboard.press("ArrowRight");
+  // Mapbox eases the keyboard pan over a few hundred ms; select the centre once it has moved.
+  await expect(map).toHaveAttribute("aria-busy", "false");
+  await page.waitForTimeout(600);
   await page.keyboard.press("Enter");
   await dialog
     .getByRole("button", { name: "Nhập tọa độ", exact: true })
@@ -564,11 +515,10 @@ test("map keyboard selection and permanent address search produce explicit coord
     .getByLabel("Tìm địa chỉ hoặc địa điểm")
     .fill("Nhà hàng thử nghiệm");
   await dialog.getByRole("button", { name: "Tìm kiếm", exact: true }).click();
-  await dialog
-    .getByRole("button", { name: "Nhà hàng thử nghiệm", exact: true })
-    .click();
+  await dialog.getByRole("button", { name: /Nhà hàng thử nghiệm/ }).click();
   await dialog.getByRole("button", { name: "Lưu vị trí" }).click();
   await expect(page.getByText("Đã chọn: 10.776900, 106.700900")).toBeVisible();
+  expect(searches).toBe(1);
 });
 
 test("map information cards close independently and keep the pin and saved coordinates", async ({
@@ -639,53 +589,6 @@ test("map information cards close independently and keep the pin and saved coord
     .click();
   await dialog.getByRole("button", { name: "Lưu vị trí", exact: true }).click();
   await expect(page.getByText("Đã chọn: 21.028500, 105.854200")).toBeVisible();
-});
-
-test("demo workspace uses Mapbox overlays on desktop/mobile and retains selection after hiding cards", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/dev/scenarios?state=owner-register-restaurant");
-  const opener = page.getByRole("button", { name: "Chọn vị trí trên bản đồ" });
-  await opener.click();
-  const dialog = page.getByRole("dialog");
-  const summary = dialog.getByRole("region", {
-    name: "Thông tin địa điểm đã chọn",
-    exact: true,
-  });
-  await expect(summary).toContainText("Hồ Hoàn Kiếm");
-  await dialog.screenshot({
-    path: "artifacts/restaurant-map-demo-desktop.png",
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await dialog.screenshot({ path: "artifacts/restaurant-map-demo-mobile.png" });
-  expect(
-    await dialog.evaluate(
-      (element) => element.scrollWidth <= element.clientWidth,
-    ),
-  ).toBe(true);
-  const controls = await dialog
-    .getByRole("button", { name: "Dùng vị trí hiện tại" })
-    .boundingBox();
-  const summaryBounds = await summary.boundingBox();
-  if (!controls || !summaryBounds)
-    throw new Error("Map controls and summary must be visible.");
-  expect(summaryBounds.y + summaryBounds.height).toBeLessThan(controls.y);
-  await dialog
-    .getByRole("button", { name: "Ẩn thông tin điểm trên bản đồ", exact: true })
-    .click();
-  await dialog
-    .getByRole("button", { name: "Ẩn thông tin địa điểm đã chọn", exact: true })
-    .click();
-  await expect(
-    dialog.getByRole("button", { name: "Hiển thị thông tin vị trí đã chọn" }),
-  ).toBeVisible();
-  await dialog.getByRole("button", { name: "Lưu", exact: true }).click();
-  await expect(page.getByText("Đã chọn: 21.028500, 105.854200")).toBeVisible();
-  await opener.click();
-  await expect(summary).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(opener).toBeFocused();
 });
 
 test("failed catalog and map retain manual entry; malformed uploads and foreign origins are denied", async ({

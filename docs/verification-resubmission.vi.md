@@ -1,5 +1,8 @@
 # ANGI-68 — F-49 Gửi lại hồ sơ xác minh
 
+> **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
+
+
 Nhánh `feat/ANGI-68-resubmit-verification` được tạo trước khi sửa code, từ `origin/dev` mới nhất `032595a12a765ba3680e53d741d909a6bf7a68f1` (đã gồm F-47/F-48). Code được để nguyên chưa stage/commit/push; không tạo PR thay chủ dự án.
 
 ## Cách sử dụng
@@ -11,7 +14,7 @@ Nhánh `feat/ANGI-68-resubmit-verification` được tạo trước khi sửa co
 5. Gửi **bộ tài liệu đầy đủ** của lần này. Những tài liệu đã bỏ không được đưa vào request mới. Bấm **Gửi lại hồ sơ xác minh**, kiểm tra popup rồi xác nhận.
 6. Khi BE trả 201, hồ sơ mới chuyển `pending`, `previousId` trỏ hồ sơ vừa gửi lại. Trang hiển thị lịch sử qua OWN-07; dữ liệu/phản hồi của lần cũ được giữ nguyên. Reload vẫn đọc kết quả từ BE.
 
-Luồng này đã nối BE thật qua proxy cùng origin. Không cần biến môi trường ứng dụng mới. Màn minh họa dùng `/dev/scenarios?state=owner-verification-supplement` hoặc `owner-verification-rejected`; chỉ lưu dữ liệu trong bộ nhớ, không upload ra ngoài.
+Luồng này đã nối BE thật qua proxy cùng origin. Không cần biến môi trường ứng dụng mới. Không còn màn minh họa; hãy dùng backend thật hoặc bộ stub (`npm run test:owner`).
 
 ## Hợp đồng và kiểm tra dữ liệu
 
@@ -95,7 +98,7 @@ Không cần BE thật:
 
 ```powershell
 npm test -- tests/verification-resubmission.test.ts
-npx playwright test --config=playwright.verification-resubmit.config.ts
+npx playwright test -c playwright.owner.config.ts
 ```
 
 Với BE local thật và Cloudinary đã cấu hình, chạy từ `angi-frontend`, cổng 3001 trống, có Docker Desktop. Cần công cụ fixture mới trong checkout BE cùng cấp. Script chuẩn bị bên dưới ghi lại `.env.integration` với tài khoản mới cho lượt chạy; giữ bản cấu hình kiểm thử cũ trước nếu cần. Không thay `.env` ứng dụng.
@@ -104,7 +107,7 @@ Với BE local thật và Cloudinary đã cấu hình, chạy từ `angi-fronten
 powershell -ExecutionPolicy Bypass -File scripts/prepare-live-tests.ps1
 $env:NODE_OPTIONS = ""
 try {
-  node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.verification-resubmit-live.config.ts
+  node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts
 } finally {
   powershell -ExecutionPolicy Bypass -File scripts/cleanup-live-tests.ps1
 }
