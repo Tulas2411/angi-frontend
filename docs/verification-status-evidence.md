@@ -1,8 +1,5 @@
 # ANGI-65 / F-48 verification status evidence
 
-> **Tài liệu lịch sử (trước đợt dọn 10/2026).** Các cấu hình Playwright, script seed và màn `/demo` được nhắc dưới đây đã bị gộp hoặc xóa. Nội dung giữ lại làm bằng chứng; cách chạy hiện tại nằm trong [README](../README.md#checks).
-
-
 Implementation date: 2026-10-17. Branch: `feat/ANGI-65-view-verification-status`, created before source edits. The owner explicitly requested task branches; code remains unstaged and uncommitted.
 
 ## Branch dependency

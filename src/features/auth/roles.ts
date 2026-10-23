@@ -6,16 +6,11 @@ export const ROLE_CODES: readonly RoleCode[] = [
   "MOD",
   "ADMIN",
 ];
-/**
- * Landing page after sign-in. Only RESTAURANT_OWNER has a business workspace
- * backed by the real API; every other role lands on the public homepage in its
- * signed-in state until its workspace is integrated.
- */
 export const HOME_BY_ROLE: Record<RoleCode, string> = {
-  TRAVELER: "/",
+  TRAVELER: "/demo/traveler",
   RESTAURANT_OWNER: "/restaurant",
-  MOD: "/",
-  ADMIN: "/",
+  MOD: "/moderation",
+  ADMIN: "/administration",
 };
 export const LABEL_BY_ROLE: Record<RoleCode, string> = {
   TRAVELER: "Người khám phá",

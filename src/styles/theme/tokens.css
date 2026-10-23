@@ -1,10 +1,4 @@
-/*
- * ANGI design tokens. The public homepage is the reference: warm canvas, white
- * borderless-looking cards, pill controls, hairline dividers and one coral accent.
- * Palette and font families are unchanged; everything else is derived from them.
- */
 :root {
-  /* Palette */
   --canvas: #f4efe7;
   --card: #fff;
   --control: #eee9e7;
@@ -12,87 +6,23 @@
   --muted: #68615d;
   --coral: #ff5e62;
   --line: #e7e3e5;
-
-  /* Shades of the palette used for hover and pressed states */
-  --ink-hover: #3d3936;
-  --control-hover: #dfd8d5;
-  --control-active: #d5ceca;
-  --line-strong: #cbc4c0;
-
-  /* Semantic state colors (background, readable text, hairline) */
-  --success-bg: #e7eee3;
-  --success-ink: #2f5d3a;
-  --success-line: #c4d6bf;
-  --warning-bg: #fff7e8;
-  --warning-ink: #7a4a00;
-  --warning-line: #efd9a8;
-  --error-bg: #fff0f0;
-  --error-ink: #a12e32;
-  --error-line: #efc3c3;
-  --info-bg: var(--control);
-  --info-ink: var(--ink);
-
-  /* Shape */
-  --radius-xs: 8px;
-  --radius-sm: 12px;
-  --radius-md: 16px;
+  --success: #e7eee3;
+  --warning: #fff7e8;
+  --error: #fff0f0;
+  --radius-sm: 16px;
+  --radius-md: 20px;
   --radius-lg: 24px;
   --radius-xl: 28px;
-  --radius-pill: 999px;
-
-  /* Spacing */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
-  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
   --space-12: 48px;
-  --space-16: 64px;
-
-  /* Elevation */
-  --shadow: 0 8px 24px rgb(34 34 34 / 0.12);
-  --shadow-card: 0 12px 36px rgb(34 34 34 / 0.06);
-  --shadow-pop: 0 24px 80px rgb(34 34 34 / 0.15);
-  --focus-ring: 0 0 0 3px rgb(255 94 98 / 0.35);
-
-  /* Layout */
-  --page-width: 1224px;
-  --form-width: 880px;
-  --auth-width: 480px;
-  --gutter: 40px;
-  --header-height: 96px;
-
-  /* Typography (families are the homepage's) */
-  --font-body: "Be Vietnam Pro", "DM Sans", sans-serif;
+  --shadow: 4px 5px 0 rgb(34 34 34 / 0.1);
+  --shadow-card: 5px 6px 0 rgb(34 34 34 / 0.12);
+  --content-width: 1280px;
+  --font-body: "DM Sans", sans-serif;
   --font-heading: "Fraunces", serif;
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-base: 15px;
-  --text-lg: 18px;
-  --leading-body: 1.6;
-  --tracking-heading: -0.025em;
-
-  /* Motion */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 160ms;
-  --duration: 240ms;
-  --duration-slow: 480ms;
-}
-@media (max-width: 1100px) {
-  :root {
-    --gutter: 24px;
-  }
-}
-@media (max-width: 700px) {
-  :root {
-    --gutter: 20px;
-    --header-height: 72px;
-  }
-}
-@media (max-width: 360px) {
-  :root {
-    --gutter: 16px;
-  }
 }

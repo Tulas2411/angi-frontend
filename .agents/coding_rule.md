@@ -6,19 +6,19 @@ Rules for changes to `angi-frontend`. Read [project_architecture.md](project_arc
 
 - Use the existing `src/features` folders. Add page behavior in the owning feature, reusable controls in the UI kit and API mapping at the service boundary.
 - Keep `src/app` focused on routing, metadata, server guards, layouts and page composition. Do not duplicate a whole feature inside a route file.
-- Ship only what is integrated with the real backend: no demo mode, mock service, fixture fallback, placeholder business screen or dev/gallery route in product code. Test fixtures live under `tests/` and are never imported by `src`. Extract pure calculations and presentation rules into `*-rules.ts` files so they can be tested independently.
+- Place shared view models and provider behavior in `features/platform`; keep scenario fixtures in `src/mocks`. Extract pure calculations and presentation rules when they need reuse or independent tests.
 - Scope changes to the assigned FE feature. Add dependencies, roles or API contracts only when the task and verified sources require them.
 
 ## 2. Dependency direction
 
-| Area                        | May depend on                                           | Must not depend on                                           |
-| --------------------------- | ------------------------------------------------------- | ------------------------------------------------------------ |
-| Base/composed UI primitives | React, shared UI/types and visual tokens                | Feature pages, business providers, auth server helpers       |
-| Domain components           | UI primitives and domain/view types                     | Route files or unrelated page implementations                |
-| Feature pages               | Domain components, UI, typed service interfaces         | Arbitrary backend URLs or database clients                   |
-| Business adapters           | Verified wire DTOs, explicit mappers and API boundary   | JSX or page state                                            |
-| Client modules              | Browser-safe helpers and serializable data              | `server-only` modules, Node APIs, credentials or token pairs |
-| Server Route Handlers       | Auth server helpers, HTTP helpers and verified services | Browser-only APIs                                            |
+| Area                        | May depend on                                            | Must not depend on                                           |
+| --------------------------- | -------------------------------------------------------- | ------------------------------------------------------------ |
+| Base/composed UI primitives | React, shared UI/types and visual tokens                 | Feature pages, business providers, auth server helpers       |
+| Domain components           | UI primitives and domain/view types                      | Route files or unrelated page implementations                |
+| Feature pages               | Domain components, UI, typed provider/service interfaces | Arbitrary backend URLs or database clients                   |
+| Business adapters           | Verified wire DTOs, explicit mappers and API boundary    | JSX or page state                                            |
+| Client modules              | Browser-safe helpers and serializable data               | `server-only` modules, Node APIs, credentials or token pairs |
+| Server Route Handlers       | Auth server helpers, HTTP helpers and verified services  | Browser-only APIs or demo state as a real identity           |
 
 Use `@/` imports for code under `src`. Keep imports inside a small feature relative when that improves clarity. Do not create circular dependencies or import from `src/app` into shared code.
 
@@ -27,15 +27,15 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 | Element                          | Convention                            | Example                                        |
 | -------------------------------- | ------------------------------------- | ---------------------------------------------- |
 | Components/types/interfaces      | PascalCase                            | `RestaurantDetail`, `AuthUserDto`              |
-| Functions, hooks and variables   | camelCase; hooks begin with `use`     | `readApiResponse`, `useRestaurant`             |
+| Functions, hooks and variables   | camelCase; hooks begin with `use`     | `readApiResponse`, `usePlatform`               |
 | Source files and feature folders | kebab-case, following existing layout | `login-form.tsx`, `data-service.ts`            |
 | Next.js special files            | Framework names                       | `page.tsx`, `layout.tsx`, `route.ts`           |
 | Roles on the wire                | Exact backend constants               | `TRAVELER`, `RESTAURANT_OWNER`, `MOD`, `ADMIN` |
 | Other API enums/fields           | Exact documented values               | `pending_verification`, `avatarUrl`            |
 
 - Keep strict TypeScript. Prefer `unknown` plus narrowing for external data; do not bypass validation with `any`, unexplained non-null assertions or casts that invent a contract.
-- Use typed props and named domain types. Wire DTOs live beside the owning feature (`*-types.ts`); preserve backend nullability and ID types there and map to view shapes explicitly.
-- Reuse `ApiResponse`, `AuthUserDto` and `RoleCode`. Use type-only imports where applicable.
+- Use typed props and named domain types. `features/platform/contracts.ts` contains FE view models; preserve backend nullability and ID types only in verified wire DTOs. Demo string IDs do not define server IDs.
+- Reuse `ApiResponse`, `AuthUserDto`, `RoleCode` and the existing view contracts. Use type-only imports where applicable.
 - Documentation and code identifiers are English. User-facing messages, field labels and accessible names remain Vietnamese.
 
 ## 4. Server and client boundaries
@@ -53,8 +53,8 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 - Protect root and nested role routes. A protected layout authenticates the user; it does not replace each role-specific guard.
 - ADMIN can access moderation under the existing policy. Do not treat ADMIN as implicitly allowed in every other role workspace.
 - UI permissions control presentation, not real authorization. BE verifies access, ownership and moderation state for every operation.
-- A query parameter or client state must never override the real session.
-- Keep navigation consistent with `AppShell`, `SiteNav` and `ownerRoutes`; add a route to navigation only when its backend adapter exists. Unknown or removed routes answer 404.
+- Demo role selection must never create an auth cookie, authorize a live request or allow a query parameter to override the real session.
+- Keep navigation bases and links consistent with `WorkspaceShell`/`WorkspaceScope`; demo links stay in their demo workspace.
 - Tests for denied navigation must accept Next.js streamed redirects and verify that protected content is not rendered, rather than relying only on one HTTP status.
 
 ## 6. API client and error handling
@@ -71,11 +71,11 @@ Use `@/` imports for code under `src`. Keep imports inside a small feature relat
 ## 7. Adding a live endpoint
 
 1. Find the latest backend API contract and confirm the operation exists in the backend implementation. If those sources are unavailable, leave the integration pending rather than deriving a DTO from a Figma screen or fixture.
-2. Add typed wire request/response models in the owning feature, separate from view shapes. Map between them explicitly.
+2. Add typed wire request/response models in the owning feature, separate from `features/platform/contracts.ts` view models. Map between them explicitly.
 3. Add the exact method/path to the Next.js proxy allowlist and export the corresponding Route Handler method. Never accept a caller-controlled upstream host.
 4. Keep the browser on the same-origin API client. Preserve Origin checks for mutations and `withAuth` for protected calls; use public calls only where the contract says they are public.
 5. Preserve designed status, pagination, query behavior, units, nulls and structured errors. Pass the designed success status to `ok(data, status)`; its default is 200.
-6. Add a typed service/adapter and render its loading, empty, error and success states. A failed live call shows retry feedback; it never falls back to sample data.
+6. Add a typed service/adapter and render its loading, empty, error and success states. Keep demo fixtures isolated from live failures.
 7. Test response/error handling and relevant role/data behavior. Update the documented integration status.
 8. Complete the final API Design reconciliation required by [Checks and evidence](#13-checks-and-evidence).
 
@@ -94,11 +94,11 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 ## 9. State, effects and mutations
 
 - Use local state for transient controls, workspace context for shared state, and URL state for navigation/filter state that should be shareable. Avoid competing sources of truth.
-- Clone data before updates; do not mutate context state or props.
-- Serialize saves (a submitting ref plus a busy flag) so overlapping updates do not overwrite each other. Publish saved state and success feedback only after the operation succeeds.
+- Use `PlatformProvider` readiness and mutation APIs. Clone data before updates; do not directly mutate fixtures, context state or props.
+- Preserve serialized saves so overlapping updates do not overwrite each other. Publish saved state and success feedback only after the operation succeeds.
 - Keep pending/busy feedback visible and disable duplicate submissions. Preserve unsaved form input on errors and support cancellation before destructive actions.
 - Effects must clean up listeners, timers and stale async updates. Do not use effects to mirror values that can be derived during render.
-- Never imply an action succeeded before the backend confirmed it. Illustrative homepage examples must say they are not saved.
+- Current demo changes are temporary. Never imply a demo action sent an email, uploaded to a cloud service or persisted in BE.
 
 ## 10. Forms, dates and presentation
 
@@ -106,28 +106,30 @@ An allowlisted path is not an implemented endpoint. The generic `api.post` helpe
 - Every action requiring user confirmation must use an in-app popup modal built from the shared `Dialog` or `ConfirmDialog`. Never use browser `alert`, `confirm` or `prompt` for these decisions. Inline alerts/toasts may provide feedback that does not require a user decision.
 - Every control needs an accessible label. Connect helper/errors through `aria-describedby` and invalid state through `aria-invalid`.
 - Validate for useful UX, then keep BE authoritative. Do not silently change its limits or enum values to match a fixture.
-- Use the current route and role policy when showing auth and staff controls. Public registration offers Traveler/Owner.
-- Keep the restaurant's verification, operating and moderation statuses, and pending menu edits, as distinct states in the UI.
+- Use the current route and role policy when showing auth and staff controls. Public registration UI offers Traveler/Owner; Admin invitation UI is a separate preview flow.
+- Preserve distinct FE view-model states where the screens distinguish them: restaurant verification, operating and moderation; pending menu edits; published trip snapshots; permission overrides; and audit views. Do not present demo transitions as confirmed backend behavior.
+- A demo sync retry changes the event to pending. Its UI must not claim processing completed.
 - Keep monetary values numeric and format VND for display. Preserve UTC API timestamps and distinguish date-only values from instants when formatting.
 
 ## 11. UI kit, assets and responsive behavior
 
 - Reuse existing components and variants before adding a new abstraction. Shared UI receives typed props; it must not know backend URLs or role-specific page logic.
-- Use theme tokens (`src/styles/theme/tokens.css`) and shared CSS for color, spacing, type, radii, elevation, page width and gutter. The palette and the homepage fonts (Fraunces 900 headings, Be Vietnam Pro body) are fixed; avoid copied magic values where a token fits.
+- Use theme tokens and shared CSS for color, spacing, type, radii and elevation. Avoid copied magic values where an existing token fits.
 - Add visual variants centrally; do not copy a whole button/dialog/table into a feature to change styling.
 - Keep local design asset provenance and font licenses. Do not use screenshots as page content or invent remote asset paths.
 - Preserve aspect ratios and image fallbacks. Decorative images use empty alt text; meaningful images describe their content.
 - Keep forms, tables, dialogs and navigation usable at desktop and mobile widths. Contain intentional table overflow without hiding page content or creating page-wide horizontal scrolling.
 - Keyboard operation, visible focus, modal focus/return behavior, Escape, textual statuses and reduced motion are part of the component contract.
-- Represent loading, empty, unavailable, denied, error and success states. A failed live adapter must never show sample data in its place.
+- Represent loading, empty, unavailable, denied, error and success states. A failed live adapter must not silently show demo fixtures as live data.
 
 ## 12. Configuration and external boundaries
 
 - `.env.example` lists variable names and safe defaults. `.env.local` and real credentials stay local; preserve existing values during setup.
 - `NEXT_PUBLIC_*` values are public/build-time values. Store session secrets and backend-only URLs without that prefix.
 - Keep database and external-service secrets out of browser code and public assets. FE reaches backend operations through verified contracts, not direct database access.
+- Coordinate demo/gallery flags with the intended environment. Production previews require an explicit decision; real protected routes still require auth even in demo data mode.
 - Avoid introducing libraries already covered by native HTML, React or existing helpers. When a dependency is justified, review its footprint and update the npm lockfile with npm rather than editing it manually.
-- Mapbox usage policy from the owner (2026-10-16): do not probe tokens, open live maps or run provider/browser tests that consume Mapbox usage without an explicit request. Automated suites must intercept every Mapbox request (`tests/browser/mapbox-fixture.ts`) and use a placeholder token. Documentation reads and offline API-contract reconciliation do not authorize provider calls.
+- Mapbox usage policy from the owner (2026-10-16): do not probe tokens, open live maps or run provider/browser tests that consume Mapbox usage without an explicit request. For the current Mapbox delivery the owner requested code only and will perform all testing; leave tests/build/lint/typecheck unrun and report that fact. Documentation reads and offline API-contract reconciliation do not authorize provider calls.
 
 ## 13. Checks and evidence
 

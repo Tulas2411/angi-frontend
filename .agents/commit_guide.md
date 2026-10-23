@@ -75,7 +75,7 @@ Optional. A change that belongs to one feature uses the module, even across laye
 
 | Repo          | Module scopes                                                                                   | Layer / area scopes                                                |
 | ------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| angi-frontend | `auth`, `account`, `discovery`, `owner` | `ui`, `api`, `layout`, `styles`, `test`, `deps`, `.agents`, `docs` |
+| angi-frontend | `auth`, `platform`, `discovery`, `blogs`, `roadmaps`, `profile`, `owner`, `moderation`, `admin` | `ui`, `api`, `layout`, `styles`, `test`, `deps`, `.agents`, `docs` |
 
 Use the existing frontend feature names; do not rename them to backend modules just to match a scope.
 

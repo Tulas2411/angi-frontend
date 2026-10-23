@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -13,13 +13,13 @@ import {
 import { ProvinceField } from "@/components/domain/province-field";
 import { WardField } from "@/components/domain/ward-field";
 import { provinceNameKey } from "@/shared/locations/provinces";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageHeading, useWorkspace } from "@/components/layout/workspace";
+import { usePlatform } from "@/features/platform/provider";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { ownerProfileHref, ownerRoutes, ownerVerificationHref } from "./routes";
+import { createMockRestaurantRegistrationService } from "@/mocks/restaurant-registration";
 import {
   buildRestaurantRequest,
   emptyRestaurantForm,
-  hiddenFieldMessages,
   restaurantFieldErrors,
   validateRestaurantForm,
 } from "./registration-rules";
@@ -36,7 +36,14 @@ import type {
 
 export function RestaurantRegistrationPage() {
   const router = useRouter();
-  const service = restaurantService;
+  const { base } = useWorkspace();
+  const { data, mode, mutate } = usePlatform();
+  const demo = mode === "demo";
+  const mockService = useMemo(
+    () => createMockRestaurantRegistrationService(),
+    [],
+  );
+  const service = demo ? mockService : restaurantService;
   const [values, setValues] = useState<RestaurantFormValues>({
     ...emptyRestaurantForm,
   });
@@ -53,7 +60,7 @@ export function RestaurantRegistrationPage() {
   const [existing, setExisting] = useState<OwnerRestaurantDto | null>(null);
   const [created, setCreated] = useState<OwnerRestaurantDto | null>(null);
   const [conflict, setConflict] = useState(false);
-  const [loadStatus, setLoadStatus] = useState("loading");
+  const [loadStatus, setLoadStatus] = useState(demo ? "ready" : "loading");
   const [attempt, setAttempt] = useState(0);
   const formRef = useRef<HTMLFormElement>(null);
   const submitting = useRef(false);
@@ -65,6 +72,7 @@ export function RestaurantRegistrationPage() {
     };
   }, []);
   useEffect(() => {
+    if (demo) return;
     let ignore = false;
     restaurantService
       .getOwnerRestaurant()
@@ -89,7 +97,10 @@ export function RestaurantRegistrationPage() {
     return () => {
       ignore = true;
     };
-  }, [attempt]);
+  }, [demo, attempt]);
+  const demoExisting = demo
+    ? data.restaurants.find((item) => item.id === data.ownerRestaurantId)
+    : undefined;
   const blocked = busy || coverPending || galleryPending;
   function update(field: keyof RestaurantFormValues, value: string) {
     setValues((previous) => ({
@@ -116,7 +127,7 @@ export function RestaurantRegistrationPage() {
     setGallery([]);
     setErrors({});
     setError("");
-    router.push(ownerRoutes.overview);
+    router.back();
   }
   function requestCancel() {
     if (blocked) return;
@@ -158,7 +169,37 @@ export function RestaurantRegistrationPage() {
         ),
       );
       if (!active.current) return;
-      setCreated(restaurant);
+      if (demo)
+        await mutate((next) => {
+          const id = `owner-restaurant-${restaurant.id}`;
+          next.restaurants.push({
+            id,
+            name: restaurant.name,
+            address: restaurant.addressLine,
+            province: restaurant.provinceName ?? "",
+            district: restaurant.district ?? "",
+            ward: restaurant.ward ?? "",
+            priceLevel: restaurant.priceLevel,
+            phone: restaurant.phone ?? "",
+            email: restaurant.email ?? "",
+            website: restaurant.website ?? "",
+            description: restaurant.description ?? "",
+            image: restaurant.coverUrl ?? "",
+            photos: restaurant.images,
+            businessHours: restaurant.businessHours.map((hour) => ({
+              ...hour,
+            })),
+            latitude: restaurant.latitude ?? location.latitude,
+            longitude: restaurant.longitude ?? location.longitude,
+            verification: restaurant.verificationStatus,
+            moderation: restaurant.moderationStatus,
+            operating: restaurant.operatingStatus,
+            rating: restaurant.ratingAvg,
+          });
+          next.ownerRestaurantId = id;
+          next.hours = [];
+        }, "Đã tạo hồ sơ nhà hàng trong bản minh họa.");
+      if (active.current) setCreated(restaurant);
     } catch (caught) {
       if (!active.current) return;
       if (
@@ -172,11 +213,7 @@ export function RestaurantRegistrationPage() {
             ? restaurantFieldErrors(caught.errors)
             : {};
         setErrors(fields);
-        setError(
-          [getErrorMessage(caught), hiddenFieldMessages(fields)]
-            .filter(Boolean)
-            .join(" "),
-        );
+        setError(getErrorMessage(caught));
         focusError(fields);
       }
     } finally {
@@ -200,23 +237,29 @@ export function RestaurantRegistrationPage() {
         </Button>
       </Card>
     );
-  if (created || existing || conflict) {
-    const restaurant = created ?? existing;
+  if (created || existing || demoExisting || conflict) {
+    const restaurant = created ?? existing ?? demoExisting;
     return (
-      <div className="stack form-page">
+      <div className="stack registration-page">
         <PageHeading
           title={created ? "Đăng ký nhà hàng thành công" : "Bạn đã có nhà hàng"}
         />
-        <Card className="stack">
+        <Card className="stack elevated">
           <Alert tone={created ? "success" : "info"}>
             {created
-              ? "Hồ sơ nhà hàng đã được tạo thành công."
+              ? demo
+                ? "Hồ sơ đã được tạo trong bản minh họa."
+                : "Hồ sơ nhà hàng đã được tạo thành công."
               : "Mỗi tài khoản chủ nhà hàng chỉ đăng ký được một nhà hàng."}
           </Alert>
           {restaurant && (
             <>
               <h2>{restaurant.name}</h2>
-              <p>{restaurant.addressLine}</p>
+              {"addressLine" in restaurant ? (
+                <p>{restaurant.addressLine}</p>
+              ) : (
+                <p>{restaurant.address}</p>
+              )}
             </>
           )}
           {created && (
@@ -229,13 +272,13 @@ export function RestaurantRegistrationPage() {
             </>
           )}
           <div className="actions">
-            <ActionLink href={ownerVerificationHref()}>
-              Đến hồ sơ xác minh
-            </ActionLink>
-            <ActionLink href={ownerProfileHref()} secondary>
+            <ActionLink href={`${base}/profile`} secondary>
               Quản lý hồ sơ
             </ActionLink>
-            <ActionLink href={ownerRoutes.overview} secondary>
+            <ActionLink href={`${base}/verification`}>
+              Đến hồ sơ xác minh
+            </ActionLink>
+            <ActionLink href={base} secondary>
               Về tổng quan
             </ActionLink>
           </div>
@@ -244,9 +287,8 @@ export function RestaurantRegistrationPage() {
     );
   }
   return (
-    <div className="stack form-page">
+    <div className="stack registration-page">
       <PageHeading
-        eyebrow="Dành cho chủ nhà hàng"
         title="Đăng ký nhà hàng của bạn"
         description="Một tài khoản chủ nhà hàng chỉ đăng ký một nhà hàng. Bạn có thể bổ sung giờ mở cửa sau."
       />
@@ -263,7 +305,7 @@ export function RestaurantRegistrationPage() {
       >
         {error && <Alert>{error}</Alert>}
         <fieldset disabled={blocked} className="registration-fields stack">
-          <Card title="Thông tin nhà hàng">
+          <Card title="Thông tin nhà hàng" className="elevated">
             <p className="helper">Các mục có dấu * là bắt buộc.</p>
             <Field
               label="Tên nhà hàng"
@@ -411,6 +453,11 @@ export function RestaurantRegistrationPage() {
               onPending={setGalleryPending}
               service={service}
             />
+            {demo && (
+              <p className="helper">
+                Ảnh trong bản minh họa chỉ được đọc trên thiết bị của bạn.
+              </p>
+            )}
           </Card>
         </fieldset>
         <div className="actions registration-actions">

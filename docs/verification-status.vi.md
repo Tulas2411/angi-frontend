@@ -1,12 +1,10 @@
 # ANGI-65 — F-48 Xem trạng thái xác minh
 
-> **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
-
-
 ## Cách mở
 
 - Đăng nhập bằng tài khoản Restaurant Owner, vào **Xác minh nhà hàng** → **Trạng thái xác minh**.
 - Mở trực tiếp `/restaurant/verification?tab=status` để chọn thẻ trạng thái ngay khi vào trang.
+- Màn minh họa không cần BE: `/dev/scenarios?state=owner-verification-history`, `owner-verification-approved` hoặc `owner-verification-feedback`.
 
 ## Chức năng
 
@@ -78,7 +76,7 @@ Kiểm tra tự động bằng API stub riêng, không tiêu hao Mapbox hoặc u
 
 ```powershell
 npm test -- tests/verification-status.test.ts
-npx playwright test -c playwright.owner.config.ts
+npx playwright test --config=playwright.verification-status.config.ts
 ```
 
 Browser config build/chạy FE production trong thư mục cache riêng trên cổng 3001, API stub trên 5164. Bộ kiểm tra cũng chạy hồi quy F-47; chạy tuần tự với các bộ Owner khác vì dùng chung cổng.
@@ -91,7 +89,7 @@ BE local phải đang chạy bằng `docker-compose.local.yml`, database `angi_l
 powershell -ExecutionPolicy Bypass -File scripts/prepare-live-tests.ps1
 $env:NODE_OPTIONS = ""
 try {
-  node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts
+  node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.verification-live.config.ts
 } finally {
   powershell -ExecutionPolicy Bypass -File scripts/cleanup-live-tests.ps1
 }

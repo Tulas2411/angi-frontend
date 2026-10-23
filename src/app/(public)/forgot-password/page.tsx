@@ -1,17 +1,17 @@
-﻿import type { Metadata } from "next";
-import { AuthShell } from "@/features/auth/auth-shell";
-import { ForgotPasswordForm } from "@/features/auth/password-recovery";
-
-export const metadata: Metadata = { title: "Quên mật khẩu" };
-
-export default function Page() {
+import Brand from "@/components/brand";
+import { AuthFlowPage } from "@/features/auth/flows";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  const { token } = await searchParams;
   return (
-    <AuthShell
-      eyebrow="Tài khoản"
-      title="Quên mật khẩu"
-      description="Nhập email tài khoản để nhận liên kết đặt lại mật khẩu."
-    >
-      <ForgotPasswordForm />
-    </AuthShell>
+    <main className="auth-page">
+      <div className="container">
+        <Brand />
+      </div>
+      <AuthFlowPage flow="forgot-password" tokenPresent={Boolean(token)} />
+    </main>
   );
 }

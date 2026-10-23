@@ -1,8 +1,5 @@
 # Verification results
 
-> **Tài liệu lịch sử (trước đợt dọn 10/2026).** Các cấu hình Playwright, script seed và màn `/demo` được nhắc dưới đây đã bị gộp hoặc xóa. Nội dung giữ lại làm bằng chứng; cách chạy hiện tại nằm trong [README](../README.md#checks).
-
-
 ## 2026-10-16: Fix CI GeoJSONFeature type errors
 
 CI failed with TS2339 for `properties`/`geometry` in InteractiveLocationMap. Mapbox GL JS 3.33.0 declares `GeoJSONFeature extends GeoJSON.Feature`, but the application did not install the GeoJSON namespace declarations. Added `@types/geojson` ^7946.0.16 as an explicit dev dependency using npm and updated package-lock.json. No casts, type suppression, TypeScript configuration changes or runtime map changes were needed.

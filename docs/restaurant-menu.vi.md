@@ -1,8 +1,5 @@
 # F-50 — Quản lý thực đơn nhà hàng (ANGI-80)
 
-> **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
-
-
 Phần bên dưới ghi phạm vi và kết quả tại mốc F-50. Chức năng gửi duyệt OWN-17 hiện được bổ sung riêng ở [F-51 / ANGI-86](menu-approval.vi.md); các câu mô tả OWN-17 chưa được triển khai ở bản F-50 là thông tin lịch sử của lượt đó.
 
 Nhánh FE: `feat/ANGI-80-manage-restaurant-menu`, tạo từ `origin/dev` tại `80600a5f9cccf19c0bd37874b76e15161f04f45f`. Thay đổi để nguyên chưa stage/commit/push.
@@ -42,6 +39,7 @@ OWN-17 `/menu-submissions/{id}/submit` có trong BE nhưng thuộc **F-51 Submit
 
 Tên được trim và giới hạn 1–200 ký tự; mô tả mới/thay đổi 30–2000 ký tự; giá nguyên VND 0–999.999.999.999; `dishForm=soup|dry|other`; thứ tự nguyên 0–32767; tag ID dương, không trùng. Mô tả cũ null/ngắn được giữ khi không chỉnh trường đó. BE vẫn quyết định validation, trạng thái và quyền sở hữu cuối cùng.
 
+Demo ở `/demo/owner/menu` dùng adapter riêng với shape DTO của workbook, giữ bản nháp trong bộ nhớ workspace và reset khi reload/remount. Còn món/hết món cũng cập nhật món tương ứng trong provider demo. Không có upload Cloudinary hoặc request API thật từ adapter demo.
 
 ## Lệnh kiểm thử
 
@@ -51,7 +49,7 @@ npm test
 npm run build
 npm run typecheck
 $env:PLAYWRIGHT_BROWSERS_PATH = '.cache/browsers'
-npx playwright test -c playwright.owner.config.ts
+npx playwright test --config=playwright.menu.config.ts
 ```
 
 Suite giao diện dùng snapshot production riêng, API stub tại 5164, FE tại 3001, không dùng env ứng dụng. Chạy các suite browser nối tiếp vì dùng chung cổng.
@@ -61,7 +59,7 @@ Kiểm thử BE thật là opt-in và chỉ chạy ở Docker `angi_local`:
 ```powershell
 ./scripts/prepare-live-tests.ps1
 $env:NODE_OPTIONS = ''
-node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts
+node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.menu-live.config.ts
 ```
 
 Lệnh tạo tài khoản mới và thay `.env.integration` (file ignored), không thay `.env` hiện có. Config test ép token Mapbox rỗng; browser chặn request ngoài localhost. Trace/video/screenshot live tắt để bảo vệ mật khẩu/token/URL ảnh. Test đăng ký nhà hàng bằng API thật, kiểm tra 403 khi chưa xác minh, rồi gọi công cụ BE `docker/local/Seed --set-menu-fixture` với GUID của run. Công cụ chỉ đánh dấu nhà hàng test mới có tên chính xác là verified và tạo hai món gốc trong DB local. **Đây là dữ liệu chuẩn bị, không chứng minh luồng Moderator xác minh hoạt động.**

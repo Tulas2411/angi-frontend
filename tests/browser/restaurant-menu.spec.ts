@@ -22,8 +22,6 @@ let failure: {
   data?: unknown;
 } | null;
 let verified: boolean, missing: boolean;
-/** Keeps a failure active across repeated loads (React dev mode runs effects twice). */
-let stickyFailure = false;
 const base = "/api/backend/owner/restaurant/menu-submissions";
 test.beforeAll(async () => {
   server = createServer(async (req, res) => {
@@ -71,7 +69,7 @@ test.beforeAll(async () => {
     }
     if (failure && path.endsWith(failure.match)) {
       const error = failure;
-      if (!stickyFailure) failure = null;
+      failure = null;
       send(error.status, error.data ?? null, error.code, error.errors);
       return;
     }
@@ -242,7 +240,6 @@ test.beforeEach(async ({ page, context }) => {
   nextItem = 340;
   calls = [];
   failure = null;
-  stickyFailure = false;
   verified = true;
   missing = false;
   page.on("dialog", async (dialog) => {
@@ -257,8 +254,8 @@ test.beforeEach(async ({ page, context }) => {
 });
 async function login(page: Page, role = "owner") {
   await page.goto("/login");
-  await page.getByLabel(/^Email/).fill(`${role}@menu.test`);
-  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
+  await page.getByLabel("Email", { exact: true }).fill(`${role}@menu.test`);
+  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).not.toHaveURL(/\/login$/);
   await page.goto("/restaurant/menu");
@@ -513,16 +510,10 @@ test("unverified/missing/transport states never fall back to demo menu", async (
     status: 503,
     code: "SERVICE_UNAVAILABLE",
   };
-  stickyFailure = true;
   await page.reload();
-  const retry = page.getByRole("button", {
-    name: "Thử lại thực đơn",
-    exact: true,
-  });
-  await expect(retry).toBeVisible();
-  stickyFailure = false;
-  failure = null;
-  await retry.click();
+  await page
+    .getByRole("button", { name: "Thử lại thực đơn", exact: true })
+    .click();
   await expect(
     page.getByRole("heading", { name: "Bún bò Huế", exact: true }),
   ).toBeVisible();

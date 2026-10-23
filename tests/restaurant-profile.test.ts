@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   buildProfilePatch,
   profileFormFromRestaurant,
+  profileToDemoView,
   validateProfilePatch,
 } from "@/features/owner/profile-rules";
+import { createMockRestaurantProfileService } from "@/mocks/restaurant-profile";
+import { initialData } from "@/mocks/fixtures";
 import { ownerRestaurantSample as original } from "./fixtures/owner-restaurant";
 
 const values = profileFormFromRestaurant(original);
@@ -119,5 +122,67 @@ describe("OWN-03 partial updates", () => {
     expect(
       validateProfilePatch({ imageMediaIds: [], coverMediaId: null }),
     ).toEqual({});
+  });
+  it("keeps fixture IDs, statuses and related entities when publishing a saved profile", () => {
+    const current = initialData.restaurants[0];
+    const saved = profileToDemoView(current, {
+      ...original,
+      name: "Đã cập nhật",
+      ward: "Phường mới",
+    });
+    expect(saved).toMatchObject({
+      id: current.id,
+      name: "Đã cập nhật",
+      ward: "Phường mới",
+      verification: current.verification,
+      operating: current.operating,
+      moderation: current.moderation,
+    });
+    expect(current.name).not.toBe("Đã cập nhật");
+  });
+  it("returns the saved wire state without losing read-only fields or exposing request-only keys", async () => {
+    const service = createMockRestaurantProfileService(original);
+    const result = await service.updateProfile({
+      name: "  Quán mới  ",
+      email: null,
+      imageMediaIds: [],
+    });
+    expect(result).toMatchObject({
+      name: "Quán mới",
+      email: null,
+      images: [],
+      businessHours: original.businessHours,
+      openMenuSubmission: original.openMenuSubmission,
+      verificationStatus: "verified",
+      operatingStatus: "open",
+      moderationStatus: "visible",
+    });
+    expect(result).not.toHaveProperty("imageMediaIds");
+    expect((await service.getOwnerRestaurant()).name).toBe("Quán mới");
+    result.images.push("outside mutation");
+    expect((await service.getOwnerRestaurant()).images).toEqual([]);
+  });
+  it("does not mutate the restaurant when validation or media ownership fails", async () => {
+    const service = createMockRestaurantProfileService(original);
+    await expect(service.updateProfile({ name: "" })).rejects.toMatchObject({
+      errorCode: "VALIDATION_FAILED",
+    });
+    await expect(
+      service.updateProfile({ name: "Quán mới", coverMediaId: 999 }),
+    ).rejects.toMatchObject({
+      errorCode: "VALIDATION_FAILED",
+      errors: { coverMediaId: expect.any(Array) },
+    });
+    expect((await service.getOwnerRestaurant()).name).toBe(original.name);
+  });
+  it("reports missing owner data instead of substituting another fixture", async () => {
+    const service = createMockRestaurantProfileService(null);
+    await expect(service.getOwnerRestaurant()).rejects.toMatchObject({
+      status: 404,
+      errorCode: "RESTAURANT_NOT_FOUND",
+    });
+    await expect(
+      service.updateProfile({ name: "Quán mới" }),
+    ).rejects.toMatchObject({ errorCode: "RESTAURANT_NOT_FOUND" });
   });
 });

@@ -8,9 +8,9 @@ import {
   EmptyState,
   Skeleton,
 } from "@/components/ui/primitives";
+import { useWorkspace } from "@/components/layout/workspace";
+import { verificationLabels } from "@/components/domain/cards";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { ownerRoutes } from "./routes";
-import { verificationLabels } from "./status-labels";
 import {
   VerificationDetails,
   verificationDateLabel,
@@ -42,6 +42,7 @@ export function VerificationHistory({
   onPrepare: () => void;
   onResubmit: (previous: VerificationDto) => void;
 }) {
+  const { base } = useWorkspace();
   const [state, setState] = useState<HistoryState>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -80,7 +81,7 @@ export function VerificationHistory({
       <EmptyState
         title="Bạn chưa đăng ký nhà hàng"
         action={
-          <ActionLink href={ownerRoutes.register}>Đăng ký nhà hàng</ActionLink>
+          <ActionLink href={`${base}/register`}>Đăng ký nhà hàng</ActionLink>
         }
       >
         Đăng ký nhà hàng trước khi xem hồ sơ xác minh.

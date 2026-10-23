@@ -1,8 +1,5 @@
 # ANGI-61 / F-47 verification submission evidence
 
-> **Tài liệu lịch sử (trước đợt dọn 10/2026).** Các cấu hình Playwright, script seed và màn `/demo` được nhắc dưới đây đã bị gộp hoặc xóa. Nội dung giữ lại làm bằng chứng; cách chạy hiện tại nằm trong [README](../README.md#checks).
-
-
 Implementation date: 2026-10-16. User instructions retain shared confirmation modals, final API Design reconciliation and no Mapbox usage. Changes remain unstaged and uncommitted under `AGENTS.md` / `.agents/commit_guide.md`.
 
 ## Delivered behavior

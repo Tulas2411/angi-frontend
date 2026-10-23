@@ -1,13 +1,10 @@
 # ANGI-48 — Giờ mở cửa
 
-> **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
-
-
 Màn hình F-45 được sửa theo ảnh do chủ dự án cung cấp ngày 17/10/2026. Nhánh riêng: `fix/ANGI-48-redesign-business-hours`, tạo từ `origin/dev`, không đặt upstream là `dev`/`main`. Thay đổi để chủ dự án tự review, commit và publish.
 
 ## Cách sử dụng
 
-Đăng nhập tài khoản Restaurant Owner đã có nhà hàng, mở `/restaurant/profile?tab=hours` (thường là <http://localhost:3000/restaurant/profile?tab=hours>). Không còn bản minh họa; màn này chỉ chạy với backend thật.
+Đăng nhập tài khoản Restaurant Owner đã có nhà hàng, mở `/restaurant/profile?tab=hours` (thường là <http://localhost:3000/restaurant/profile?tab=hours>). Bản minh họa nằm tại `/demo/owner/profile?tab=hours`.
 
 - Bảng **Lịch phục vụ trong tuần** hiển thị thứ hai đến chủ nhật, nhiều khoảng cách nhau bằng dấu `·`.
 - **Chỉnh giờ** mở modal chỉnh/xóa các khoảng của một ngày. **Thêm khoảng** mở modal có thêm một cặp giờ trống. Có thể thêm tiếp trong modal.
@@ -48,12 +45,12 @@ Workbook mô tả lỗi chồng nhau “trong cùng ngày”; implementation BE 
 
 ## Kiểm thử
 
-Unit: `npm test`. Browser: `npx playwright test -c playwright.owner.config.ts`. Config browser build source hiện tại trong snapshot riêng, dùng API stub local, token Mapbox rỗng; test chặn request ngoài localhost. Có kiểm tra desktop, mobile 390/320 px, bàn phím, modal/focus, validation và xử lý lỗi BE.
+Unit: `npm test`. Browser: `npx playwright test --config=playwright.hours.config.ts`. Config browser build source hiện tại trong snapshot riêng, dùng API stub local, token Mapbox rỗng; test chặn request ngoài localhost. Có kiểm tra desktop, mobile 390/320 px, bàn phím, modal/focus, validation và xử lý lỗi BE.
 
 BE thật: dùng stack Docker local và seed một lượt mới theo [hướng dẫn chạy dự án](local-run-and-test-guide.vi.md). Nạp env kiểm thử chứa `ANGI_LOCAL_TEST_RUN`, tài khoản `hours-<run>@angi.local`, Owner/Empty Owner cùng lượt và mật khẩu local rồi chạy:
 
 ```powershell
-node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts
+node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.hours-live.config.ts
 ```
 
 Config live chỉ cho host local và tài khoản theo lượt; hai case ANGI-48 dùng nhà hàng seed riêng. Không upload ảnh, gọi Mapbox hoặc ghi dữ liệu vào hệ thống dùng chung. Không ghi trace/video có thông tin đăng nhập.
