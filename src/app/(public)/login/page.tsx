@@ -1,49 +1,62 @@
-import { redirect } from "next/navigation";
-import Brand from "@/components/brand";
-import LoginForm from "@/features/auth/login-form";
-import { getSession, readAuth } from "@/features/auth/server";
-import { Alert, Card } from "@/shared/ui";
+﻿import type { Metadata } from "next";
+import Link from "next/link";
+import { Alert } from "@/shared/ui";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
+import { AuthShell } from "@/features/auth/auth-shell";
+import LoginForm from "@/features/auth/login-form";
+import { HOME_BY_ROLE, LABEL_BY_ROLE } from "@/features/auth/roles";
+import { getSession, readAuth } from "@/features/auth/server";
+
+export const metadata: Metadata = { title: "Đăng nhập" };
+
+const sessionReasons = [
+  "UNAUTHORIZED",
+  "REFRESH_TOKEN_INVALID",
+  "ACCOUNT_BANNED",
+  "ACCOUNT_SUSPENDED",
+  "ACCOUNT_DEACTIVATED",
+];
+
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string; next?: string }>;
+  searchParams: Promise<{ reason?: string }>;
 }) {
-  // Cho phép mở /login bất kể đã đăng nhập hay chưa (hỗ trợ test UI form).
-  // Chỉ tự chuyển sang homepage khi user gõ /login mà có query ?reason=UNAUTHORIZED.
-  const { reason, next } = await searchParams;
+  const { reason } = await searchParams;
+  // /login stays reachable with a session so a user can switch accounts.
   const auth = readAuth(await getSession());
-  if (auth && reason === "UNAUTHORIZED" && !next) {
-    redirect("/demo/traveler");
-  }
-  const known = [
-    "UNAUTHORIZED",
-    "REFRESH_TOKEN_INVALID",
-    "ACCOUNT_BANNED",
-    "ACCOUNT_SUSPENDED",
-    "ACCOUNT_DEACTIVATED",
-  ];
   return (
-    <main className="container auth-page">
-      <Brand />
-      <div className="auth-card stack">
-        <Card className="login-card">
-          {reason && known.includes(reason) && (
-            <Alert>
-              {getErrorMessage(
-                new ApiError(401, reason, "Vui lòng đăng nhập lại."),
-              )}
-            </Alert>
+    <AuthShell
+      eyebrow="Chào mừng trở lại"
+      title="Đăng nhập vào ANGI"
+      description="Tiếp tục hành trình ăn ngon của bạn."
+      footer={
+        <>
+          Bạn chưa có tài khoản?{" "}
+          <Link href="/register" prefetch={false} className="text-link">
+            Đăng ký ngay
+          </Link>
+        </>
+      }
+    >
+      {reason && sessionReasons.includes(reason) && (
+        <Alert>
+          {getErrorMessage(
+            new ApiError(401, reason, "Vui lòng đăng nhập lại."),
           )}
-          {auth && (
-            <Alert>
-              Bạn đang đăng nhập với tài khoản <b>{auth.user.email}</b> (
-              {auth.user.role}). Bạn có thể đăng nhập lại để chuyển tài khoản.
-            </Alert>
-          )}
-          <LoginForm />
-        </Card>
-      </div>
-    </main>
+        </Alert>
+      )}
+      {auth && (
+        <Alert tone="info">
+          Bạn đang đăng nhập với <b>{auth.user.email}</b> (
+          {LABEL_BY_ROLE[auth.user.role]}).{" "}
+          <Link href={HOME_BY_ROLE[auth.user.role]} className="text-link">
+            Tiếp tục với tài khoản này
+          </Link>{" "}
+          hoặc đăng nhập lại để chuyển tài khoản.
+        </Alert>
+      )}
+      <LoginForm />
+    </AuthShell>
   );
 }

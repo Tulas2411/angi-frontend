@@ -3,11 +3,6 @@ import { loadProvinceCatalog } from "@/shared/locations/province-service";
 import { loadWardCatalog } from "@/shared/locations/ward-service";
 import { matchMapProvince, matchMapWard } from "./restaurant-address-rules";
 
-export {
-  locationFromMapPoint,
-  searchMapLocations as searchRestaurantLocations,
-} from "@/shared/maps/mapbox";
-
 /** At most one reverse lookup per explicit save; a previously resolved pin is reused. */
 export async function resolveRestaurantAddress(
   point: MapLocation,

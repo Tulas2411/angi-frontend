@@ -120,13 +120,11 @@ const save = saveWeek;
 async function login(page: Page, traveler = false) {
   await page.goto("/login");
   await page
-    .getByLabel("Email", { exact: true })
+    .getByLabel(/^Email/)
     .fill(traveler ? "traveler@hours.test" : "owner@hours.test");
-  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
+  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await expect(page).toHaveURL(
-    traveler ? /\/demo\/traveler$/ : /\/restaurant$/,
-  );
+  await expect(page).toHaveURL(traveler ? /\/$/ : /\/restaurant$/);
 }
 async function openHours(page: Page) {
   await login(page);
@@ -147,6 +145,8 @@ test.beforeEach(async ({ page, context }) => {
     throw new Error(`Unexpected native ${dialog.type()}`);
   });
   page.on("pageerror", (error) => {
+    // React dev-only server-component profiling can fail after a redirect; production never runs it.
+    if (/cannot have a negative time stamp/.test(error.message)) return;
     throw error;
   });
 });
@@ -448,7 +448,7 @@ test("role, origin and exact method restrictions protect OWN-04", async ({
 }) => {
   await login(page, true);
   await page.goto("/restaurant/profile?tab=hours");
-  await expect(page).toHaveURL(/\/demo\/traveler$/);
+  await expect(page).toHaveURL(/\/$/);
   for (const origin of ["http://localhost:3001", "https://foreign.example"])
     expect(
       (
@@ -551,23 +551,4 @@ test("reference layout and day dialogs fit desktop/mobile and keyboard Tab stays
     path: "artifacts/owner-hours-mobile.png",
     fullPage: true,
   });
-});
-
-test("demo preserves multiple intervals across profile navigation without a live PUT", async ({
-  page,
-}) => {
-  await page.goto("/demo/owner/profile?tab=hours");
-  await editDay(page);
-  await closing(page).fill("13:30");
-  await applyDay(page);
-  await addSlot(page, "Thứ hai", 2, "17:00", "22:00");
-  await save(page).click();
-  await expect(
-    page.getByText("Đã lưu giờ mở cửa trong bản minh họa.", { exact: true }),
-  ).toBeVisible();
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
-  await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Bếp Nhà");
-  await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await expect(dayRow(page)).toContainText("17:00–22:00");
-  expect(requests).toHaveLength(0);
 });

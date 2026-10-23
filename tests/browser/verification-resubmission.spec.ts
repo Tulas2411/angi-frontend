@@ -1,7 +1,7 @@
 import { createServer, type Server } from "node:http";
 import { expect, test, type Page } from "@playwright/test";
 import { ownerRestaurantSample } from "../fixtures/owner-restaurant";
-import { verificationHistoryFixture } from "../../src/mocks/verification-history";
+import { verificationHistoryFixture } from "../fixtures/verification-history";
 import type {
   GetVerificationStatusResponseDto,
   ResubmitVerificationRequestDto,
@@ -158,8 +158,8 @@ test.beforeEach(async ({ context, page }) => {
 });
 async function login(page: Page, name = "owner") {
   await page.goto("/login");
-  await page.getByLabel("Email", { exact: true }).fill(`${name}@resubmit.test`);
-  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
+  await page.getByLabel(/^Email/).fill(`${name}@resubmit.test`);
+  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   const response = page.waitForResponse((response) =>
     response.url().endsWith("/api/auth/login"),
   );
@@ -452,31 +452,4 @@ test("proxy denies unauthenticated/non-owner requests, bad ids, methods and fore
     ).status(),
   ).toBe(403);
   expect(submissions).toHaveLength(0);
-});
-
-test("demo resubmission keeps history and numeric document IDs in isolated memory", async ({
-  page,
-}) => {
-  await page.goto("/dev/scenarios?state=owner-verification-supplement");
-  await page
-    .getByRole("button", { name: "Gửi lại hồ sơ", exact: true })
-    .click();
-  await confirm(page);
-  await expect(
-    page.getByText("Đã gửi lại hồ sơ minh họa. Trạng thái: Chờ duyệt.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "Xem hồ sơ #24", exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Tải lại lịch sử", exact: true })
-    .click();
-  await expect(
-    page.getByRole("button", { name: "Xem hồ sơ #24", exact: true }),
-  ).toBeVisible();
-  expect(submissions).toHaveLength(0);
-  expect(uploads).toBe(0);
-  expect(external).toEqual([]);
 });

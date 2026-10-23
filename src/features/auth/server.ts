@@ -181,24 +181,3 @@ export async function requireUser(
     redirect(HOME_BY_ROLE[auth.user.role]);
   return auth.user;
 }
-
-/**
- * Đọc phiên cho các trang công khai — KHÔNG chuyển hướng khi chưa đăng nhập.
- *
- * Không gian công khai (`/dishes/*`, `/restaurants/*`, `/guides/*`) chỉ phục vụ
- * vai trò TRAVELER. Nhân viên nội bộ (MOD / ADMIN / RESTAURANT_OWNER) xem các
- * trang này với tư cách khách, để không bị `PageRouter` điều hướng sang layout
- * của nhân viên. Khách chưa đăng nhập cũng xem bình thường, KHÔNG bị đẩy về
- * trang đăng nhập.
- */
-export async function readPublicSession(): Promise<{
-  user: AuthUserDto | null;
-  role: RoleCode | "GUEST";
-}> {
-  const auth = readAuth(await getSession());
-  const traveler = auth?.user.role === "TRAVELER";
-  return {
-    user: traveler ? (auth?.user ?? null) : null,
-    role: traveler ? "TRAVELER" : "GUEST",
-  };
-}

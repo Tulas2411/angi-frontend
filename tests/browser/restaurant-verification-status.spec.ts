@@ -4,7 +4,7 @@ import { ownerRestaurantSample } from "../fixtures/owner-restaurant";
 import {
   verificationHistoryFixture,
   verificationStatusSample,
-} from "../../src/mocks/verification-history";
+} from "../fixtures/verification-history";
 import type { GetVerificationStatusResponseDto } from "../../src/features/owner/verification-types";
 import type { RoleCode } from "../../src/features/auth/types";
 import { HOME_BY_ROLE } from "../../src/features/auth/roles";
@@ -117,8 +117,8 @@ async function login(page: Page, role: RoleCode = "RESTAURANT_OWNER") {
         : role === "ADMIN"
           ? "admin"
           : "owner";
-  await page.getByLabel("Email", { exact: true }).fill(`${name}@history.test`);
-  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
+  await page.getByLabel(/^Email/).fill(`${name}@history.test`);
+  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(HOME_BY_ROLE[role], { timeout: 30000 });
 }
@@ -362,24 +362,4 @@ test("mobile history and modal show long feedback without page overflow or nativ
     .click();
   await expect(dialog(page)).toHaveCount(0);
   expect(native).toEqual([]);
-});
-
-test("demo exposes history, decisions and feedback without calling real backend or providers", async ({
-  page,
-}) => {
-  await page.goto("/dev/scenarios?state=owner-verification-feedback");
-  await expect(
-    page.getByRole("heading", { name: "Lịch sử hồ sơ", exact: true }),
-  ).toBeVisible();
-  await expect(
-    latest(page).getByText("Cần bổ sung giấy chứng nhận an toàn thực phẩm.", {
-      exact: true,
-    }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Tải lại lịch sử", exact: true })
-    .click();
-  await expect(page.locator(".verification-history-list li")).toHaveCount(3);
-  expect(calls).toHaveLength(0);
-  expect(privateRequests).toEqual([]);
 });

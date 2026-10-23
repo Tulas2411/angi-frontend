@@ -32,16 +32,21 @@ const fonts = fs.readdirSync("public/assets/fonts").map((name) => ({
   file: path.posix.join("public/assets/fonts", name),
   bytes: fs.statSync(path.join("public/assets/fonts", name)).size,
 }));
-if (
-  fonts.some((f) => !f.bytes) ||
-  fonts.filter((f) => f.file.endsWith(".ttf")).length !== 5
-)
-  throw new Error("Missing font/license file");
+if (fonts.some((f) => !f.bytes)) throw new Error("Missing font/license file");
+for (const family of source.fonts) {
+  for (const file of [
+    family.license,
+    ...(family.files ?? (family.file ? [family.file] : [])),
+  ]) {
+    if (!fs.existsSync(file) || !fs.statSync(file).size)
+      throw new Error(`Missing font/license file: ${file}`);
+  }
+}
 fs.mkdirSync("artifacts", { recursive: true });
 fs.writeFileSync(
   "artifacts/asset-verification.json",
   JSON.stringify({ results, fonts }, null, 2),
 );
 console.log(
-  `Verified ${results.length} Figma exports, 5 font files and 2 font licenses; geometry recorded in artifacts/asset-verification.json.`,
+  `Verified ${results.length} Figma exports, ${fonts.filter((f) => f.file.endsWith(".ttf")).length} font files and ${source.fonts.length} font licenses; geometry recorded in artifacts/asset-verification.json.`,
 );

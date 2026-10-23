@@ -1,5 +1,8 @@
 # ANGI-61 — F-47 Gửi hồ sơ xác minh nhà hàng
 
+> **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
+
+
 ## Phạm vi đã triển khai
 
 - Mở `/restaurant/verification` sau khi đăng nhập bằng tài khoản Restaurant Owner.
@@ -48,13 +51,12 @@ Các lỗi trạng thái `VERIFICATION_ALREADY_PENDING`, `RESTAURANT_ALREADY_VER
 7. Thử tài khoản chưa có nhà hàng, nhà hàng đã xác minh/đang chờ/bị từ chối; không được tạo hồ sơ lần đầu trái trạng thái.
 8. Thử ngắt BE khi tải/gửi rồi khôi phục: thấy lỗi, dữ liệu đang soạn không mất, thử lại được. Thử trên màn hình điện thoại và điều khiển bằng Tab/Enter/Escape.
 
-Không cần BE để xem form minh họa: mở `/dev/scenarios?state=owner-verification-new`. Mock chỉ lưu metadata trong bộ nhớ; tải lại toàn bộ trang sẽ khôi phục fixture. Owner mặc định ở `/demo/owner/verification` đã xác minh nên không hiện form nộp mới.
 
 Bộ kiểm tra tự động riêng, dùng FE 3001/API stub 5164, chạy lần lượt với các bộ Owner khác:
 
 ```powershell
 npm test -- tests/restaurant-verification.test.ts
-npx playwright test --config=playwright.verification.config.ts
+npx playwright test -c playwright.owner.config.ts
 ```
 
 Config để trống Mapbox token và chặn các request trình duyệt ra ngoài localhost. Không mở bản đồ, không upload thật, không kiểm tra token Mapbox.

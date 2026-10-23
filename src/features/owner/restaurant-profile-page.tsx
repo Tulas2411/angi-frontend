@@ -13,23 +13,21 @@ import {
   Tabs,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading, useWorkspace } from "@/components/layout/workspace";
-import { usePlatform } from "@/features/platform/provider";
+import { PageHeading } from "@/components/layout/page-heading";
 import { ProvinceField } from "@/components/domain/province-field";
 import { WardField } from "@/components/domain/ward-field";
 import { provinceNameKey } from "@/shared/locations/provinces";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import {
-  createMockRestaurantProfileService,
-  ownerProfileFromDemo,
-} from "@/mocks/restaurant-profile";
-import {
   buildProfilePatch,
   profileFormFromRestaurant,
-  profileToDemoView,
   validateProfilePatch,
 } from "./profile-rules";
-import { restaurantFieldErrors } from "./registration-rules";
+import { ownerProfileHref, ownerRoutes, type OwnerProfileTab } from "./routes";
+import {
+  hiddenFieldMessages,
+  restaurantFieldErrors,
+} from "./registration-rules";
 import {
   restaurantProfileService,
   type RestaurantProfileService,
@@ -52,18 +50,7 @@ export function RestaurantProfilePage({
 }: {
   initialTab?: string;
 }) {
-  const { base } = useWorkspace();
-  const { data, mode, mutate } = usePlatform();
-  const [mockService] = useState(() => {
-    const owner = data.restaurants.find(
-      (item) => item.id === data.ownerRestaurantId,
-    );
-    return createMockRestaurantProfileService(
-      owner ? ownerProfileFromDemo(owner, data.hours) : null,
-    );
-  });
-  const demo = mode === "demo";
-  const service = demo ? mockService : restaurantProfileService;
+  const service = restaurantProfileService;
   const [restaurant, setRestaurant] = useState<OwnerRestaurantDto | null>(null);
   const [status, setStatus] = useState<
     "loading" | "ready" | "missing" | "error"
@@ -102,7 +89,7 @@ export function RestaurantProfilePage({
       <EmptyState
         title="Bạn chưa đăng ký nhà hàng"
         action={
-          <ActionLink href={`${base}/register`}>Đăng ký nhà hàng</ActionLink>
+          <ActionLink href={ownerRoutes.register}>Đăng ký nhà hàng</ActionLink>
         }
       >
         Đăng ký nhà hàng trước khi quản lý hồ sơ.
@@ -128,22 +115,8 @@ export function RestaurantProfilePage({
     <RestaurantProfileEditor
       restaurant={restaurant}
       service={service}
-      demo={demo}
       initialTab={initialTab}
-      onSaved={async (saved) => {
-        if (demo)
-          await mutate((next) => {
-            const index = next.restaurants.findIndex(
-              (item) => item.id === next.ownerRestaurantId,
-            );
-            if (index >= 0)
-              next.restaurants[index] = profileToDemoView(
-                next.restaurants[index],
-                saved,
-              );
-          }, ""); // The editor shows success after the operation and fixture save finish.
-        setRestaurant(saved);
-      }}
+      onSaved={setRestaurant}
     />
   );
 }
@@ -158,18 +131,15 @@ type Confirmation = {
 function RestaurantProfileEditor({
   restaurant,
   service,
-  demo,
   initialTab,
   onSaved,
 }: {
   restaurant: OwnerRestaurantDto;
   service: RestaurantProfileService;
-  demo: boolean;
   initialTab: string;
-  onSaved: (restaurant: OwnerRestaurantDto) => Promise<void>;
+  onSaved: (restaurant: OwnerRestaurantDto) => void;
 }) {
   const router = useRouter();
-  const { base } = useWorkspace();
   const tab = ["information", "photos"].includes(initialTab)
     ? initialTab
     : "information";
@@ -234,7 +204,7 @@ function RestaurantProfileEditor({
       ? "photos"
       : "information";
     setFocusRequest({ field, tab: target });
-    if (tab !== target) router.push(`${base}/profile?tab=${target}`);
+    if (tab !== target) router.push(ownerProfileHref(target));
   }
   function change(key: keyof RestaurantFormValues, value: string) {
     setFocusRequest(null);
@@ -263,7 +233,8 @@ function RestaurantProfileEditor({
   }
   function changeTab(next: string) {
     if (blocked || next === tab) return;
-    const navigate = () => router.push(`${base}/profile?tab=${next}`);
+    const navigate = () =>
+      router.push(ownerProfileHref(next as OwnerProfileTab));
     if (dirty && ["hours", "status"].includes(next))
       setConfirmation({
         title: "Bỏ thay đổi chưa lưu?",
@@ -299,7 +270,7 @@ function RestaurantProfileEditor({
     try {
       const saved = await service.updateProfile(patch);
       if (!active.current) return;
-      await onSaved(saved);
+      onSaved(saved);
       if (!active.current) return;
       setValues(profileFormFromRestaurant(saved));
       setLocation(restaurantLocationFromProfile(saved));
@@ -309,15 +280,17 @@ function RestaurantProfileEditor({
       setGalleryMode("unchanged");
       setErrors({});
       setFocusRequest(null);
-      setSuccess(
-        demo ? "Đã lưu hồ sơ trong bản minh họa." : "Đã lưu hồ sơ nhà hàng.",
-      );
+      setSuccess("Đã lưu hồ sơ nhà hàng.");
     } catch (caught) {
       if (!active.current) return;
       const fields =
         caught instanceof ApiError ? restaurantFieldErrors(caught.errors) : {};
       setErrors(fields);
-      setError(getErrorMessage(caught));
+      setError(
+        [getErrorMessage(caught), hiddenFieldMessages(fields)]
+          .filter(Boolean)
+          .join(" "),
+      );
       focusErrors(fields);
     } finally {
       submitting.current = false;
@@ -325,10 +298,11 @@ function RestaurantProfileEditor({
     }
   }
   return (
-    <div className="stack registration-page">
+    <div className="stack form-page">
       <PageHeading
-        title="Nhà hàng của tôi"
-        description={`${restaurant.name} · Chỉ các thông tin bạn thay đổi được lưu.`}
+        eyebrow="Nhà hàng của tôi"
+        title={restaurant.name}
+        description="Chỉ các thông tin bạn thay đổi mới được lưu."
       />
       <Tabs
         value={tab}

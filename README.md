@@ -1,57 +1,54 @@
 # angi-frontend
 
-ANGI (Ăn Gì) is a Vietnamese food discovery and itinerary-planning application. This repository contains the Next.js frontend for guests, travelers, restaurant owners, moderators and administrators, together with a server-side API boundary for the separate [ANGI backend](https://github.com/predtn/angi-backend).
+ANGI (Ăn Gì) is a Vietnamese food discovery and itinerary-planning application. This repository contains the Next.js frontend and its server-side API boundary for the separate [ANGI backend](https://github.com/predtn/angi-backend).
 
 The product UI is Vietnamese. Team documentation and code identifiers are English.
 
+**The frontend contains only features that are integrated with the real backend.** There are no demo workspaces, mock data modes, component galleries or placeholder business screens. Everything else is simply absent (404) until its backend endpoints are available.
+
 ## Start here
 
-- New team member: follow [Local setup](#local-setup), then open `/demo` to explore the screens.
-- Running the full local stack and testing real Owner APIs: follow [the Vietnamese run and test guide](docs/local-run-and-test-guide.vi.md).
+- New team member: follow [Local setup](#local-setup), then sign in with an account from your local backend.
 - Implementing a feature: read [Project architecture](.agents/project_architecture.md) and [Coding rules](.agents/coding_rule.md).
-- Integrating an API: read [API and authentication](#api-and-authentication) and the latest backend API Design before adding a service.
-- Reviewing a change: use [Checks](#checks), [Design coverage](docs/design-coverage.md) and [Human Git workflow](.agents/commit_guide.md).
+- Integrating an API: read [API and authentication](#api-and-authentication) and the latest backend API Design (`angi-backend/.docs/ANGI_API_Design_Ver*.xlsx`).
+- Reviewing a change: use [Checks](#checks) and the [Human Git workflow](.agents/commit_guide.md).
+- What exists and what was removed: see the [screen and endpoint inventory](docs/scope-inventory.md).
 
 ## Current implementation status
 
-| Area                                                                                      | Status                                                                                        |
-| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| Login, token refresh and logout                                                           | Connected to the existing backend through Next.js Route Handlers                              |
-| Encrypted session and role guards                                                         | Implemented; real role workspaces require a backend login                                     |
-| Self-registration (AUTH-01: email, password, displayName, role TRAVELER/RESTAURANT_OWNER) | Connected to `POST /api/v1/auth/register` via `/api/auth/register`                            |
-| Dish/restaurant discovery, guides, itineraries and expenses                               | Interactive frontend screens using isolated demo data                                         |
-| Owner, moderation, administration, permissions, audit and sync screens                    | Interactive frontend screens using isolated demo data                                         |
-| Owner restaurant registration (F-43 / ANGI-36)                                            | Connected to OWN-01/OWN-02 and MEDIA-01; isolated mock registration is available              |
-| Owner restaurant profile (F-44 / ANGI-43)                                                 | Connected to OWN-02/OWN-03; information, location and image changes use verified DTOs         |
-| Owner business hours (F-45 / ANGI-48)                                                     | Connected to OWN-02/OWN-04; complete weekly schedules, multiple intervals and overnight hours |
-| Owner operating status (F-46 / ANGI-55)                                                   | Connected to OWN-02/OWN-05; three states, optional reason and suspension conflict handling    |
-| Owner verification submission (F-47 / ANGI-61)                                            | Connected to OWN-02/OWN-06 and private MEDIA-01 uploads; initial submission and latest result |
-| Owner verification status/history (F-48 / ANGI-65) | Connected to OWN-07; latest request, review feedback, complete history and read-only detail modals |
-| Owner verification resubmission (F-49 / ANGI-68) | Connected to OWN-08; edit/reuse/replace documents, new pending attempt linked to the latest rejected/needs_more_info request |
-| Owner menu management (F-50 / ANGI-80)                                                    | Connected to OWN-09..16/18, CAT-02 and dish MEDIA-01; availability, isolated draft CRUD, paginated history and cancellation  |
-| Owner menu approval submission (F-51 / ANGI-86) | Connected to OWN-17; modal confirmation, optional note, pending state, draft guards and preserved active menu |
-| Other live business data                                                                  | Whole-business adapter pending; pages show unavailable/retry feedback                         |
-| Email verification/recovery, OAuth, invitations, routing and AI                           | UI/scaffold exists where designed; real integrations remain pending                           |
+| Area                                                         | Backend operations            | Status                                                                                                 |
+| ------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Public homepage (`/`)                                        | none                          | Editorial: local dish collection, URL search/filters, dish dialogs, unsaved taste and roadmap examples |
+| Register, verify email, resend, recover password             | AUTH-01, 02, 03, 08, 09       | Connected                                                                                              |
+| Login, Google login (when configured), refresh, logout       | AUTH-04..07                   | Connected; encrypted HttpOnly session                                                                  |
+| Account profile and password (`/account`)                    | ME-01, ME-02, ME-03           | Connected for every role                                                                               |
+| Owner overview                                               | OWN-02                        | Connected                                                                                              |
+| Owner registration, profile, images                          | OWN-01, 02, 03, MEDIA-01      | Connected                                                                                              |
+| Owner business hours and operating status                    | OWN-04, OWN-05                | Connected                                                                                              |
+| Owner verification, history, resubmission                    | OWN-06, 07, 08, MEDIA-01      | Connected                                                                                              |
+| Owner menu, drafts and approval submission                   | OWN-09..18, CAT-02, MEDIA-01  | Connected                                                                                              |
+| Province / ward suggestions                                  | Provinces Open API V2 (proxy) | Connected                                                                                              |
+| Traveler discovery, reviews, roadmaps, guides, notifications | —                             | Not integrated; no route                                                                               |
+| Moderator and Administrator workspaces                       | —                             | Not integrated; these roles land on the homepage and can use `/account`                                |
 
-A successful demo action changes local fixture state. It does not persist business data, send an email or authenticate the selected demo role. Backend API Design describes planned contracts; an entry in that workbook does not prove that an endpoint has been implemented.
+Known partial integrations: the account page does not upload avatars; the Google button appears only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set; the homepage taste/roadmap examples never call the backend and say they are not saved.
 
 ## Technology
 
-| Concern                  | Stack                                                                          |
-| ------------------------ | ------------------------------------------------------------------------------ |
-| Runtime and dependencies | Node.js 24, npm, committed npm lockfile                                        |
-| Application              | Next.js 16.4 App Router, React 19.3, strict TypeScript                         |
-| UI                       | Tailwind CSS 4, CSS tokens, reusable native/React controls, local fonts/assets |
-| Authentication           | `iron-session`, encrypted HttpOnly cookie, rotating backend tokens             |
-| Quality                  | ESLint, Prettier, Vitest and Playwright                                        |
+| Concern                  | Stack                                                              |
+| ------------------------ | ------------------------------------------------------------------ |
+| Runtime and dependencies | Node.js 22+ (24 recommended), npm, committed npm lockfile          |
+| Application              | Next.js 16.4 App Router, React 19.3, strict TypeScript             |
+| UI                       | Shared CSS over design tokens, local fonts and assets              |
+| Authentication           | `iron-session`, encrypted HttpOnly cookie, rotating backend tokens |
+| Maps                     | `mapbox-gl`, owner location picker only                            |
+| Quality                  | ESLint, Prettier, Vitest and Playwright                            |
 
-Use the versions declared in `package.json`/`package-lock.json`. Framework guides matching the installed Next.js version are available in `node_modules/next/dist/docs/` after installation.
+Use the versions declared in `package.json`/`package-lock.json`. Framework guides for the installed Next.js are in `node_modules/next/dist/docs/` after installation.
 
 ## Local setup
 
-### 1. Install the frontend
-
-Install Node.js 24 and npm. Clone the repo if needed, use the team's assigned working branch, and run commands from the `angi-frontend` directory:
+### 1. Install
 
 ```sh
 git clone https://github.com/Tulas2411/angi-frontend.git
@@ -59,243 +56,132 @@ cd angi-frontend
 npm ci
 ```
 
-### 2. Create local configuration
+### 2. Configure
 
-Copy `.env.example` to `.env.local` on first setup. Preserve an existing `.env.local`.
-
-PowerShell:
+Copy `.env.example` to `.env.local` on first setup and keep an existing `.env.local` untouched.
 
 ```powershell
 if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
 ```
 
-On macOS/Linux, use `cp .env.example .env.local` only when the local file does not already exist.
-
-Generate a private session key, then paste the output into `SESSION_PASSWORD` in `.env.local`:
+Generate a private session key and paste it into `SESSION_PASSWORD`:
 
 ```sh
 node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 ```
 
-| Variable                               | Example/default                             | Purpose                                                                          |
-| -------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------- |
-| `API_BASE_URL`                         | `http://127.0.0.1:5154/api/v1`              | Private server-side REST API base URL                                            |
-| `NEXT_PUBLIC_API_BASE_URL`             | `/api`                                      | Same-origin Next.js handlers called by the browser                               |
-| `APP_URL`                              | `http://localhost:3000`                     | Exact browser origin allowed for mutations                                       |
-| `SESSION_PASSWORD`                     | Your own random key, at least 32 characters | Encrypts the frontend session cookie; required for auth                          |
-| `NEXT_PUBLIC_DATA_MODE`                | `live`                                      | Business data mode; `demo` opts workspace shells into fixtures                   |
-| `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN`      | Empty                                       | Optional public `pk.*` token for restaurant map/address search                   |
-| `NEXT_PUBLIC_ENABLE_DEMO`              | `true`                                      | Set `false` to disable the `/demo` route family                                  |
-| `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY` | `false`                                     | Gallery/scenarios are available in development; production needs explicit `true` |
+| Variable                          | Example/default                  | Purpose                                                                            |
+| --------------------------------- | -------------------------------- | ---------------------------------------------------------------------------------- |
+| `API_BASE_URL`                    | `http://127.0.0.1:5154/api/v1`   | Private server-side REST API base URL                                              |
+| `NEXT_PUBLIC_API_BASE_URL`        | `/api`                           | Same-origin Next.js handlers called by the browser                                 |
+| `APP_URL`                         | `http://localhost:3000`          | Exact browser origin allowed for mutations                                         |
+| `SESSION_PASSWORD`                | Your own random key (≥ 32 chars) | Encrypts the session cookie; required                                              |
+| `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | Empty                            | Optional public `pk.*` token for the owner map picker                              |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID`    | Empty                            | Optional; must match `Google:ClientId` in the backend. No value → no Google button |
 
-Keep real values in `.env.local`, which is ignored by Git. Variables prefixed with `NEXT_PUBLIC_` are public and selected at build time. Restart dev or rebuild after changing them. Keep the browser API base `/api`; calling the backend directly would bypass this app's session and proxy flow. Changing the app port or hostname also requires matching `APP_URL`.
+Real values belong in `.env.local` (ignored by Git). `NEXT_PUBLIC_*` values are public and fixed at build time; restart or rebuild after changing them. Use `127.0.0.1` for the local backend URL: the Docker stack binds IPv4 only, while Node.js can resolve `localhost` to IPv6 and return `503 SERVICE_UNAVAILABLE` on login. Manual coordinates and browser geolocation work without a map token. `./scripts/sync-mapbox-env.ps1` copies the backend's public Mapbox token when you want maps locally.
 
-Use `127.0.0.1` for the local Docker backend URL: the local stack binds IPv4 only, while Node.js can resolve `localhost` to IPv6 `::1`. That mismatch causes login to return `503 SERVICE_UNAVAILABLE` even when OpenAPI opens in the browser. The frontend browser origin and `APP_URL` can remain `http://localhost:3000`.
+### 3. Start the backend
 
-### 3. Run a frontend preview
+Real data and login need the backend. Prepare `angi-backend` following its own README (PostgreSQL, secrets, migrations), then run it (default `http://localhost:5154`, Scalar docs at `/scalar`). Keep `API_BASE_URL` aligned with the actual host and `/api/v1` prefix. Ask the backend maintainer for an isolated development account; create test accounts only in your own local database.
+
+### 4. Run the frontend
 
 ```sh
 npm run dev
 ```
 
-Open [the demo selector](http://localhost:3000/demo). It works without Docker or a running backend and provides separate Guest, Traveler, Owner, Moderator and Admin workspaces.
-
-For design/component work, use [the component gallery](http://localhost:3000/dev/components) and [reproducible state scenarios](http://localhost:3000/dev/scenarios). Fixture changes reset on page reload or workspace remount.
-
-The default business mode is `live`. Owner restaurant registration, profile editing, business hours, operating status, verification submission and history use verified backend operations; other public/role business pages show unavailable feedback until their adapters are implemented. `/demo` explicitly uses fixtures. Setting `NEXT_PUBLIC_DATA_MODE=demo` does not remove authentication from protected real routes.
-
-For F-43, log in as a Restaurant Owner and open `/restaurant/register`; owner root also checks whether a restaurant exists. The new-owner demo is `/dev/scenarios?state=owner-register-restaurant`. Required information includes business name/phone, address, province/ward and explicitly selected coordinates. Optional cover/gallery images upload through MEDIA-01 before OWN-01 receives numeric media IDs. Registration creates an unverified restaurant; sending verification documents is a separate task. Existing restaurants and registration conflicts prevent duplicate creation.
-
-For F-44, open `/restaurant/profile` after Owner login, or `/demo/owner/profile` without a backend. GET loads the current profile; PATCH sends only edited fields. Clearing optional text/price or the cover uses explicit `null`; clearing the gallery uses `[]`. Cancel restores the latest saved response after a modal confirmation, and failures preserve the draft. Hours and operating/verification/moderation statuses are independent operations and never enter this PATCH. GET images are URLs, so the gallery supports intentional full replacement with uploaded numeric IDs or full removal, rather than guessing IDs from URLs. Deployed live use requires OWN-02, OWN-03 and MEDIA-01.
-
-For F-45, open `/restaurant/profile?tab=hours` or `/demo/owner/profile?tab=hours`. OWN-02 supplies the current `businessHours`; OWN-04 `PUT /api/v1/owner/restaurant/business-hours` replaces the full week with `{ hours }` and returns `{ hours, isOpenNow }`. Days use 0 for Sunday through 6 for Saturday; times are Vietnam `HH:mm`. Add several intervals per day, including overnight intervals, without overlap across days or the week boundary. Sending `hours: []` clears the declared schedule; missing days contain no starting interval, but may still be covered by the previous day's overnight interval. Cancel, clear/remove and leaving a dirty editor use in-app modals. Failures retain the draft, and successful saves use the returned schedule/status. Operating/verification/moderation statuses stay independent. Demo hours retain every interval during workspace navigation and reset on reload/remount.
-
-The weekly card has “Chỉnh giờ” and “Thêm khoảng” actions per day. The day modal validates the whole candidate week before applying it locally; “Lưu cả tuần” persists all changes. Empty days show “Chưa khai báo giờ”, and saving an empty week asks for confirmation. See the [Vietnamese business-hours guide](docs/business-hours.vi.md) for validation and local test steps.
-
-Manual coordinates and browser geolocation work without a map token. `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` enables the shared Mapbox GL JS dialog: street/satellite layers, local search of loaded basemap POIs and ANGI restaurants, explicit Search Box searches and Directions routes. Restaurant discovery/detail, matching Roll Dish fixtures and itineraries expose **Mở bản đồ tương tác**; the itinerary no longer requests Static Images on page load. ANGI markers use existing coordinates and names. Opening a map and moving it can load provider resources; local POI filtering makes no additional search request. Search Box coverage, optional metadata and storage rights depend on the provider; permanent address geocoding retains `permanent=true`. See the [Vietnamese Mapbox usage and manual verification guide](docs/mapbox-features.vi.md). The owner will test this delivery; no token probes, live Mapbox calls or test/build checks were run.
-
-ProvinceField supplies [Provinces Open API V2](https://provinces.open-api.vn/) suggestions for restaurant address forms, itinerary destinations, header/restaurant location search and the gallery, including demos. The post-merger catalog has 34 provinces/cities. WardField loads wards directly by province; owner forms have no district input. Both support unaccented search, official-name selection, shared caching, manual entry and retry. The corresponding backend change accepts optional legacy districts. No new key or env setting is needed. See [setup details](docs/setup.md), [the address contract note](docs/address-entry-v2.vi.md), and run `npx playwright test --config=playwright.province.config.ts` for isolated checks.
-
-For F-47, open `/restaurant/verification` after Owner login. Use `/dev/scenarios?state=owner-verification-new` to prepare a mock initial submission. Legal information and at least one business license are required; documents upload privately through MEDIA-01 (`purpose=verification_doc`) before OWN-06 receives their numeric IDs. Sending and discarding use modals. Success shows the pending response; failed requests retain the draft. F-48 supplies full history through OWN-07; F-49 integrates resubmission through OWN-08. See [the Vietnamese manual guide and contract](docs/restaurant-verification.vi.md).
-
-For F-48, open `/restaurant/verification?tab=status`. OWN-07 returns the current restaurant verification flag and all requests, newest first. Review feedback, reviewer/date, private document links and previous-attempt details are visible in read-only modals. Refresh is manual. See [the Vietnamese F-48 guide](docs/verification-status.vi.md).
-
-For F-49, select **Gửi lại hồ sơ** on the latest rejected/needs-more-info attempt. Its legal values and documents are prefilled; retain or replace documents and confirm the new submission in a modal. OWN-08 requires at least one document, without OWN-06's license-document requirement. Real local checks covered both resubmission states with actual API/PostgreSQL/Cloudinary and explicitly prepared review fixtures. See [F-49 usage, API discrepancies, test evidence and rerun steps](docs/verification-resubmission.vi.md).
-
-For F-50, open `/restaurant/menu` after Owner login. Availability changes apply immediately after confirmation. Verified restaurants can create one draft, add/edit/remove proposed dishes with catalog tags and dish-purpose media, inspect changes/history and cancel draft/pending submissions. Draft edits leave the active menu unchanged. F-51's review submission is separate. See [the F-50 Vietnamese guide, BE endpoint audit and verification evidence](docs/restaurant-menu.vi.md). No new application env variables are needed.
-
-For F-51, open a changed draft and select **Gửi duyệt thực đơn**. The modal collects an optional note up to 1000 characters and confirms the exact OWN-17 POST. Success returns 200 with the same submission now pending, preserves the active menu and updates history/read-only controls. Empty/unchanged drafts and server conflicts do not report success. See [F-51 usage, API reconciliation, tests and the separate ANGI-86 branch workflow](docs/menu-approval.vi.md). No new env keys or dependencies.
-
-Real local F-47/F-48 verification passed four browser cases, including private Cloudinary upload/download and persisted pending history. Moderator decision endpoints are absent in the current BE, so live approval/feedback transitions remain unverified. See [live results, limits and rerun instructions](docs/verification-live.vi.md); its separate opt-in config disables Mapbox.
-
-### 4. Run real authentication when needed
-
-Real `/login`, refresh and logout require the backend. Install Docker and .NET 10 SDK, prepare `angi-backend` using its [local database and secret configuration instructions](https://github.com/predtn/angi-backend#local-database), then start it from that repository:
-
-```sh
-dotnet run --project ANGI.WebApi --launch-profile http
-```
-
-The current HTTP profile serves `http://localhost:5154`. In Development, backend startup applies its EF migrations. Use the PostgreSQL port/password from the backend `.env`; its default port is 5432, while individual machines may use another free port such as 5433.
-
-Open [Scalar API documentation](http://localhost:5154/scalar). Keep `API_BASE_URL` aligned with the actual API host and `/api/v1` prefix. Ask the backend maintainer for an isolated development account; frontend demo users cannot log in through the real auth API. Private helper launchers, a portable SDK and seeded passwords from someone else's machine are not part of this repo or required for this setup.
+Open [http://localhost:3000](http://localhost:3000). The homepage works without a backend. Register or sign in to use the rest.
 
 ## Routes and access
 
-| Route                                                                                  | Access/purpose                                            |
-| -------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `/`, `/dishes/*`, `/restaurants/*`, `/guides/*`                                        | Public discovery/community screens                        |
-| `/login`                                                                               | Real login; existing sessions redirect to their role home |
-| `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/setup-password` | Public auth flow UI; live integrations pending            |
-| `/discovery/*`                                                                         | `TRAVELER`                                                |
-| `/restaurant/*`                                                                        | `RESTAURANT_OWNER`                                        |
-| `/moderation/*`                                                                        | `MOD` and `ADMIN`                                         |
-| `/administration/*`                                                                    | `ADMIN`                                                   |
-| `/demo/guest`, `/demo/traveler`, `/demo/owner`, `/demo/moderator`, `/demo/admin`       | Isolated fixture-backed previews and nested screens       |
-| `/dev/components`, `/dev/scenarios`                                                    | Development galleries; explicitly gated in production     |
+| Route                                                                                                        | Access             | Purpose                                          |
+| ------------------------------------------------------------------------------------------------------------ | ------------------ | ------------------------------------------------ |
+| `/`                                                                                                          | Public             | Homepage; owners are redirected to `/restaurant` |
+| `/login`, `/register`, `/verify-email`, `/verify-success`, `/forgot-password`, `/reset-password`             | Public             | Account entry and recovery                       |
+| `/account`                                                                                                   | Any signed-in role | Profile and password                             |
+| `/restaurant`, `/restaurant/register`, `/restaurant/profile`, `/restaurant/verification`, `/restaurant/menu` | `RESTAURANT_OWNER` | Owner workspace                                  |
+| Anything else                                                                                                | —                  | 404                                              |
 
-Server guards authenticate the protected layout and enforce the role on root/nested pages. Missing sessions redirect to `/login`; wrong roles redirect to their own home. UI permission checks explain access, while the backend authorizes live requests. A demo role creates no session cookie.
+Landing page after sign-in: Traveler `/`, Owner `/restaurant`, Moderator `/`, Administrator `/`. Missing sessions redirect to `/login`; a role mismatch redirects to the role's landing page. Hidden navigation never authorizes a request; the backend decides.
+
+Owner screens: `/restaurant/profile?tab=hours|status|photos` selects an editor tab and `/restaurant/verification?tab=status` opens the history. Detailed behavior notes (Vietnamese) are in `docs/`: [business hours](docs/business-hours.vi.md), [verification](docs/restaurant-verification.vi.md), [status/history](docs/verification-status.vi.md), [resubmission](docs/verification-resubmission.vi.md), [menu](docs/restaurant-menu.vi.md), [menu approval](docs/menu-approval.vi.md), [address v2](docs/address-entry-v2.vi.md) and [map address prefill](docs/map-address-prefill.vi.md).
 
 ## Repository map
 
 ```text
-.agents/                Architecture, coding rules and human Git conventions
-AGENTS.md               Rules and entry point for coding assistants
-src/app/                Routes, layouts, server guards and Next.js API handlers
-src/features/auth/      Verified auth DTOs, session/refresh logic and auth forms
-src/features/platform/  Business view models, provider, shared rules and page router
-src/features/*/         Discovery, blogs, roadmaps, profile, owner, moderation, admin
-src/api/services/       Demo/live business adapter boundary
-src/shared/api/         Browser client, ApiError and response/HTTP helpers
-src/shared/ui/          Base controls and variants
-src/components/         Composed UI, layouts and domain components
-src/styles/theme/       Shared visual tokens
-src/mocks/              Deterministic demo data and scenarios
-public/assets/          Local Figma exports, fonts and licenses
-tests/                  Unit tests and browser tests
-scripts/                Smoke, visual/state capture and asset verification tools
-docs/                   Setup detail, design mappings and verification evidence
+.agents/             Architecture, coding and Git rules (read before changing code)
+docs/                Setup, inventory, design coverage and verification evidence
+public/assets/       Local fonts, photos and logo (manifest: docs/assets.json)
+scripts/             Isolated test server, smoke test, asset verification, Mapbox env sync
+tests/               Vitest unit tests, browser/ Playwright specs and API stubs, live/ opt-in suites
+src/app/             Routes, layouts, auth and API Route Handlers
+src/components/      Site header/footer, UI primitives, map and location components
+src/features/        auth, account, discovery (homepage), owner
+src/shared/          API client/errors, base UI, locations, maps, formatting
+src/styles/theme/    Design tokens
 ```
-
-The business models in `features/platform/contracts.ts` are frontend view models, not verified server DTOs. The current `DataService` loads/saves a whole view model for demo state; this is not a proposed backend endpoint. Implement verified DTO mapping behind the adapter boundary when connecting a feature to live data.
 
 ## API and authentication
 
-```text
-Browser -> same-origin /api handlers -> ANGI backend /api/v1
-```
+The browser only talks to same-origin Route Handlers:
 
-Backend responses use `ApiResponse<T>`. The shared client returns its `data` field, including successful `null`; failures become `ApiError` with `status`, `errorCode`, field `errors`, error `data` and `retryAfter`. Branch on `errorCode`, never on localized messages.
+- `/api/auth/[action]` — register, verify email (and resend), forgot/reset password, login, Google login, refresh, logout, session.
+- `/api/backend/[...path]` — authenticated proxy with an exact `METHOD path` allowlist (account, media, tags and owner operations). Mutations validate `Origin`; owner paths require the owner role. Everything else is `404 ROUTE_NOT_FOUND`.
+- `/api/locations/provinces[/{code}/wards]` — public province/ward catalogue.
 
-For a client-side auth interaction:
-
-```tsx
-import { api } from "@/shared/api/client";
-import { ApiError, getErrorMessage } from "@/shared/api/error";
-
-try {
-  const user = await api.login({ email, password });
-  // user is AuthUserDto from response.data; tokens are not returned to the browser.
-  handleSignedIn(user);
-} catch (error) {
-  if (error instanceof ApiError && error.errorCode === "VALIDATION_FAILED") {
-    setFieldErrors(error.errors ?? {});
-  }
-  setFormError(getErrorMessage(error));
-}
-```
-
-`email`, `password` and UI callbacks above are supplied by the form. Existing implementations are in `src/features/auth/login-form.tsx` and `src/shared/api/client.ts`.
-
-- Auth handlers implement login, session, refresh and logout. `/api/auth/session` reads a cached user snapshot and refreshes expired tokens; it does not call a backend `/me` endpoint.
-- Tokens live in encrypted `angi_session` cookies with HttpOnly and SameSite protections; Secure is enabled in production. They are not stored in browser storage or passed to client components.
-- Authenticated calls use the current access token, rotate on expiry/`UNAUTHORIZED` and retry at most once. Concurrent refreshes share a rotation, and a registry retains the latest pair for delayed cookies. Other permission/business failures do not trigger refresh.
-- Mutations validate Origin using `APP_URL`. Personalized responses are not cached. Login/logout use full navigation to clear cached protected routes.
-- The backend proxy has an exact method/path allowlist. Its current `me`/password entries are planned account operations, not working backend endpoints. Adding a client helper alone does not enable an operation; add verified DTOs, the allowed method/path and its Route Handler export together.
-
-The owner proxy allows `GET/POST/PATCH owner/restaurant`, `PUT owner/restaurant/business-hours`, `PUT owner/restaurant/operating-status` and `POST owner/restaurant/verifications` for Owner sessions, plus authenticated multipart `POST media`. Registration/upload/verification preserve 201; GET/PATCH/PUT preserve 200. Field errors remain associated with the form and transport failures retain input for retry. These typed operation services bypass the pending whole-business adapter without substituting fixtures into live failures.
-
-The canonical API workbook is maintained in `angi-backend/.docs/ANGI_API_Design_Ver*.xlsx` (currently v1.8 in the sibling checkout). Read the newest version and verify backend availability before connecting business APIs. Do not silently substitute demo data when a live call fails.
-
-Session coordination and revocation currently run in one Next.js process. Before using multiple instances/serverless, add a shared session store with atomic refresh coordination and durable revocation. Process-local maps do not survive restarts. Production configuration also needs HTTPS, private environment keys, considered cookie size/client IP handling, and an explicit decision about demo/gallery availability.
+The login response stores the backend token pair in an encrypted HttpOnly cookie; tokens never reach browser code. Expired access tokens are refreshed once (single flight) and the request retried once. Callers branch on `errorCode`, never on localized text. Add an endpoint only after confirming it exists in the backend; keep the documented success status, nullability and units.
 
 ## Checks
 
-CI runs on PRs and pushes to `dev`/`main` with the `frontend-checks` job:
+| Command                | What it checks                                                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| `npm run lint`         | ESLint                                                                                      |
+| `npm run typecheck`    | TypeScript (run `npm run build` first on a fresh checkout to generate route types)          |
+| `npm test`             | Vitest unit tests                                                                           |
+| `npm run build`        | Production build                                                                            |
+| `npm run format:check` | Prettier                                                                                    |
+| `npm run test:browser` | Public pages, auth, routing/redirects, account (production build + local auth stub)         |
+| `npm run test:owner`   | Owner workspace suites against a local API stub; Mapbox disabled                            |
+| `npm run test:map`     | Registration, profile, map picker, province/ward; Mapbox traffic is intercepted             |
+| `npm run test:smoke`   | Real local backend with seeded accounts (`ANGI_TEST_PASSWORD`, `SESSION_PASSWORD` required) |
+| `npm run test:live`    | Opt-in suites against the real local backend with your own accounts                         |
 
-```sh
-npm run lint
-npm test
-npm run build
-npm run typecheck
-```
+Browser suites start their own isolated server on port 3001 (a snapshot under `.cache/`, so a running dev server is untouched) and an API stub on port 5164, so run them one at a time. Install Chromium once with `npx playwright install chromium`; if you keep browsers elsewhere set the same `PLAYWRIGHT_BROWSERS_PATH` for installation and tests. Set `ANGI_TEST_DEV=1` to serve the snapshot with `next dev` instead of building it. CI runs lint, unit tests, build and typecheck; browser suites are run separately.
 
-Build before standalone typecheck on a fresh checkout so Next.js route types exist. These checks do not require a running backend.
-
-Additional checks:
-
-| Command                                                     | Purpose/prerequisites                                                                                                  |
-| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `npm run format:check`                                      | Existing source/tests/scripts/docs formatting check                                                                    |
-| `npm exec prettier -- --check README.md AGENTS.md .agents`  | README and rule-document formatting                                                                                    |
-| `npm run test:browser`                                      | Chromium behavior/access/keyboard checks; Playwright starts dev or reuses port 3000                                    |
-| `npx playwright test --config=playwright.owner.config.ts`   | F-43 integration, error, role, keyboard and responsive checks; isolated frontend 3001/API stub 5164                    |
-| `npx playwright test --config=playwright.profile.config.ts` | F-44 GET/PATCH, media, validation, role, modal and responsive checks; isolated source/server and API stub              |
-| `npx playwright test --config=playwright.hours.config.ts`   | F-45 full-week PUT, overnight intervals, errors, role/Origin, modals and responsive checks; same isolated test ports   |
-| `npx playwright test --config=playwright.status.config.ts`  | F-46 PUT, confirmation, three states, suspension, roles/Origin, draft retention and responsive checks; same test ports |
-| `npx playwright test --config=playwright.verification.config.ts` | F-47 private multipart, POST, field errors, conflicts, modals, roles/Origin and mobile; no external providers |
-| `node scripts/owner-test-server.mjs --build`                | Production build of an isolated source snapshot while a local preview is running                                       |
-| `npm run test:visual`                                       | Route screenshots and page/asset/overflow checks; dev server must be running                                           |
-| `npm run test:states`                                       | Interaction/scenario captures; dev server must be running                                                              |
-| `npx playwright test --config=playwright.verification-status.config.ts` | F-48 GET/history/feedback, empty/errors, role guards, private URLs and mobile, plus F-47 regressions; local stub only |
-| `npx playwright test --config=playwright.verification-resubmit.config.ts` | F-49 resubmission, retained/replaced media, conflicts and responsive checks, plus F-47/F-48 regressions; local stub only |
-| `node scripts/verify-assets.mjs`                            | Local design assets and font/license verification                                                                      |
-| `npm run test:smoke`                                        | Existing real-auth integration checks; local backend/frontend and prepared test accounts required                      |
-
-For browser checks, install Chromium. PowerShell example using a local cache:
-
-```powershell
-$env:PLAYWRIGHT_BROWSERS_PATH='.cache/browsers'
-npx playwright install chromium
-npm run test:browser
-```
-
-On macOS/Linux, set/export `PLAYWRIGHT_BROWSERS_PATH=.cache/browsers` before the same install/test commands. Screenshot scripts additionally accept `PLAYWRIGHT_BASE_URL`; the current Playwright config itself uses localhost:3000.
-
-The optional smoke script expects active, verified local accounts `traveler@angi.local`, `owner@angi.local`, `mod@angi.local` and `admin@angi.local`, with their matching roles and a common test password. Provide `ANGI_TEST_PASSWORD` in your shell; otherwise it tries a private sibling `.tools/local-settings.json` file that is not shipped in this repo. Arrange isolated test data with the backend maintainer. Do not run this script against shared/production accounts or store test passwords in source.
-
-Generated reports/screenshots/cache files stay under ignored `artifacts/`, `playwright-report/`, `test-results/` and `.cache/`. [Verification results](docs/verification.md) record historical scope and limitations; rerun relevant checks for your change rather than treating that report as current CI evidence.
+Automated Mapbox rule: do not probe tokens, open live maps or run provider-consuming tests without an explicit request. The suites use a placeholder token and intercept every Mapbox request.
 
 ## Working on a feature
 
-1. Confirm the assigned scope, Figma references and latest API contract.
-2. Reuse the owning feature, shared tokens, UI kit and workspace navigation.
-3. Add verified service/DTO mappings for live data, keeping fixtures isolated.
-4. Handle loading, empty, error, unavailable, denied, pending and success states.
-5. Check relevant logic, role access, keyboard behavior and desktop/mobile layouts.
-6. Update docs/design mappings when adding routes, state variants, variables or supported integrations.
+1. Confirm the assigned scope and the latest API contract, and that the backend implements it.
+2. Reuse the owning feature, shared tokens, UI kit and site shell.
+3. Add typed services and DTO mappings; never fall back to sample data when a call fails.
+4. Handle loading, empty, error, denied, pending and success states.
+5. Check logic, role access, keyboard behavior (focus, Escape, return focus) and 320–1440px layouts.
+6. Update docs and the inventory when you add a route, variable or integration.
 
-Human maintainers manage branches, commits and reviews according to [the Git guide](.agents/commit_guide.md). Automated assistants must leave edits unstaged/uncommitted and must not create/modify commits, rewrite history, push, or create/merge PRs.
+Human maintainers manage branches, commits and reviews according to [the Git guide](.agents/commit_guide.md). Automated assistants leave edits unstaged/uncommitted and never create or modify commits, rewrite history, push, or create/merge PRs.
 
 ## Troubleshooting
 
-| Symptom                                         | Check                                                                                           |
-| ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `/login` reports a session key error            | Set `SESSION_PASSWORD` to your private random key (at least 32 characters) and restart          |
-| Login cannot connect                            | Check the backend is running and `API_BASE_URL` includes `/api/v1`                              |
-| Mutation returns `FORBIDDEN`                    | Match the browser origin/port to `APP_URL`; do not disable Origin validation                    |
-| Business pages show unavailable data            | Current live adapter is intentionally unavailable; use explicit `/demo` previews                |
-| A demo user cannot access a real role route     | Demo selection is not authentication; log in with a real local backend account                  |
-| Typecheck reports missing generated route types | Run build before standalone typecheck on a fresh checkout                                       |
-| Gallery/demo is missing                         | Check environment flags, development/production mode and whether public env values were rebuilt |
-| Browser tests cannot find Chromium              | Install it with the same `PLAYWRIGHT_BROWSERS_PATH` used by the test process                    |
+| Symptom                                         | Check                                                                         |
+| ----------------------------------------------- | ----------------------------------------------------------------------------- |
+| `/login` reports a session key error            | Set `SESSION_PASSWORD` (≥ 32 characters) and restart                          |
+| Login cannot connect                            | Backend running? `API_BASE_URL` includes `/api/v1` and uses `127.0.0.1`       |
+| Mutation returns `FORBIDDEN`                    | Browser origin/port must match `APP_URL`; do not disable Origin validation    |
+| A page I remember is a 404                      | Removed on purpose: only backend-integrated screens exist (see the inventory) |
+| No Google button on `/login`                    | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is empty; set it and rebuild                   |
+| Typecheck reports missing generated route types | Run `npm run build` before a standalone typecheck on a fresh checkout         |
+| Browser tests cannot find Chromium              | Install it with the same `PLAYWRIGHT_BROWSERS_PATH` used by the test process  |
+| Browser suite cannot bind port 3001 / 5164      | Another suite or preview is running; stop it and rerun                        |
 
 ## Further documentation
 
 - [Frontend project architecture](.agents/project_architecture.md)
 - [Frontend coding rules](.agents/coding_rule.md)
 - [Human Git and review guide](.agents/commit_guide.md)
-- [Setup and previews](docs/setup.md)
-- [Scaffold implementation notes](docs/architecture.md)
-- [Figma design coverage](docs/design-coverage.md)
+- [Screen and endpoint inventory](docs/scope-inventory.md)
+- [Setup details](docs/setup.md) and [Vietnamese run and test guide](docs/local-run-and-test-guide.vi.md)
+- [Public homepage](docs/public-homepage.md)
+- [Design coverage](docs/design-coverage.md)
 - [Verification evidence and remaining limits](docs/verification.md)
