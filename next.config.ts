@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   cacheComponents: false,
+  experimental: {
+    agentUpgrade: "security",
+  },
   /* config options here */
   turbopack: {
     rules: {
