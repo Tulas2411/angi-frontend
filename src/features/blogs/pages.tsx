@@ -21,7 +21,7 @@ import {
   UploadField,
   type UploadedFile,
 } from "@/components/ui/primitives";
-import { BlogCard } from "@/components/domain/cards";
+import { BlogCard, MyBlogCard } from "@/components/domain/cards";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import {
@@ -31,6 +31,9 @@ import {
   snapshotTrip,
 } from "@/features/platform/rules";
 import type { Trip } from "@/features/platform/contracts";
+
+/** Số bài viết hiển thị trên mỗi trang. */
+const PAGE_SIZE = 5;
 
 /** Các lý do người dùng chọn khi báo cáo một bài viết cộng đồng. */
 const REPORT_REASONS = [
@@ -68,7 +71,7 @@ export function BlogList({ mine = false }: { mine?: boolean }) {
         title={mine ? "Bài viết của tôi" : "Cẩm nang ẩm thực"}
         description="Câu chuyện ăn ngon, kinh nghiệm chọn quán và lịch ăn từ cộng đồng."
         action={
-          user && (
+          !mine && user && (
             <ActionLink href={`${base}/guides/new`}>Viết cẩm nang</ActionLink>
           )
         }
@@ -93,47 +96,84 @@ export function BlogList({ mine = false }: { mine?: boolean }) {
           { value: "popular", label: "Phổ biến" },
         ]}
       />
-      <div className="grid-3">
-        {pageSlice(blogs, page, 6).items.map((b) => (
-          <BlogCard
-            key={b.id}
-            blog={b}
-            href={`${base}/guides/${b.id}`}
-            actions={
-              mine ? (
-                <>
-                  <CardActionLink
-                    href={`${base}/guides/${b.id}/edit`}
-                    icon="edit"
-                    label="Chỉnh sửa bài viết"
-                  />
-                  <CardActionButton
-                    icon="trash"
-                    label="Xóa bài viết"
-                    onClick={() => setRemove(b.id)}
-                  />
-                </>
-              ) : undefined
-            }
+      {mine ? (
+        <section className="card soft blog-hub-mine">
+          <div className="blog-hub-head">
+            <div>
+              <h2>Bài viết của tôi</h2>
+            </div>
+            {user && (
+              <ActionLink href={`${base}/guides/new`} className="blog-hub-create">
+                Viết cẩm nang
+              </ActionLink>
+            )}
+          </div>
+          {pageSlice(blogs, page, PAGE_SIZE).items.length ? (
+            <div className="blog-my-list">
+              {pageSlice(blogs, page, PAGE_SIZE).items.map((b) => (
+                <MyBlogCard
+                  key={b.id}
+                  blog={b}
+                  href={`${base}/guides/${b.id}`}
+                  actions={
+                    <>
+                      <CardActionLink
+                        href={`${base}/guides/${b.id}/edit`}
+                        icon="edit"
+                        label="Chỉnh sửa bài viết"
+                      />
+                      <CardActionButton
+                        icon="trash"
+                        label="Xóa bài viết"
+                        onClick={() => setRemove(b.id)}
+                      />
+                    </>
+                  }
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              title={search ? "Chưa có kết quả" : "Bạn chưa có bài viết"}
+              action={
+                user && (
+                  <ActionLink href={`${base}/guides/new`}>Viết cẩm nang</ActionLink>
+                )
+              }
+            />
+          )}
+          <Pagination
+            total={blogs.length}
+            page={page}
+            size={PAGE_SIZE}
+            onChange={setPage}
           />
-        ))}
-      </div>
-      {!blogs.length && (
-        <EmptyState
-          title={mine ? "Bạn chưa có bài viết" : "Chưa có kết quả"}
-          action={
-            user && (
-              <ActionLink href={`${base}/guides/new`}>Viết cẩm nang</ActionLink>
-            )
-          }
-        />
+        </section>
+      ) : (
+        <>
+          <div className="grid-3">
+            {pageSlice(blogs, page, PAGE_SIZE).items.map((b) => (
+              <BlogCard key={b.id} blog={b} href={`${base}/guides/${b.id}`} />
+            ))}
+          </div>
+          {!blogs.length && (
+            <EmptyState
+              title="Chưa có kết quả"
+              action={
+                user && (
+                  <ActionLink href={`${base}/guides/new`}>Viết cẩm nang</ActionLink>
+                )
+              }
+            />
+          )}
+          <Pagination
+            total={blogs.length}
+            page={page}
+            size={PAGE_SIZE}
+            onChange={setPage}
+          />
+        </>
       )}
-      <Pagination
-        total={blogs.length}
-        page={page}
-        size={6}
-        onChange={setPage}
-      />
       <ConfirmDialog
         open={!!remove}
         title="Xóa bài viết này?"

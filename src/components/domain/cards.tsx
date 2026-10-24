@@ -157,6 +157,41 @@ export function BlogCard({
     </Card>
   );
 }
+export function MyBlogCard({
+  blog,
+  href,
+  actions,
+}: {
+  blog: Blog;
+  href: string;
+  /** Nút tròn nổi ở góc trên phải card (Chỉnh sửa / Xóa). */
+  actions?: ReactNode;
+}) {
+  const comments = blog.comments.filter((c) => c.moderation === "visible");
+  return (
+    <article className="blog-my-card">
+      {actions && <div className="blog-my-overlay">{actions}</div>}
+      <div className="blog-my-media">
+        <Media src={blog.image} alt={blog.title} />
+      </div>
+      <div className="blog-my-body">
+        <h3 className="blog-my-title">{blog.title}</h3>
+        <div className="blog-my-footer">
+          <Avatar name={blog.author} className="blog-my-avatar" />
+          <div className="blog-my-author-meta">
+            <span className="blog-my-author">{blog.author}</span>
+            <span className="blog-my-date">{dateLabel(blog.date)}</span>
+          </div>
+          <span className="blog-my-stat">♥ {blog.likes}</span>
+          <span className="blog-my-stat">💬 {comments.length}</span>
+        </div>
+        <ActionLink href={href} secondary className="blog-my-view">
+          Xem bài viết
+        </ActionLink>
+      </div>
+    </article>
+  );
+}
 export function ReviewContent({
   review,
   showHidden = false,
