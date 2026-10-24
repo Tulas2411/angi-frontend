@@ -4,7 +4,7 @@ ANGI (Ăn Gì) is a Vietnamese food discovery and itinerary-planning application
 
 The product UI is Vietnamese. Team documentation and code identifiers are English.
 
-**Two kinds of screens coexist.** _Backend-integrated screens_ (authentication, `/account`, the Restaurant Owner workspace and the Traveler roadmap planner `/roadmaps/new`) use the shared site shell and real API services only; a failed call shows retry feedback, never sample data. _Earlier workspace screens_ (public dishes/restaurants/guides, `/demo/*` role previews, Traveler pages, blogs, notifications, owner reviews, moderation and administration) stay as their authors built them: they run on demo fixtures wherever no backend adapter exists yet, keep their own shell and styles (`legacy-ui`), and are removed or integrated only by their owners.
+**Two kinds of screens coexist.** _Backend-integrated screens_ (authentication, `/account`, the Restaurant Owner workspace and the Traveler roadmap list `/roadmaps` and planner `/roadmaps/new`) use the shared site shell and real API services only; a failed call shows retry feedback, never sample data. _Earlier workspace screens_ (public dishes/restaurants/guides, `/demo/*` role previews, Traveler pages, blogs, notifications, owner reviews, moderation and administration) stay as their authors built them: they run on demo fixtures wherever no backend adapter exists yet, keep their own shell and styles (`legacy-ui`), and are removed or integrated only by their owners.
 
 ## Start here
 
@@ -101,6 +101,7 @@ Open [http://localhost:3000](http://localhost:3000). The homepage works without 
 | `/login`, `/register`, `/verify-email`, `/verify-success`, `/forgot-password`, `/reset-password`             | Public             | Account entry and recovery                                    |
 | `/account`                                                                                                   | Any signed-in role | Profile and password                                          |
 | `/restaurant`, `/restaurant/register`, `/restaurant/profile`, `/restaurant/verification`, `/restaurant/menu` | `RESTAURANT_OWNER` | Owner workspace                                               |
+| `/roadmaps`                                                                                                  | `TRAVELER`         | My roadmaps, paged (RM-02)                                    |
 | `/roadmaps/new`                                                                                              | `TRAVELER`         | Plan a new roadmap (RM-01) and edit its overview (RM-04)      |
 | `/dishes`, `/restaurants`, `/guides`                                                                         | Public             | Earlier public discovery screens                              |
 | `/demo/*`                                                                                                    | Public preview     | Earlier role previews on demo fixtures; no session is created |

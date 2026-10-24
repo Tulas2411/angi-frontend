@@ -19,6 +19,7 @@ Rule: a screen in the new shell stays only if its data and actions come from a b
 | `/restaurant/profile`                     | Owner              | OWN-02, OWN-03, OWN-04, OWN-05, MEDIA-01   | Proxy                                          | Tabs: information, photos, hours, status.                                                                                                                                |
 | `/restaurant/verification`                | Owner              | OWN-02, OWN-06, OWN-07, OWN-08, MEDIA-01   | Proxy                                          |                                                                                                                                                                          |
 | `/restaurant/menu`                        | Owner              | OWN-09..OWN-18, CAT-02, MEDIA-01           | Proxy                                          |                                                                                                                                                                          |
+| `/roadmaps`                               | Traveler           | RM-02                                      | Proxy `roadmaps?page&pageSize`                 | F-20 View My Roadmap: paged cards (9 per page, `?page=` in the URL), newest first. Cards do not open a detail yet (F-21).                                                |
 | `/roadmaps/new`                           | Traveler           | RM-01, RM-04                               | Proxy `roadmaps`, `roadmaps/{id}`              | F-19 Plan New Roadmap: destination, origin (map point or current location, otherwise none), start date, days, budget, title; edit the overview after creation.           |
 | `/api/locations/provinces[/{code}/wards]` | Public             | none (Provinces Open API V2)               | Server fetch, cached                           | Used by owner address forms and the roadmap destination.                                                                                                                 |
 
@@ -41,25 +42,26 @@ All of these remain reachable exactly as before. Traveler, Moderator and Adminis
 
 ## Proxy allowlist (`/api/backend/...`)
 
-`GET me`, `PATCH me`, `PUT me/password`, `GET|POST|PATCH owner/restaurant`, `PUT owner/restaurant/business-hours`, `PUT owner/restaurant/operating-status`, `GET|POST owner/restaurant/verifications`, `POST owner/restaurant/verifications/{id}/resubmit`, the owner menu operations validated in `shared/api/owner-menu-proxy.ts`, `POST media`, `GET tags`, `POST roadmaps`, `PATCH roadmaps/{id}`. Everything else answers `404 ROUTE_NOT_FOUND`. Public read endpoints (dishes, restaurants, Home) were removed from the proxy together with their pages.
+`GET me`, `PATCH me`, `PUT me/password`, `GET|POST|PATCH owner/restaurant`, `PUT owner/restaurant/business-hours`, `PUT owner/restaurant/operating-status`, `GET|POST owner/restaurant/verifications`, `POST owner/restaurant/verifications/{id}/resubmit`, the owner menu operations validated in `shared/api/owner-menu-proxy.ts`, `POST media`, `GET tags`, `GET roadmaps`, `POST roadmaps`, `PATCH roadmaps/{id}`. Everything else answers `404 ROUTE_NOT_FOUND`. Public read endpoints (dishes, restaurants, Home) were removed from the proxy together with their pages.
 
 ## Backend operations the integrated shell does not use
 
 Operation IDs are those of the API Design workbook ("Backend API" sheet). Their screens are the earlier ones above, owned by their authors.
 
-| Operation IDs                                                        | Backend                      | Frontend                                                  |
-| -------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------- |
-| HOME-01, DISH-01..03, REST-01..04, IMP-01, PREF-02/03, CAT-02 (tags) | Implemented                  | Earlier discovery and Traveler screens (partly connected) |
-| NOTI-01..03, RM-02, RM-03, RM-05..14, BLOG-01..11                    | Controllers present          | Earlier Traveler screens (RM-01/RM-04: `/roadmaps/new`)   |
-| REV-01, REP-01, REP-02 (writing reviews and reports)                 | Not found in the controllers | Earlier screens on demo fixtures                          |
-| OWN-19, OWN-20 (owner review replies)                                | Not found in the controllers | Owner reviews screen on demo fixtures                     |
-| MOD-\*, ADM-\*, OPS-\*                                               | Not found in the controllers | Moderation and administration screens on demo fixtures    |
+| Operation IDs                                                        | Backend                      | Frontend                                                                    |
+| -------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------------------------- |
+| HOME-01, DISH-01..03, REST-01..04, IMP-01, PREF-02/03, CAT-02 (tags) | Implemented                  | Earlier discovery and Traveler screens (partly connected)                   |
+| NOTI-01..03, RM-03, RM-05..14, BLOG-01..11                           | Controllers present          | Earlier Traveler screens (RM-01/RM-04: `/roadmaps/new`, RM-02: `/roadmaps`) |
+| REV-01, REP-01, REP-02 (writing reviews and reports)                 | Not found in the controllers | Earlier screens on demo fixtures                                            |
+| OWN-19, OWN-20 (owner review replies)                                | Not found in the controllers | Owner reviews screen on demo fixtures                                       |
+| MOD-\*, ADM-\*, OPS-\*                                               | Not found in the controllers | Moderation and administration screens on demo fixtures                      |
 
 ## Partial integrations
 
 - Account: display name, phone, bio and password only. No avatar upload.
 - Google sign-in: rendered only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set.
 - Homepage taste and roadmap examples: editorial, never saved, no backend call.
+- My roadmaps (F-20): RM-02 only. Cards show what RoadmapSummary carries; there is no detail, edit or delete yet (F-21 RM-03, F-22 RM-05), so cards are not links.
 - Roadmap planner (F-19): RM-01 and RM-04 only. The destination province is not stored by RM-01 (the backend keeps no destination); it fills the title suggestion. With `gps` no coordinates are sent or stored. After a reload the created roadmap is not reopened here; the detail screen (F-21, RM-03) is not built yet.
 - Maps: owner location picker and roadmap origin picker (same dialog); needs a public `pk.` Mapbox token, otherwise manual coordinates and geolocation are used.
 

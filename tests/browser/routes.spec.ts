@@ -17,7 +17,7 @@ test.afterAll(async () => {
 test.beforeEach(() => stub.reset());
 
 const removedRoutes = [
-  "/roadmaps",
+  "/roadmaps/unknown",
   "/blogs",
   "/choose-role",
   "/demo/unknown-role",
@@ -42,6 +42,8 @@ test("protected routes send guests to the login page", async ({ page }) => {
   for (const path of [
     "/account",
     "/restaurant",
+    "/roadmaps",
+    "/roadmaps/new",
     "/restaurant/register",
     "/restaurant/profile",
     "/restaurant/verification",

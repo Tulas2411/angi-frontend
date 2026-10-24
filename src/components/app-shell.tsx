@@ -24,6 +24,7 @@ const navigation: Partial<
   TRAVELER: {
     label: "Điều hướng lộ trình",
     items: [
+      { href: roadmapRoutes.list, label: "Lộ trình của tôi", match: "exact" },
       { href: roadmapRoutes.plan, label: "Lập lộ trình", match: "exact" },
     ],
   },

@@ -61,9 +61,14 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
           Tài khoản của tôi
         </Link>
         {user.role === "TRAVELER" && (
-          <Link href={roadmapRoutes.plan} className="menu-item">
-            Lập lộ trình mới
-          </Link>
+          <>
+            <Link href={roadmapRoutes.list} className="menu-item">
+              Lộ trình của tôi
+            </Link>
+            <Link href={roadmapRoutes.plan} className="menu-item">
+              Lập lộ trình mới
+            </Link>
+          </>
         )}
         <Link href="/" className="menu-item">
           Trang chủ ANGI

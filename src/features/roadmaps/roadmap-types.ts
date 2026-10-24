@@ -84,3 +84,12 @@ export interface RoadmapFormValues {
   originMode: RoadmapOriginMode;
   originLabel: string;
 }
+
+/** RM-02 `Paged<RoadmapSummary>` (API Design v1.8, sheet "Chi tiết Request-Response" r120–r124). */
+export interface RoadmapPageDto {
+  items: RoadmapSummaryDto[];
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
