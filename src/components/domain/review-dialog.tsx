@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/shared/ui";
 import {
   Dialog,
@@ -44,13 +44,17 @@ export function WriteReviewDialog({
     [text, setText] = useState(""),
     [photos, setPhotos] = useState<UploadedFile[]>([]);
 
-  // Mỗi lần mở lại popup thì bắt đầu với phiếu đánh giá trống.
-  useEffect(() => {
-    if (!open) return;
-    setRating(5);
-    setText("");
-    setPhotos([]);
-  }, [open]);
+  // Mỗi lần mở lại popup thì bắt đầu với phiếu đánh giá trống. Đặt lại ngay khi `open`
+  // chuyển sang true (điều chỉnh state trong lúc render) thay vì gọi setState trong effect.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setRating(5);
+      setText("");
+      setPhotos([]);
+    }
+  }
 
   function close() {
     setRating(5);
