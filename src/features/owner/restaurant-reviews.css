@@ -1,0 +1,279 @@
+/* Trang "Lắng nghe thực khách" — phản hồi đánh giá của nhà hàng. */
+
+.owner-reviews {
+  gap: var(--space-6);
+}
+
+.owner-reviews-summary {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(260px, 1.1fr);
+  gap: var(--space-6);
+  align-items: center;
+}
+
+.owner-reviews-score {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.owner-reviews-score-value {
+  font-family: var(--font-heading);
+  font-size: 56px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.owner-reviews-score-meta {
+  display: grid;
+  gap: 4px;
+}
+
+.owner-reviews-score-count {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* Thanh phân bố số sao: mỗi dòng là một mức điểm. */
+.owner-reviews-breakdown {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.owner-reviews-breakdown-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 34px;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.owner-reviews-breakdown-track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--control);
+  overflow: hidden;
+}
+
+.owner-reviews-breakdown-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--coral);
+}
+
+.owner-reviews-breakdown-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Thẻ đếm nhanh: đã phản hồi / chưa phản hồi. */
+.owner-reviews-counts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.owner-reviews-count {
+  background: var(--control);
+  border-radius: var(--radius-sm);
+  padding: var(--space-4);
+}
+
+.owner-reviews-count dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.owner-reviews-count dd {
+  margin: 4px 0 0;
+  font-family: var(--font-heading);
+  font-size: 28px;
+  line-height: 1.1;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.owner-reviews-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: end;
+}
+
+/* Dải sao dùng chung cho tổng quan và tiêu đề đánh giá. */
+.owner-reviews-stars {
+  display: inline-flex;
+  gap: 2px;
+  color: var(--coral);
+}
+
+.owner-reviews-star-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.owner-reviews-stars-lg .owner-reviews-star-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.owner-reviews-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.owner-review {
+  padding-block: var(--space-6);
+  border-bottom: 1px solid var(--line);
+}
+
+.owner-review:first-child {
+  padding-top: 0;
+}
+
+.owner-review:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.owner-review-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.owner-review-heading {
+  display: grid;
+  gap: 2px;
+}
+
+.owner-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.owner-review-rating {
+  display: grid;
+  gap: 2px;
+  justify-items: end;
+}
+
+.owner-review-text {
+  margin: var(--space-3) 0 0;
+  line-height: 1.6;
+}
+
+.owner-review-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.owner-review-image {
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  background: var(--control);
+}
+
+/* Khối phản hồi của nhà hàng nằm lệch sang phải để dễ phân biệt. */
+.owner-review-reply {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+  background: var(--control);
+  border-radius: var(--radius-md);
+}
+
+.owner-review-reply-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.owner-review-reply-text {
+  margin: var(--space-2) 0 0;
+  line-height: 1.6;
+}
+
+.owner-review-reply-note {
+  margin: var(--space-2) 0 0;
+}
+
+.owner-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.owner-review-hidden {
+  margin: var(--space-3) 0 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+}
+
+/* Dialog soạn phản hồi. */
+.owner-reviews-dialog-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.owner-reviews-dialog-note {
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 900px) {
+  .owner-reviews-summary {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+
+  .owner-reviews-counts {
+    grid-template-columns: 1fr;
+  }
+
+  .owner-reviews-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .owner-review-main {
+    grid-template-columns: auto 1fr;
+  }
+
+  .owner-review-rating {
+    grid-column: 1 / -1;
+    justify-items: start;
+  }
+
+  .owner-review-actions .button {
+    width: 100%;
+  }
+}

@@ -751,12 +751,21 @@ export function UploadField({
   onChange,
   documents = false,
   max = 1,
+  helper,
+  showCount = true,
+  actionLabel,
 }: {
   label: string;
   files: UploadedFile[];
   onChange: (files: UploadedFile[]) => void;
   documents?: boolean;
   max?: number;
+  /** Ghi đè dòng mô tả định dạng tệp mặc định. */
+  helper?: string;
+  /** Ẩn bộ đếm "x / max" khi nhãn đã chứa thông tin tương đương. */
+  showCount?: boolean;
+  /** Nhãn của ô bấm để chọn tệp (mặc định "Chọn ảnh" / "Chọn tài liệu"). */
+  actionLabel?: string;
 }) {
   const [error, setError] = useState(""),
     [progress, setProgress] = useState(0),
@@ -830,13 +839,15 @@ export function UploadField({
     <div className="upload-field">
       <div className="between">
         <label htmlFor={id}>{label}</label>
-        <span className="helper">
-          {files.length} / {max}
-        </span>
+        {showCount && (
+          <span className="helper">
+            {files.length} / {max}
+          </span>
+        )}
       </div>
       <p className="helper">
-        JPG, PNG, WEBP tối đa 5 MB{documents && "; PDF tối đa 10 MB"}. Tải tệp
-        trong bản minh họa.
+        {helper ??
+          `JPG, PNG, WEBP tối đa 5 MB${documents ? "; PDF tối đa 10 MB" : ""}. Tải tệp trong bản minh họa.`}
       </p>
       <input
         id={id}
@@ -890,7 +901,8 @@ export function UploadField({
             }}
             suppressHydrationWarning
           >
-            <span aria-hidden>＋</span>Chọn {documents ? "tài liệu" : "ảnh"}
+            <span aria-hidden>＋</span>
+            {actionLabel ?? `Chọn ${documents ? "tài liệu" : "ảnh"}`}
           </button>
         )}
       </div>

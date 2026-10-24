@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
+  Choice,
   EmptyState,
   Field,
   Tabs,
@@ -11,6 +12,8 @@ import {
   Dialog,
   SelectField,
   TextArea,
+  UploadField,
+  type UploadedFile,
 } from "@/components/ui/primitives";
 import {
   BlogCard,
@@ -28,9 +31,21 @@ import { pageSlice } from "@/features/platform/rules";
 import { ProvinceField } from "@/components/domain/province-field";
 import { matchesRestaurantLocation } from "@/shared/locations/restaurant-search";
 import { RestaurantMapButton } from "@/components/domain/mapbox-preview";
+import { WriteReviewDialog } from "@/components/domain/review-dialog";
 import { dishBrowseService } from "@/api/services/dish-browse-service";
 import { dishDetailService } from "@/api/services/dish-detail-service";
 import { restaurantDetailService } from "@/api/services/restaurant-detail-service";
+
+/** Các lý do người dùng chọn khi báo cáo một nhà hàng. */
+const RESTAURANT_REPORT_REASONS = [
+  "Thông tin không chính xác",
+  "Đã đóng cửa",
+  "Nội dung rác",
+  "Nội dung xúc phạm",
+  "Vệ sinh không đảm bảo",
+  "Lừa đảo",
+  "Khác",
+] as const;
 
 export function DiscoveryPage() {
   const { data } = usePlatform(),
@@ -351,10 +366,10 @@ export function RestaurantDetail({ id }: { id: string }) {
     { base, user } = useWorkspace(),
     [tab, setTab] = useState("menu"),
     [reviewOpen, setReviewOpen] = useState(false),
-    [rating, setRating] = useState("5"),
-    [text, setText] = useState(""),
     [reportOpen, setReportOpen] = useState(false),
-    [reason, setReason] = useState("Sai thông tin");
+    [reason, setReason] = useState<string>(RESTAURANT_REPORT_REASONS[0]),
+    [reportText, setReportText] = useState(""),
+    [reportEvidence, setReportEvidence] = useState<UploadedFile[]>([]);
   // F-16: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết.
   useEffect(() => {
     const numericId = Number(id);
@@ -408,7 +423,7 @@ export function RestaurantDetail({ id }: { id: string }) {
                     variant="secondary"
                     onClick={() => setReportOpen(true)}
                   >
-                    Báo cáo thông tin
+                    Báo cáo nhà hàng
                   </Button>
                 </>
               ) : (
@@ -466,52 +481,27 @@ export function RestaurantDetail({ id }: { id: string }) {
           </Alert>
         </Card>
       )}
-      <Dialog
+      <WriteReviewDialog
         open={reviewOpen}
+        busy={busy}
         onClose={() => setReviewOpen(false)}
-        title="Chia sẻ trải nghiệm"
-      >
-        <form
-          className="stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await mutate((d) =>
+        onSubmit={async ({ rating, text }) => {
+          await mutate(
+            (d) =>
               d.reviews.unshift({
                 id: crypto.randomUUID(),
                 restaurantId: id,
                 author: user!.displayName,
-                rating: Number(rating),
-                text: text.trim(),
-                date: "2026-10-09T12:00:00+07:00",
+                rating,
+                text,
+                date: new Date().toISOString(),
                 moderation: "visible",
               }),
-            );
-            setReviewOpen(false);
-            setText("");
-            setTab("reviews");
-          }}
-        >
-          <SelectField
-            label="Số sao"
-            value={rating}
-            onChange={setRating}
-            options={[1, 2, 3, 4, 5].map((v) => ({
-              value: String(v),
-              label: `${v} / 5 sao`,
-            }))}
-          />
-          <TextArea
-            label="Đánh giá"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            required
-            maxLength={1000}
-          />
-          <Button type="submit" loading={busy}>
-            Đăng đánh giá minh họa
-          </Button>
-        </form>
-      </Dialog>
+            "Đã gửi đánh giá trong bản minh họa.",
+          );
+          setTab("reviews");
+        }}
+      />
       <Dialog
         open={reportOpen}
         onClose={() => setReportOpen(false)}
@@ -529,29 +519,43 @@ export function RestaurantDetail({ id }: { id: string }) {
                   targetId: id,
                   reporter: user!.displayName,
                   reason,
-                  description: text,
+                  description: reportText.trim(),
+                  evidence: reportEvidence.map((f) => f.url!).filter(Boolean),
                   status: "open",
                   date: "2026-10-09",
                 }),
               "Đã nhận báo cáo trong bản minh họa.",
             );
             setReportOpen(false);
-            setText("");
+            setReportText("");
+            setReportEvidence([]);
           }}
         >
-          <SelectField
-            label="Lý do"
-            value={reason}
-            onChange={setReason}
-            options={["Sai thông tin", "Vệ sinh", "Nội dung không phù hợp"].map(
-              (v) => ({ value: v, label: v }),
-            )}
-          />
+          <fieldset className="report-reasons">
+            <legend>Lý do báo cáo</legend>
+            {RESTAURANT_REPORT_REASONS.map((r) => (
+              <Choice
+                key={r}
+                kind="radio"
+                name="restaurant-report-reason"
+                label={r}
+                checked={reason === r}
+                onChange={() => setReason(r)}
+              />
+            ))}
+          </fieldset>
           <TextArea
-            label="Thông tin bổ sung"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
+            label="Mô tả chi tiết"
+            value={reportText}
+            onChange={(e) => setReportText(e.target.value)}
             maxLength={1000}
+            helper="Mô tả cụ thể giúp bộ phận kiểm duyệt xử lý nhanh hơn."
+          />
+          <UploadField
+            label="Ảnh bằng chứng"
+            files={reportEvidence}
+            max={5}
+            onChange={setReportEvidence}
           />
           <Button type="submit" loading={busy}>
             Gửi báo cáo
