@@ -9,11 +9,9 @@ import {
   Skeleton,
   Tabs,
 } from "@/components/ui/primitives";
-import { PageHeading, useWorkspace } from "@/components/layout/workspace";
-import { usePlatform } from "@/features/platform/provider";
+import { PageHeading } from "@/components/layout/page-heading";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { ownerProfileFromDemo } from "@/mocks/restaurant-profile";
-import { createMockBusinessHoursService } from "@/mocks/business-hours";
+import { ownerProfileHref, ownerRoutes, type OwnerProfileTab } from "./routes";
 import {
   businessDays,
   businessHourFieldErrors,
@@ -33,18 +31,7 @@ import { BusinessHoursDayDialog } from "./business-hours-day-dialog";
 import "./restaurant-business-hours.css";
 
 export function RestaurantBusinessHoursPage() {
-  const { base } = useWorkspace();
-  const { mode, data, mutate } = usePlatform();
-  const demo = mode === "demo";
-  const [mock] = useState(() => {
-    const owner = data.restaurants.find(
-      (restaurant) => restaurant.id === data.ownerRestaurantId,
-    );
-    return createMockBusinessHoursService(
-      owner ? ownerProfileFromDemo(owner, data.hours) : null,
-    );
-  });
-  const service = demo ? mock : businessHoursService;
+  const service = businessHoursService;
   const [restaurant, setRestaurant] = useState<OwnerRestaurantDto | null>(null);
   const [status, setStatus] = useState<
     "loading" | "ready" | "error" | "missing"
@@ -81,7 +68,7 @@ export function RestaurantBusinessHoursPage() {
       <EmptyState
         title="Bạn chưa đăng ký nhà hàng"
         action={
-          <ActionLink href={`${base}/register`}>Đăng ký nhà hàng</ActionLink>
+          <ActionLink href={ownerRoutes.register}>Đăng ký nhà hàng</ActionLink>
         }
       >
         Đăng ký nhà hàng trước khi cập nhật giờ mở cửa.
@@ -107,16 +94,7 @@ export function RestaurantBusinessHoursPage() {
     <BusinessHoursEditor
       restaurant={restaurant}
       service={service}
-      demo={demo}
-      onSaved={async (result) => {
-        if (demo)
-          await mutate((next) => {
-            const owner = next.restaurants.find(
-              (item) => item.id === next.ownerRestaurantId,
-            );
-            if (owner)
-              owner.businessHours = result.hours.map((hour) => ({ ...hour }));
-          }, "");
+      onSaved={(result) => {
         setRestaurant((current) =>
           current
             ? {
@@ -141,15 +119,12 @@ type Confirmation = {
 function BusinessHoursEditor({
   restaurant,
   service,
-  demo,
   onSaved,
 }: {
   restaurant: OwnerRestaurantDto;
   service: BusinessHoursService;
-  demo: boolean;
-  onSaved: (response: UpdateBusinessHoursResponseDto) => Promise<void>;
+  onSaved: (response: UpdateBusinessHoursResponseDto) => void;
 }) {
-  const { base } = useWorkspace();
   const router = useRouter();
   const [saved, setSaved] = useState<UpdateBusinessHoursResponseDto>(() => ({
     hours: sortBusinessHours(restaurant.businessHours),
@@ -204,7 +179,8 @@ function BusinessHoursEditor({
   }
   function changeTab(tab: string) {
     if (busy || tab === "hours") return;
-    const navigate = () => router.push(`${base}/profile?tab=${tab}`);
+    const navigate = () =>
+      router.push(ownerProfileHref(tab as OwnerProfileTab));
     if (dirty)
       setConfirmation({
         title: "Bỏ thay đổi giờ mở cửa chưa lưu?",
@@ -237,16 +213,14 @@ function BusinessHoursEditor({
     try {
       const result = await service.updateHours({ hours });
       if (!active.current) return;
-      await onSaved(result);
+      onSaved(result);
       if (!active.current) return;
       setSaved({
         hours: sortBusinessHours(result.hours),
         isOpenNow: result.isOpenNow,
       });
       restore(result);
-      setSuccess(
-        demo ? "Đã lưu giờ mở cửa trong bản minh họa." : "Đã lưu giờ mở cửa.",
-      );
+      setSuccess("Đã lưu giờ mở cửa.");
     } catch (caught) {
       if (!active.current) return;
       const fields =
@@ -280,8 +254,9 @@ function BusinessHoursEditor({
     } else void persist();
   }
   return (
-    <div className="stack registration-page business-hours-page">
+    <div className="stack form-page business-hours-page">
       <PageHeading
+        eyebrow="Nhà hàng của tôi"
         title="Giờ mở cửa"
         description="Lưu toàn bộ lịch trong tuần theo giờ Việt Nam. Một ngày có thể có nhiều khoảng phục vụ."
       />

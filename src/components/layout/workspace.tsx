@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import "@/styles/legacy-workspace.css";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,

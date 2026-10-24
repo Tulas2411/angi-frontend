@@ -143,20 +143,15 @@ test.beforeEach(async ({ page }) => {
 async function login(page: Page, traveler = false) {
   await page.goto("/login");
   await page
-    .getByLabel("Email", { exact: true })
+    .getByLabel(/^Email/)
     .fill(traveler ? "traveler@profile.test" : "owner@profile.test");
-  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
+  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
-  await expect(page).toHaveURL(
-    traveler ? /\/demo\/traveler$/ : /\/restaurant$/,
-    {
-      timeout: 30000,
-    },
-  );
+  await expect(page).toHaveURL(traveler ? /\/$/ : /\/restaurant$/, {
+    timeout: 30000,
+  });
   if (!traveler)
-    await expect(
-      page.getByRole("heading", { name: "Bạn đã có nhà hàng" }),
-    ).toBeVisible({ timeout: 30000 });
+    await expect(page.locator("main h1")).toBeVisible({ timeout: 30000 });
 }
 async function openProfile(page: Page) {
   await login(page);
@@ -381,7 +376,7 @@ test("non-owner routes, PATCH and foreign mutation origins remain denied", async
 }) => {
   await login(page, true);
   await page.goto("/restaurant/profile");
-  await expect(page).toHaveURL(/\/demo\/traveler$/);
+  await expect(page).toHaveURL(/\/$/);
   expect(
     (
       await page.request.patch("/api/backend/owner/restaurant", {
@@ -430,83 +425,4 @@ test("Mapbox location selection stages numeric coordinates until the owner saves
   await expect
     .poll(() => patches)
     .toEqual([{ latitude: 10.7769, longitude: 106.7009 }]);
-});
-
-test("demo edits remain isolated, survive workspace navigation and fit desktop/mobile", async ({
-  page,
-}) => {
-  const pageErrors: string[] = [];
-  const nativeDialogs: string[] = [];
-  page.on("pageerror", (error) => pageErrors.push(error.message));
-  page.on("dialog", async (dialog) => {
-    nativeDialogs.push(dialog.type());
-    await dialog.dismiss();
-  });
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto("/demo/owner/profile");
-  await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Bếp Nhà");
-  await page
-    .getByRole("button", { name: "Chọn vị trí trên bản đồ", exact: true })
-    .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Lưu", exact: true })
-    .click();
-  await expect(save(page)).toBeDisabled();
-  await page.getByLabel("Tên nhà hàng").fill("Nhà hàng ANGI thử nghiệm");
-  await save(page).click();
-  await expect(
-    page.getByText("Đã lưu hồ sơ trong bản minh họa.", { exact: true }),
-  ).toBeVisible();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
-    path: "artifacts/owner-profile-desktop.png",
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({
-    path: "artifacts/owner-profile-mobile.png",
-    fullPage: true,
-  });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth,
-    ),
-  ).toBe(true);
-  await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Chỉnh giờ · Thứ hai", exact: true })
-    .click();
-  await page
-    .getByLabel(/^Giờ mở ·/)
-    .first()
-    .fill("05:15");
-  await page.getByRole("button", { name: "Áp dụng", exact: true }).click();
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
-  await expect(
-    page.getByRole("dialog", { name: "Bỏ thay đổi giờ mở cửa chưa lưu?" }),
-  ).toBeVisible();
-  await page
-    .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
-    .click();
-  await expect(
-    page.getByRole("listitem", { name: "Thứ hai", exact: true }),
-  ).toContainText("05:15");
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })
-    .click();
-  await expect(page.getByLabel("Tên nhà hàng")).toHaveValue(
-    "Nhà hàng ANGI thử nghiệm",
-  );
-  await page.getByRole("link", { name: "Tổng quan", exact: true }).click();
-  await expect(
-    page.getByRole("heading", {
-      name: "Một ngày mới tại Nhà hàng ANGI thử nghiệm.",
-    }),
-  ).toBeVisible();
-  expect(patches).toHaveLength(0);
-  expect(uploads).toBe(0);
-  expect(pageErrors).toEqual([]);
-  expect(nativeDialogs).toEqual([]);
 });

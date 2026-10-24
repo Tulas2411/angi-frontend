@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { LegacyScope } from "@/components/legacy-scope";
 import { WorkspaceShell } from "@/components/layout/workspace";
 import { readPublicSession } from "@/features/auth/server";
 
@@ -13,6 +14,7 @@ import { readPublicSession } from "@/features/auth/server";
 export default async function ExploreLayout({ children }: { children: ReactNode }) {
   const { user } = await readPublicSession();
   return (
+    <LegacyScope>
     <WorkspaceShell
       user={user}
       base=""
@@ -20,5 +22,6 @@ export default async function ExploreLayout({ children }: { children: ReactNode 
     >
       {children}
     </WorkspaceShell>
+    </LegacyScope>
   );
 }

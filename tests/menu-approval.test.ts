@@ -6,9 +6,6 @@ import {
 } from "@/features/owner/menu-approval-rules";
 import { restaurantMenuService } from "@/features/owner/menu-service";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
-import { ApiError } from "@/shared/api/error";
-import { initialData } from "@/mocks/fixtures";
-import { createMockRestaurantMenuService } from "@/mocks/restaurant-menu";
 import { menuDetailSample, ownerMenuSample } from "./fixtures/restaurant-menu";
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -103,60 +100,5 @@ describe("F-51 OWN-17", () => {
           items: [{ ...menuDetailSample.items[0], change }],
         }),
       ).toBeNull();
-  });
-  it("demo enforces empty/unchanged/draft-only states and pending metadata, preserving the active menu", async () => {
-    const service = createMockRestaurantMenuService(
-      structuredClone(initialData),
-      async () => {},
-    );
-    const current = await service.getMenu(),
-      draft = await service.create();
-    await expect(service.submit(draft.id, {})).rejects.toMatchObject({
-      status: 400,
-      errorCode: "MENU_UNCHANGED",
-    });
-    await service.update(draft.id, draft.items[0].id, {
-      price: draft.items[0].price + 1,
-    });
-    await expect(
-      service.submit(draft.id, { ownerNote: "x".repeat(1001) }),
-    ).rejects.toMatchObject({
-      status: 400,
-      errorCode: "VALIDATION_FAILED",
-      errors: { OwnerNote: expect.any(Array) },
-    });
-    const submitted = await service.submit(draft.id, {
-      ownerNote: "  Đã sửa giá  ",
-    });
-    expect(submitted).toMatchObject({
-      id: draft.id,
-      status: "pending",
-      ownerNote: "Đã sửa giá",
-      reviewedAt: null,
-      reviewedBy: null,
-      reviewNote: null,
-    });
-    expect(submitted.submittedAt).not.toBeNull();
-    expect(submitted).not.toHaveProperty("items");
-    expect((await service.getMenu()).dishes).toEqual(current.dishes);
-    expect((await service.getMenu()).openSubmission).toEqual({
-      id: draft.id,
-      status: "pending",
-    });
-    await expect(service.submit(draft.id, {})).rejects.toMatchObject({
-      status: 409,
-      errorCode: "SUBMISSION_NOT_EDITABLE",
-    });
-    await expect(
-      service.update(draft.id, draft.items[0].id, { price: 1 }),
-    ).rejects.toMatchObject({ errorCode: "SUBMISSION_NOT_EDITABLE" });
-    await service.cancel(draft.id);
-    const empty = await service.create();
-    for (const item of empty.items) await service.remove(empty.id, item.id);
-    await expect(service.submit(empty.id, {})).rejects.toMatchObject({
-      status: 400,
-      errorCode: "MENU_EMPTY",
-    });
-    await expect(service.submit(999999, {})).rejects.toBeInstanceOf(ApiError);
   });
 });

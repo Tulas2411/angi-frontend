@@ -8,8 +8,7 @@ import {
   verificationErrorMessage,
 } from "@/features/owner/verification-rules";
 import { ApiError } from "@/shared/api/error";
-import { createMockVerificationService } from "@/mocks/restaurant-verification";
-import { verificationHistoryFixture } from "@/mocks/verification-history";
+import { verificationHistoryFixture } from "./fixtures/verification-history";
 import { ownerRestaurantSample } from "./fixtures/owner-restaurant";
 
 afterEach(() => {
@@ -30,11 +29,7 @@ function fixture(status: "rejected" | "needs_more_info" = "needs_more_info") {
     verificationStatus: history.verificationStatus,
     latestVerification: history.items[0],
   };
-  return {
-    history,
-    restaurant,
-    service: createMockVerificationService(restaurant, history.items),
-  };
+  return { history, restaurant };
 }
 
 describe("F-49 / OWN-08 resubmission", () => {
@@ -142,72 +137,6 @@ describe("F-49 / OWN-08 resubmission", () => {
     expect(
       resubmittableVerification({ ...restaurant, latestVerification: null }),
     ).toBeNull();
-  });
-  for (const status of ["rejected", "needs_more_info"] as const) {
-    it(`creates a new pending attempt after ${status}, keeps the previous request immutable and reuses owned media`, async () => {
-      const { history, service } = fixture(status);
-      const original = structuredClone(history.items);
-      const result = await service.resubmit(23, request);
-      expect(result).toMatchObject({
-        id: 24,
-        status: "pending",
-        previousId: 23,
-        documents: request.documents,
-        reviewedBy: null,
-        reviewedAt: null,
-        reviewNote: null,
-      });
-      const updated = await service.getHistory();
-      expect(updated.verificationStatus).toBe("pending");
-      expect(updated.items.slice(1)).toEqual(original);
-      expect((await service.getOwnerRestaurant()).latestVerification?.id).toBe(
-        24,
-      );
-      await expect(service.resubmit(23, request)).rejects.toMatchObject({
-        status: 409,
-        errorCode: "VERIFICATION_NOT_RESUBMITTABLE",
-      });
-    });
-  }
-  it("rejects old attempts, foreign/missing IDs and foreign media without modifying history", async () => {
-    const { history, service } = fixture();
-    await expect(service.resubmit(21, request)).rejects.toMatchObject({
-      errorCode: "VERIFICATION_NOT_RESUBMITTABLE",
-    });
-    await expect(service.resubmit(99999, request)).rejects.toMatchObject({
-      status: 404,
-      errorCode: "VERIFICATION_NOT_FOUND",
-    });
-    await expect(
-      service.resubmit(23, {
-        ...request,
-        documents: [{ docType: "other", mediaId: 99999 }],
-      }),
-    ).rejects.toMatchObject({
-      errorCode: "VALIDATION_FAILED",
-      errors: { "Documents[0].MediaId": expect.any(Array) },
-    });
-    expect((await service.getHistory()).items).toEqual(history.items);
-    await expect(
-      createMockVerificationService(null).resubmit(23, request),
-    ).rejects.toMatchObject({ errorCode: "RESTAURANT_NOT_FOUND" });
-  });
-  it("assigns a new media id after retained IDs and accepts a changed complete document set", async () => {
-    const { service } = fixture();
-    const media = await service.upload(
-      new File(["%PDF-1.4 test"], "attp.pdf", { type: "application/pdf" }),
-    );
-    expect(media.id).toBeGreaterThan(9001);
-    const result = await service.resubmit(23, {
-      ...request,
-      documents: [{ docType: "food_safety_cert", mediaId: media.id }],
-    });
-    expect(result.documents).toEqual([
-      { docType: "food_safety_cert", mediaId: media.id, url: "" },
-    ]);
-    expect((await service.getHistory()).items[1].documents[0].mediaId).toBe(
-      9001,
-    );
   });
   it("explains stale/missing submissions with actionable messages", () => {
     for (const code of [

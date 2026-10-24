@@ -63,20 +63,21 @@ export const api = {
       { method: "POST", body: JSON.stringify(body) },
       false,
     ),
+  // AUTH-03, AUTH-08 and AUTH-09 answer 200 with `data: null`.
   resendVerification: (email: string) =>
-    request<{ sent: boolean }>(
+    request<null>(
       "auth/verify-email/resend",
       { method: "POST", body: JSON.stringify({ email }) },
       false,
     ),
   forgotPassword: (email: string) =>
-    request<{ sent: boolean }>(
+    request<null>(
       "auth/forgot-password",
       { method: "POST", body: JSON.stringify({ email }) },
       false,
     ),
   resetPassword: (token: string, newPassword: string) =>
-    request<{ userId: string; status: string }>(
+    request<null>(
       "auth/reset-password",
       {
         method: "POST",
@@ -110,6 +111,7 @@ export const api = {
    * đẩy ra trang đăng nhập.
    */
   getOptional: <T>(path: string) => request<T>(`backend/${path}`, {}, false),
+  /** Same-origin public route (province and ward catalog); never redirects to /login. */
   getPublic: <T>(path: string) => request<T>(path, {}, false),
   upload: <T>(path: string, body: FormData) =>
     request<T>(`backend/${path}`, { method: "POST", body }),

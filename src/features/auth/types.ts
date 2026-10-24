@@ -47,7 +47,10 @@ export interface GoogleLoginClientDto {
 
 // Wire DTOs for AUTH-01 self-registration. Status comes from backend as snake_case
 // (e.g. "pending_verification") and reuses the existing UserStatus union.
-export type RegisterableRole = Extract<RoleCode, "TRAVELER" | "RESTAURANT_OWNER">;
+export type RegisterableRole = Extract<
+  RoleCode,
+  "TRAVELER" | "RESTAURANT_OWNER"
+>;
 
 export interface RegisterAccountRequestDto {
   email: string;

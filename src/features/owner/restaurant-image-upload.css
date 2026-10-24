@@ -1,11 +1,16 @@
-.registration-image-add {
+﻿.registration-image-add {
   position: relative;
   display: grid;
   place-items: center;
   aspect-ratio: 44 / 25;
+  border: 1px dashed var(--line-strong);
   border-radius: var(--radius-md);
   background: var(--control);
   color: var(--muted);
+  transition: background var(--duration-fast) ease;
+}
+.registration-image-add:hover {
+  background: var(--control-hover);
 }
 .registration-image-add > span {
   font-size: 32px;
@@ -28,16 +33,14 @@
   outline-offset: 4px;
 }
 .registration-image-upload .upload-tile .button-icon {
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
-  min-height: 26px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
   padding: 0;
-  border: 0;
-  background: color-mix(in srgb, var(--card) 75%, transparent);
   font-size: 16px;
   line-height: 1;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 .registration-image-upload .upload-tile .button-icon:hover,
 .registration-image-upload .upload-tile .button-icon:focus-visible {

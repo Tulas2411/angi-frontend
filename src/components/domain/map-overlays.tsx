@@ -20,12 +20,10 @@ export function MapSelectionOverlay({
   location,
   summaryHidden = false,
   position,
-  onDirections,
 }: {
   location: MapLocation;
   summaryHidden?: boolean;
   position?: MapPinPosition;
-  onDirections?: () => void;
 }) {
   const [pinInfo, setPinInfo] = useState(true);
   const [summary, setSummary] = useState(true);
@@ -140,11 +138,6 @@ export function MapSelectionOverlay({
                 </>
               )}
               <p>{coordinates}</p>
-              {kind === "summary" && onDirections && (
-                <Button variant="tertiary" onClick={onDirections}>
-                  Chỉ đường
-                </Button>
-              )}
             </div>
             <Button
               variant="icon"

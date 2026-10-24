@@ -1,10 +1,6 @@
 import type { ReactNode } from "react";
-import AppShell from "@/components/app-shell";
-import { requireUser } from "@/features/auth/server";
-export default async function ProtectedLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return <AppShell user={await requireUser()}>{children}</AppShell>;
+
+/** Each route group below authenticates and supplies its own shell. */
+export default function ProtectedLayout({ children }: { children: ReactNode }) {
+  return children;
 }

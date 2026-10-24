@@ -268,14 +268,32 @@
   ],
   "fonts": [
     {
+      "family": "Be Vietnam Pro",
+      "weights": [400, 600],
+      "source": "https://github.com/google/fonts/tree/main/ofl/bevietnampro",
+      "files": [
+        "public/assets/fonts/be-vietnam-pro-400.ttf",
+        "public/assets/fonts/be-vietnam-pro-600.ttf"
+      ],
+      "license": "public/assets/fonts/Be-Vietnam-Pro-OFL.txt",
+      "slot": "Public homepage headings (600) and body (400/600)"
+    },
+    {
       "family": "DM Sans",
       "weights": [400, 500, 600, 700],
+      "files": [
+        "public/assets/fonts/dm-sans-400.ttf",
+        "public/assets/fonts/dm-sans-500.ttf",
+        "public/assets/fonts/dm-sans-600.ttf",
+        "public/assets/fonts/dm-sans-700.ttf"
+      ],
       "source": "Google Fonts / ofl/dmsans",
       "license": "public/assets/fonts/DM-Sans-OFL.txt"
     },
     {
       "family": "Fraunces",
       "weights": [900],
+      "file": "public/assets/fonts/fraunces-900.ttf",
       "source": "Google Fonts / ofl/fraunces",
       "license": "public/assets/fonts/Fraunces-OFL.txt"
     }

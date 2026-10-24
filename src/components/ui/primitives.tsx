@@ -12,6 +12,7 @@ import {
 import { Button, Input } from "@/shared/ui";
 import { pageSlice, validateUpload } from "@/features/platform/rules";
 import { searchText } from "@/shared/text/search";
+
 export function Icon({
   name,
 }: {
@@ -74,17 +75,12 @@ export function ActionLink({
   return (
     <Link
       href={href}
-      className={`button button-${secondary ? "secondary" : "primary"} ${className}`}
+      className={`button button-${secondary ? "secondary" : "primary"} ${className}`.trim()}
     >
       {children}
     </Link>
   );
 }
-/**
- * Nút tròn nổi trên ảnh bìa của card (chỉnh sửa / xóa).
- * - `CardActionLink` dùng cho hành động điều hướng (Chỉnh sửa).
- * - `CardActionButton` dùng cho hành động phá huỷ (Xóa) — đỏ khi hover.
- */
 export function CardActionLink({
   href,
   icon,
@@ -152,6 +148,51 @@ export function Field({
         aria-invalid={!!error}
         aria-describedby={helper || error ? `${id}-help` : undefined}
       />
+      <p className={error ? "field-error" : "helper"} id={`${id}-help`}>
+        {error || helper}
+      </p>
+    </div>
+  );
+}
+/** Password input with an accessible show/hide toggle. */
+export function PasswordField({
+  label,
+  helper,
+  error,
+  id: suppliedId,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  label: string;
+  helper?: string;
+  error?: string;
+}) {
+  const generated = useId(),
+    id = suppliedId ?? generated,
+    [shown, setShown] = useState(false);
+  return (
+    <div className="field">
+      <label htmlFor={id}>
+        {label}
+        {props.required && " *"}
+      </label>
+      <div className="password-row">
+        <Input
+          {...props}
+          id={id}
+          type={shown ? "text" : "password"}
+          aria-invalid={!!error}
+          aria-describedby={helper || error ? `${id}-help` : undefined}
+        />
+        <Button
+          variant="secondary"
+          aria-pressed={shown}
+          aria-controls={id}
+          disabled={props.disabled}
+          onClick={() => setShown((value) => !value)}
+        >
+          {shown ? "Ẩn" : "Hiện"}
+        </Button>
+      </div>
       <p className={error ? "field-error" : "helper"} id={`${id}-help`}>
         {error || helper}
       </p>
@@ -335,6 +376,8 @@ export function Dialog({
   wide = false,
   map = false,
   drawer = false,
+  focusField = false,
+  className = "",
 }: {
   open: boolean;
   onClose: () => void;
@@ -344,6 +387,9 @@ export function Dialog({
   wide?: boolean;
   map?: boolean;
   drawer?: boolean;
+  /** Forms move initial focus to their first field instead of the close button. */
+  focusField?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
     titleId = useId();
@@ -354,17 +400,25 @@ export function Dialog({
       open && document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-    if (open && !dialog.open) dialog.showModal();
+    if (open && !dialog.open) {
+      dialog.showModal();
+      if (focusField)
+        dialog
+          .querySelector<HTMLElement>(
+            ".dialog-content :is(input, textarea, select)",
+          )
+          ?.focus();
+    }
     if (!open && dialog.open) dialog.close();
     return () => {
       if (dialog.open) dialog.close();
       if (returnFocus?.isConnected) returnFocus.focus();
     };
-  }, [open]);
+  }, [open, focusField]);
   return (
     <dialog
       ref={ref}
-      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""}`}
+      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();
@@ -445,7 +499,7 @@ export function EmptyState({
         ◎
       </span>
       <h3>{title}</h3>
-      <p>{children}</p>
+      {children && <p>{children}</p>}
       {action}
     </div>
   );
@@ -471,7 +525,7 @@ export function Avatar({
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   return (
-    <span className={`avatar ${className}`}>
+    <span className={`avatar ${className}`.trim()}>
       {image && image !== failed ? (
         <img src={image} alt={name} onError={() => setFailed(image)} />
       ) : (
@@ -480,6 +534,7 @@ export function Avatar({
     </span>
   );
 }
+/** Image from a backend record; a missing or broken image shows a neutral placeholder. */
 export function Media({
   src,
   alt,
@@ -491,7 +546,7 @@ export function Media({
 }) {
   const [failed, setFailed] = useState<string>();
   return (
-    <div className={`media ${className}`}>
+    <div className={`media ${className}`.trim()}>
       {src && src !== failed ? (
         <img src={src} alt={alt} onError={() => setFailed(src)} />
       ) : (
