@@ -20,6 +20,7 @@ const allowedEndpoints = new Set([
   "GET owner/restaurant/verifications",
   "POST media",
   "GET tags",
+  "POST roadmaps",
 ]);
 
 async function handle(request: Request, context: Context) {
@@ -32,9 +33,12 @@ async function handle(request: Request, context: Context) {
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
+    const roadmapUpdate =
+      request.method === "PATCH" && /^roadmaps\/[1-9]\d*$/.test(endpoint);
     if (
       !allowedEndpoints.has(`${request.method} ${endpoint}`) &&
       !resubmission &&
+      !roadmapUpdate &&
       !menuOperation &&
       !publicOp
     ) {

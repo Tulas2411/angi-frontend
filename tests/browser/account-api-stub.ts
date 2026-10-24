@@ -51,7 +51,21 @@ export function profileSample(role: RoleCode = "TRAVELER"): UserProfileDto {
   };
 }
 
-export async function startAccountStub(port = 5164): Promise<AccountStub> {
+/** Answers a feature's own routes; returns false to fall through to the account routes. */
+export type StubHandler = (
+  request: { method: string; url: string; body: unknown },
+  send: (
+    status: number,
+    data: unknown,
+    errorCode?: string | null,
+    errors?: Record<string, string[]>,
+  ) => void,
+) => boolean;
+
+export async function startAccountStub(
+  port = 5164,
+  handler?: StubHandler,
+): Promise<AccountStub> {
   const stub = {
     profile: profileSample(),
     calls: [] as string[],
@@ -107,6 +121,17 @@ export async function startAccountStub(port = 5164): Promise<AccountStub> {
       },
     });
     stub.calls.push(`${request.method} ${request.url}`);
+    if (
+      handler?.(
+        {
+          method: request.method ?? "GET",
+          url: request.url ?? "",
+          body: raw ? (JSON.parse(raw) as unknown) : null,
+        },
+        send,
+      )
+    )
+      return;
     if (request.url === "/api/v1/auth/login") {
       const { email } = JSON.parse(raw) as { email: string };
       const role = roleByPrefix[email.split("@")[0]] ?? "TRAVELER";

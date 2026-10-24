@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { Icon } from "@/components/ui/primitives";
 import type { AuthUserDto } from "@/features/auth/types";
+import { roadmapRoutes } from "@/features/roadmaps/routes";
 import { Button, Input } from "@/shared/ui";
 import { HomeDishCollection } from "./home-dish-collection";
 import { createDishPhotos } from "./home-dish-layout";
@@ -161,7 +162,10 @@ export function PublicHomePage({
           </a>
         </nav>
         <HomePreferencePreview signedIn={Boolean(user)} />
-        <HomeRoadmapPreview signedIn={Boolean(user)} />
+        <HomeRoadmapPreview
+          signedIn={Boolean(user)}
+          planHref={user?.role === "TRAVELER" ? roadmapRoutes.plan : undefined}
+        />
         <section
           id="mon-ngon"
           className="home-collection"
