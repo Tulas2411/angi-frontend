@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { LABEL_BY_ROLE } from "@/features/auth/roles";
 import type { AuthUserDto } from "@/features/auth/types";
+import { roadmapRoutes } from "@/features/roadmaps/routes";
 
 /** Signed-in menu shared by the homepage and every protected page. */
 export function AccountMenu({ user }: { user: AuthUserDto }) {
@@ -59,6 +60,11 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
         <Link href="/account" className="menu-item">
           Tài khoản của tôi
         </Link>
+        {user.role === "TRAVELER" && (
+          <Link href={roadmapRoutes.plan} className="menu-item">
+            Lập lộ trình mới
+          </Link>
+        )}
         <Link href="/" className="menu-item">
           Trang chủ ANGI
         </Link>

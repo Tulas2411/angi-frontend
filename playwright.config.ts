@@ -12,6 +12,7 @@ export default defineConfig({
     "auth-flows.spec.ts",
     "routes.spec.ts",
     "account.spec.ts",
+    "roadmap-plan.spec.ts",
   ],
   workers: 1,
   timeout: 60000,

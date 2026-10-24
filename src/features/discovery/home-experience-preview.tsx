@@ -193,8 +193,11 @@ const roadmapDays: readonly {
 
 export function HomeRoadmapPreview({
   signedIn = false,
+  planHref,
 }: {
   signedIn?: boolean;
+  /** Set for a signed-in Traveler: links to the real roadmap planner. */
+  planHref?: string;
 }) {
   const [dayIndex, setDayIndex] = useState(0);
   const [stopIndex, setStopIndex] = useState(0);
@@ -225,6 +228,11 @@ export function HomeRoadmapPreview({
           {!signedIn && (
             <Link href="/register" prefetch={false} className="home-text-link">
               Tham gia ANGI <span aria-hidden>↗</span>
+            </Link>
+          )}
+          {planHref && (
+            <Link href={planHref} prefetch={false} className="home-text-link">
+              Lập lộ trình của bạn <span aria-hidden>↗</span>
             </Link>
           )}
         </div>

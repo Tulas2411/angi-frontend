@@ -19,7 +19,8 @@ Rule: a screen in the new shell stays only if its data and actions come from a b
 | `/restaurant/profile`                     | Owner              | OWN-02, OWN-03, OWN-04, OWN-05, MEDIA-01   | Proxy                                          | Tabs: information, photos, hours, status.                                                                                                                                |
 | `/restaurant/verification`                | Owner              | OWN-02, OWN-06, OWN-07, OWN-08, MEDIA-01   | Proxy                                          |                                                                                                                                                                          |
 | `/restaurant/menu`                        | Owner              | OWN-09..OWN-18, CAT-02, MEDIA-01           | Proxy                                          |                                                                                                                                                                          |
-| `/api/locations/provinces[/{code}/wards]` | Public             | none (Provinces Open API V2)               | Server fetch, cached                           | Used by owner address forms.                                                                                                                                             |
+| `/roadmaps/new`                           | Traveler           | RM-01, RM-04                               | Proxy `roadmaps`, `roadmaps/{id}`              | F-19 Plan New Roadmap: destination, origin (map point or current location, otherwise none), start date, days, budget, title; edit the overview after creation.           |
+| `/api/locations/provinces[/{code}/wards]` | Public             | none (Provinces Open API V2)               | Server fetch, cached                           | Used by owner address forms and the roadmap destination.                                                                                                                 |
 
 ## Earlier screens kept (not part of the integrated shell)
 
@@ -40,7 +41,7 @@ All of these remain reachable exactly as before. Traveler, Moderator and Adminis
 
 ## Proxy allowlist (`/api/backend/...`)
 
-`GET me`, `PATCH me`, `PUT me/password`, `GET|POST|PATCH owner/restaurant`, `PUT owner/restaurant/business-hours`, `PUT owner/restaurant/operating-status`, `GET|POST owner/restaurant/verifications`, `POST owner/restaurant/verifications/{id}/resubmit`, the owner menu operations validated in `shared/api/owner-menu-proxy.ts`, `POST media`, `GET tags`. Everything else answers `404 ROUTE_NOT_FOUND`. Public read endpoints (dishes, restaurants, Home) were removed from the proxy together with their pages.
+`GET me`, `PATCH me`, `PUT me/password`, `GET|POST|PATCH owner/restaurant`, `PUT owner/restaurant/business-hours`, `PUT owner/restaurant/operating-status`, `GET|POST owner/restaurant/verifications`, `POST owner/restaurant/verifications/{id}/resubmit`, the owner menu operations validated in `shared/api/owner-menu-proxy.ts`, `POST media`, `GET tags`, `POST roadmaps`, `PATCH roadmaps/{id}`. Everything else answers `404 ROUTE_NOT_FOUND`. Public read endpoints (dishes, restaurants, Home) were removed from the proxy together with their pages.
 
 ## Backend operations the integrated shell does not use
 
@@ -49,7 +50,7 @@ Operation IDs are those of the API Design workbook ("Backend API" sheet). Their 
 | Operation IDs                                                        | Backend                      | Frontend                                                  |
 | -------------------------------------------------------------------- | ---------------------------- | --------------------------------------------------------- |
 | HOME-01, DISH-01..03, REST-01..04, IMP-01, PREF-02/03, CAT-02 (tags) | Implemented                  | Earlier discovery and Traveler screens (partly connected) |
-| NOTI-01..03, RM-01..14, BLOG-01..11                                  | Controllers present          | Earlier Traveler screens                                  |
+| NOTI-01..03, RM-02, RM-03, RM-05..14, BLOG-01..11                    | Controllers present          | Earlier Traveler screens (RM-01/RM-04: `/roadmaps/new`)   |
 | REV-01, REP-01, REP-02 (writing reviews and reports)                 | Not found in the controllers | Earlier screens on demo fixtures                          |
 | OWN-19, OWN-20 (owner review replies)                                | Not found in the controllers | Owner reviews screen on demo fixtures                     |
 | MOD-\*, ADM-\*, OPS-\*                                               | Not found in the controllers | Moderation and administration screens on demo fixtures    |
@@ -59,14 +60,15 @@ Operation IDs are those of the API Design workbook ("Backend API" sheet). Their 
 - Account: display name, phone, bio and password only. No avatar upload.
 - Google sign-in: rendered only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set.
 - Homepage taste and roadmap examples: editorial, never saved, no backend call.
-- Maps: owner location picker only; needs a public `pk.` Mapbox token, otherwise manual coordinates and geolocation are used.
+- Roadmap planner (F-19): RM-01 and RM-04 only. The destination province is not stored by RM-01 (the backend keeps no destination); it fills the title suggestion. With `gps` no coordinates are sent or stored. After a reload the created roadmap is not reopened here; the detail screen (F-21, RM-03) is not built yet.
+- Maps: owner location picker and roadmap origin picker (same dialog); needs a public `pk.` Mapbox token, otherwise manual coordinates and geolocation are used.
 
 ## Tests that cover the kept scope
 
-| Suite                        | Covers                                                                                                                                                                             |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Vitest (`npm test`)          | Rules and DTO builders (account, owner), services, proxy allowlist, session/refresh logic, formatting, address and province logic.                                                 |
-| `npm run test:browser`       | Homepage, auth pages, unknown routes → 404, role landings and wrong-role redirects, account menu keyboard behavior, logout, proxy allowlist, account profile and password dialogs. |
-| `npm run test:owner`         | Business hours, operating status, verification, status/history, resubmission, menu and menu approval against a local API stub.                                                     |
-| `npm run test:map`           | Registration, profile, map picker, province and ward suggestions with every Mapbox request intercepted.                                                                            |
-| `npm run test:live` (opt-in) | Real local backend with your own accounts.                                                                                                                                         |
+| Suite                        | Covers                                                                                                                                                                                                            |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Vitest (`npm test`)          | Rules and DTO builders (account, owner, roadmap plan), services, proxy allowlist, session/refresh logic, formatting, address and province logic.                                                                  |
+| `npm run test:browser`       | Homepage, auth pages, unknown routes → 404, role landings and wrong-role redirects, account menu keyboard behavior, logout, proxy allowlist, account profile and password dialogs, roadmap planner (RM-01/RM-04). |
+| `npm run test:owner`         | Business hours, operating status, verification, status/history, resubmission, menu and menu approval against a local API stub.                                                                                    |
+| `npm run test:map`           | Registration, profile, map picker, province and ward suggestions with every Mapbox request intercepted.                                                                                                           |
+| `npm run test:live` (opt-in) | Real local backend with your own accounts.                                                                                                                                                                        |

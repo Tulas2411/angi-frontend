@@ -11,7 +11,8 @@ import type { MapLocation, MapStyle } from "@/shared/maps/mapbox";
 import { InteractiveLocationMap } from "./interactive-location-map";
 
 /**
- * Point picker for a restaurant location. Search is an explicit Search Box
+ * Point picker shared by the restaurant location (F-43) and the roadmap origin
+ * (F-19). Search is an explicit Search Box
  * forward request on submit; coordinates can also be typed, so the dialog stays
  * usable without a token or WebGL.
  */
@@ -166,7 +167,7 @@ export function MapLocationDialog({
         setResultsOpen(true);
         if (!found.length)
           setError(
-            "Không tìm thấy nhà hàng phù hợp. Thử tên khác hoặc chấm vị trí trên bản đồ.",
+            "Không tìm thấy địa điểm phù hợp. Thử tên khác hoặc chấm vị trí trên bản đồ.",
           );
       }
     } catch (caught) {
