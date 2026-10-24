@@ -47,14 +47,63 @@ export interface RoadmapSummaryDto {
   updatedAt: string;
 }
 
-/** Items are rendered by the roadmap detail screens (F-21+); this form only counts days. */
+/** Tag of a dish (DTO "Tag"). */
+export interface RoadmapTagDto {
+  id: number;
+  tagType: "meal_time" | "dietary" | "category";
+  code: string;
+  name: string;
+}
+
+/** DTO "RestaurantMini", nested in a dish. Coordinates can be null. */
+export interface RoadmapRestaurantDto {
+  id: number;
+  name: string;
+  district: string | null;
+  provinceName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  ratingAvg: number;
+}
+
+/** DTO "RoadmapDish": a DishCard plus the dish status. `active` is the only normal one. */
+export interface RoadmapDishDto {
+  id: number;
+  name: string;
+  price: number;
+  coverUrl: string | null;
+  dishForm: "soup" | "dry" | "other";
+  isAvailable: boolean;
+  likeCount: number;
+  dislikeCount: number;
+  tags: RoadmapTagDto[];
+  restaurant: RoadmapRestaurantDto;
+  status: "active" | "hidden" | "removed";
+  rank: number | null;
+}
+
+/** DTO "RoadmapItem". */
+export interface RoadmapItemDto {
+  id: number;
+  dayId: number;
+  dayNumber: number;
+  mealSlot: MealSlot;
+  sortOrder: number;
+  source: "manual" | "ai";
+  recoRequestId: string | null;
+  dish: RoadmapDishDto;
+  myFeedback: "like" | "dislike" | null;
+  createdAt: string;
+}
+
+/** DTO "RoadmapDay"; items come sorted by meal slot and then sortOrder. */
 export interface RoadmapDayDto {
   dayId: number;
   dayNumber: number;
   date: string | null;
   note: string | null;
   dayCost: number;
-  items: unknown[];
+  items: RoadmapItemDto[];
 }
 
 export interface RoadmapBudgetDto {
@@ -92,4 +141,30 @@ export interface RoadmapPageDto {
   pageSize: number;
   totalItems: number;
   totalPages: number;
+}
+
+/** RM-14 `GET roadmaps/{id}/days/{dayId}/route` (API Design v1.8, sheet "Chi tiết Request-Response" r185–r200). */
+export interface RoadmapRouteLegDto {
+  /** null = the leg starts at the origin. */
+  fromItemId: number | null;
+  toItemId: number;
+  distanceMeters: number;
+  durationSeconds: number;
+}
+
+export interface RoadmapRouteDto {
+  dayId: number;
+  profile: "driving" | "walking" | "cycling";
+  origin: {
+    latitude: number;
+    longitude: number;
+    label?: string | null;
+    source: "pinned" | "gps";
+  } | null;
+  originSkipped: boolean;
+  legs: RoadmapRouteLegDto[];
+  totalDistanceMeters: number;
+  totalDurationSeconds: number;
+  /** true = the provider failed and the backend estimated the distances. */
+  isEstimated: boolean;
 }

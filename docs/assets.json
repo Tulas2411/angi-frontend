@@ -158,6 +158,12 @@
       "slot": "Roadmap travel connector"
     },
     {
+      "file": "public/assets/figma/roadmap-chevron.svg",
+      "figmaNode": "24:1383",
+      "sourceName": "imgImg (676:11826 / day expand icon)",
+      "slot": "F-21 sidebar and itinerary day disclosure; intrinsic 17.5 x 14"
+    },
+    {
       "file": "public/assets/figma/guide-cover.png",
       "figmaNode": "447:29323",
       "sourceName": "imgNhThamChiu",

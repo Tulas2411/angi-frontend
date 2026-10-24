@@ -28,7 +28,9 @@ export function Icon({
     | "X"
     | "edit"
     | "trash"
-    | "LocateFixed";
+    | "LocateFixed"
+    | "connection"
+    | "roadmap-chevron";
 }) {
   return (
     <span className={`icon icon-${name}`} aria-hidden>

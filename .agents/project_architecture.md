@@ -25,7 +25,7 @@ Backend workbooks are not bundled with FE. If a sibling `angi-backend` checkout 
 
 ANGI (Ăn Gì) helps travelers discover Vietnamese regional dishes and restaurants and plan food itineraries. This repository contains the browser application and its Next.js API boundary. The REST backend and recommendation service are separate projects.
 
-**Two kinds of screens coexist.** _Backend-integrated screens_ (authentication, `/account`, the Restaurant Owner workspace and the Traveler roadmap list `/roadmaps` and planner `/roadmaps/new`) use the shared site shell and real API services only; a failed call shows retry feedback, never sample data. _Earlier workspace screens_ (public dishes/restaurants/guides, `/demo/*` role previews, Traveler pages, blogs, notifications, owner reviews, moderation and administration) stay as their authors built them: they run on demo fixtures wherever no backend adapter exists yet, keep their own shell and styles (`legacy-ui`), and are removed or integrated only by their owners.
+**Two kinds of screens coexist.** _Backend-integrated screens_ (authentication, `/account`, the Restaurant Owner workspace and the Traveler roadmap list `/roadmaps`, detail `/roadmaps/{id}` and planner `/roadmaps/new`) use the shared site shell and real API services only; a failed call shows retry feedback, never sample data. _Earlier workspace screens_ (public dishes/restaurants/guides, `/demo/*` role previews, Traveler pages, blogs, notifications, owner reviews, moderation and administration) stay as their authors built them: they run on demo fixtures wherever no backend adapter exists yet, keep their own shell and styles (`legacy-ui`), and are removed or integrated only by their owners.
 
 | Area                                                         | Backend operations                       | Route                                                                                            |
 | ------------------------------------------------------------ | ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
@@ -35,6 +35,7 @@ ANGI (Ăn Gì) helps travelers discover Vietnamese regional dishes and restauran
 | Owner overview, registration, profile, hours, status         | OWN-01..05, MEDIA-01                     | `/restaurant`, `/restaurant/register`, `/restaurant/profile`                                     |
 | Owner verification and resubmission                          | OWN-06..08, MEDIA-01                     | `/restaurant/verification`                                                                       |
 | Owner menu, drafts, approval submission                      | OWN-09..18, CAT-02, MEDIA-01             | `/restaurant/menu`                                                                               |
+| Traveler roadmap detail (F-21)                               | RM-03, RM-14                             | `/roadmaps/{roadmapId}`                                                                          |
 | Traveler roadmap list (F-20)                                 | RM-02                                    | `/roadmaps`                                                                                      |
 | Traveler roadmap planner (F-19)                              | RM-01, RM-04                             | `/roadmaps/new`                                                                                  |
 | Province and ward suggestions                                | Public Provinces Open API V2 (via proxy) | used by owner address forms                                                                      |
@@ -52,7 +53,7 @@ Documentation and identifiers are in English. Product copy and accessible labels
 | Styling                 | Shared CSS (`src/app/globals.css`) over CSS custom properties     |
 | Session                 | `iron-session`, encrypted HttpOnly cookie, Node.js Route Handlers |
 | Server boundary         | `server-only`, native `fetch`, explicit proxy allowlist           |
-| Maps                    | `mapbox-gl`, only for the owner location picker                   |
+| Maps                    | `mapbox-gl`: owner location picker and read-only roadmap stop map |
 | Unit tests              | Vitest; Node environment                                          |
 | Browser checks          | Playwright; Chromium; local API stubs                             |
 | Code quality            | ESLint with Next.js rules, Prettier, TypeScript                   |
@@ -102,6 +103,8 @@ The palette and fonts come from the public homepage and are unchanged: Canvas `#
 
 All pages share one page width (`--page-width`, 1224px), gutter (`--gutter`) and header (`--header-height`) defined in `tokens.css`. The homepage and protected pages use the same `SiteHeader`, `AccountMenu` and `SiteFooter`. Use tokens and the shared primitives; do not copy a control or dialog into a feature.
 
+F-21 is a route-scoped full-width workbench matching Figma `24:1383`: left day navigation, center notebook and right viewport-height map. `.roadmap-detail-page` scopes the shell width/header/footer adjustments through `:has`; other routes keep the standard shell. The detail view uses Figma's DM Sans/Fraunces fonts, existing tokens/components and exact local disclosure/connector assets. Below 901px the day list scrolls horizontally and the map stacks above the content.
+
 ## 5. Routes and roles
 
 | Route                                                                                                                                                                  | Access             | Behavior                                                                                                       |
@@ -136,6 +139,7 @@ An allowlist entry is not proof that an endpoint is implemented: confirm it in t
 - **Owner** (`features/owner`): the overview is built from OWN-02. Registration (OWN-01) first checks OWN-02: only `RESTAURANT_NOT_FOUND` enables the form. Profile (OWN-03) omits unchanged keys, clears optional values with `null` and gallery removal with `[]`; images are uploaded through MEDIA-01 and only numeric media IDs are sent. Business hours (OWN-04) replace the whole week with `HH:mm` Vietnam time and allow overnight intervals. Operating status (OWN-05) always passes a confirmation dialog and treats `RESTAURANT_SUSPENDED` as a conflict. Verification (OWN-06/07/08) uploads private documents, shows full history, and resubmits with a complete body. The menu (OWN-09..18) edits an isolated draft, then submits it for moderator approval without replacing the active menu. Verification, operating and moderation statuses are separate and are never merged.
 - **Homepage** (`features/discovery`): server-rendered; search and taste filters live in the URL and select a local editorial collection. Photo layout is shuffled on the server and serialized for hydration. The taste and roadmap examples are client islands, are not saved, and call no backend. See [public homepage](../docs/public-homepage.md).
 - **Maps**: `MapLocationDialog` is used only by the owner location picker. It searches only when the user submits, optionally reverse-geocodes one selected point to prefill the address, and falls back to manual coordinates. No Mapbox call happens without a user action. See [map address prefill](../docs/map-address-prefill.vi.md).
+- **Roadmap map (F-21)**: `RoadmapDetailMap` uses only RM-03 restaurant coordinates for numbered/grouped stop markers, with shared day/item selection and read-only real-data info/rating/dish-photo panels. It consumes the existing itinerary's cached RM-14 effective origin; it does not request Directions/geocoding or invent route geometry. Missing configuration/coordinates/provider errors retain the actual stop list. Numbered marker elements explicitly keep button semantics when Mapbox mounts them. Offline browser checks use a fake token and fulfilled local style; live Mapbox quota is not used. See [roadmap detail](../docs/roadmap-detail.vi.md).
 - **Locations**: `ProvinceField`/`WardField` use the shared catalogue; typed values stay editable when the catalogue fails.
 
 ## 8. Testing
