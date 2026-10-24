@@ -1,11 +1,4 @@
-.registration-page.business-hours-page {
-  max-width: var(--content-width);
-}
-.business-hours-page .business-hours-card {
-  gap: var(--space-4);
-  box-shadow: var(--shadow);
-}
-.business-hours-week {
+﻿.business-hours-week {
   margin: 0;
   padding: 0;
   list-style: none;
@@ -15,10 +8,13 @@
   grid-template-columns: minmax(100px, 1fr) minmax(0, 3fr) auto;
   align-items: center;
   gap: var(--space-6);
-  min-height: 96px;
+  min-height: 88px;
   padding: var(--space-4) 0;
   border-bottom: 1px solid var(--line);
   font-size: 14px;
+}
+.business-hours-day-name {
+  font-weight: 600;
 }
 .business-hours-summary {
   min-width: 0;
@@ -43,7 +39,7 @@
 }
 .business-hours-notice {
   padding: var(--space-4);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--control);
   font-size: 14px;
 }
@@ -52,6 +48,7 @@
 }
 .business-hours-notice p + p {
   margin-top: var(--space-2);
+  color: var(--muted);
 }
 .business-hours-week-actions > .button:first-child {
   flex: 1;
@@ -59,9 +56,15 @@
 .business-hours-week-actions > .button:last-child {
   min-width: 180px;
 }
+.business-hours-day-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
 .business-hours-slot {
-  border-bottom: 1px solid var(--line);
   padding-bottom: var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line);
 }
 .business-hours-slot legend {
   margin-bottom: var(--space-2);
@@ -86,14 +89,8 @@
   }
 }
 @media (max-width: 600px) {
-  .business-hours-page .business-hours-card {
-    padding: var(--space-4);
-  }
   .business-hours-day {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .business-hours-day-name {
-    font-weight: 600;
   }
   .business-hours-day-actions {
     grid-column: 1;

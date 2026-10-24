@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Card } from "@/shared/ui";
 import { EmptyState, SelectField, Skeleton } from "@/components/ui/primitives";
-import { dateLabel } from "@/features/platform/rules";
+import { dateLabel } from "@/shared/format";
 import { menuErrorMessage, menuStatusLabels } from "./menu-rules";
 import type { RestaurantMenuService } from "./menu-service";
 import type { MenuHistoryDto, MenuStatus } from "./menu-types";

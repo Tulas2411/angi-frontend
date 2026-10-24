@@ -9,8 +9,8 @@ import {
   isMapLocation,
   mapDistance,
   searchMapPlaces,
-} from "@/shared/maps/mapbox";
-import type { MapLocation, MapRoute, RouteProfile } from "@/shared/maps/mapbox";
+} from "@/shared/maps/legacy-mapbox";
+import type { MapLocation, MapRoute, RouteProfile } from "@/shared/maps/legacy-mapbox";
 
 const profiles: { id: RouteProfile; label: string }[] = [
   { id: "driving", label: "Ô tô" },

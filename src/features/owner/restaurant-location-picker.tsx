@@ -11,7 +11,6 @@ export function RestaurantLocationPicker(props: {
   return (
     <MapLocationDialog
       {...props}
-      poiSearchOnly
       prepareSelection={(point, signal) =>
         resolveRestaurantAddress(
           point,

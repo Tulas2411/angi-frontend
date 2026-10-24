@@ -14,7 +14,7 @@ Các màn discovery, lịch ăn và Roll Dish vẫn theo trạng thái tích h�
 
 Thanh tìm kiếm trong modal chọn vị trí/khám phá dùng ô nhập thông thường, không có danh sách gợi ý tỉnh/thành. Kết quả địa điểm chỉ được tìm khi bấm tìm/Enter. Các ô tỉnh/thành và phường/xã trong form địa chỉ vẫn dùng API gợi ý như trước.
 
-Modal chọn vị trí của Owner (đăng ký và sửa hồ sơ, cả live/demo) chỉ có thanh tìm kiếm dùng **POI mở rộng**. Các nút chọn chế độ và hàng danh mục đã bỏ theo yêu cầu. Tìm khi bấm nút/Enter; không tự gọi Mapbox khi gõ. Ba lựa chọn bên dưới áp dụng cho bản đồ khám phá và các picker khác.
+Modal chọn vị trí của Owner (đăng ký và sửa hồ sơ) chỉ có thanh tìm kiếm dùng **POI mở rộng**. Các nút chọn chế độ và hàng danh mục đã bỏ theo yêu cầu. Tìm khi bấm nút/Enter; không tự gọi Mapbox khi gõ. Các phần mô tả bản đồ khám phá, chỉ đường và các picker khác bên dưới thuộc giai đoạn trước; những màn đó đã bị gỡ và chỉ còn picker của Owner.
 
 | Lựa chọn                   | Cách hoạt động                                                                                                                              | Khi nào phát sinh yêu cầu tìm kiếm Mapbox |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |

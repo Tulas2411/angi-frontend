@@ -1,5 +1,8 @@
 # F-51 — Gửi thực đơn để duyệt (ANGI-86)
 
+> **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
+
+
 Nhánh riêng: `feat/ANGI-86-submit-menu-for-approval`, tạo bằng `--no-track` từ `origin/dev` tại `237e8c01946d4fceacb7d9b9f00e5a7bc55f6881`. Nhánh không theo dõi `origin/dev` hay `origin/main`. Code để nguyên chưa stage/commit/push; chủ dự án tự review và merge.
 
 ## Nhánh và hướng merge
@@ -24,7 +27,6 @@ Mở `/restaurant/menu`, mở một bản nháp có thay đổi rồi chọn **G
 - **Để sau**, dấu X và Escape đóng modal nhưng giữ ghi chú trong trang. Ghi chú cũng được giữ khi chuyển sang lịch sử rồi mở lại cùng bản; reload/thoát trang sẽ mất ghi chú chưa gửi. Không tự lưu ghi chú qua API khác.
 - Lỗi validation/mạng giữ ghi chú để sửa hoặc thử lại có chủ đích; không tự retry POST. Chặn click gửi lặp và khóa đóng modal khi đang gửi.
 - `MENU_EMPTY`, `MENU_UNCHANGED`, `SUBMISSION_NOT_EDITABLE`, `SUBMISSION_NOT_FOUND` hiển thị lỗi đúng nghĩa, không báo thành công; có nút đóng và tải lại trạng thái BE. BE vẫn là nơi quyết định trạng thái/quyền cuối cùng.
-- `/demo/owner/menu` dùng cùng UI với adapter mock riêng. Gửi chỉ thay đổi dữ liệu trong phiên demo, không xác thực người dùng, không gọi BE hay upload ảnh.
 
 ## API và mức độ sẵn sàng BE
 
@@ -62,7 +64,7 @@ npm test
 npm run build
 npm run typecheck
 $env:PLAYWRIGHT_BROWSERS_PATH = '.cache/browsers'
-npx playwright test --config=playwright.menu-approval.config.ts
+npx playwright test -c playwright.owner.config.ts
 ```
 
 Suite stub gồm F-51 và hồi quy F-50; snapshot production riêng, FE cổng 3001, API stub 5164. Chạy nối tiếp với các suite khác dùng cùng cổng.
@@ -72,7 +74,7 @@ Kiểm thử BE thật chỉ chạy ở Docker `angi_local`, cần seed helper t
 ```powershell
 ./scripts/prepare-live-tests.ps1
 $env:NODE_OPTIONS = ''
-node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.menu-approval-live.config.ts
+node --env-file=.env.integration node_modules/@playwright/test/cli.js test --config=playwright.live.config.ts
 ```
 
 Lệnh tạo tài khoản mới và thay file `.env.integration` ignored, không thay env ứng dụng. Test đăng ký nhà hàng qua API thật rồi dùng **fixture BE có guard** `docker/local/Seed --set-menu-fixture` để chuẩn bị nhà hàng verified và hai món đang bán. Bước chuẩn bị này không chứng minh Moderator xác minh hoạt động. Sau đó toàn bộ gửi duyệt F-51 đi qua FE/proxy/API thật; không sửa DB để giả lập pending. Test không upload file hoặc gọi Mapbox. Trace/video/screenshot live tắt; evidence không chứa mật khẩu/token/URL bí mật.

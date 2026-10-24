@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Button } from "@/shared/ui";
-import { isMapLocation } from "@/shared/maps/mapbox";
-import type { MapLocation } from "@/shared/maps/mapbox";
-import { MapLocationDialog } from "./map-location-dialog";
-import "./map-picker.css";
+import { isMapLocation } from "@/shared/maps/legacy-mapbox";
+import type { MapLocation } from "@/shared/maps/legacy-mapbox";
+import { MapLocationDialog } from "./legacy-map/map-location-dialog";
+import "./legacy-map/map-picker.css";
 
 /** ANGI coordinates are rendered directly; opening the page never loads a map. */
 export function RestaurantMapButton({

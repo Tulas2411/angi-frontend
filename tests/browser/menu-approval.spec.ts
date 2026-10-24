@@ -170,8 +170,8 @@ test.beforeEach(async ({ page, context }) => {
 });
 async function login(page: Page, role = "owner") {
   await page.goto("/login");
-  await page.getByLabel("Email", { exact: true }).fill(`${role}@approval.test`);
-  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
+  await page.getByLabel(/^Email/).fill(`${role}@approval.test`);
+  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).not.toHaveURL(/\/login$/);
 }
@@ -471,28 +471,4 @@ test("mobile modal supports keyboard, retained notes across history navigation, 
     path: ".cache/menu-approval-desktop.png",
     fullPage: true,
   });
-});
-test("demo submits the same draft locally without authenticating or contacting backend", async ({
-  page,
-}) => {
-  await page.goto("/demo/owner/menu");
-  await page.getByRole("button", { name: "Tạo bản nháp", exact: true }).click();
-  await page.getByRole("button", { name: "Sửa Phở bò", exact: true }).click();
-  const editor = page.getByRole("dialog", {
-    name: "Sửa món trong bản nháp",
-    exact: true,
-  });
-  await editor.getByLabel("Giá (VND) *", { exact: true }).fill("65001");
-  await editor.getByRole("button", { name: "Lưu món", exact: true }).click();
-  const dialog = await modal(page);
-  await dialog
-    .getByLabel("Ghi chú gửi kiểm duyệt", { exact: true })
-    .fill("Ghi chú minh họa");
-  await dialog
-    .getByRole("button", { name: "Xác nhận gửi duyệt", exact: true })
-    .click();
-  await expect(page.getByText("Chờ duyệt", { exact: true })).toBeVisible();
-  expect(submissions).toEqual([]);
-  expect(forwarded).toEqual([]);
-  await expect(page.getByText(/Bản minh họa\. Thay đổi chỉ lưu/)).toBeVisible();
 });

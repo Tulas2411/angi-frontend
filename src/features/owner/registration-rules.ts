@@ -112,6 +112,32 @@ export function restaurantFieldErrors(
   );
 }
 
+const visibleFields = new Set([
+  "name",
+  "phone",
+  "email",
+  "website",
+  "description",
+  "addressLine",
+  "provinceName",
+  "ward",
+  "location",
+  "priceLevel",
+  "coverMediaId",
+  "imageMediaIds",
+]);
+
+/**
+ * Backend rules that no form control can show (for example a legacy `district` requirement)
+ * would otherwise leave the owner with a generic error and nothing to fix.
+ */
+export function hiddenFieldMessages(fields: Record<string, string>): string {
+  return Object.entries(fields)
+    .filter(([field]) => !visibleFields.has(field))
+    .map(([, message]) => message)
+    .join(" ");
+}
+
 export function validateRestaurantImage(
   file: Pick<File, "type" | "size">,
 ): string | null {

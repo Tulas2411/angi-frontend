@@ -11,8 +11,6 @@ import {
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { ApiError } from "@/shared/api/error";
 import { menuDetailSample } from "./fixtures/restaurant-menu";
-import { createMockRestaurantMenuService } from "@/mocks/restaurant-menu";
-import { initialData } from "@/mocks/fixtures";
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -152,31 +150,6 @@ describe("F-50 contracts", () => {
   });
 });
 describe("menu editor", () => {
-  it("demo retains real fixture images with explicit media IDs, can clear them and restores unchanged markers", async () => {
-    const mock = createMockRestaurantMenuService(
-      structuredClone(initialData),
-      async () => {},
-    );
-    const current = await mock.getMenu(),
-      draft = await mock.create(),
-      item = draft.items[0];
-    expect(item.coverMediaId).toBeGreaterThan(0);
-    expect(
-      (await mock.update(draft.id, item.id, { coverMediaId: null })).coverUrl,
-    ).toBeNull();
-    expect((await mock.getMenu()).dishes[0].coverUrl).toBe(
-      current.dishes[0].coverUrl,
-    );
-    expect(
-      (
-        await mock.update(draft.id, item.id, {
-          coverMediaId: item.coverMediaId,
-        })
-      ).change,
-    ).toBe("unchanged");
-    await mock.cancel(draft.id);
-    expect((await mock.getMenu()).openSubmission).toBeNull();
-  });
   it("omits unchanged fields and retains legacy nullable/short descriptions and unknown tag IDs", () => {
     const item = {
       ...menuDetailSample.items[0],

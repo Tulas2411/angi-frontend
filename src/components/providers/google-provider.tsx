@@ -4,13 +4,9 @@ import type { ReactNode } from "react";
 
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? "";
 
+/** Google sign-in is optional: without a client id the login page simply omits its button. */
 export function GoogleProvider({ children }: { children: ReactNode }) {
-  if (!GOOGLE_CLIENT_ID) {
-    console.warn(
-      "[GoogleProvider] NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set. Google login will not work.",
-    );
-    return <>{children}</>;
-  }
+  if (!GOOGLE_CLIENT_ID) return <>{children}</>;
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       {children}

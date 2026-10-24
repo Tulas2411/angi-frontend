@@ -1,6 +1,6 @@
 "use client";
-import { MapLocationDialog } from "./map-location-dialog";
-import type { MapLocation } from "@/shared/maps/mapbox";
+import { MapLocationDialog } from "./legacy-map/map-location-dialog";
+import type { MapLocation } from "@/shared/maps/legacy-mapbox";
 
 const initialCenter: MapLocation = {
   name: "Hồ Hoàn Kiếm",

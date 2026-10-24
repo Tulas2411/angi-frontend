@@ -1,30 +1,29 @@
-import { Suspense } from "react";
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { WorkspaceShell } from "@/components/layout/workspace";
-import { PageRouter } from "@/features/platform/page-router";
-import { Skeleton } from "@/components/ui/primitives";
 import { getSession, readAuth } from "@/features/auth/server";
-import { HOME_BY_ROLE } from "@/features/auth/roles";
+import { PublicHomePage } from "@/features/discovery/public-home-page";
+import { readHomeSelection } from "@/features/discovery/home-content";
 
-export default async function HomePage() {
-  const auth = readAuth(await getSession());
-  if (!auth) {
-    // Bắt buộc đăng nhập đúng tài khoản BE mới vào được homepage.
-    redirect("/login?reason=UNAUTHORIZED");
-  }
-  // Đã đăng nhập: render homepage theo role (mặc định traveler).
-  const home = HOME_BY_ROLE[auth.user.role] ?? "/demo/traveler";
-  if (home !== "/") redirect(home);
+export const metadata: Metadata = {
+  title: { absolute: "ANGI — Ăn đúng gu. Đi thật đã." },
+  description:
+    "Khám phá món hợp khẩu vị và lịch trình ẩm thực cho chuyến đi của bạn. Cùng ANGI ăn đúng gu, đi thật đã.",
+};
 
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [session, params] = await Promise.all([getSession(), searchParams]);
+  const auth = readAuth(session);
+  // The Restaurant Owner workspace is the only signed-in destination backed by
+  // the real API. Other roles stay on the homepage in its signed-in state.
+  if (auth?.user.role === "RESTAURANT_OWNER") redirect("/restaurant");
   return (
-    <WorkspaceShell
-      user={auth.user}
-      base=""
-      mode={process.env.NEXT_PUBLIC_DATA_MODE === "demo" ? "demo" : "live"}
-    >
-      <Suspense fallback={<Skeleton />}>
-        <PageRouter role={auth.user.role} />
-      </Suspense>
-    </WorkspaceShell>
+    <PublicHomePage
+      selection={readHomeSelection(params)}
+      user={auth?.user ?? null}
+    />
   );
 }

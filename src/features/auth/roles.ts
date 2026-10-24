@@ -6,8 +6,12 @@ export const ROLE_CODES: readonly RoleCode[] = [
   "MOD",
   "ADMIN",
 ];
+/**
+ * Landing page after sign-in. Travelers land on the public homepage (signed-in state);
+ * Moderators and Administrators keep their workspaces.
+ */
 export const HOME_BY_ROLE: Record<RoleCode, string> = {
-  TRAVELER: "/demo/traveler",
+  TRAVELER: "/",
   RESTAURANT_OWNER: "/restaurant",
   MOD: "/moderation",
   ADMIN: "/administration",
