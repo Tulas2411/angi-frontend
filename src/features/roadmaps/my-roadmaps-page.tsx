@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -20,7 +21,7 @@ import {
   vnd,
 } from "./roadmap-list-rules";
 import { roadmapService, type RoadmapListService } from "./roadmap-service";
-import { roadmapListHref, roadmapRoutes } from "./routes";
+import { roadmapDetailHref, roadmapListHref, roadmapRoutes } from "./routes";
 import type { RoadmapPageDto, RoadmapSummaryDto } from "./roadmap-types";
 import "./my-roadmaps.css";
 
@@ -39,7 +40,9 @@ function RoadmapCard({ roadmap }: { roadmap: RoadmapSummaryDto }) {
       <Media src={roadmap.coverUrl ?? undefined} alt={roadmap.title} />
       <div className="roadmap-card-body">
         <div className="stack-sm">
-          <h2 id={`roadmap-${roadmap.id}`}>{roadmap.title}</h2>
+          <h2 id={`roadmap-${roadmap.id}`}>
+            <Link href={roadmapDetailHref(roadmap.id)}>{roadmap.title}</Link>
+          </h2>
           <p className="helper">{roadmapDateRange(roadmap)}</p>
           <p className="roadmap-card-chips">
             <span>{roadmap.numDays} ngày</span>

@@ -3,6 +3,7 @@ import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
+import { roadmapOperation } from "@/shared/api/roadmap-proxy";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -34,12 +35,11 @@ async function handle(request: Request, context: Context) {
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
-    const roadmapUpdate =
-      request.method === "PATCH" && /^roadmaps\/[1-9]\d*$/.test(endpoint);
+    const roadmapRoute = roadmapOperation(request.method, endpoint);
     if (
       !allowedEndpoints.has(`${request.method} ${endpoint}`) &&
       !resubmission &&
-      !roadmapUpdate &&
+      !roadmapRoute &&
       !menuOperation &&
       !publicOp
     ) {

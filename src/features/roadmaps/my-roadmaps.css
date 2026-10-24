@@ -15,9 +15,35 @@
 }
 
 .roadmap-card {
+  position: relative;
   flex: 1;
   gap: 0;
   padding: var(--space-3);
+  transition:
+    box-shadow var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+
+.roadmap-card:hover,
+.roadmap-card:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+
+/* The title link covers the whole card, so the card is one link to the detail page. */
+.roadmap-card h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+
+.roadmap-card h2 a:focus-visible {
+  outline: none;
+}
+
+.roadmap-card h2 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
 }
 
 .roadmap-card > .media {

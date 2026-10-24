@@ -14,7 +14,7 @@ import {
   roadmapFormFromSummary,
 } from "./roadmap-rules";
 import { roadmapService, type RoadmapPlanService } from "./roadmap-service";
-import { roadmapRoutes } from "./routes";
+import { roadmapDetailHref, roadmapRoutes } from "./routes";
 import type { RoadmapDetailDto, RoadmapSummaryDto } from "./roadmap-types";
 import "./plan-roadmap.css";
 
@@ -172,6 +172,9 @@ export function PlanRoadmapPage({
               >
                 Lập lộ trình khác
               </Button>
+              <ActionLink href={roadmapDetailHref(overview.id)} secondary>
+                Xem chi tiết
+              </ActionLink>
               <ActionLink href={roadmapRoutes.list} secondary>
                 Xem lộ trình của tôi
               </ActionLink>
