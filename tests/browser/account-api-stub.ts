@@ -183,8 +183,18 @@ export async function loginAs(
   page: Page,
   role: "traveler" | "owner" | "mod" | "admin",
 ) {
+  // A redirect from the previous page may still be loading; navigating away would abort it.
+  await page.waitForLoadState("load");
   await page.context().clearCookies();
-  await page.goto("/login");
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await page.goto("/login");
+      break;
+    } catch (error) {
+      // A client-side redirect of the previous page can cancel this navigation.
+      if (attempt >= 3 || !String(error).includes("ERR_ABORTED")) throw error;
+    }
+  }
   await page.getByLabel(/^Email/).fill(`${role}@test.local`);
   await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();

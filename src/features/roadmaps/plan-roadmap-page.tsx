@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
-import { Media } from "@/components/ui/primitives";
+import { ActionLink, Media } from "@/components/ui/primitives";
 import { dateLabel } from "@/shared/format";
 import { RoadmapOverviewForm } from "./roadmap-overview-form";
 import {
@@ -14,6 +14,7 @@ import {
   roadmapFormFromSummary,
 } from "./roadmap-rules";
 import { roadmapService, type RoadmapPlanService } from "./roadmap-service";
+import { roadmapRoutes } from "./routes";
 import type { RoadmapDetailDto, RoadmapSummaryDto } from "./roadmap-types";
 import "./plan-roadmap.css";
 
@@ -171,6 +172,9 @@ export function PlanRoadmapPage({
               >
                 Lập lộ trình khác
               </Button>
+              <ActionLink href={roadmapRoutes.list} secondary>
+                Xem lộ trình của tôi
+              </ActionLink>
             </div>
           </section>
         )}

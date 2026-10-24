@@ -20,6 +20,7 @@ const allowedEndpoints = new Set([
   "GET owner/restaurant/verifications",
   "POST media",
   "GET tags",
+  "GET roadmaps",
   "POST roadmaps",
 ]);
 

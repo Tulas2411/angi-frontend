@@ -13,6 +13,7 @@ export default defineConfig({
     "routes.spec.ts",
     "account.spec.ts",
     "roadmap-plan.spec.ts",
+    "my-roadmaps.spec.ts",
   ],
   workers: 1,
   timeout: 60000,

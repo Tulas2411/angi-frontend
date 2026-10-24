@@ -2,6 +2,7 @@ import { api } from "@/shared/api/client";
 import type {
   CreateRoadmapRequestDto,
   RoadmapDetailDto,
+  RoadmapPageDto,
   UpdateRoadmapRequestDto,
 } from "./roadmap-types";
 
@@ -15,8 +16,15 @@ export interface RoadmapPlanService {
   ) => Promise<RoadmapDetailDto>;
 }
 
-export const roadmapService: RoadmapPlanService = {
+export interface RoadmapListService {
+  /** RM-02: one page of the caller's roadmaps, newest first. `page` starts at 1. */
+  list: (page: number, pageSize: number) => Promise<RoadmapPageDto>;
+}
+
+export const roadmapService: RoadmapPlanService & RoadmapListService = {
   create: (request) => api.post<RoadmapDetailDto>("roadmaps", request),
   update: (roadmapId, request) =>
     api.patch<RoadmapDetailDto>(`roadmaps/${roadmapId}`, request),
+  list: (page, pageSize) =>
+    api.get<RoadmapPageDto>(`roadmaps?page=${page}&pageSize=${pageSize}`),
 };

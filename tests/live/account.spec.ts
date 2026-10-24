@@ -38,7 +38,7 @@ test("unknown routes answer 404 and protected routes need a session", async ({
   page,
 }) => {
   await login(page, accounts.traveler);
-  for (const path of ["/roadmaps", "/choose-role"])
+  for (const path of ["/roadmaps/unknown", "/choose-role"])
     expect((await page.goto(path))?.status(), path).toBe(404);
   await page.context().clearCookies();
   for (const path of ["/account", "/moderation", "/restaurant/menu"]) {

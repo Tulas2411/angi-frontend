@@ -1,0 +1,77 @@
+/* F-20 "Lộ trình của tôi": card grid on the shared page width. */
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap-grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+.roadmap-card {
+  flex: 1;
+  gap: 0;
+  padding: var(--space-3);
+}
+
+.roadmap-card > .media {
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-md);
+}
+
+.roadmap-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+}
+
+.roadmap-card h2 {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.roadmap-card-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.roadmap-card-chips > span {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* Money and origin text stay readable and wrap instead of overflowing the card. */
+.roadmap-card .detail-list {
+  margin-top: auto;
+}
+
+.roadmap-card .detail-list dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 1100px) {
+  .roadmap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .roadmap-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
