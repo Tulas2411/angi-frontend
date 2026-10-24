@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert } from "@/shared/ui";
-import { ActionLink } from "@/components/ui/primitives";
+import { Alert, Card } from "@/shared/ui";
 
 export default function VerifyEmailClient() {
   const router = useRouter();
@@ -68,7 +68,7 @@ export default function VerifyEmailClient() {
         if (active)
           setFailure({
             token: currentToken,
-            message: "Không thể kết nối máy chủ. Vui lòng thử lại.",
+            message: "Không thể kết nối server. Vui lòng thử lại.",
           });
       }
     }
@@ -80,20 +80,24 @@ export default function VerifyEmailClient() {
   }, [token, baseUrl, router]);
 
   if (!errorMessage) {
-    return <Alert tone="info">Đang xác minh email…</Alert>;
+    return (
+      <Card className="stack">
+        <Alert tone="info">Đang xác minh email...</Alert>
+      </Card>
+    );
   }
 
   return (
-    <div className="stack">
+    <Card className="stack">
       <Alert tone="error">{errorMessage}</Alert>
-      <div className="actions">
-        <ActionLink href="/register" secondary>
+      <div className="between auth-links">
+        <Link href="/" className="button button-tertiary">
+          ← Về trang chủ
+        </Link>
+        <Link href="/register" className="button button-secondary">
           Đăng ký lại
-        </ActionLink>
-        <ActionLink href="/" secondary>
-          Về trang chủ
-        </ActionLink>
+        </Link>
       </div>
-    </div>
+    </Card>
   );
 }

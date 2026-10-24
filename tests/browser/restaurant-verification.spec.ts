@@ -199,8 +199,10 @@ async function login(page: Page, role: RoleCode = "RESTAURANT_OWNER") {
         : role === "ADMIN"
           ? "admin"
           : "owner";
-  await page.getByLabel(/^Email/).fill(`${local}@verification.test`);
-  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
+  await page
+    .getByLabel("Email", { exact: true })
+    .fill(`${local}@verification.test`);
+  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(HOME_BY_ROLE[role], { timeout: 30000 });
 }
@@ -585,4 +587,39 @@ test("anonymous, wrong roles, foreign Origin and unlisted methods cannot reach O
   ).toBe(404);
   expect((await page.request.get(url)).status()).toBe(200);
   expect(submissions).toHaveLength(0);
+});
+
+test("demo submits in memory, reflects pending status after refresh and sends no backend calls", async ({
+  page,
+}) => {
+  await page.goto("/dev/scenarios?state=owner-verification-new");
+  await expect(legalName(page)).toBeVisible();
+  await fill(page);
+  await addFile(page).setInputFiles(pdf());
+  await expect(
+    page.getByLabel("Loại tài liệu · license.pdf", { exact: true }),
+  ).toBeVisible();
+  await submit(page).click();
+  await confirm(page).click();
+  await expect(
+    page.getByText("Đã gửi hồ sơ minh họa. Trạng thái: Chờ duyệt.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Tải lại trạng thái", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Hồ sơ gần nhất", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(verificationRequestSample.legalName, { exact: true }),
+  ).toBeVisible();
+  expect(submissions).toHaveLength(0);
+  expect(uploads).toHaveLength(0);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.screenshot({
+    path: "artifacts/verification-desktop.png",
+    fullPage: true,
+  });
 });

@@ -126,12 +126,11 @@ check(
   "field validation",
 );
 
-// Only the owner has a backend-integrated workspace; the other roles land on the homepage.
 for (const [email, role, home] of [
-  ["traveler@angi.local", "TRAVELER", "/"],
+  ["traveler@angi.local", "TRAVELER", "/demo/traveler"],
   ["owner@angi.local", "RESTAURANT_OWNER", "/restaurant"],
-  ["mod@angi.local", "MOD", "/"],
-  ["admin@angi.local", "ADMIN", "/"],
+  ["mod@angi.local", "MOD", "/moderation"],
+  ["admin@angi.local", "ADMIN", "/administration"],
 ]) {
   const session = await login(email);
   check(session.user.role === role, role + " login and private tokens");
@@ -139,21 +138,11 @@ for (const [email, role, home] of [
     (await call(home, { cookie: session.cookie })).status === 200,
     role + " page",
   );
-  check(
-    (await call("/account", { cookie: session.cookie })).status === 200,
-    role + " account page",
+  const wrong = await call(
+    role === "ADMIN" ? "/restaurant" : "/administration",
+    { cookie: session.cookie },
   );
-  if (role !== "RESTAURANT_OWNER")
-    await redirected(
-      await call("/restaurant", { cookie: session.cookie }),
-      home,
-      role + " role guard",
-    );
-  for (const removed of ["/demo", "/dishes", "/administration", "/moderation"])
-    check(
-      (await call(removed, { cookie: session.cookie })).status === 404,
-      role + " removed route " + removed,
-    );
+  await redirected(wrong, home, role + " role guard");
   const logout = await call("/api/auth/logout", {
     method: "POST",
     cookie: session.cookie,

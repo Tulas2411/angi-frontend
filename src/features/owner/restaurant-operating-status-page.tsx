@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Alert, Button, Card } from "@/shared/ui";
+import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   ConfirmDialog,
@@ -11,10 +11,15 @@ import {
   Tabs,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageHeading, useWorkspace } from "@/components/layout/workspace";
+import {
+  verificationLabels,
+  visibilityLabels,
+} from "@/components/domain/cards";
+import { usePlatform } from "@/features/platform/provider";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { ownerProfileHref, ownerRoutes, type OwnerProfileTab } from "./routes";
-import { RestaurantStatusGrid } from "./status-labels";
+import { ownerProfileFromDemo } from "@/mocks/restaurant-profile";
+import { createMockOperatingStatusService } from "@/mocks/operating-status";
 import {
   buildOperatingStatusRequest,
   isOperatingStatus,
@@ -34,7 +39,18 @@ import type {
 } from "./restaurant-types";
 
 export function RestaurantOperatingStatusPage() {
-  const service = operatingStatusService;
+  const { base } = useWorkspace();
+  const { mode, data, mutate } = usePlatform();
+  const demo = mode === "demo";
+  const [mock] = useState(() => {
+    const owner = data.restaurants.find(
+      (item) => item.id === data.ownerRestaurantId,
+    );
+    return createMockOperatingStatusService(
+      owner ? ownerProfileFromDemo(owner, data.hours) : null,
+    );
+  });
+  const service = demo ? mock : operatingStatusService;
   const [restaurant, setRestaurant] = useState<OwnerRestaurantDto | null>(null);
   const [status, setStatus] = useState<
     "loading" | "ready" | "error" | "missing"
@@ -71,7 +87,7 @@ export function RestaurantOperatingStatusPage() {
       <EmptyState
         title="Bạn chưa đăng ký nhà hàng"
         action={
-          <ActionLink href={ownerRoutes.register}>Đăng ký nhà hàng</ActionLink>
+          <ActionLink href={`${base}/register`}>Đăng ký nhà hàng</ActionLink>
         }
       >
         Đăng ký nhà hàng trước khi cập nhật trạng thái hoạt động.
@@ -97,7 +113,15 @@ export function RestaurantOperatingStatusPage() {
     <OperatingStatusEditor
       restaurant={restaurant}
       service={service}
-      onSaved={(result) => {
+      demo={demo}
+      onSaved={async (result) => {
+        if (demo)
+          await mutate((next) => {
+            const owner = next.restaurants.find(
+              (item) => item.id === next.ownerRestaurantId,
+            );
+            if (owner) owner.operating = result.operatingStatus;
+          }, "");
         setRestaurant((current) =>
           current
             ? { ...current, operatingStatus: result.operatingStatus }
@@ -118,13 +142,16 @@ type DiscardConfirmation = {
 function OperatingStatusEditor({
   restaurant,
   service,
+  demo,
   onSaved,
 }: {
   restaurant: OwnerRestaurantDto;
   service: OperatingStatusService;
-  onSaved: (result: UpdateOperatingStatusResponseDto) => void;
+  demo: boolean;
+  onSaved: (result: UpdateOperatingStatusResponseDto) => Promise<void>;
 }) {
   const router = useRouter();
+  const { base } = useWorkspace();
   const [selected, setSelected] = useState(restaurant.operatingStatus);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -168,8 +195,7 @@ function OperatingStatusEditor({
   }
   function changeTab(tab: string) {
     if (busy || tab === "status") return;
-    const navigate = () =>
-      router.push(ownerProfileHref(tab as OwnerProfileTab));
+    const navigate = () => router.push(`${base}/profile?tab=${tab}`);
     if (dirty)
       setDiscard({
         title: "Bỏ thay đổi trạng thái chưa lưu?",
@@ -202,13 +228,17 @@ function OperatingStatusEditor({
     try {
       const result = await service.updateStatus(request);
       if (!active.current) return;
-      onSaved(result);
+      await onSaved(result);
       if (!active.current) return;
       setSelected(result.operatingStatus);
       setNote("");
       setErrors({});
       setFocusRequest(null);
-      setSuccess("Đã cập nhật trạng thái hoạt động.");
+      setSuccess(
+        demo
+          ? "Đã cập nhật trạng thái trong bản minh họa."
+          : "Đã cập nhật trạng thái hoạt động.",
+      );
     } catch (caught) {
       if (!active.current) return;
       const fields =
@@ -232,11 +262,10 @@ function OperatingStatusEditor({
     }
   }
   return (
-    <div className="stack form-page">
+    <div className="stack registration-page">
       <PageHeading
-        eyebrow="Nhà hàng của tôi"
-        title={restaurant.name}
-        description="Quản lý trạng thái hoạt động của nhà hàng."
+        title="Nhà hàng của tôi"
+        description={`${restaurant.name} · Quản lý trạng thái hoạt động.`}
       />
       <Tabs
         value="status"
@@ -249,7 +278,20 @@ function OperatingStatusEditor({
         ]}
       />
       <Card title="Trạng thái hiện tại">
-        <RestaurantStatusGrid restaurant={restaurant} />
+        <div className="status-grid">
+          <div>
+            <h3>Xác minh nhà hàng</h3>
+            <Badge>{verificationLabels[restaurant.verificationStatus]}</Badge>
+          </div>
+          <div>
+            <h3>Hoạt động</h3>
+            <Badge>{operatingStatusLabels[restaurant.operatingStatus]}</Badge>
+          </div>
+          <div>
+            <h3>Kiểm duyệt</h3>
+            <Badge>{visibilityLabels[restaurant.moderationStatus]}</Badge>
+          </div>
+        </div>
         <p className="helper">
           Trạng thái hoạt động được quản lý độc lập với giờ mở cửa, xác minh và
           kiểm duyệt.

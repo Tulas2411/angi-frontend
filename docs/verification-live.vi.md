@@ -1,8 +1,5 @@
 # Kiểm thử BE thật — F-47 / F-48
 
-> **Tài liệu lịch sử (trước đợt dọn 10/2026).** Các cấu hình Playwright, script seed và màn `/demo` được nhắc dưới đây đã bị gộp hoặc xóa. Nội dung giữ lại làm bằng chứng; cách chạy hiện tại nằm trong [README](../README.md#checks).
-
-
 Ngày kiểm tra: **17/10/2026, khoảng 01:56–01:58, giờ Việt Nam**. Nhánh FE: `feat/ANGI-65-view-verification-status`.
 
 Lần bàn giao trước chỉ có kiểm tra bằng API stub. Đó là thiếu sót so với yêu cầu kiểm thử BE thật của chủ dự án. Lượt bổ sung này chạy FE production → Next.js proxy → Kestrel → PostgreSQL `angi_local`, cùng upload/tải tài liệu Cloudinary thật. Không dùng stub để thay phản hồi nghiệp vụ.

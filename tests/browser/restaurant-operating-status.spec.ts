@@ -134,12 +134,14 @@ async function login(page: Page, role: RoleCode = "RESTAURANT_OWNER") {
     ADMIN: "admin@status.test",
   };
   await page.goto("/login");
-  await page.getByLabel(/^Email/).fill(emails[role]);
-  await page.getByLabel(/^Mật khẩu/).fill("TestPassword123");
+  await page.getByLabel("Email", { exact: true }).fill(emails[role]);
+  await page.getByLabel("Password", { exact: true }).fill("TestPassword123");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(HOME_BY_ROLE[role], { timeout: 30000 });
   if (role === "RESTAURANT_OWNER")
-    await expect(page.locator("main h1")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Bạn đã có nhà hàng" }),
+    ).toBeVisible();
 }
 async function openStatus(page: Page) {
   await login(page);
@@ -271,8 +273,6 @@ test("pending saves prevent duplicate requests and cancellation restores the lat
     page.getByText("Đã cập nhật trạng thái hoạt động.", { exact: true }),
   ).toBeVisible();
   expect(puts).toHaveLength(1);
-  // Dialogs animate out, so wait until the confirmation has fully left the page.
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   delay = false;
   await selected(page).selectOption("permanently_closed");
   await reason(page).fill("Chưa lưu");
@@ -280,7 +280,6 @@ test("pending saves prevent duplicate requests and cancellation restores the lat
   await page
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(reason(page)).toHaveValue("Chưa lưu");
   await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
   await page
@@ -432,4 +431,80 @@ test("profile/status dirty tab exits require modals before either editor is unmo
     .click();
   await expect(selected(page)).toHaveValue("open");
   expect(puts).toHaveLength(0);
+});
+
+test("demo preserves permanent closure across workspace tabs, supports reopening and fits desktop/mobile", async ({
+  page,
+}) => {
+  const errors: string[] = [];
+  const native: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  page.on("dialog", async (dialog) => {
+    native.push(dialog.type());
+    await dialog.dismiss();
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto("/demo/owner/profile?tab=status");
+  await selected(page).selectOption("permanently_closed");
+  await reason(page).fill("Ngừng kinh doanh tại địa chỉ này");
+  await update(page).click();
+  await page.screenshot({
+    path: "artifacts/owner-status-confirm-desktop.png",
+    fullPage: false,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "artifacts/owner-status-confirm-mobile.png",
+    fullPage: false,
+  });
+  await confirm(page).click();
+  await expect(
+    page.getByText("Đã cập nhật trạng thái trong bản minh họa.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: "artifacts/owner-status-mobile.png",
+    fullPage: true,
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({
+    path: "artifacts/owner-status-desktop.png",
+    fullPage: true,
+  });
+  await page.getByRole("link", { name: "Tổng quan", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Một ngày mới tại Bếp Nhà." }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Đóng cửa vĩnh viễn", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("link", { name: "Quản lý nhà hàng", exact: true })
+    .click();
+  await page.getByRole("tab", { name: "Giờ mở cửa", exact: true }).click();
+  await expect(
+    page.getByRole("listitem", { name: "Thứ hai", exact: true }),
+  ).toContainText("07:00");
+  await page.getByRole("tab", { name: "Trạng thái", exact: true }).click();
+  await expect(selected(page)).toHaveValue("permanently_closed");
+  await selected(page).selectOption("open");
+  await update(page).click();
+  await confirm(page).click();
+  await expect(
+    page.getByText("Đã cập nhật trạng thái trong bản minh họa.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(selected(page)).toHaveValue("open");
+  expect(puts).toHaveLength(0);
+  expect(errors).toEqual([]);
+  expect(native).toEqual([]);
 });

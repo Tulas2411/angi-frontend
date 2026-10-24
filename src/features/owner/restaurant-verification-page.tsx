@@ -17,10 +17,15 @@ import {
   Tabs,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PageHeading, useWorkspace } from "@/components/layout/workspace";
+import { verificationLabels } from "@/components/domain/cards";
+import { usePlatform } from "@/features/platform/provider";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { ownerRoutes } from "./routes";
-import { verificationLabels } from "./status-labels";
+import { ownerProfileFromDemo } from "@/mocks/restaurant-profile";
+import {
+  createMockVerificationService,
+  verificationFromDemo,
+} from "@/mocks/restaurant-verification";
 import { VerificationDocumentUpload } from "./verification-document-upload";
 import { VerificationHistory } from "./verification-history";
 import {
@@ -54,7 +59,28 @@ export function RestaurantVerificationPage({
 }: {
   initialTab?: string;
 }) {
-  const service = verificationService;
+  const { base } = useWorkspace();
+  const { mode, data, mutate } = usePlatform();
+  const demo = mode === "demo";
+  const [mock] = useState(() => {
+    const owner = data.restaurants.find(
+      (item) => item.id === data.ownerRestaurantId,
+    );
+    const seed = owner ? ownerProfileFromDemo(owner, data.hours) : null;
+    const records = data.submissions.filter(
+      (item) =>
+        item.kind === "verification" &&
+        item.restaurantId === data.ownerRestaurantId,
+    );
+    const history = seed
+      ? records.map((record, index) =>
+          verificationFromDemo(record, seed.id, 21 + index),
+        )
+      : [];
+    if (seed && history.length) seed.latestVerification = history[0];
+    return createMockVerificationService(seed, history);
+  });
+  const service = demo ? mock : verificationService;
   const [restaurant, setRestaurant] = useState<OwnerRestaurantDto | null>(null);
   const [status, setStatus] = useState<
     "loading" | "ready" | "missing" | "error"
@@ -110,7 +136,7 @@ export function RestaurantVerificationPage({
       <EmptyState
         title="Bạn chưa đăng ký nhà hàng"
         action={
-          <ActionLink href={ownerRoutes.register}>Đăng ký nhà hàng</ActionLink>
+          <ActionLink href={`${base}/register`}>Đăng ký nhà hàng</ActionLink>
         }
       >
         Đăng ký nhà hàng trước khi nộp hồ sơ xác minh.
@@ -130,8 +156,9 @@ export function RestaurantVerificationPage({
       initialTab={initialTab}
       onHistoryLoaded={onHistoryLoaded}
       service={service}
+      demo={demo}
       onReload={reload}
-      onSaved={(result) => {
+      onSaved={async (result, documents) => {
         setRestaurant((current) =>
           current
             ? {
@@ -141,6 +168,34 @@ export function RestaurantVerificationPage({
               }
             : current,
         );
+        if (demo)
+          await mutate((next) => {
+            const owner = next.restaurants.find(
+              (item) => item.id === next.ownerRestaurantId,
+            );
+            if (!owner) return;
+            owner.verification = "pending";
+            next.submissions.unshift({
+              id: `verification-${result.id}`,
+              kind: "verification",
+              restaurantId: owner.id,
+              status: "pending",
+              date: result.submittedAt,
+              note: result.ownerNote ?? "",
+              legalName: result.legalName,
+              license: result.businessLicenseNo,
+              taxCode: result.taxCode ?? "",
+              previousId: result.previousId,
+              documents: result.documents.map((document) => ({
+                type: document.docType,
+                name:
+                  documents.find((item) => item.media.id === document.mediaId)
+                    ?.fileName ?? "Tài liệu xác minh",
+                mediaId: document.mediaId,
+                url: document.url,
+              })),
+            });
+          }, "");
       }}
     />
   );
@@ -162,6 +217,7 @@ function VerificationEditor({
   initialTab,
   onHistoryLoaded,
   service,
+  demo,
   onReload,
   onSaved,
 }: {
@@ -169,8 +225,12 @@ function VerificationEditor({
   initialTab?: string;
   onHistoryLoaded: (result: GetVerificationStatusResponseDto) => void;
   service: VerificationService;
+  demo: boolean;
   onReload: () => void;
-  onSaved: (result: VerificationDto) => void;
+  onSaved: (
+    result: VerificationDto,
+    documents: VerificationDocumentSelection[],
+  ) => Promise<void>;
 }) {
   const [tab, setTab] = useState(
     initialTab === "status" || verificationSubmissionBlock(restaurant)
@@ -298,10 +358,14 @@ function VerificationEditor({
       setTab("status");
       setSuccess(
         previousId !== null
-          ? "Đã gửi lại hồ sơ xác minh. Trạng thái: Chờ duyệt."
-          : "Đã gửi hồ sơ xác minh. Trạng thái: Chờ duyệt.",
+          ? demo
+            ? "Đã gửi lại hồ sơ minh họa. Trạng thái: Chờ duyệt."
+            : "Đã gửi lại hồ sơ xác minh. Trạng thái: Chờ duyệt."
+          : demo
+            ? "Đã gửi hồ sơ minh họa. Trạng thái: Chờ duyệt."
+            : "Đã gửi hồ sơ xác minh. Trạng thái: Chờ duyệt.",
       );
-      onSaved(result);
+      await onSaved(result, documents);
     } catch (caught) {
       if (!alive.current) return;
       setConfirmation(null);
@@ -367,9 +431,8 @@ function VerificationEditor({
     setConfirmation(null);
   }
   return (
-    <div className="stack form-page restaurant-verification-page">
+    <div className="stack restaurant-verification-page">
       <PageHeading
-        eyebrow="Nhà hàng của tôi"
         title="Xác minh nhà hàng"
         description="Gửi thông tin pháp lý và tài liệu để yêu cầu xác minh nhà hàng."
       />
@@ -501,8 +564,9 @@ function VerificationEditor({
               onChange={(event) => change("ownerNote", event.target.value)}
             />
             <Alert tone="info">
-              Tài liệu được tải lên để phục vụ xác minh. Kiểm tra đúng loại tài
-              liệu trước khi gửi hồ sơ.
+              {demo
+                ? "Tài liệu và hồ sơ trong bản minh họa không được gửi ra ngoài."
+                : "Tài liệu được tải lên để phục vụ xác minh. Kiểm tra đúng loại tài liệu trước khi gửi hồ sơ."}
             </Alert>
             <div className="actions">
               <Button type="submit" disabled={blocked}>

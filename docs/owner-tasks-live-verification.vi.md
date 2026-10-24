@@ -1,8 +1,5 @@
 # Kiểm thử ANGI-36, ANGI-48 và ANGI-55 với backend thật
 
-> **Tài liệu lịch sử (trước đợt dọn 10/2026).** Các cấu hình Playwright, script seed và màn `/demo` được nhắc dưới đây đã bị gộp hoặc xóa. Nội dung giữ lại làm bằng chứng; cách chạy hiện tại nằm trong [README](../README.md#checks).
-
-
 Ngày kiểm tra: **15/10/2026**. Báo cáo này tập trung vào ba task Owner do bạn giao, bổ sung kết quả mới cho báo cáo Sprint 1 trước đó. Tất cả lời gọi nghiệp vụ trong các lượt kiểm thử dưới đây đi qua FE Next.js, BE Kestrel và PostgreSQL thật; các lượt upload hợp lệ sử dụng Cloudinary thật. Không giả lập phản hồi API.
 
 ## Kết luận theo từng task

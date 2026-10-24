@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   buildRestaurantRequest,
   emptyRestaurantForm,
-  hiddenFieldMessages,
   restaurantFieldErrors,
   validateRestaurantForm,
   validateRestaurantImage,
 } from "@/features/owner/registration-rules";
+import { locationFromMapPoint } from "@/features/owner/location-service";
+import { createMockRestaurantRegistrationService } from "@/mocks/restaurant-registration";
 
 const values = {
   ...emptyRestaurantForm,
@@ -98,12 +99,38 @@ describe("restaurant registration contract", () => {
       validateRestaurantImage({ type: "application/pdf", size: 200 }),
     ).not.toBeNull();
   });
-  it("surfaces backend rules that no form control can show, such as a legacy district rule", () => {
-    const fields = restaurantFieldErrors({
-      Name: ["Tên chưa hợp lệ."],
-      district: ["Quận/huyện là bắt buộc."],
+  it("creates a coherent unverified wire response and refuses a second demo registration", async () => {
+    const service = createMockRestaurantRegistrationService();
+    const result = await service.register(
+      buildRestaurantRequest(values, location),
+    );
+    expect(result).toMatchObject({
+      name: "Bếp Nhà",
+      id: 7,
+      verificationStatus: "unverified",
+      operatingStatus: "open",
+      moderationStatus: "visible",
+      ratingAvg: 0,
+      ratingCount: 0,
+      businessHours: [],
+      latestVerification: null,
     });
-    expect(hiddenFieldMessages(fields)).toBe("Quận/huyện là bắt buộc.");
-    expect(hiddenFieldMessages({ name: "Tên chưa hợp lệ." })).toBe("");
+    await expect(
+      service.register(buildRestaurantRequest(values, location)),
+    ).rejects.toMatchObject({
+      status: 409,
+      errorCode: "OWNER_ALREADY_HAS_RESTAURANT",
+    });
+  });
+  it("maps the center to itself and map movement to the correct hemisphere", () => {
+    expect(locationFromMapPoint(location, 14, 0, 0).latitude).toBeCloseTo(
+      location.latitude,
+    );
+    expect(locationFromMapPoint(location, 14, 0, 0).longitude).toBeCloseTo(
+      location.longitude,
+    );
+    const eastAndNorth = locationFromMapPoint(location, 14, 100, -100);
+    expect(eastAndNorth.longitude).toBeGreaterThan(location.longitude);
+    expect(eastAndNorth.latitude).toBeGreaterThan(location.latitude);
   });
 });

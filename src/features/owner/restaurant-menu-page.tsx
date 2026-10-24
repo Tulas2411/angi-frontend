@@ -1,5 +1,4 @@
 "use client";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -10,10 +9,11 @@ import {
   Skeleton,
   Tabs,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
-import { dateLabel, money } from "@/shared/format";
+import { PageHeading, useWorkspace } from "@/components/layout/workspace";
+import { usePlatform } from "@/features/platform/provider";
+import { dateLabel, money } from "@/features/platform/rules";
 import { ApiError } from "@/shared/api/error";
-import { ownerRoutes, ownerVerificationHref } from "./routes";
+import { createMockRestaurantMenuService } from "@/mocks/restaurant-menu";
 import type { OwnerRestaurantDto } from "./restaurant-types";
 import type {
   MenuDetailDto,
@@ -39,7 +39,20 @@ type Confirmation =
   | { kind: "remove"; item: MenuItemDto; submissionId: number }
   | { kind: "cancel"; submissionId: number };
 export function RestaurantMenuPage() {
-  const service = restaurantMenuService;
+  const { data, mode, mutate, getDemoResource } = usePlatform(),
+    { base } = useWorkspace();
+  const [service] = useState(() =>
+    mode === "live"
+      ? restaurantMenuService
+      : getDemoResource(`owner-menu-${data.ownerRestaurantId}`, () =>
+          createMockRestaurantMenuService(data, async (id, value) => {
+            await mutate((next) => {
+              const dish = next.dishes.find((value) => value.id === id);
+              if (dish) dish.serving = value;
+            });
+          }),
+        ),
+  );
   const [state, setState] = useState<{
     loading: boolean;
     restaurant?: OwnerRestaurantDto;
@@ -224,12 +237,17 @@ export function RestaurantMenuPage() {
     disabled = busy || detailLoading;
   const editable = detail?.status === "draft";
   return (
-    <div className="stack form-page menu-workspace">
+    <div className="stack menu-workspace">
       <PageHeading
-        eyebrow="Nhà hàng của tôi"
         title="Quản lý thực đơn"
         description="Quản lý món đang bán và chuẩn bị thay đổi trong bản nháp riêng."
       />
+      {mode === "demo" && (
+        <Alert tone="info">
+          Bản minh họa. Thay đổi chỉ lưu trong phiên minh họa; ảnh được đọc trên
+          thiết bị của bạn.
+        </Alert>
+      )}
       {state.loading ? (
         <Skeleton />
       ) : state.error ? (
@@ -238,7 +256,7 @@ export function RestaurantMenuPage() {
             <Alert tone="error">{menuErrorMessage(state.error)}</Alert>
             {state.error instanceof ApiError &&
             state.error.errorCode === "RESTAURANT_NOT_FOUND" ? (
-              <ActionLink href={ownerRoutes.register}>
+              <ActionLink href={`${base}/register`}>
                 Đăng ký nhà hàng
               </ActionLink>
             ) : (
@@ -281,9 +299,7 @@ export function RestaurantMenuPage() {
             {restaurant.verificationStatus !== "verified" && (
               <Alert tone="warning">
                 Nhà hàng cần được xác minh trước khi tạo bản nháp thực đơn.{" "}
-                <Link href={ownerVerificationHref()} className="text-link">
-                  Xem hồ sơ xác minh
-                </Link>
+                <a href={`${base}/verification`}>Xem hồ sơ xác minh</a>
               </Alert>
             )}
             <Tabs

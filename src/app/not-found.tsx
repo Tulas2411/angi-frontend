@@ -1,21 +1,18 @@
-import { ActionLink } from "@/components/ui/primitives";
-import { SiteHeader } from "@/components/site/site-header";
-
-/** Routes that no longer exist (demo, discovery, moderation, administration…) end here. */
+import Link from "next/link";
 export default function NotFound() {
   return (
-    <div className="auth-shell">
-      <SiteHeader />
-      <main id="main-content" className="auth-main" tabIndex={-1}>
-        <section className="auth-card stack text-center">
-          <div className="auth-heading">
-            <p className="eyebrow">404</p>
-            <h1>Trang này chưa có</h1>
-            <p>Đường dẫn bạn mở không tồn tại hoặc đã được gỡ bỏ.</p>
-          </div>
-          <ActionLink href="/">Về trang chủ</ActionLink>
-        </section>
-      </main>
-    </div>
+    <main className="mx-auto max-w-md px-6 py-24 text-center">
+      <p className="text-sm font-semibold text-orange-600">404</p>
+      <h1 className="mt-4 text-3xl font-bold">Trang này chưa có</h1>
+      <p className="mt-4 text-sm text-stone-500">
+        Bạn có thể quay về trang chủ để tiếp tục.
+      </p>
+      <Link
+        href="/"
+        className="mt-8 inline-block rounded-xl bg-orange-600 px-5 py-3 font-semibold text-white"
+      >
+        Về trang chủ
+      </Link>
+    </main>
   );
 }

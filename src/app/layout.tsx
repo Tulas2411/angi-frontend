@@ -13,7 +13,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       {/* Browser extensions (McAfee Web Advisor, password managers) can add
           attributes to <html>/<body> before hydration. suppressHydrationWarning
           only affects this element's own attributes. */}
-      <body suppressHydrationWarning>
+      <body className="min-h-screen antialiased" suppressHydrationWarning>
         <GoogleProvider>{children}</GoogleProvider>
       </body>
     </html>

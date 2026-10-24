@@ -23,14 +23,14 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`button button-${variant} ${className}`.trim()}
+      className={`button button-${variant} ${className}`}
       // Browser extensions (McAfee Web Advisor, password managers) inject
       // `fdprocessedid` onto <button> before React hydrates, which triggers a
       // hydration mismatch. suppressHydrationWarning only silences this
       // element's own attributes; it never hides real content mismatches.
       suppressHydrationWarning
     >
-      {loading && <span className="spinner" aria-hidden />}
+      {loading && <span aria-hidden>⌛</span>}
       {loading ? "Đang xử lý…" : children}
     </button>
   );
@@ -42,7 +42,7 @@ export function Input({
   return (
     <input
       {...props}
-      className={`input ${className}`.trim()}
+      className={`input ${className}`}
       // See the note on Button: extensions may add `fdprocessedid` to
       // <input> before hydration.
       suppressHydrationWarning
@@ -59,7 +59,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`card ${className}`.trim()}>
+    <section className={`card ${className}`}>
       {title && <h2>{title}</h2>}
       {children}
     </section>
@@ -78,7 +78,7 @@ export function Alert({
       className={`alert alert-${tone}`}
     >
       <span className="alert-symbol" aria-hidden>
-        {tone === "error" ? "!" : tone === "success" ? "✓" : "i"}
+        {tone === "error" ? "!" : tone === "success" ? "✓" : "ⓘ"}
       </span>
       <div>{children}</div>
     </div>

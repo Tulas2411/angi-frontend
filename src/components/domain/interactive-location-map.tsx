@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { GeoJSONSource, Map as MapboxMap } from "mapbox-gl";
 import { mapLocationKey, mapStyles } from "@/shared/maps/mapbox";
-import type { MapLocation, MapStyle } from "@/shared/maps/mapbox";
+import type { MapLocation, MapRoute, MapStyle } from "@/shared/maps/mapbox";
 import { MapSelectionOverlay } from "./map-overlays";
 import type { MapPinPosition } from "./map-overlays";
 import "mapbox-gl/dist/mapbox-gl.css";
@@ -27,6 +27,10 @@ export function InteractiveLocationMap({
   onError,
   style = "streets",
   places = [],
+  routes = [],
+  activeRoute = 0,
+  onDirections,
+  onPlacesReader,
 }: {
   token: string;
   label: string;
@@ -39,6 +43,10 @@ export function InteractiveLocationMap({
   onError: () => void;
   style?: MapStyle;
   places?: MapLocation[];
+  routes?: MapRoute[];
+  activeRoute?: number;
+  onDirections?: () => void;
+  onPlacesReader?: (reader: (() => MapLocation[]) | null) => void;
 }) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
@@ -57,7 +65,10 @@ export function InteractiveLocationMap({
     onSelect,
     onError,
     places,
+    routes,
+    activeRoute,
     style,
+    onPlacesReader,
   });
   useEffect(() => {
     latest.current = {
@@ -67,9 +78,23 @@ export function InteractiveLocationMap({
       onSelect,
       onError,
       places,
+      routes,
+      activeRoute,
       style,
+      onPlacesReader,
     };
-  }, [camera, selected, onCameraChange, onSelect, onError, places, style]);
+  }, [
+    camera,
+    selected,
+    onCameraChange,
+    onSelect,
+    onError,
+    places,
+    routes,
+    activeRoute,
+    style,
+    onPlacesReader,
+  ]);
 
   useEffect(() => {
     if (!container.current) return;
@@ -79,8 +104,79 @@ export function InteractiveLocationMap({
     let instance: MapboxMap | null = null;
     let observer: ResizeObserver | null = null;
 
+    function readVisiblePlaces(): MapLocation[] {
+      if (!instance || disposed || !styleLoaded.current) return [];
+      const source = instance.getSource("composite");
+      if (!source) return [];
+      // Streets v12 and Satellite Streets v12 both use the Streets poi_label source layer.
+      return instance
+        .querySourceFeatures("composite", { sourceLayer: "poi_label" })
+        .flatMap((feature) => {
+          const name: unknown =
+            feature.properties?.name_vi ?? feature.properties?.name;
+          if (
+            feature.geometry.type !== "Point" ||
+            typeof name !== "string" ||
+            !name.trim()
+          )
+            return [];
+          const [longitude, latitude] = feature.geometry.coordinates;
+          if (
+            !Number.isFinite(latitude) ||
+            !Number.isFinite(longitude) ||
+            !instance?.getBounds()?.contains([longitude, latitude])
+          )
+            return [];
+          return [
+            {
+              name,
+              latitude,
+              longitude,
+              source: "mapbox" as const,
+              featureType: "poi",
+              categories: [
+                feature.properties?.class,
+                feature.properties?.type,
+                feature.properties?.maki,
+              ].filter((value): value is string => typeof value === "string"),
+            },
+          ];
+        });
+    }
+
     function updateData() {
       if (!instance || disposed || !styleLoaded.current) return;
+      const routeData = {
+        type: "FeatureCollection" as const,
+        features: latest.current.routes
+          .map((route, index) => ({
+            type: "Feature" as const,
+            properties: { active: index === latest.current.activeRoute },
+            geometry: {
+              type: "LineString" as const,
+              coordinates: route.coordinates,
+            },
+          }))
+          .sort(
+            (left, right) =>
+              Number(left.properties.active) - Number(right.properties.active),
+          ),
+      };
+      const existingRoutes = instance.getSource<GeoJSONSource>("angi-routes");
+      if (existingRoutes) existingRoutes.setData(routeData);
+      else
+        instance.addSource("angi-routes", { type: "geojson", data: routeData });
+      if (!instance.getLayer("angi-route-lines"))
+        instance.addLayer({
+          id: "angi-route-lines",
+          type: "line",
+          source: "angi-routes",
+          layout: { "line-cap": "round", "line-join": "round" },
+          paint: {
+            "line-color": ["case", ["get", "active"], "#2879ff", "#a9b8d0"],
+            "line-width": ["case", ["get", "active"], 6, 4],
+          },
+        });
       const placeData = {
         type: "FeatureCollection" as const,
         features: latest.current.places.map((point) => ({
@@ -169,7 +265,7 @@ export function InteractiveLocationMap({
         !(target instanceof Element) ||
         element.contains(target) ||
         target.closest(
-          "input, textarea, select, .combobox-options, .map-search-results, .map-coordinate-panel, .map-location-copy",
+          "input, textarea, select, .combobox-options, .map-search-results, .map-coordinate-panel, .map-location-copy, .map-directions-panel, .map-category-row, .map-own-places",
         )
       )
         return;
@@ -214,6 +310,7 @@ export function InteractiveLocationMap({
         appliedStyle.current = latest.current.style;
         reproject.current = projectSelection;
         syncData.current = updateData;
+        latest.current.onPlacesReader?.(readVisiblePlaces);
         instance.touchZoomRotate.disableRotation();
         instance.keyboard.disableRotation();
         instance.on("style.load", () => {
@@ -315,6 +412,7 @@ export function InteractiveLocationMap({
       styleLoaded.current = false;
       reproject.current = () => {};
       syncData.current = () => {};
+      latest.current.onPlacesReader?.(null);
     };
   }, [token]);
 
@@ -330,7 +428,36 @@ export function InteractiveLocationMap({
 
   useEffect(() => {
     syncData.current();
-  }, [places, styleRevision]);
+  }, [places, routes, activeRoute, styleRevision]);
+
+  useEffect(() => {
+    const instance = map.current;
+    const coordinates = routes[activeRoute]?.coordinates;
+    if (!instance || !coordinates?.length) return;
+    const bounds: [[number, number], [number, number]] = coordinates.reduce<
+      [[number, number], [number, number]]
+    >(
+      (range, point) => [
+        [Math.min(range[0][0], point[0]), Math.min(range[0][1], point[1])],
+        [Math.max(range[1][0], point[0]), Math.max(range[1][1], point[1])],
+      ],
+      [
+        [coordinates[0][0], coordinates[0][1]],
+        [coordinates[0][0], coordinates[0][1]],
+      ],
+    );
+    const wide = instance.getContainer().clientWidth >= 760;
+    instance.fitBounds(bounds, {
+      padding: {
+        left: wide ? 380 : 40,
+        right: 60,
+        top: wide ? 60 : 160,
+        bottom: 100,
+      },
+      maxZoom: 16,
+      duration: 500,
+    });
+  }, [routes, activeRoute]);
 
   useEffect(() => {
     const instance = map.current;
@@ -385,6 +512,7 @@ export function InteractiveLocationMap({
           location={selected}
           position={pinPosition}
           summaryHidden={summaryHidden}
+          onDirections={onDirections}
         />
       )}
     </div>
