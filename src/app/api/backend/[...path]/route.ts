@@ -7,6 +7,7 @@ import {
   roadmapOperation,
   roadmapOperationHasBody,
 } from "@/shared/api/roadmap-proxy";
+import { socialOperation } from "@/shared/api/social-proxy";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -39,12 +40,14 @@ async function handle(request: Request, context: Context) {
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
     const roadmapRoute = roadmapOperation(request.method, endpoint);
+    const socialRoute = socialOperation(request.method, endpoint);
     if (
       !allowedEndpoints.has(`${request.method} ${endpoint}`) &&
       !resubmission &&
       !roadmapRoute &&
       !menuOperation &&
-      !publicOp
+      !publicOp &&
+      !socialRoute
     ) {
       throw new ApiError(
         404,
@@ -57,6 +60,7 @@ async function handle(request: Request, context: Context) {
     if (
       request.method !== "GET" &&
       menuOperation?.body !== false &&
+      socialRoute?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
       if (endpoint === "media") {
@@ -93,6 +97,29 @@ async function handle(request: Request, context: Context) {
           }),
         ),
         publicOp.status,
+      );
+    }
+    // Blog/bình luận/báo cáo công khai — backend để [AllowAnonymous].
+    if (socialRoute?.allowGuest) {
+      return ok(
+        await backend<unknown>(`${endpoint}${query}`, {
+          method: request.method,
+          body,
+        }),
+        socialRoute.status,
+      );
+    }
+    // Thao tác xã hội cần đăng nhập (đăng bài, bình luận, báo cáo, đánh giá).
+    if (socialRoute) {
+      return ok(
+        await withAuth(session, (auth) =>
+          backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          }),
+        ),
+        socialRoute.status,
       );
     }
     return ok(

@@ -104,6 +104,9 @@ test("gỡ phản hồi cần xác nhận", async ({ page }) => {
 test("không phản hồi được đánh giá đang bị ẩn", async ({ page }) => {
   await page.goto("/demo/owner/reviews");
 
+  // Đánh giá bị ẩn nằm ở trang 2 nên phải chuyển trang mới thấy.
+  await page.getByRole("button", { name: "Trang sau" }).click();
+
   const hidden = page.locator(".owner-review", {
     hasText: "đang bị ẩn",
   });
