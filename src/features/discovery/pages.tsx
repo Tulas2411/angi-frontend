@@ -10,7 +10,6 @@ import {
   Tabs,
   Pagination,
   Dialog,
-  SelectField,
   TextArea,
   UploadField,
   type UploadedFile,
@@ -577,19 +576,10 @@ export function RestaurantDetail({ id }: { id: string }) {
     </div>
   );
 }
+
 export function DishDetail({ id }: { id: string }) {
-  const { data, mutate, busy } = usePlatform(),
-    { base, user, demo } = useWorkspace(),
-    [reportOpen, setReportOpen] = useState(false),
-    [reason, setReason] = useState("Sai thông tin"),
-    [text, setText] = useState("");
-  /** Đóng popup báo cáo và xoá sạch dữ liệu đang nhập để lần mở sau không
-      còn hiện lại nội dung cũ. */
-  function closeReport() {
-    setReportOpen(false);
-    setReason("Sai thông tin");
-    setText("");
-  }
+  const { data } = usePlatform(),
+    { base, demo } = useWorkspace();
   // F-13: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết món.
   useEffect(() => {
     const numericId = Number(id);
@@ -669,15 +659,6 @@ export function DishDetail({ id }: { id: string }) {
                 <Badge tone="success">Đang phục vụ</Badge>
               ) : (
                 <Badge tone="warning">Tạm hết món</Badge>
-              )}
-            </div>
-            <div className="actions">
-              {user ? (
-                <Button variant="secondary" onClick={() => setReportOpen(true)}>
-                  Báo cáo thông tin
-                </Button>
-              ) : (
-                <ActionLink href="/login">Đăng nhập để báo cáo</ActionLink>
               )}
             </div>
           </div>
@@ -900,55 +881,6 @@ export function DishDetail({ id }: { id: string }) {
           </div>
         </Card>
       )}
-      <Dialog
-        open={reportOpen}
-        onClose={closeReport}
-        title="Báo cáo món ăn"
-        instant
-      >
-        <form
-          className="stack"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await mutate(
-              (d) =>
-                d.reports.unshift({
-                  id: crypto.randomUUID(),
-                  target: "dish",
-                  targetId: id,
-                  reporter: user!.displayName,
-                  reason,
-                  description: text,
-                  status: "open",
-                  date: new Date().toISOString().slice(0, 10),
-                }),
-              "Đã nhận báo cáo trong bản minh họa.",
-            );
-            closeReport();
-          }}
-        >
-          <SelectField
-            label="Lý do"
-            value={reason}
-            onChange={setReason}
-            options={[
-              "Sai thông tin",
-              "Giá không đúng",
-              "Hết nguyên liệu",
-              "Nội dung không phù hợp",
-            ].map((v) => ({ value: v, label: v }))}
-          />
-          <TextArea
-            label="Thông tin bổ sung"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            maxLength={1000}
-          />
-          <Button type="submit" loading={busy}>
-            Gửi báo cáo
-          </Button>
-        </form>
-      </Dialog>
     </div>
   );
 }
