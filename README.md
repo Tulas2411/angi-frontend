@@ -95,19 +95,19 @@ Open [http://localhost:3000](http://localhost:3000). The homepage works without 
 
 ## Routes and access
 
-| Route                                                                                                        | Access             | Purpose                                                              |
-| ------------------------------------------------------------------------------------------------------------ | ------------------ | -------------------------------------------------------------------- |
-| `/`                                                                                                          | Public             | Homepage; owners are redirected to `/restaurant`                     |
-| `/login`, `/register`, `/verify-email`, `/verify-success`, `/forgot-password`, `/reset-password`             | Public             | Account entry and recovery                                           |
-| `/account`                                                                                                   | Any signed-in role | Profile and password                                                 |
-| `/restaurant`, `/restaurant/register`, `/restaurant/profile`, `/restaurant/verification`, `/restaurant/menu` | `RESTAURANT_OWNER` | Owner workspace                                                      |
-| `/roadmaps`                                                                                                  | `TRAVELER`         | My roadmaps, paged (RM-02)                                           |
-| `/roadmaps/{roadmapId}`                                                                                      | `TRAVELER`         | Roadmap detail: overview, itinerary with legs, budget (RM-03, RM-14) |
-| `/roadmaps/new`                                                                                              | `TRAVELER`         | Plan a new roadmap (RM-01) and edit its overview (RM-04)             |
-| `/dishes`, `/restaurants`, `/guides`                                                                         | Public             | Earlier public discovery screens                                     |
-| `/demo/*`                                                                                                    | Public preview     | Earlier role previews on demo fixtures; no session is created        |
-| `/restaurant/reviews`, `/restaurant/notifications`, `/moderation/*`, `/administration/*`                     | By role            | Earlier workspace screens (legacy shell)                             |
-| Anything else                                                                                                | —                  | 404                                                                  |
+| Route                                                                                                        | Access             | Purpose                                                                                         |
+| ------------------------------------------------------------------------------------------------------------ | ------------------ | ----------------------------------------------------------------------------------------------- |
+| `/`                                                                                                          | Public             | Homepage; owners are redirected to `/restaurant`                                                |
+| `/login`, `/register`, `/verify-email`, `/verify-success`, `/forgot-password`, `/reset-password`             | Public             | Account entry and recovery                                                                      |
+| `/account`                                                                                                   | Any signed-in role | Profile and password                                                                            |
+| `/restaurant`, `/restaurant/register`, `/restaurant/profile`, `/restaurant/verification`, `/restaurant/menu` | `RESTAURANT_OWNER` | Owner workspace                                                                                 |
+| `/roadmaps`                                                                                                  | `TRAVELER`         | My roadmaps, paged (RM-02)                                                                      |
+| `/roadmaps/{roadmapId}`                                                                                      | `TRAVELER`         | Roadmap detail: overview, itinerary with legs, budget (RM-03, RM-14); add a dish (RM-06, RM-07) |
+| `/roadmaps/new`                                                                                              | `TRAVELER`         | Plan a new roadmap (RM-01) and edit its overview (RM-04)                                        |
+| `/dishes`, `/restaurants`, `/guides`                                                                         | Public             | Earlier public discovery screens                                                                |
+| `/demo/*`                                                                                                    | Public preview     | Earlier role previews on demo fixtures; no session is created                                   |
+| `/restaurant/reviews`, `/restaurant/notifications`, `/moderation/*`, `/administration/*`                     | By role            | Earlier workspace screens (legacy shell)                                                        |
+| Anything else                                                                                                | —                  | 404                                                                                             |
 
 Landing page after sign-in: Traveler `/`, Owner `/restaurant`, Moderator `/moderation`, Administrator `/administration`. Missing sessions redirect to `/login`; a role mismatch redirects to the role's landing page. Hidden navigation never authorizes a request; the backend decides.
 

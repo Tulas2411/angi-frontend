@@ -1,12 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { Alert, Button, Card } from "@/shared/ui";
 import { ActionLink, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import type { DetailTab } from "./roadmap-detail-rules";
 import { RoadmapDetailView } from "./roadmap-detail-view";
-import { roadmapService, type RoadmapDetailService } from "./roadmap-service";
+import { roadmapService, type RoadmapScreenService } from "./roadmap-service";
 import { roadmapRoutes } from "./routes";
 import type { RoadmapDetailDto } from "./roadmap-types";
 import "./roadmap-detail.css";
@@ -27,7 +27,7 @@ export function RoadmapDetailPage({
   roadmapId: number;
   initialDay: number;
   initialTab: DetailTab;
-  service?: RoadmapDetailService;
+  service?: RoadmapScreenService;
 }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -51,6 +51,17 @@ export function RoadmapDetailPage({
     };
   }, [roadmapId, service, attempt]);
 
+  /**
+   * After RM-07 the roadmap is read again (RM-03): the order, costs and budget are the
+   * backend's, never recomputed here. A failure is thrown so the dialog can say so.
+   */
+  const reload = useCallback(async () => {
+    const detail = await service.get(roadmapId);
+    setState((current) =>
+      current.status === "ready" ? { status: "ready", detail } : current,
+    );
+  }, [roadmapId, service]);
+
   const back = (
     <Link href={roadmapRoutes.list} className="text-link">
       ← Lộ trình của tôi
@@ -64,6 +75,7 @@ export function RoadmapDetailPage({
         initialDay={initialDay}
         initialTab={initialTab}
         service={service}
+        onItemAdded={reload}
       />
     );
   if (state.status === "loading")
