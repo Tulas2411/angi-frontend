@@ -21,7 +21,7 @@ import {
   vnd,
 } from "./roadmap-list-rules";
 import { originModeLabels } from "./roadmap-rules";
-import type { RoadmapDetailService } from "./roadmap-service";
+import type { RoadmapScreenService } from "./roadmap-service";
 import { roadmapDetailHref, roadmapRoutes } from "./routes";
 import type { RoadmapDetailDto, RoadmapRouteDto } from "./roadmap-types";
 
@@ -34,11 +34,14 @@ export function RoadmapDetailView({
   initialDay,
   initialTab,
   service,
+  onItemAdded,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
   initialTab: DetailTab;
-  service: RoadmapDetailService;
+  service: RoadmapScreenService;
+  /** Reloads the roadmap after a dish was added; rejects when the reload fails. */
+  onItemAdded: () => Promise<void>;
 }) {
   const { overview, itinerary, budget } = detail;
   const firstDay = itinerary.find((day) => day.dayNumber === initialDay);
@@ -276,6 +279,7 @@ export function RoadmapDetailView({
             onSelectItem={selectContentItem}
             mapDayNumber={activeDay}
             onMapRouteChange={receiveMapRoute}
+            onItemAdded={onItemAdded}
           />
           {tab === "itinerary" && (
             <div className="roadmap-itinerary-budget">

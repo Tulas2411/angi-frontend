@@ -322,11 +322,27 @@
   gap: var(--space-4);
 }
 
-/* "Bữa sáng": a band across the column, like the meal headers of the design. */
-.roadmap-meal-heading {
-  padding: var(--space-3) var(--space-4);
+/* "Bữa sáng" + "+ Thêm món": a band across the column, like the meal headers of the design. */
+.roadmap-meal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-2) var(--space-4);
   border-radius: var(--radius-md);
   background: var(--control);
+}
+
+.roadmap-meal-header .button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 6px var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.roadmap-meal-heading {
+  min-width: 0;
   font-family: "DM Sans", var(--font-body);
   font-size: 17px;
   font-weight: 600;

@@ -66,8 +66,8 @@ export interface RoadmapRestaurantDto {
   ratingAvg: number;
 }
 
-/** DTO "RoadmapDish": a DishCard plus the dish status. `active` is the only normal one. */
-export interface RoadmapDishDto {
+/** DTO "DishCard": a dish with its restaurant, as listed by RM-06. `rank` is the reco rank. */
+export interface DishCardDto {
   id: number;
   name: string;
   price: number;
@@ -78,8 +78,12 @@ export interface RoadmapDishDto {
   dislikeCount: number;
   tags: RoadmapTagDto[];
   restaurant: RoadmapRestaurantDto;
-  status: "active" | "hidden" | "removed";
   rank: number | null;
+}
+
+/** DTO "RoadmapDish": a DishCard plus the dish status. `active` is the only normal one. */
+export interface RoadmapDishDto extends DishCardDto {
+  status: "active" | "hidden" | "removed";
 }
 
 /** DTO "RoadmapItem". */
@@ -167,4 +171,39 @@ export interface RoadmapRouteDto {
   totalDurationSeconds: number;
   /** true = the provider failed and the backend estimated the distances. */
   isEstimated: boolean;
+}
+
+/**
+ * RM-06 `GET roadmaps/{id}/suggestions` (API Design v1.8, sheet "Chi tiết Request-Response"
+ * r136–r138): ranked dishes that are not in the roadmap yet.
+ */
+export interface RoadmapSuggestionsDto {
+  /** The reco request id; sent back by RM-07 when a suggested dish is chosen. */
+  requestId: string;
+  items: DishCardDto[];
+  nextCursor: string | null;
+}
+
+/** RM-07 body (r139–r142). Without `sortOrder` the item goes to the end of its meal. */
+export interface AddRoadmapItemRequestDto {
+  dishId: number;
+  mealSlot: MealSlot;
+  sortOrder?: number;
+  recoRequestId?: string;
+}
+
+/** RM-06 query (Backend API row r36). `province` is required: a roadmap keeps no destination. */
+export interface RoadmapSuggestionsQuery {
+  province: string;
+  dayId?: number;
+  mealSlot?: MealSlot;
+  q?: string;
+  /** VND, whole number, ≥ 0. */
+  maxPrice?: number;
+  /** GPS position; both coordinates go together. Without them the pinned origin is used. */
+  lat?: number;
+  lng?: number;
+  cursor?: string;
+  /** 1..50, the backend default is 20. */
+  limit?: number;
 }

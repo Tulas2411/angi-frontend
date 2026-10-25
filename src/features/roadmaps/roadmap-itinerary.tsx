@@ -20,9 +20,13 @@ import {
   wantsDayRoute,
   type GpsProblem,
 } from "./roadmap-detail-rules";
+import { RoadmapAddItemDialog } from "./roadmap-add-item-dialog";
+import { mostCommonProvince, nextMealSlot } from "./roadmap-add-item-rules";
+import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
-import type { RoadmapDetailService } from "./roadmap-service";
+import type { RoadmapScreenService } from "./roadmap-service";
 import type {
+  MealSlot,
   RoadmapDayDto,
   RoadmapItemDto,
   RoadmapRouteDto,
@@ -38,6 +42,19 @@ type GpsState =
   | { status: "asking" }
   | { status: "granted"; latitude: number; longitude: number }
   | { status: "problem"; problem: GpsProblem };
+
+/**
+ * Cache key of a day's legs: the dishes are part of it, so a day that gained a dish is asked
+ * again (once), while an unchanged day keeps its answer.
+ */
+function routeKey(
+  day: RoadmapDayDto,
+  latitude: number | undefined,
+  longitude: number | undefined,
+) {
+  const dishes = day.items.map((item) => item.id).join(".");
+  return `${day.dayId}:${dishes}:${latitude === undefined ? "-" : `${latitude},${longitude}`}`;
+}
 
 function ItemCard({
   item,
@@ -119,6 +136,7 @@ function DayPanel({
   onRetry,
   selectedItemId,
   onSelectItem,
+  onAdd,
 }: {
   day: RoadmapDayDto;
   overview: RoadmapSummaryDto;
@@ -129,6 +147,8 @@ function DayPanel({
   onRetry: () => void;
   selectedItemId: number | null;
   onSelectItem: (id: number | null) => void;
+  /** Opens the add-dish dialog for this day, on the given meal when one is clicked. */
+  onAdd: (slot?: MealSlot) => void;
 }) {
   const maps = googleMapsDayLink(overview, day.items);
   const legs = route?.status === "ready" ? legsByTarget(route.route) : null;
@@ -164,8 +184,9 @@ function DayPanel({
       </p>
       {open && (
         <div id={bodyId} className="roadmap-day-body stack">
-          {maps && (
-            <div className="roadmap-day-actions">
+          <div className="roadmap-day-actions">
+            <Button onClick={() => onAdd()}>+ Thêm món</Button>
+            {maps && (
               <a
                 className="button button-secondary"
                 href={maps.url}
@@ -175,13 +196,13 @@ function DayPanel({
                 Mở trên Google Maps
                 <span className="sr-only"> (mở tab mới)</span>
               </a>
-              {maps.truncated && (
-                <p className="helper">
-                  Google Maps nhận tối đa {maps.stops} điểm, nên liên kết chỉ
-                  gồm {maps.stops} quán đầu của ngày.
-                </p>
-              )}
-            </div>
+            )}
+          </div>
+          {maps?.truncated && (
+            <p className="helper">
+              Google Maps nhận tối đa {maps.stops} điểm, nên liên kết chỉ gồm{" "}
+              {maps.stops} quán đầu của ngày.
+            </p>
           )}
 
           {loading && (
@@ -237,9 +258,17 @@ function DayPanel({
                 key={`${group.mealSlot}-${group.items[0].id}`}
                 className="roadmap-meal"
               >
-                <h4 className="roadmap-meal-heading">
-                  {mealSlotLabels[group.mealSlot]}
-                </h4>
+                <div className="roadmap-meal-header">
+                  <h4 className="roadmap-meal-heading">
+                    {mealSlotLabels[group.mealSlot]}
+                  </h4>
+                  <Button
+                    aria-label={`Thêm món vào ${mealSlotLabels[group.mealSlot].toLowerCase()}`}
+                    onClick={() => onAdd(group.mealSlot)}
+                  >
+                    + Thêm món
+                  </Button>
+                </div>
                 <ol className="roadmap-items">
                   {group.items.map((item) => {
                     const leg = legs?.get(item.id);
@@ -285,7 +314,9 @@ function DayPanel({
               </div>
             ))
           ) : (
-            <p className="roadmap-empty-day">Ngày này chưa có món nào.</p>
+            <p className="roadmap-empty-day">
+              Ngày này chưa có món nào. Bấm “Thêm món” để chọn món ANGI gợi ý.
+            </p>
           )}
           {day.items.length > 0 && (
             <p className="roadmap-day-total">
@@ -320,6 +351,7 @@ export function RoadmapItinerary({
   onSelectItem,
   mapDayNumber,
   onMapRouteChange,
+  onItemAdded,
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
@@ -327,12 +359,19 @@ export function RoadmapItinerary({
   openDays: number[];
   onToggleDay: (dayNumber: number) => void;
   active: boolean;
-  service: RoadmapDetailService;
+  service: RoadmapScreenService;
   selectedItemId: number | null;
   onSelectItem: (id: number | null) => void;
   mapDayNumber: number;
   onMapRouteChange: (route: RoadmapRouteDto | null) => void;
+  /** RM-07 succeeded: the parent reloads the roadmap so every figure comes from RM-03. */
+  onItemAdded: () => Promise<void>;
 }) {
+  const [addTarget, setAddTarget] = useState<{
+    dayNumber: number;
+    slot: MealSlot;
+    province: string;
+  } | null>(null);
   const [gps, setGps] = useState<GpsState>({ status: "idle" });
   const [routes, setRoutes] = useState<Record<string, RouteState>>({});
   const [attempt, setAttempt] = useState(0);
@@ -347,10 +386,10 @@ export function RoadmapItinerary({
 
   const gpsLatitude = gps.status === "granted" ? gps.latitude : undefined;
   const gpsLongitude = gps.status === "granted" ? gps.longitude : undefined;
-  const keyOf = (dayId: number) =>
-    `${dayId}:${gpsLatitude === undefined ? "-" : `${gpsLatitude},${gpsLongitude}`}`;
+  const keyOf = (day: RoadmapDayDto) =>
+    routeKey(day, gpsLatitude, gpsLongitude);
   const mapDay = itinerary.find((day) => day.dayNumber === mapDayNumber);
-  const mapRouteState = mapDay ? routes[keyOf(mapDay.dayId)] : undefined;
+  const mapRouteState = mapDay ? routes[keyOf(mapDay)] : undefined;
   useEffect(() => {
     onMapRouteChange(
       mapRouteState?.status === "ready" ? mapRouteState.route : null,
@@ -367,7 +406,7 @@ export function RoadmapItinerary({
       if (!openDays.includes(day.dayNumber)) continue;
       if (!wantsDayRoute(overview, day.items, gpsOrigin !== undefined))
         continue;
-      const key = `${day.dayId}:${gpsOrigin ? `${gpsOrigin.latitude},${gpsOrigin.longitude}` : "-"}`;
+      const key = routeKey(day, gpsLatitude, gpsLongitude);
       if (started.current.has(key)) continue;
       started.current.add(key);
       service
@@ -400,6 +439,10 @@ export function RoadmapItinerary({
     service,
     attempt,
   ]);
+
+  const addDay = addTarget
+    ? itinerary.find((day) => day.dayNumber === addTarget.dayNumber)
+    : undefined;
 
   /** The browser asks the traveler here; coordinates stay in memory only. */
   function askCurrentPosition() {
@@ -479,7 +522,7 @@ export function RoadmapItinerary({
         </div>
       )}
       {itinerary.map((day) => {
-        const key = keyOf(day.dayId);
+        const key = keyOf(day);
         const open = openDays.includes(day.dayNumber);
         const route = routes[key];
         return (
@@ -498,9 +541,35 @@ export function RoadmapItinerary({
             onRetry={() => retry(key)}
             selectedItemId={selectedItemId}
             onSelectItem={onSelectItem}
+            onAdd={(slot) =>
+              setAddTarget({
+                dayNumber: day.dayNumber,
+                slot: slot ?? nextMealSlot(day),
+                // The roadmap keeps no destination: reuse what the traveler typed, else the dishes' province.
+                province:
+                  recallDestination(roadmapId) || mostCommonProvince(itinerary),
+              })
+            }
           />
         );
       })}
+      {addTarget && addDay && (
+        <RoadmapAddItemDialog
+          roadmapId={roadmapId}
+          overview={overview}
+          day={addDay}
+          initialSlot={addTarget.slot}
+          defaultProvince={addTarget.province}
+          gpsOrigin={
+            gpsLatitude === undefined || gpsLongitude === undefined
+              ? undefined
+              : { latitude: gpsLatitude, longitude: gpsLongitude }
+          }
+          service={service}
+          onAdded={onItemAdded}
+          onClose={() => setAddTarget(null)}
+        />
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
 import { ActionLink, Media } from "@/components/ui/primitives";
 import { dateLabel } from "@/shared/format";
+import { rememberDestination } from "./roadmap-destination";
 import { RoadmapOverviewForm } from "./roadmap-overview-form";
 import {
   buildCreateRoadmapRequest,
@@ -80,6 +81,8 @@ export function PlanRoadmapPage({
               const created = await service.create(
                 buildCreateRoadmapRequest(values, origin),
               );
+              // RM-01 keeps no destination; RM-06 asks for it, so remember it for this browser.
+              rememberDestination(created.overview.id, values.province);
               setRoadmap(created);
               setNotice("");
             }}

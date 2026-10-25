@@ -1,9 +1,14 @@
 import { api } from "@/shared/api/client";
+import { suggestionsQueryString } from "./roadmap-add-item-rules";
 import type {
+  AddRoadmapItemRequestDto,
   CreateRoadmapRequestDto,
   RoadmapDetailDto,
+  RoadmapItemDto,
   RoadmapPageDto,
   RoadmapRouteDto,
+  RoadmapSuggestionsDto,
+  RoadmapSuggestionsQuery,
   UpdateRoadmapRequestDto,
 } from "./roadmap-types";
 
@@ -36,9 +41,27 @@ export interface RoadmapDetailService {
   ) => Promise<RoadmapRouteDto>;
 }
 
+export interface RoadmapItemService {
+  /** RM-06: ranked dishes for a meal that are not in the roadmap yet; `cursor` pages the list. */
+  suggestions: (
+    roadmapId: number,
+    query: RoadmapSuggestionsQuery,
+  ) => Promise<RoadmapSuggestionsDto>;
+  /** RM-07: 201 Created with the new RoadmapItem. */
+  addItem: (
+    roadmapId: number,
+    dayId: number,
+    request: AddRoadmapItemRequestDto,
+  ) => Promise<RoadmapItemDto>;
+}
+
+/** Everything the roadmap detail screen calls: RM-03, RM-14, RM-06 and RM-07. */
+export type RoadmapScreenService = RoadmapDetailService & RoadmapItemService;
+
 export const roadmapService: RoadmapPlanService &
   RoadmapListService &
-  RoadmapDetailService = {
+  RoadmapDetailService &
+  RoadmapItemService = {
   create: (request) => api.post<RoadmapDetailDto>("roadmaps", request),
   update: (roadmapId, request) =>
     api.patch<RoadmapDetailDto>(`roadmaps/${roadmapId}`, request),
@@ -53,4 +76,13 @@ export const roadmapService: RoadmapPlanService &
       `roadmaps/${roadmapId}/days/${dayId}/route${query}`,
     );
   },
+  suggestions: (roadmapId, query) =>
+    api.get<RoadmapSuggestionsDto>(
+      `roadmaps/${roadmapId}/suggestions?${suggestionsQueryString(query)}`,
+    ),
+  addItem: (roadmapId, dayId, request) =>
+    api.post<RoadmapItemDto>(
+      `roadmaps/${roadmapId}/days/${dayId}/items`,
+      request,
+    ),
 };
