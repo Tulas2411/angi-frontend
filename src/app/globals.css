@@ -1032,6 +1032,11 @@ select.input {
   box-shadow: var(--shadow-pop);
   opacity: 0;
   transform: translateY(12px) scale(0.98);
+  /* Giữ `flex-direction` ở cấp gốc: trong lúc thoát animation, `display`
+     vẫn được giữ ở `flex` (transition allow-discrete) nhưng rule `[open]`
+     đã mất hiệu lực. Nếu không khai báo ở đây, heading/content/footer sẽ bị
+     xếp ngang và ảnh trong popup bị bóp méo trước khi hộp thoại tắt hẳn. */
+  flex-direction: column;
   transition:
     opacity var(--duration) ease,
     transform var(--duration) var(--ease-out),
@@ -1043,6 +1048,14 @@ select.input {
   flex-direction: column;
   opacity: 1;
   transform: none;
+}
+/* Popup cần đóng tắt luôn: bỏ toàn bộ transition khi đã đóng (kể cả
+   `display`/`overlay` allow-discrete) để hộp thoại và lớp phủ nền biến mất
+   ngay lập tức, không giữ lại khung hình đã vỡ layout trong lúc fade-out.
+   Rule chỉ áp dụng ở trạng thái đóng nên hiệu ứng mở ra vẫn giữ nguyên. */
+.dialog.dialog-instant:not([open]),
+.dialog.dialog-instant:not([open])::backdrop {
+  transition: none;
 }
 .dialog::backdrop {
   background: rgb(34 34 34 / 0.48);

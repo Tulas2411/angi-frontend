@@ -370,6 +370,14 @@ export function RestaurantDetail({ id }: { id: string }) {
     [reason, setReason] = useState<string>(RESTAURANT_REPORT_REASONS[0]),
     [reportText, setReportText] = useState(""),
     [reportEvidence, setReportEvidence] = useState<UploadedFile[]>([]);
+  /** Đóng popup báo cáo và xoá sạch dữ liệu đang nhập để lần mở sau không
+      còn hiện lại ảnh bằng chứng hay nội dung cũ. */
+  function closeReport() {
+    setReportOpen(false);
+    setReason(RESTAURANT_REPORT_REASONS[0]);
+    setReportText("");
+    setReportEvidence([]);
+  }
   // F-16: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết.
   useEffect(() => {
     const numericId = Number(id);
@@ -509,8 +517,9 @@ export function RestaurantDetail({ id }: { id: string }) {
       />
       <Dialog
         open={reportOpen}
-        onClose={() => setReportOpen(false)}
+        onClose={closeReport}
         title="Báo cáo nhà hàng"
+        instant
       >
         <form
           className="stack"
@@ -531,9 +540,7 @@ export function RestaurantDetail({ id }: { id: string }) {
                 }),
               "Đã nhận báo cáo trong bản minh họa.",
             );
-            setReportOpen(false);
-            setReportText("");
-            setReportEvidence([]);
+            closeReport();
           }}
         >
           <fieldset className="report-reasons">
@@ -576,6 +583,13 @@ export function DishDetail({ id }: { id: string }) {
     [reportOpen, setReportOpen] = useState(false),
     [reason, setReason] = useState("Sai thông tin"),
     [text, setText] = useState("");
+  /** Đóng popup báo cáo và xoá sạch dữ liệu đang nhập để lần mở sau không
+      còn hiện lại nội dung cũ. */
+  function closeReport() {
+    setReportOpen(false);
+    setReason("Sai thông tin");
+    setText("");
+  }
   // F-13: gọi BE song song (fire-and-forget) để xác nhận endpoint khi user mở chi tiết món.
   useEffect(() => {
     const numericId = Number(id);
@@ -888,8 +902,9 @@ export function DishDetail({ id }: { id: string }) {
       )}
       <Dialog
         open={reportOpen}
-        onClose={() => setReportOpen(false)}
+        onClose={closeReport}
         title="Báo cáo món ăn"
+        instant
       >
         <form
           className="stack"
@@ -909,8 +924,7 @@ export function DishDetail({ id }: { id: string }) {
                 }),
               "Đã nhận báo cáo trong bản minh họa.",
             );
-            setReportOpen(false);
-            setText("");
+            closeReport();
           }}
         >
           <SelectField

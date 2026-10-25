@@ -379,6 +379,7 @@ export function Dialog({
   map = false,
   drawer = false,
   focusField = false,
+  instant = false,
   className = "",
 }: {
   open: boolean;
@@ -391,6 +392,8 @@ export function Dialog({
   drawer?: boolean;
   /** Forms move initial focus to their first field instead of the close button. */
   focusField?: boolean;
+  /** Close without the fade-out animation: the dialog disappears at once. */
+  instant?: boolean;
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
@@ -420,7 +423,7 @@ export function Dialog({
   return (
     <dialog
       ref={ref}
-      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
+      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${instant ? "dialog-instant" : ""} ${className}`.trim()}
       aria-labelledby={titleId}
       onCancel={(e) => {
         e.preventDefault();

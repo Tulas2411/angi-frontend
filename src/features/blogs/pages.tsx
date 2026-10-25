@@ -244,6 +244,14 @@ export function BlogDetail({ id }: { id: string }) {
     [reportReason, setReportReason] = useState<string>(REPORT_REASONS[0]),
     [reportText, setReportText] = useState(""),
     [reportEvidence, setReportEvidence] = useState<UploadedFile[]>([]);
+  /** Đóng popup báo cáo và xoá sạch dữ liệu đang nhập để lần mở sau không
+      còn hiện lại ảnh bằng chứng hay nội dung cũ. */
+  function closeReport() {
+    setReportOpen(false);
+    setReportReason(REPORT_REASONS[0]);
+    setReportText("");
+    setReportEvidence([]);
+  }
   const blog = data.blogs.find(
     (b) => b.id === id && b.moderation === "visible",
   );
@@ -421,8 +429,9 @@ export function BlogDetail({ id }: { id: string }) {
       </ConfirmDialog>
       <Dialog
         open={reportOpen}
-        onClose={() => setReportOpen(false)}
+        onClose={closeReport}
         title="Báo cáo bài viết"
+        instant
       >
         <form
           className="stack"
@@ -443,9 +452,7 @@ export function BlogDetail({ id }: { id: string }) {
                 }),
               "Đã nhận báo cáo trong bản minh họa.",
             );
-            setReportOpen(false);
-            setReportText("");
-            setReportEvidence([]);
+            closeReport();
           }}
         >
           <fieldset className="report-reasons">
