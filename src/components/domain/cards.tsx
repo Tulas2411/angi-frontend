@@ -215,6 +215,20 @@ export function ReviewContent({
           ? review.text
           : "Nội dung đánh giá bị ẩn."}
       </p>
+      {!!review.images?.length && (
+        <ul className="review-images">
+          {review.images.map((image, index) => (
+            <li className="review-image-frame" key={`${image}-${index}`}>
+              <img
+                className="review-image"
+                src={image}
+                alt={`Ảnh thực tế của ${review.author}, ảnh ${index + 1}`}
+                loading="lazy"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
       {review.reply && (
         <div className="review-reply">
           <strong>Phản hồi của Bếp Nhà</strong>

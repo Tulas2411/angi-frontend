@@ -1,4 +1,6 @@
+
 "use client";
+
 import { useState } from "react";
 import { Button } from "@/shared/ui";
 import {
@@ -8,7 +10,6 @@ import {
   type UploadedFile,
 } from "@/components/ui/primitives";
 
-/** Nhãn mô tả mức độ hài lòng đi kèm số sao đang chọn. */
 const RATING_LABELS: Record<number, string> = {
   1: "Rất tệ",
   2: "Tệ",
@@ -16,15 +17,18 @@ const RATING_LABELS: Record<number, string> = {
   4: "Hài lòng",
   5: "Tuyệt vời",
 };
+
 const RATING_VALUES = [1, 2, 3, 4, 5] as const;
 const REVIEW_TEXT_MAX = 2000;
 const REVIEW_PHOTOS_MAX = 5;
 const REVIEW_FORM_ID = "write-review-form";
 
-/**
- * Popup viết đánh giá ở trang chi tiết nhà hàng.
- * Bố cục: mô tả → chọn số sao → nội dung → ảnh thực tế.
- */
+export type WriteReviewPayload = {
+  rating: number;
+  text: string;
+  photos: UploadedFile[];
+};
+
 export function WriteReviewDialog({
   open,
   onClose,
@@ -34,33 +38,66 @@ export function WriteReviewDialog({
   open: boolean;
   onClose: () => void;
   busy?: boolean;
-  onSubmit: (payload: {
-    rating: number;
-    text: string;
-    photos: UploadedFile[];
-  }) => Promise<void> | void;
+  onSubmit: (payload: WriteReviewPayload) => Promise<void> | void;
 }) {
-  const [rating, setRating] = useState(5),
-    [text, setText] = useState(""),
-    [photos, setPhotos] = useState<UploadedFile[]>([]);
+  const [rating, setRating] = useState(5);
+  const [text, setText] = useState("");
+  const [photos, setPhotos] = useState<UploadedFile[]>([]);
+  const [error, setError] = useState("");
 
-  // Mỗi lần mở lại popup thì bắt đầu với phiếu đánh giá trống. Đặt lại ngay khi `open`
-  // chuyển sang true (điều chỉnh state trong lúc render) thay vì gọi setState trong effect.
   const [wasOpen, setWasOpen] = useState(open);
+
   if (open !== wasOpen) {
     setWasOpen(open);
+
     if (open) {
       setRating(5);
       setText("");
       setPhotos([]);
+      setError("");
     }
   }
 
   function close() {
+    if (busy) return;
+
     setRating(5);
     setText("");
     setPhotos([]);
+    setError("");
     onClose();
+  }
+
+  async function handleSubmit(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setError("");
+
+    if (!text.trim()) {
+      setError("Vui lòng nhập nội dung đánh giá.");
+      return;
+    }
+
+    try {
+      await onSubmit({
+        rating,
+        text: text.trim(),
+        photos,
+      });
+
+      setRating(5);
+      setText("");
+      setPhotos([]);
+      setError("");
+      onClose();
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Không thể gửi đánh giá. Vui lòng thử lại.",
+      );
+    }
   }
 
   return (
@@ -70,10 +107,19 @@ export function WriteReviewDialog({
       title="Viết đánh giá"
       footer={
         <div className="dialog-actions-review">
-          <Button type="submit" form={REVIEW_FORM_ID} loading={busy}>
+          <Button
+            type="submit"
+            form={REVIEW_FORM_ID}
+            loading={busy}
+          >
             Gửi đánh giá
           </Button>
-          <Button variant="secondary" onClick={close} disabled={busy}>
+
+          <Button
+            variant="secondary"
+            onClick={close}
+            disabled={busy}
+          >
             Hủy
           </Button>
         </div>
@@ -82,20 +128,21 @@ export function WriteReviewDialog({
       <form
         id={REVIEW_FORM_ID}
         className="write-review"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          await onSubmit({ rating, text: text.trim(), photos });
-          close();
-        }}
+        onSubmit={handleSubmit}
       >
         <p className="write-review-lead">
-          Chia sẻ trải nghiệm của bạn tại quán. Mỗi người khám phá chỉ được
-          đánh giá một lần cho mỗi nhà hàng.
+          Chia sẻ trải nghiệm của bạn tại quán.
+          Mỗi người chỉ được đánh giá một lần cho mỗi nhà hàng.
         </p>
+
         <div className="field">
-          <span className="write-review-label" id="write-review-rating-label">
+          <span
+            className="write-review-label"
+            id="write-review-rating-label"
+          >
             Đánh giá nhà hàng *
           </span>
+
           <div
             className="write-review-stars"
             role="radiogroup"
@@ -112,14 +159,13 @@ export function WriteReviewDialog({
                   rating === value ? "is-selected" : ""
                 }`}
                 onClick={() => setRating(value)}
-                suppressHydrationWarning
               >
                 <svg
                   className="write-review-star-icon"
                   viewBox="0 0 24 24"
                   width="20"
                   height="20"
-                  aria-hidden
+                  aria-hidden="true"
                   focusable="false"
                 >
                   <path
@@ -127,25 +173,29 @@ export function WriteReviewDialog({
                     fill="currentColor"
                   />
                 </svg>
+
                 <span>{value}</span>
               </button>
             ))}
           </div>
+
           <p className="helper write-review-stars-caption">
             {rating} / 5 · {RATING_LABELS[rating]}
           </p>
         </div>
+
         <TextArea
           label="Nội dung đánh giá"
           value={text}
           onChange={(event) => setText(event.target.value)}
-          placeholder="Cà phê trưng bày nhẹ, không gian nhỏ và gần Hồ Gươm. Mình sẽ ghé lại."
+          placeholder="Chia sẻ trải nghiệm thực tế của bạn..."
           maxLength={REVIEW_TEXT_MAX}
           required
         />
+
         <div className="write-review-photos">
           <UploadField
-            label="Ảnh thực tế nghiệm · Không bắt buộc"
+            label="Ảnh trải nghiệm thực tế · Không bắt buộc"
             helper="JPG, PNG hoặc WEBP · Tối đa 5 ảnh · Mỗi ảnh không quá 5 MB"
             showCount={false}
             files={photos}
@@ -153,6 +203,12 @@ export function WriteReviewDialog({
             onChange={setPhotos}
           />
         </div>
+
+        {error && (
+          <p role="alert" className="helper">
+            {error}
+          </p>
+        )}
       </form>
     </Dialog>
   );

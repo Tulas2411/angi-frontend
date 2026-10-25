@@ -485,7 +485,7 @@ export function RestaurantDetail({ id }: { id: string }) {
         open={reviewOpen}
         busy={busy}
         onClose={() => setReviewOpen(false)}
-        onSubmit={async ({ rating, text }) => {
+        onSubmit={async ({ rating, text, photos }) => {
           await mutate(
             (d) =>
               d.reviews.unshift({
@@ -494,6 +494,11 @@ export function RestaurantDetail({ id }: { id: string }) {
                 author: user!.displayName,
                 rating,
                 text,
+                // Ảnh đính kèm được đọc thành data URL nên lưu thẳng vào
+                // đánh giá; `ReviewContent` hiển thị lại danh sách này.
+                images: photos
+                  .map((photo) => photo.url)
+                  .filter((url): url is string => Boolean(url)),
                 date: new Date().toISOString(),
                 moderation: "visible",
               }),

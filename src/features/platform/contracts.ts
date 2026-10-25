@@ -47,6 +47,8 @@ export interface Review {
   rating: number;
   text: string;
   date: string;
+  /** Ảnh thực tế đính kèm. Rỗng khi đánh giá không có ảnh. */
+  images?: string[];
   reply?: string;
   moderation: Visibility;
   replyModeration?: Visibility;

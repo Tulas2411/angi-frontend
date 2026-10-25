@@ -1725,6 +1725,30 @@
 & .review p {
   margin-block: 12px;
 }
+& .review-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+/* Khung ảnh cố định 96px để ảnh luôn có cùng kích thước khi đánh giá có
+   nhiều ảnh hoặc chỉ một ảnh. */
+& .review-image-frame {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  overflow: hidden;
+}
+& .review-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 & .review-header {
   display: flex;
   gap: 12px;
