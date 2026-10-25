@@ -24,6 +24,12 @@ import { RoadmapAddItemDialog } from "./roadmap-add-item-dialog";
 import { mostCommonProvince, nextMealSlot } from "./roadmap-add-item-rules";
 import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
+import { RoadmapRemoveItemDialog } from "./roadmap-remove-item-dialog";
+import {
+  removeNotice,
+  removeReloadFailed,
+  type RemoveOutcome,
+} from "./roadmap-remove-item-rules";
 import type { RoadmapScreenService } from "./roadmap-service";
 import type {
   MealSlot,
@@ -36,6 +42,13 @@ import type {
 type RouteState =
   | { status: "error"; message: string }
   | { status: "ready"; route: RoadmapRouteDto };
+
+/** What follows a removal, shown in the day it happened in. */
+interface DayNotice {
+  dayNumber: number;
+  tone: "success" | "warning";
+  text: string;
+}
 
 type GpsState =
   | { status: "idle" }
@@ -61,11 +74,13 @@ function ItemCard({
   order,
   selected,
   onSelect,
+  onRemove,
 }: {
   item: RoadmapItemDto;
   order: number;
   selected: boolean;
   onSelect: () => void;
+  onRemove: () => void;
 }) {
   const { dish } = item;
   const notice = dishNotice(dish);
@@ -104,6 +119,17 @@ function ItemCard({
             )}
           </p>
         )}
+        <div className="roadmap-item-actions">
+          <Button
+            variant="tertiary"
+            className="roadmap-item-remove"
+            aria-label={`Xóa ${dish.name} khỏi lộ trình`}
+            onClick={onRemove}
+          >
+            <Icon name="trash" />
+            <span>Xóa món</span>
+          </Button>
+        </div>
       </div>
       <button
         type="button"
@@ -137,6 +163,8 @@ function DayPanel({
   selectedItemId,
   onSelectItem,
   onAdd,
+  onRemove,
+  notice,
 }: {
   day: RoadmapDayDto;
   overview: RoadmapSummaryDto;
@@ -149,7 +177,15 @@ function DayPanel({
   onSelectItem: (id: number | null) => void;
   /** Opens the add-dish dialog for this day, on the given meal when one is clicked. */
   onAdd: (slot?: MealSlot) => void;
+  /** Asks to remove an item of this day (the parent confirms and calls RM-09). */
+  onRemove: (item: RoadmapItemDto) => void;
+  notice: DayNotice | null;
 }) {
+  const noticeRef = useRef<HTMLDivElement>(null);
+  // The removed card is gone with the focus on it: move the focus to what happened.
+  useEffect(() => {
+    if (notice) noticeRef.current?.focus();
+  }, [notice]);
   const maps = googleMapsDayLink(overview, day.items);
   const legs = route?.status === "ready" ? legsByTarget(route.route) : null;
   const bodyId = `day-body-${day.dayNumber}`;
@@ -198,6 +234,15 @@ function DayPanel({
               </a>
             )}
           </div>
+          {notice && (
+            <div
+              ref={noticeRef}
+              tabIndex={-1}
+              className="roadmap-day-notice"
+            >
+              <Alert tone={notice.tone}>{notice.text}</Alert>
+            </div>
+          )}
           {maps?.truncated && (
             <p className="helper">
               Google Maps nhận tối đa {maps.stops} điểm, nên liên kết chỉ gồm{" "}
@@ -306,6 +351,7 @@ function DayPanel({
                           }
                           selected={selectedItemId === item.id}
                           onSelect={() => onSelectItem(item.id)}
+                          onRemove={() => onRemove(item)}
                         />
                       </li>
                     );
@@ -352,6 +398,7 @@ export function RoadmapItinerary({
   mapDayNumber,
   onMapRouteChange,
   onItemAdded,
+  onItemRemoved,
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
@@ -366,7 +413,14 @@ export function RoadmapItinerary({
   onMapRouteChange: (route: RoadmapRouteDto | null) => void;
   /** RM-07 succeeded: the parent reloads the roadmap so every figure comes from RM-03. */
   onItemAdded: () => Promise<void>;
+  /** RM-09 succeeded: the parent reloads the roadmap, rejecting when that fails. */
+  onItemRemoved: () => Promise<void>;
 }) {
+  const [removeTarget, setRemoveTarget] = useState<{
+    dayNumber: number;
+    item: RoadmapItemDto;
+  } | null>(null);
+  const [notice, setNotice] = useState<DayNotice | null>(null);
   const [addTarget, setAddTarget] = useState<{
     dayNumber: number;
     slot: MealSlot;
@@ -443,6 +497,28 @@ export function RoadmapItinerary({
   const addDay = addTarget
     ? itinerary.find((day) => day.dayNumber === addTarget.dayNumber)
     : undefined;
+  const removeDay = removeTarget
+    ? itinerary.find((day) => day.dayNumber === removeTarget.dayNumber)
+    : undefined;
+
+  /** The item is gone: leave the map selection, say so in its day and read RM-03 again. */
+  async function itemRemoved(outcome: RemoveOutcome) {
+    if (!removeTarget) return;
+    const { dayNumber, item } = removeTarget;
+    setRemoveTarget(null);
+    if (selectedItemId === item.id) onSelectItem(null);
+    setNotice({
+      dayNumber,
+      tone: "success",
+      text: removeNotice(outcome, item.dish.name),
+    });
+    try {
+      await onItemRemoved();
+    } catch {
+      if (mounted.current)
+        setNotice({ dayNumber, tone: "warning", text: removeReloadFailed });
+    }
+  }
 
   /** The browser asks the traveler here; coordinates stay in memory only. */
   function askCurrentPosition() {
@@ -541,6 +617,11 @@ export function RoadmapItinerary({
             onRetry={() => retry(key)}
             selectedItemId={selectedItemId}
             onSelectItem={onSelectItem}
+            notice={notice?.dayNumber === day.dayNumber ? notice : null}
+            onRemove={(item) => {
+              setNotice(null);
+              setRemoveTarget({ dayNumber: day.dayNumber, item });
+            }}
             onAdd={(slot) =>
               setAddTarget({
                 dayNumber: day.dayNumber,
@@ -553,6 +634,16 @@ export function RoadmapItinerary({
           />
         );
       })}
+      {removeTarget && removeDay && (
+        <RoadmapRemoveItemDialog
+          roadmapId={roadmapId}
+          day={removeDay}
+          item={removeTarget.item}
+          service={service}
+          onRemoved={(outcome) => void itemRemoved(outcome)}
+          onClose={() => setRemoveTarget(null)}
+        />
+      )}
       {addTarget && addDay && (
         <RoadmapAddItemDialog
           roadmapId={roadmapId}

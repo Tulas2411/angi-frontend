@@ -3,7 +3,10 @@ import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
-import { roadmapOperation } from "@/shared/api/roadmap-proxy";
+import {
+  roadmapOperation,
+  roadmapOperationHasBody,
+} from "@/shared/api/roadmap-proxy";
 
 export const runtime = "nodejs";
 type Context = { params: Promise<{ path: string[] }> };
@@ -51,7 +54,11 @@ async function handle(request: Request, context: Context) {
     }
     if (request.method !== "GET") checkOrigin(request);
     let body: unknown;
-    if (request.method !== "GET" && menuOperation?.body !== false) {
+    if (
+      request.method !== "GET" &&
+      menuOperation?.body !== false &&
+      !(roadmapRoute && !roadmapOperationHasBody(request.method))
+    ) {
       if (endpoint === "media") {
         try {
           body = await request.formData();

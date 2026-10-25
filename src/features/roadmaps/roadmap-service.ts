@@ -53,9 +53,11 @@ export interface RoadmapItemService {
     dayId: number,
     request: AddRoadmapItemRequestDto,
   ) => Promise<RoadmapItemDto>;
+  /** RM-09: 200 OK with `data: null`; the item is gone for good, other items are untouched. */
+  deleteItem: (roadmapId: number, itemId: number) => Promise<void>;
 }
 
-/** Everything the roadmap detail screen calls: RM-03, RM-14, RM-06 and RM-07. */
+/** Everything the roadmap detail screen calls: RM-03, RM-14, RM-06, RM-07 and RM-09. */
 export type RoadmapScreenService = RoadmapDetailService & RoadmapItemService;
 
 export const roadmapService: RoadmapPlanService &
@@ -85,4 +87,7 @@ export const roadmapService: RoadmapPlanService &
       `roadmaps/${roadmapId}/days/${dayId}/items`,
       request,
     ),
+  deleteItem: async (roadmapId, itemId) => {
+    await api.delete<null>(`roadmaps/${roadmapId}/items/${itemId}`);
+  },
 };

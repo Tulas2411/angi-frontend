@@ -35,6 +35,7 @@ export function RoadmapDetailView({
   initialTab,
   service,
   onItemAdded,
+  onItemRemoved,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
@@ -42,6 +43,8 @@ export function RoadmapDetailView({
   service: RoadmapScreenService;
   /** Reloads the roadmap after a dish was added; rejects when the reload fails. */
   onItemAdded: () => Promise<void>;
+  /** Reloads the roadmap after an item was deleted; rejects when the reload fails. */
+  onItemRemoved: () => Promise<void>;
 }) {
   const { overview, itinerary, budget } = detail;
   const firstDay = itinerary.find((day) => day.dayNumber === initialDay);
@@ -280,6 +283,7 @@ export function RoadmapDetailView({
             mapDayNumber={activeDay}
             onMapRouteChange={receiveMapRoute}
             onItemAdded={onItemAdded}
+            onItemRemoved={onItemRemoved}
           />
           {tab === "itinerary" && (
             <div className="roadmap-itinerary-budget">
