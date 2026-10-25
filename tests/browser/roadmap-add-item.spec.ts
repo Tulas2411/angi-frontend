@@ -14,7 +14,9 @@ import type {
   RoadmapItemDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
-/** F-24: RM-06 and RM-07 against a local stub shaped like the API Design JSON samples. */
+/**
+ * F-24: RM-06 and RM-07, F-28: RM-09 against a local stub shaped like the API Design JSON samples.
+ */
 const requestId = "6f0c2b1e-8d7a-4c1e-9b3f-2a5d7e9c1f00";
 const slotOrder: MealSlot[] = [
   "breakfast",
@@ -33,6 +35,9 @@ let failAdd: { status: number; errorCode: string } | null = null;
 let failDetailReads = 0;
 let detailReads = 0;
 let expireNextCursor = false;
+let deleteCalls: number[] = [];
+let failDelete: { status: number; errorCode: string } | null = null;
+let itemGoneElsewhere = false;
 
 const restaurant = (name: string, latitude: number, longitude: number) => ({
   id: 7,
@@ -185,6 +190,32 @@ function insertItem(dayId: number, body: AddRoadmapItemRequestDto) {
   return item;
 }
 
+/** What RM-09 does: the item leaves its day, every other item stays, and costs follow. */
+function deleteItem(itemId: number) {
+  for (const day of detail.itinerary) {
+    const index = day.items.findIndex((entry) => entry.id === itemId);
+    if (index < 0) continue;
+    const [item] = day.items.splice(index, 1);
+    const price = item.dish.price;
+    day.dayCost -= price;
+    detail.overview.itemCount -= 1;
+    detail.overview.totalEstimatedCost -= price;
+    detail.budget.totalEstimatedCost -= price;
+    detail.budget.remaining =
+      (detail.budget.budgetAmount ?? 0) - detail.budget.totalEstimatedCost;
+    detail.budget.byDay[day.dayNumber - 1].cost -= price;
+    const meal = detail.budget.byMealSlot.find(
+      (e) => e.mealSlot === item.mealSlot,
+    );
+    if (meal) meal.cost -= price;
+    detail.budget.byMealSlot = detail.budget.byMealSlot.filter(
+      (e) => e.cost > 0,
+    );
+    return true;
+  }
+  return false;
+}
+
 const roadmaps: StubHandler = ({ method, url, body }, send) => {
   const parsed = new URL(url, "http://stub");
   const path = parsed.pathname;
@@ -281,6 +312,29 @@ const roadmaps: StubHandler = ({ method, url, body }, send) => {
     });
     return true;
   }
+  const remove = /^\/api\/v1\/roadmaps\/88\/items\/(\d+)$/.exec(path);
+  if (method === "DELETE" && remove) {
+    deleteCalls.push(Number(remove[1]));
+    if (failDelete) {
+      const failure = failDelete;
+      failDelete = null;
+      send(failure.status, null, failure.errorCode);
+      return true;
+    }
+    if (itemGoneElsewhere) {
+      // Removed from another tab in the meantime: RM-09 answers 404 ROADMAP_ITEM_NOT_FOUND.
+      itemGoneElsewhere = false;
+      deleteItem(Number(remove[1]));
+      send(404, null, "ROADMAP_ITEM_NOT_FOUND");
+      return true;
+    }
+    if (!deleteItem(Number(remove[1]))) {
+      send(404, null, "ROADMAP_ITEM_NOT_FOUND");
+      return true;
+    }
+    send(200, null);
+    return true;
+  }
   const add = /^\/api\/v1\/roadmaps\/88\/days\/(\d+)\/items$/.exec(path);
   if (method === "POST" && add) {
     const request = body as AddRoadmapItemRequestDto;
@@ -321,6 +375,9 @@ test.beforeEach(async ({ page }) => {
   failDetailReads = 0;
   detailReads = 0;
   expireNextCursor = false;
+  deleteCalls = [];
+  failDelete = null;
+  itemGoneElsewhere = false;
   await page.route("**/api/locations/provinces", (route) =>
     route.fulfill({
       json: {
@@ -735,6 +792,182 @@ test("the dialog works with the keyboard and has no horizontal overflow from 320
   await expect(opener).toBeFocused();
   await opener.click();
   await expect(box.locator(".roadmap-suggestion")).toHaveCount(12);
+  for (const width of [320, 390, 768, 1024, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await box.evaluate(
+        (element) => element.scrollWidth <= element.clientWidth + 1,
+      ),
+      `dialog ${width}px`,
+    ).toBe(true);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+      `page ${width}px`,
+    ).toBe(true);
+  }
+});
+
+// F-28 Delete Roadmap Item (RM-09).
+const removeButton = (page: Page, dish: string) =>
+  page.getByRole("button", { name: `Xóa ${dish} khỏi lộ trình` });
+const confirmDialog = (page: Page) =>
+  page.getByRole("dialog", { name: "Xóa món khỏi lộ trình?" });
+const confirmRemove = (page: Page) =>
+  confirmDialog(page).getByRole("button", { name: "Xóa món", exact: true });
+/** Day 1 with breakfast (Bún bò Huế, 45.000) and lunch (Mì Quảng ếch, 30.000). */
+function withLunch() {
+  insertItem(301, {
+    dishId: 200,
+    mealSlot: "lunch",
+    recoRequestId: requestId,
+  });
+}
+
+test("removing a dish asks first, sends RM-09 and leaves the other dishes alone", async ({
+  page,
+}) => {
+  withLunch();
+  await open(page);
+  await expect(items(page)).toHaveCount(2);
+  await expect(page.locator(".roadmap-day-sub").first()).toContainText(
+    "2 món · 75.000 VND",
+  );
+  // The dish picked on the map is the one removed: the selection must not outlive it.
+  const locate = page
+    .locator(".roadmap-item")
+    .getByRole("button", { name: "Xem vị trí Bún bò Huế" });
+  await locate.click();
+  await expect(locate).toHaveAttribute("aria-pressed", "true");
+
+  await removeButton(page, "Bún bò Huế").click();
+  const box = confirmDialog(page);
+  await expect(box).toContainText(
+    "Bún bò Huế (Bún Bò Bà Diệu) sẽ bị xóa khỏi bữa sáng của Thứ Bảy, 10 tháng 10.",
+  );
+  await expect(box).toContainText(
+    "Các món khác trong lộ trình không bị ảnh hưởng",
+  );
+  // Nothing is sent until the traveler confirms.
+  expect(deleteCalls).toEqual([]);
+  await confirmRemove(page).click();
+  await expect(box).toBeHidden();
+
+  expect(deleteCalls).toEqual([1502]);
+  // RM-03 is read again: figures, order and budget are the backend's.
+  await expect(items(page)).toHaveCount(1);
+  await expect(
+    page.locator(".roadmap-item", { hasText: "Mì Quảng ếch" }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".roadmap-item", { hasText: "Bún bò Huế" }),
+  ).toHaveCount(0);
+  await expect(page.locator(".roadmap-day-sub").first()).toContainText(
+    "1 món · 30.000 VND",
+  );
+  expect(detailReads).toBe(2);
+  await expect(page.locator(".roadmap-day-notice")).toContainText(
+    "Đã xóa Bún bò Huế khỏi lộ trình.",
+  );
+  // The card that held the focus is gone, so the notice takes it.
+  await expect(page.locator(".roadmap-day-notice")).toBeFocused();
+  await page.getByRole("tab", { name: "Ngân sách" }).click();
+  await expect(
+    page
+      .getByRole("tabpanel", { name: "Ngân sách" })
+      .locator(".roadmap-budget-total"),
+  ).toContainText("30.000 VND");
+});
+
+test("keeping the dish or pressing Escape sends nothing and returns the focus", async ({
+  page,
+}) => {
+  await open(page);
+  const opener = removeButton(page, "Bún bò Huế");
+  await opener.click();
+  await confirmDialog(page).getByRole("button", { name: "Giữ món" }).click();
+  await expect(confirmDialog(page)).toBeHidden();
+  await expect(opener).toBeFocused();
+  await opener.click();
+  await page.keyboard.press("Escape");
+  await expect(confirmDialog(page)).toBeHidden();
+  await expect(opener).toBeFocused();
+  expect(deleteCalls).toEqual([]);
+  await expect(items(page)).toHaveCount(1);
+});
+
+test("a failed removal keeps the dish and the dialog, and can be tried again", async ({
+  page,
+}) => {
+  await open(page);
+  failDelete = { status: 503, errorCode: "SERVICE_UNAVAILABLE" };
+  await removeButton(page, "Bún bò Huế").click();
+  const box = confirmDialog(page);
+  await confirmRemove(page).click();
+  await expect(box.getByRole("alert")).toContainText(
+    "Hiện chưa kết nối được với hệ thống.",
+  );
+  await expect(items(page)).toHaveCount(1);
+  expect(detailReads).toBe(1);
+  await confirmRemove(page).click();
+  await expect(box).toBeHidden();
+  expect(deleteCalls).toEqual([1502, 1502]);
+  await expect(items(page)).toHaveCount(0);
+  await expect(page.locator(".roadmap-day-sub").first()).toContainText(
+    "Chưa có món",
+  );
+});
+
+test("a dish already removed elsewhere is reported and the list is refreshed", async ({
+  page,
+}) => {
+  withLunch();
+  await open(page);
+  itemGoneElsewhere = true;
+  await removeButton(page, "Bún bò Huế").click();
+  await confirmRemove(page).click();
+  await expect(confirmDialog(page)).toBeHidden();
+  await expect(page.locator(".roadmap-day-notice")).toContainText(
+    "Bún bò Huế không còn trong lộ trình",
+  );
+  await expect(items(page)).toHaveCount(1);
+  expect(deleteCalls).toEqual([1502]);
+});
+
+test("a removal whose reload fails says the roadmap may be out of date", async ({
+  page,
+}) => {
+  await open(page);
+  failDetailReads = 1;
+  await removeButton(page, "Bún bò Huế").click();
+  await confirmRemove(page).click();
+  await expect(confirmDialog(page)).toBeHidden();
+  await expect(page.locator(".roadmap-day-notice")).toContainText(
+    "Món đã được xóa nhưng chưa tải lại được lộ trình",
+  );
+  expect(deleteCalls).toEqual([1502]);
+});
+
+test("the legs of a day are asked again once a dish is removed from it", async ({
+  page,
+}) => {
+  withLunch();
+  await open(page);
+  await expect.poll(() => routeCalls).toEqual(["301"]);
+  await removeButton(page, "Bún bò Huế").click();
+  await confirmRemove(page).click();
+  await expect(items(page)).toHaveCount(1);
+  await expect.poll(() => routeCalls).toEqual(["301", "301"]);
+});
+
+test("the remove action and its dialog fit from 320px to 1440px", async ({
+  page,
+}) => {
+  await open(page);
+  await removeButton(page, "Bún bò Huế").click();
+  const box = confirmDialog(page);
+  await expect(box).toBeVisible();
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(

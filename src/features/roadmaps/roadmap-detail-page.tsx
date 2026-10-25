@@ -52,7 +52,7 @@ export function RoadmapDetailPage({
   }, [roadmapId, service, attempt]);
 
   /**
-   * After RM-07 the roadmap is read again (RM-03): the order, costs and budget are the
+   * After RM-07 and RM-09 the roadmap is read again (RM-03): the order, costs and budget are the
    * backend's, never recomputed here. A failure is thrown so the dialog can say so.
    */
   const reload = useCallback(async () => {
@@ -76,6 +76,7 @@ export function RoadmapDetailPage({
         initialTab={initialTab}
         service={service}
         onItemAdded={reload}
+        onItemRemoved={reload}
       />
     );
   if (state.status === "loading")
