@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState, type FormEvent } from "react";
+import Image from "next/image";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   Avatar,
@@ -145,11 +146,13 @@ function ReviewItem({
       {visible && review.images.length > 0 && (
         <ul className="owner-review-images">
           {review.images.map((image, index) => (
-            <li key={image}>
-              <img
+            <li key={image} className="owner-review-image-frame">
+              <Image
                 className="owner-review-image"
                 src={image}
                 alt={`Ảnh thực khách ${review.author} đăng kèm, ảnh ${index + 1}`}
+                fill
+                sizes="88px"
               />
             </li>
           ))}

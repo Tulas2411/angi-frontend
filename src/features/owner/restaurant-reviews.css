@@ -185,12 +185,18 @@
   list-style: none;
 }
 
-.owner-review-image {
+/* Khung ảnh cố định 88px để `next/image` với `fill` bám đúng ô. */
+.owner-review-image-frame {
+  position: relative;
   width: 88px;
   height: 88px;
   border-radius: var(--radius-sm);
-  object-fit: cover;
   background: var(--control);
+  overflow: hidden;
+}
+
+.owner-review-image {
+  object-fit: cover;
 }
 
 /* Khối phản hồi của nhà hàng nằm lệch sang phải để dễ phân biệt. */
