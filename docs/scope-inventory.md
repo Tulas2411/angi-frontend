@@ -26,6 +26,8 @@ Rule: a screen in the new shell stays only if its data and actions come from a b
 
 ## Earlier screens kept (not part of the integrated shell)
 
+The **food-assistant panel within `/roadmaps/{roadmapId}`** is FE-complete and wired to AGENT-01..04 plus visible-item impressions (IMP-01), but backend implementation is pending. The owner approved this FE-first exception on 2026-10-26. It is not a mock screen and does not fabricate a successful conversation when those endpoints are absent. Details: [roadmap-agent.vi.md](roadmap-agent.vi.md).
+
 These screens were built before the shared shell. They keep their authors' code (`PlatformProvider`, `src/mocks`, `WorkspaceShell`) and their own scoped stylesheet. Where a backend controller exists, the author may already call it through `src/api/services/*`; the rest runs on demo fixtures. Backend status was read from `angi-backend/ANGI.WebApi/Controllers` (branch `chore/local-backend-integration`, 2026-10-20).
 
 | Screen family                                                  | Routes                                                                | Backend controllers present                                                  | State                                                        |

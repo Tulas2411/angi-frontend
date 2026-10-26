@@ -18,7 +18,7 @@ export default async function Page({
   searchParams: Promise<{ day?: string | string[]; tab?: string | string[] }>;
 }) {
   // RM-03 and RM-14 are Traveler-only operations.
-  await requireUser(["TRAVELER"]);
+  const user = await requireUser(["TRAVELER"]);
   const roadmapId = parseRoadmapId((await params).roadmapId);
   if (roadmapId === null) notFound();
   const { day, tab } = await searchParams;
@@ -26,6 +26,7 @@ export default async function Page({
     <div className="roadmap-detail-page">
       <RoadmapDetailPage
         roadmapId={roadmapId}
+        userId={user.id}
         initialDay={parseDayParam(day)}
         initialTab={parseTabParam(tab)}
       />

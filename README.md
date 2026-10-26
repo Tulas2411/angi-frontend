@@ -33,6 +33,8 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 
 Known partial integrations: the account page does not upload avatars; the Google button appears only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set; the homepage taste/roadmap examples never call the backend and say they are not saved.
 
+The roadmap food-assistant panel is wired to AGENT-01..04 but **awaits backend implementation**, explicitly authorized by the owner on 2026-10-26. It never fabricates replies when the backend is unavailable. See [assistant behavior and verification](docs/roadmap-agent.vi.md).
+
 ## Technology
 
 | Concern                  | Stack                                                              |
