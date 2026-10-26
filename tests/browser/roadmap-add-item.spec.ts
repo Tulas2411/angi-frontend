@@ -812,10 +812,6 @@ test("the dialog works with the keyboard and has no horizontal overflow from 320
 // F-28 Delete Roadmap Item (RM-09).
 const removeButton = (page: Page, dish: string) =>
   page.getByRole("button", { name: `Xóa ${dish} khỏi lộ trình` });
-const confirmDialog = (page: Page) =>
-  page.getByRole("dialog", { name: "Xóa món khỏi lộ trình?" });
-const confirmRemove = (page: Page) =>
-  confirmDialog(page).getByRole("button", { name: "Xóa món", exact: true });
 /** Day 1 with breakfast (Bún bò Huế, 45.000) and lunch (Mì Quảng ếch, 30.000). */
 function withLunch() {
   insertItem(301, {
@@ -825,7 +821,7 @@ function withLunch() {
   });
 }
 
-test("removing a dish asks first, sends RM-09 and leaves the other dishes alone", async ({
+test("removing a dish sends RM-09 at once and leaves the other dishes alone", async ({
   page,
 }) => {
   withLunch();
@@ -842,19 +838,10 @@ test("removing a dish asks first, sends RM-09 and leaves the other dishes alone"
   await expect(locate).toHaveAttribute("aria-pressed", "true");
 
   await removeButton(page, "Bún bò Huế").click();
-  const box = confirmDialog(page);
-  await expect(box).toContainText(
-    "Bún bò Huế (Bún Bò Bà Diệu) sẽ bị xóa khỏi bữa sáng của Thứ Bảy, 10 tháng 10.",
-  );
-  await expect(box).toContainText(
-    "Các món khác trong lộ trình không bị ảnh hưởng",
-  );
-  // Nothing is sent until the traveler confirms.
-  expect(deleteCalls).toEqual([]);
-  await confirmRemove(page).click();
-  await expect(box).toBeHidden();
+  // No confirmation step: the press itself deletes the dish.
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  expect(deleteCalls).toEqual([1502]);
+  await expect.poll(() => deleteCalls).toEqual([1502]);
   // RM-03 is read again: figures, order and budget are the backend's.
   await expect(items(page)).toHaveCount(1);
   await expect(
@@ -884,40 +871,27 @@ test("removing a dish asks first, sends RM-09 and leaves the other dishes alone"
   ).toContainText("30.000 VND");
 });
 
-test("keeping the dish or pressing Escape sends nothing and returns the focus", async ({
-  page,
-}) => {
+test("a double press on a dish sends one RM-09", async ({ page }) => {
   await open(page);
-  const opener = removeButton(page, "Bún bò Huế");
-  await opener.click();
-  await confirmDialog(page).getByRole("button", { name: "Giữ món" }).click();
-  await expect(confirmDialog(page)).toBeHidden();
-  await expect(opener).toBeFocused();
-  await opener.click();
-  await page.keyboard.press("Escape");
-  await expect(confirmDialog(page)).toBeHidden();
-  await expect(opener).toBeFocused();
-  expect(deleteCalls).toEqual([]);
-  await expect(items(page)).toHaveCount(1);
+  await removeButton(page, "Bún bò Huế").dblclick();
+  await expect(items(page)).toHaveCount(0);
+  expect(deleteCalls).toEqual([1502]);
 });
 
-test("a failed removal keeps the dish and the dialog, and can be tried again", async ({
+test("a failed removal keeps the dish, says why in the day and can be tried again", async ({
   page,
 }) => {
   await open(page);
   failDelete = { status: 503, errorCode: "SERVICE_UNAVAILABLE" };
   await removeButton(page, "Bún bò Huế").click();
-  const box = confirmDialog(page);
-  await confirmRemove(page).click();
-  await expect(box.getByRole("alert")).toContainText(
-    "Hiện chưa kết nối được với hệ thống.",
+  await expect(page.locator(".roadmap-day-notice")).toContainText(
+    "Chưa xóa được Bún bò Huế. Hiện chưa kết nối được với hệ thống.",
   );
   await expect(items(page)).toHaveCount(1);
   expect(detailReads).toBe(1);
-  await confirmRemove(page).click();
-  await expect(box).toBeHidden();
-  expect(deleteCalls).toEqual([1502, 1502]);
+  await removeButton(page, "Bún bò Huế").click();
   await expect(items(page)).toHaveCount(0);
+  expect(deleteCalls).toEqual([1502, 1502]);
   await expect(page.locator(".roadmap-day-sub").first()).toContainText(
     "Chưa có món",
   );
@@ -930,8 +904,6 @@ test("a dish already removed elsewhere is reported and the list is refreshed", a
   await open(page);
   itemGoneElsewhere = true;
   await removeButton(page, "Bún bò Huế").click();
-  await confirmRemove(page).click();
-  await expect(confirmDialog(page)).toBeHidden();
   await expect(page.locator(".roadmap-day-notice")).toContainText(
     "Bún bò Huế không còn trong lộ trình",
   );
@@ -945,8 +917,6 @@ test("a removal whose reload fails says the roadmap may be out of date", async (
   await open(page);
   failDetailReads = 1;
   await removeButton(page, "Bún bò Huế").click();
-  await confirmRemove(page).click();
-  await expect(confirmDialog(page)).toBeHidden();
   await expect(page.locator(".roadmap-day-notice")).toContainText(
     "Món đã được xóa nhưng chưa tải lại được lộ trình",
   );
@@ -963,26 +933,15 @@ test("the legs of a day are asked again once a dish is removed from it", async (
   await open(page);
   await expect.poll(() => routeCalls).toEqual(["301"]);
   await removeButton(page, "Bún bò Huế").click();
-  await confirmRemove(page).click();
   await expect(items(page)).toHaveCount(1);
   await expect.poll(() => routeCalls).toEqual(["301", "301"]);
 });
 
-test("the remove action and its dialog fit from 320px to 1440px", async ({
-  page,
-}) => {
+test("the remove action fits from 320px to 1440px", async ({ page }) => {
   await open(page);
-  await removeButton(page, "Bún bò Huế").click();
-  const box = confirmDialog(page);
-  await expect(box).toBeVisible();
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    expect(
-      await box.evaluate(
-        (element) => element.scrollWidth <= element.clientWidth + 1,
-      ),
-      `dialog ${width}px`,
-    ).toBe(true);
+    await expect(removeButton(page, "Bún bò Huế")).toBeVisible();
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,

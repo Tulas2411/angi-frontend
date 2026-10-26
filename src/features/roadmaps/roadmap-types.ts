@@ -205,6 +205,24 @@ export interface UpdateRoadmapItemRequestDto {
   sortOrder?: number;
 }
 
+/** RM-13 body (API Design v1.8, sheet "Chi tiết Request-Response" r178). */
+export interface RateRoadmapItemRequestDto {
+  value: "like" | "dislike";
+}
+
+/**
+ * RM-13 `201 Created` data (r179–r184). The counters are the dish's `like_count` /
+ * `dislike_count` after the rating, for display only.
+ */
+export interface RateRoadmapItemResponseDto {
+  feedbackId: number;
+  value: "like" | "dislike";
+  dishId: number;
+  likeCount: number;
+  dislikeCount: number;
+  createdAt: string;
+}
+
 /** RM-06 query (Backend API row r36). `province` is required: a roadmap keeps no destination. */
 export interface RoadmapSuggestionsQuery {
   province: string;

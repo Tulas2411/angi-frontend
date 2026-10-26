@@ -36,8 +36,17 @@ import {
   stepTarget,
   type MoveTarget,
 } from "./roadmap-reorder-rules";
-import { RoadmapRemoveItemDialog } from "./roadmap-remove-item-dialog";
+import { RateItemButtons } from "./roadmap-rate-item";
 import {
+  ratedNotice,
+  rateFailedNotice,
+  rateItemError,
+  rateReloadFailed,
+  type RatingValue,
+} from "./roadmap-rate-rules";
+import {
+  removeFailedNotice,
+  removeItemError,
   removeNotice,
   removeReloadFailed,
   type RemoveOutcome,
@@ -64,6 +73,8 @@ interface DayNotice {
   dayNumber: number;
   tone: "success" | "warning";
   text: string;
+  /** The card is still there, so the notice does not take the focus (a removal's does). */
+  quiet?: boolean;
 }
 
 type GpsState =
@@ -93,11 +104,14 @@ function ItemCard({
   onRemove,
   reorder,
   dragging,
+  onRate,
 }: {
   item: RoadmapItemDto;
   order: number;
   /** The grip is held: the card lifts, the leg line above it stays put. */
   dragging: boolean;
+  /** RM-13: rates the dish once; rejects for a failure the traveler can retry. */
+  onRate: (value: RatingValue) => Promise<void>;
   selected: boolean;
   onSelect: () => void;
   onRemove: () => void;
@@ -155,17 +169,10 @@ function ItemCard({
           {place && ` · ${place}`}
           {` · ${formatRating(dish.restaurant.ratingAvg)} sao`}
         </p>
-        {(notice || item.source === "ai" || item.myFeedback) && (
+        {(notice || item.source === "ai") && (
           <p className="roadmap-item-badges">
             {notice && <Badge tone="warning">{notice}</Badge>}
             {item.source === "ai" && <Badge>ANGI gợi ý</Badge>}
-            {item.myFeedback && (
-              <Badge>
-                {item.myFeedback === "like"
-                  ? "Bạn đã thích món này"
-                  : "Bạn đã không thích món này"}
-              </Badge>
-            )}
           </p>
         )}
         <div className="roadmap-item-actions">
@@ -178,6 +185,7 @@ function ItemCard({
             <Icon name="trash" />
             <span>Xóa món</span>
           </Button>
+          <RateItemButtons item={item} onRate={onRate} />
         </div>
       </div>
       <button
@@ -216,6 +224,7 @@ function DayPanel({
   onGenerate,
   onMove,
   moving,
+  onRate,
   notice,
 }: {
   day: RoadmapDayDto;
@@ -237,6 +246,8 @@ function DayPanel({
   onMove: (itemId: number, target: MoveTarget) => void;
   /** A move is being saved: no new one can start. */
   moving: boolean;
+  /** The traveler rates a dish of this day (RM-13). */
+  onRate: (item: RoadmapItemDto, value: RatingValue) => Promise<void>;
   notice: DayNotice | null;
 }) {
   const noticeRef = useRef<HTMLDivElement>(null);
@@ -261,7 +272,7 @@ function DayPanel({
   }, [day.items]);
   // The removed card is gone with the focus on it: move the focus to what happened.
   useEffect(() => {
-    if (notice) noticeRef.current?.focus();
+    if (notice && !notice.quiet) noticeRef.current?.focus();
   }, [notice]);
   const maps = googleMapsDayLink(overview, day.items);
   const legs = route?.status === "ready" ? legsByTarget(route.route) : null;
@@ -440,6 +451,7 @@ function DayPanel({
                           onSelect={() => onSelectItem(item.id)}
                           onRemove={() => onRemove(item)}
                           dragging={drag?.itemId === item.id}
+                          onRate={(value) => onRate(item, value)}
                           reorder={{
                             busy: moving,
                             hintId: `reorder-hint-${day.dayNumber}`,
@@ -515,6 +527,7 @@ export function RoadmapItinerary({
   onItemRemoved,
   onItemsGenerated,
   onItemsMoved,
+  onItemRated,
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
@@ -535,6 +548,8 @@ export function RoadmapItinerary({
   onItemsGenerated: () => Promise<void>;
   /** RM-08 saved a new order: the parent reloads the roadmap, rejecting when that fails. */
   onItemsMoved: () => Promise<void>;
+  /** RM-13 saved a rating: the parent reloads the roadmap, rejecting when that fails. */
+  onItemRated: () => Promise<void>;
 }) {
   // The order the traveler chose is shown at once; RM-03 confirms it (or takes it back).
   const [moved, setMoved] = useState<{
@@ -558,10 +573,8 @@ export function RoadmapItinerary({
     scope: GenerationScope;
     dayNumber: number;
   } | null>(null);
-  const [removeTarget, setRemoveTarget] = useState<{
-    dayNumber: number;
-    item: RoadmapItemDto;
-  } | null>(null);
+  // One removal at a time: a second press on the same dish must not send RM-09 twice.
+  const removing = useRef(false);
   const [notice, setNotice] = useState<DayNotice | null>(null);
   // "Đã xóa … khỏi lộ trình." is only confirmation: it goes away by itself after 5 seconds.
   useEffect(() => {
@@ -655,9 +668,6 @@ export function RoadmapItinerary({
   /** The roadmap keeps no destination: reuse what the traveler typed, else the dishes' province. */
   const knownProvince = () =>
     recallDestination(roadmapId) || mostCommonProvince(itinerary);
-  const removeDay = removeTarget
-    ? itinerary.find((day) => day.dayNumber === removeTarget.dayNumber)
-    : undefined;
 
   /**
    * Saves a new place for one dish (RM-08, one call per dish whose position changed), then reads
@@ -697,22 +707,88 @@ export function RoadmapItinerary({
     }
   }
 
-  /** The item is gone: leave the map selection, say so in its day and read RM-03 again. */
-  async function itemRemoved(outcome: RemoveOutcome) {
-    if (!removeTarget) return;
-    const { dayNumber, item } = removeTarget;
-    setRemoveTarget(null);
-    if (selectedItemId === item.id) onSelectItem(null);
-    setNotice({
-      dayNumber,
-      tone: "success",
-      text: removeNotice(outcome, item.dish.name),
-    });
+  /**
+   * Rates a dish (RM-13) at once and reads the roadmap again, so the buttons are the backend's.
+   * A dish that was rated before or has left the roadmap is settled with a notice; any other
+   * failure is a warning in the day and the buttons stay pressable.
+   */
+  async function rateItem(
+    dayNumber: number,
+    item: RoadmapItemDto,
+    value: RatingValue,
+  ) {
+    let text = ratedNotice(value, item.dish.name);
+    let tone: DayNotice["tone"] = "success";
     try {
-      await onItemRemoved();
+      await service.rateItem(roadmapId, item.id, { value });
+    } catch (caught) {
+      const failure = rateItemError(caught, item.dish.name);
+      if (!failure.settled) {
+        if (mounted.current)
+          setNotice({
+            dayNumber,
+            tone: "warning",
+            text: rateFailedNotice(item.dish.name, failure.message),
+            quiet: true,
+          });
+        return;
+      }
+      text = failure.message;
+      tone = "warning";
+    }
+    try {
+      await onItemRated();
     } catch {
-      if (mounted.current)
-        setNotice({ dayNumber, tone: "warning", text: removeReloadFailed });
+      text = rateReloadFailed;
+      tone = "warning";
+    }
+    if (!mounted.current) return;
+    // A saved rating shows on the button itself; only something to read gets a notice.
+    if (tone === "success") setAnnouncement(text);
+    else setNotice({ dayNumber, tone, text, quiet: true });
+  }
+
+  /**
+   * Deletes a dish (RM-09) at once. Once it is gone (now, or already elsewhere) the map selection
+   * is left, the day says so and RM-03 is read again; any other failure leaves the dish in place.
+   */
+  async function removeItem(dayNumber: number, item: RoadmapItemDto) {
+    if (removing.current) return;
+    removing.current = true;
+    setNotice(null);
+    try {
+      let outcome: RemoveOutcome = "removed";
+      try {
+        await service.deleteItem(roadmapId, item.id);
+      } catch (caught) {
+        const failure = removeItemError(caught);
+        if (!failure.gone) {
+          if (mounted.current)
+            setNotice({
+              dayNumber,
+              tone: "warning",
+              text: removeFailedNotice(item.dish.name, failure.message),
+              quiet: true,
+            });
+          return;
+        }
+        outcome = "already-gone";
+      }
+      if (!mounted.current) return;
+      if (selectedItemId === item.id) onSelectItem(null);
+      setNotice({
+        dayNumber,
+        tone: "success",
+        text: removeNotice(outcome, item.dish.name),
+      });
+      try {
+        await onItemRemoved();
+      } catch {
+        if (mounted.current)
+          setNotice({ dayNumber, tone: "warning", text: removeReloadFailed });
+      }
+    } finally {
+      removing.current = false;
     }
   }
 
@@ -834,15 +910,13 @@ export function RoadmapItinerary({
             selectedItemId={selectedItemId}
             onSelectItem={onSelectItem}
             notice={notice?.dayNumber === day.dayNumber ? notice : null}
-            onRemove={(item) => {
-              setNotice(null);
-              setRemoveTarget({ dayNumber: day.dayNumber, item });
-            }}
+            onRemove={(item) => void removeItem(day.dayNumber, item)}
             onGenerate={() => {
               setNotice(null);
               setGenerateTarget({ scope: "day", dayNumber: day.dayNumber });
             }}
             moving={moving}
+            onRate={(item, value) => rateItem(day.dayNumber, item, value)}
             onMove={(itemId, target) =>
               void moveItem(day.dayNumber, itemId, target)
             }
@@ -875,16 +949,6 @@ export function RoadmapItinerary({
           service={service}
           onGenerated={onItemsGenerated}
           onClose={() => setGenerateTarget(null)}
-        />
-      )}
-      {removeTarget && removeDay && (
-        <RoadmapRemoveItemDialog
-          roadmapId={roadmapId}
-          day={removeDay}
-          item={removeTarget.item}
-          service={service}
-          onRemoved={(outcome) => void itemRemoved(outcome)}
-          onClose={() => setRemoveTarget(null)}
         />
       )}
       {addTarget && addDay && (
