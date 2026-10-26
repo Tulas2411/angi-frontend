@@ -3,6 +3,7 @@ import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
+import { agentOperation } from "@/shared/api/agent-proxy";
 import {
   roadmapOperation,
   roadmapOperationHasBody,
@@ -36,6 +37,7 @@ async function handle(request: Request, context: Context) {
     const endpoint = path.join("/");
     const menuOperation = ownerMenuOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
+    const agentOp = agentOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
@@ -45,6 +47,7 @@ async function handle(request: Request, context: Context) {
       !resubmission &&
       !roadmapRoute &&
       !menuOperation &&
+      !agentOp &&
       !publicOp
     ) {
       throw new ApiError(
@@ -73,6 +76,27 @@ async function handle(request: Request, context: Context) {
       } else body = await readJson(request);
     }
     const query = new URL(request.url).search;
+    if (agentOp) {
+      let status = agentOp.status;
+      const data = await withAuth(session, (auth) => {
+        if (auth.user.role !== "TRAVELER")
+          throw new ApiError(
+            403,
+            "FORBIDDEN",
+            "Chỉ khách du lịch được sử dụng Trợ lý món ăn.",
+          );
+        return backend<unknown>(endpoint, {
+          method: request.method,
+          body,
+          token: auth.accessToken,
+          timeoutMs: agentOp.timeoutMs,
+          onSuccess: (code) => {
+            status = code;
+          },
+        });
+      });
+      return ok(data, status);
+    }
     // Public-but-anonymous endpoints — bỏ qua withAuth (BE đã cho phép AllowAnonymous).
     if (publicOp?.allowGuest) {
       return ok(

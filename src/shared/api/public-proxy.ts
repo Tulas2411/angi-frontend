@@ -57,7 +57,7 @@ export function publicOperation(
 
   // F-18 Impressions — [Authorize(Roles = "TRAVELER")] → cần session
   if (method === "POST" && endpoint === "impressions")
-    return { body: true, status: 200, allowGuest: false };
+    return { body: true, status: 202, allowGuest: false };
 
   return null;
 }

@@ -1,0 +1,315 @@
+/* Figma 137:712 / 140:1230: assistant occupies the notebook side; map remains live. */
+.roadmap-agent-trigger.button {
+  flex-shrink: 0;
+  width: 100%;
+  font-size: var(--text-sm);
+}
+.roadmap-agent-panel {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: calc(
+    var(--roadmap-sidebar-width) + (100% - var(--roadmap-sidebar-width)) *
+      0.537037
+  );
+  height: 100dvh;
+  z-index: 60;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-6) clamp(24px, 2.8vw, 48px) var(--space-8);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  transform: translateX(-102%);
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s 380ms;
+  font-family: "DM Sans", var(--font-body);
+}
+.roadmap-agent-panel[data-open="true"] {
+  transform: translateX(0);
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-4);
+  flex-shrink: 0;
+}
+.agent-header h2 {
+  font:
+    600 clamp(16px, 1.3vw, 21px)/1.35 "DM Sans",
+    var(--font-body);
+}
+.agent-header h2 span {
+  margin-inline: var(--space-2);
+}
+.agent-header .button {
+  min-height: 38px;
+  padding: var(--space-2) var(--space-6);
+  min-width: 100px;
+  font-size: var(--text-xs);
+}
+.agent-disclaimer {
+  margin: 0;
+  background: var(--control);
+  border-radius: var(--radius-pill);
+  padding: var(--space-3) var(--space-4);
+  font-size: var(--text-sm);
+  flex-shrink: 0;
+}
+.agent-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: 0 var(--space-2) var(--space-2) 0;
+  overflow-wrap: anywhere;
+}
+.agent-welcome h3 {
+  font-size: 24px;
+  line-height: 1.35;
+  margin-bottom: var(--space-6);
+}
+.agent-prompts {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 330px;
+}
+.agent-prompts .button {
+  font-size: var(--text-sm);
+  min-height: 38px;
+  padding-block: var(--space-2);
+}
+.agent-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.agent-message {
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  max-width: 94%;
+  border: 1px solid var(--line);
+  white-space: pre-wrap;
+}
+.agent-message p {
+  margin: 0;
+}
+.agent-message .agent-message-author {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: var(--space-2);
+}
+.agent-message-user {
+  background: var(--control);
+  align-self: flex-end;
+}
+.agent-message-assistant {
+  align-self: flex-start;
+}
+.agent-processing {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.agent-context {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+.agent-context > div {
+  display: flex;
+}
+.agent-context .button {
+  min-height: 32px;
+  font-size: var(--text-xs);
+  padding: var(--space-1) var(--space-2);
+}
+.agent-composer-area {
+  flex-shrink: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+.agent-composer {
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-xl);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: 5px 6px 0 rgb(34 34 34 / 0.12);
+}
+.agent-input-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.agent-input-row .field {
+  flex: 1;
+  min-width: 0;
+  gap: 0;
+}
+.agent-input-row .field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.agent-input-row textarea {
+  min-height: 50px;
+  max-height: 120px;
+  resize: vertical;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  padding: var(--space-3) var(--space-4);
+  font: inherit;
+  font-size: var(--text-sm);
+  border: 1px solid var(--line);
+}
+.agent-input-row .helper {
+  font-size: 10px;
+  padding: var(--space-1) var(--space-2);
+}
+.agent-input-row .button {
+  min-height: 50px;
+  padding-inline: var(--space-4);
+}
+.agent-composer > .helper {
+  margin-top: var(--space-2);
+  font-size: var(--text-xs);
+}
+.agent-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.agent-actions .button {
+  font-size: var(--text-sm);
+}
+.agent-question,
+.agent-route-summary {
+  background: var(--control);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+.agent-proposal {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+.agent-proposal h3 {
+  font-size: 21px;
+}
+.agent-proposal > .between {
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.agent-proposal-status {
+  background: var(--control);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+}
+.agent-proposal-items {
+  display: grid;
+  gap: var(--space-2);
+}
+.agent-proposal-item {
+  display: grid;
+  gap: var(--space-1);
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  padding: var(--space-3);
+  cursor: pointer;
+}
+.agent-proposal-item[aria-pressed="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 3px 0 var(--ink);
+  background: var(--control);
+}
+.agent-proposal-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.agent-selected {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+.agent-selected button {
+  background: var(--control);
+  color: var(--ink);
+  border: 0;
+  border-radius: var(--radius-pill);
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+@media (max-width: 900px) {
+  .roadmap-agent-panel {
+    width: 100%;
+    padding: var(--space-5);
+  }
+  .roadmap-detail-nav > .roadmap-agent-trigger {
+    width: auto;
+    align-self: flex-start;
+  }
+}
+@media (max-width: 480px) {
+  .agent-input-row textarea {
+    min-height: 76px;
+    border-radius: var(--radius-lg);
+  }
+  .roadmap-agent-panel {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+  .agent-header .button {
+    min-width: 0;
+    padding-inline: var(--space-3);
+  }
+  .agent-welcome h3 {
+    font-size: 22px;
+  }
+  .agent-composer {
+    padding: var(--space-3);
+  }
+  .agent-input-row .button {
+    padding-inline: var(--space-3);
+  }
+  .agent-composer > .helper {
+    font-size: 11px;
+  }
+  .agent-disclaimer {
+    font-size: var(--text-xs);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-agent-panel {
+    transition: none;
+  }
+}
