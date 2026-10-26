@@ -486,6 +486,8 @@ test("an empty province or no meal is explained and nothing is sent", async ({
   await openBanner(page);
   const box = dialog(page);
   await box.getByLabel(/^Tỉnh \/ thành phố/).fill("");
+  // Leave the field so its list of provinces does not cover the checkboxes.
+  await box.getByRole("heading", { name: "ANGI lên lịch giúp bạn" }).click();
   for (const meal of ["Bữa sáng", "Bữa trưa", "Bữa tối"])
     await box.getByRole("checkbox", { name: meal }).uncheck();
   await submitButton(page).click();

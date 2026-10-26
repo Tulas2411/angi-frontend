@@ -143,7 +143,33 @@
   }
 }
 
-/* The meal a picked dish goes to: a destination, not a filter. */
+/* The day, meal and place a picked dish goes to: a destination, not a filter. */
 .roadmap-add-target {
-  max-width: 280px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.roadmap-add-target > legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.roadmap-suggestion-map {
+  align-self: flex-start;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 700px) {
+  .roadmap-add-target {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
 }

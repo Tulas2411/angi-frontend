@@ -395,7 +395,7 @@ const day2 = { name: "Chủ Nhật, 11 tháng 10" };
 const dialog = (page: Page) =>
   page.getByRole("dialog", { name: /^Thêm món vào / });
 const targetMeal = (page: Page) =>
-  dialog(page).getByLabel("Thêm món đã chọn vào");
+  dialog(page).getByLabel("Bữa", { exact: true });
 const items = (page: Page) => page.locator(".roadmap-item");
 const addButton = (page: Page, name: string, slot: string) =>
   dialog(page).getByRole("button", { name: `Thêm ${name} vào ${slot}` });
@@ -415,7 +415,7 @@ test("a meal's button opens the dialog on that meal with the province already fi
   await page.getByRole("button", { name: "Thêm món vào bữa sáng" }).click();
   const box = dialog(page);
   await expect(
-    box.getByRole("heading", { name: "Thêm món vào Thứ Bảy, 10 tháng 10" }),
+    box.getByRole("heading", { name: "Thêm món vào lộ trình" }),
   ).toBeVisible();
   // The meal is only where a picked dish goes: no meal pills filter the list.
   await expect(targetMeal(page)).toHaveValue("breakfast");
@@ -482,7 +482,7 @@ test("adding a dish sends RM-07, reloads the roadmap and keeps the dialog for th
     },
   ]);
   await expect(box.getByRole("status")).toContainText(
-    "Đã thêm Mì Quảng ếch vào bữa trưa.",
+    "Đã thêm Mì Quảng ếch vào bữa trưa của Thứ Bảy, 10 tháng 10.",
   );
 
   // RM-03 was read again behind the dialog: the day, its total and the budget follow the server.
@@ -546,7 +546,7 @@ test("an empty day opens the dialog from its own button, starting at breakfast",
     .click();
   const box = dialog(page);
   await expect(
-    box.getByRole("heading", { name: "Thêm món vào Chủ Nhật, 11 tháng 10" }),
+    box.getByRole("heading", { name: "Thêm món vào lộ trình" }),
   ).toBeVisible();
   await expect(targetMeal(page)).toHaveValue("breakfast");
   expect(new URLSearchParams(suggestionCalls[0]).get("dayId")).toBe("302");
