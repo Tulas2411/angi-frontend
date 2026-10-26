@@ -2,6 +2,8 @@
 import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Badge } from "@/shared/ui";
+import { Button } from "@/shared/ui";
+import { RoadmapAgentPanel } from "./roadmap-agent-panel";
 import { Icon, Media, Tabs } from "@/components/ui/primitives";
 import { dateLabel } from "@/shared/format";
 import { RoadmapBudget } from "./roadmap-budget";
@@ -38,6 +40,7 @@ export function RoadmapDetailView({
   onItemRemoved,
   onItemsGenerated,
   onItemsMoved,
+  userId,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
@@ -51,8 +54,19 @@ export function RoadmapDetailView({
   onItemsGenerated: () => Promise<void>;
   /** Reloads the roadmap after dishes were reordered; rejects when the reload fails. */
   onItemsMoved: () => Promise<void>;
+  userId: number;
 }) {
   const { overview, itinerary, budget } = detail;
+  const [agentOpen, setAgentOpen] = useState(false);
+  function closeAgent() {
+    setAgentOpen(false);
+    requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLButtonElement>(".roadmap-agent-trigger")
+        ?.focus({ preventScroll: true }),
+    );
+  }
+  const [agentRevision, setAgentRevision] = useState(0);
   const firstDay = itinerary.find((day) => day.dayNumber === initialDay);
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const [openDays, setOpenDays] = useState<number[]>(
@@ -62,11 +76,25 @@ export function RoadmapDetailView({
         ? [itinerary[0].dayNumber]
         : [],
   );
-  const [activeDay, setActiveDay] = useState(
+  const [selectedDay, setActiveDay] = useState(
     firstDay?.dayNumber ?? itinerary[0]?.dayNumber ?? 1,
   );
+  const activeDay = itinerary.some((day) => day.dayNumber === selectedDay)
+    ? selectedDay
+    : (itinerary[0]?.dayNumber ?? 1);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [mapRoute, setMapRoute] = useState<RoadmapRouteDto | null>(null);
+  const agentCommitted = useCallback(
+    async (id: number) => {
+      if (id !== detail.overview.id) return;
+      await onItemsGenerated();
+      setMapRoute(null);
+      setSelectedItemId(null);
+      // A confirmed Agent update can change origin or meal order even if item IDs are retained.
+      setAgentRevision((value) => value + 1);
+    },
+    [detail.overview.id, onItemsGenerated],
+  );
   const receiveMapRoute = useCallback((route: RoadmapRouteDto | null) => {
     setMapRoute(route);
   }, []);
@@ -150,7 +178,15 @@ export function RoadmapDetailView({
   );
   return (
     <div className="roadmap-detail">
-      <aside className="roadmap-detail-nav">
+      <aside className="roadmap-detail-nav" inert={agentOpen}>
+        <Button
+          className="roadmap-agent-trigger"
+          aria-expanded={agentOpen}
+          aria-controls="roadmap-agent-panel"
+          onClick={() => setAgentOpen(true)}
+        >
+          ✦ Trợ lý món ăn
+        </Button>
         {back}
         <div className="roadmap-sidebar-section">
           <p className="roadmap-sidebar-eyebrow">Sổ tay ẩm thực</p>
@@ -197,7 +233,7 @@ export function RoadmapDetailView({
         </nav>
       </aside>
 
-      <div className="roadmap-detail-main stack">
+      <div className="roadmap-detail-main stack" inert={agentOpen}>
         <div className="roadmap-back-mobile">{back}</div>
         <section className="roadmap-hero" aria-labelledby="roadmap-title">
           <div className="card roadmap-hero-text stack-sm">
@@ -277,6 +313,7 @@ export function RoadmapDetailView({
           hidden={tab !== "itinerary"}
         >
           <RoadmapItinerary
+            key={agentRevision}
             roadmapId={overview.id}
             overview={overview}
             itinerary={itinerary}
@@ -311,6 +348,13 @@ export function RoadmapDetailView({
         onSelectItem={selectItem}
         origin={effectiveRoute?.origin ?? null}
         originSkipped={effectiveRoute?.originSkipped ?? false}
+      />
+      <RoadmapAgentPanel
+        open={agentOpen}
+        onClose={closeAgent}
+        roadmapId={overview.id}
+        userId={userId}
+        onCommitted={agentCommitted}
       />
     </div>
   );

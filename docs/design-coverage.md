@@ -49,6 +49,8 @@ Browser coverage: `tests/browser/owner-reviews.spec.ts` (filtering, empty-field 
 
 ## Earlier screens
 
+The roadmap food-assistant sheet now follows Figma `137:712` / `140:1230`: white left panel, title/close action, AI disclaimer, three starter prompts and bottom composer. The sidebar trigger slides the sheet over the notebook while keeping the map mounted. Existing tokens and fonts are reused; no screenshot or new static artwork is used as implementation content. Messages and proposal/validation/confirmation states use AGENT-01..04. The owner authorized FE-first wiring while BE is pending; product calls show an explicit unavailable/error state. Desktop/mobile screenshots and behavioral checks are recorded in [roadmap-agent.vi.md](roadmap-agent.vi.md).
+
 Guest, Traveler, Moderator and Administrator screens (discovery, guides, blogs, roadmaps, expenses, moderation, administration, permissions, audit and synchronization) keep their original design coverage and demo fixtures. They render inside the earlier workspace shell with their own scoped stylesheet (`src/styles/legacy-workspace.css`) and are restyled only when their authors integrate them with the backend. [design-inventory.json](design-inventory.json) records the original Figma frame inventory (7,271 frames, sections and component definitions).
 
 ## Assets

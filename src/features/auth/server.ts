@@ -106,6 +106,9 @@ export async function backend<T>(
     method?: string;
     body?: unknown;
     token?: string;
+    /** Trusted server callers may allow a longer Agent turn and preserve its 200/202 status. */
+    timeoutMs?: number;
+    onSuccess?: (status: number) => void;
   } = {},
 ): Promise<T> {
   const baseUrl = process.env.API_BASE_URL;
@@ -127,7 +130,7 @@ export async function backend<T>(
             ? undefined
             : JSON.stringify(init.body),
       cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(init.timeoutMs ?? 10_000),
     });
   } catch {
     throw new ApiError(
@@ -136,7 +139,9 @@ export async function backend<T>(
       "Không kết nối được backend ANGI.",
     );
   }
-  return readApiResponse<T>(response);
+  const data = await readApiResponse<T>(response);
+  init.onSuccess?.(response.status);
+  return data;
 }
 
 export async function refreshSession(session: AuthSession) {
