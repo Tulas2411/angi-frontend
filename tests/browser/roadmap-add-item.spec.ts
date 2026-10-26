@@ -872,6 +872,10 @@ test("removing a dish asks first, sends RM-09 and leaves the other dishes alone"
   );
   // The card that held the focus is gone, so the notice takes it.
   await expect(page.locator(".roadmap-day-notice")).toBeFocused();
+  // It is only a confirmation: after 5 seconds it goes away by itself.
+  await expect(page.locator(".roadmap-day-notice")).toBeHidden({
+    timeout: 8000,
+  });
   await page.getByRole("tab", { name: "Ngân sách" }).click();
   await expect(
     page
@@ -946,6 +950,9 @@ test("a removal whose reload fails says the roadmap may be out of date", async (
   await expect(page.locator(".roadmap-day-notice")).toContainText(
     "Món đã được xóa nhưng chưa tải lại được lộ trình",
   );
+  // A warning is not a confirmation: it stays past the 5 seconds of a success notice.
+  await page.waitForTimeout(5500);
+  await expect(page.locator(".roadmap-day-notice")).toBeVisible();
   expect(deleteCalls).toEqual([1502]);
 });
 

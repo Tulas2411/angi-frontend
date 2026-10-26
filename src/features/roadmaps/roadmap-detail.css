@@ -299,6 +299,7 @@
 }
 
 .roadmap-day-body {
+  position: relative;
   padding-top: var(--space-5);
 }
 
@@ -452,6 +453,77 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* F-27: the grip at the top left of a card reorders dishes (drag, or arrow keys). */
+.roadmap-item-text {
+  position: relative;
+}
+/* Room for the grip so a long name never runs under it. */
+.roadmap-item-text h5 {
+  padding-right: 44px;
+}
+.roadmap-item-grip {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--muted);
+  cursor: grab;
+  touch-action: none;
+}
+.roadmap-item-grip svg {
+  fill: currentColor;
+}
+.roadmap-item-grip:hover {
+  background: var(--line);
+  color: var(--ink);
+}
+.roadmap-item-grip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  color: var(--ink);
+}
+.roadmap-item-grip[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.roadmap-day-body[data-dragging="true"] {
+  cursor: grabbing;
+  user-select: none;
+}
+/* Only the card (dish and photo) follows the pointer; the "Connection" line above it stays. */
+.roadmap-item.is-dragging {
+  position: relative;
+  z-index: 20;
+  opacity: 0.92;
+  filter: drop-shadow(0 12px 18px rgb(34 34 34 / 0.22));
+}
+.roadmap-item.is-dragging .roadmap-item-grip {
+  cursor: grabbing;
+}
+.roadmap-drop-indicator {
+  position: absolute;
+  z-index: 30;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  box-shadow: 0 0 0 3px rgb(255 94 98 / 0.25);
+  transform: translateY(-2px);
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .roadmap-item-grip {
+    width: 40px;
+    height: 40px;
+  }
 }
 
 /* F-28: removing a dish sits at the foot of its card, quiet until hovered or focused. */

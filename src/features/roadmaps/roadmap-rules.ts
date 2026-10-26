@@ -12,7 +12,8 @@ export const roadmapLimits = {
   title: 200,
   originLabel: 200,
   minDays: 1,
-  maxDays: 30,
+  /** Product limit of the app; RM-01 itself accepts 1..30 (API Design v1.8). */
+  maxDays: 7,
 } as const;
 
 export const emptyRoadmapForm: RoadmapFormValues = {

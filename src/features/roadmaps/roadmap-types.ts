@@ -192,6 +192,19 @@ export interface AddRoadmapItemRequestDto {
   recoRequestId?: string;
 }
 
+/**
+ * RM-08 body (API Design v1.8, sheet "Chi tiết Request-Response" r144–r148): every field is
+ * optional and only the sent ones change. `sortOrder` is the new position inside the meal; the
+ * backend does not shift the neighbours. `dishId` (replace the dish) is not used by the app yet.
+ */
+export interface UpdateRoadmapItemRequestDto {
+  dishId?: number;
+  recoRequestId?: string;
+  dayId?: number;
+  mealSlot?: MealSlot;
+  sortOrder?: number;
+}
+
 /** RM-06 query (Backend API row r36). `province` is required: a roadmap keeps no destination. */
 export interface RoadmapSuggestionsQuery {
   province: string;

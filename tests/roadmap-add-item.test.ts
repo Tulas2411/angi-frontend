@@ -274,7 +274,10 @@ describe("roadmap proxy allowlist for F-24", () => {
       // RM-10 (POST generate) is allowed since F-26; only a wrong method or a deeper path is not.
       ["GET", "roadmaps/88/generate"],
       ["POST", "roadmaps/88/generate/extra"],
-      ["PATCH", "roadmaps/88/items/1"],
+      // RM-08 (PATCH item) is allowed since F-27; neighbours of it still are not.
+      ["PATCH", "roadmaps/88/items"],
+      ["PATCH", "roadmaps/88/items/1/feedback"],
+      ["POST", "roadmaps/88/items/1"],
     ])
       expect(roadmapOperation(method, path), `${method} ${path}`).toBe(false);
   });

@@ -13,6 +13,7 @@ import type {
   RoadmapSuggestionsDto,
   RoadmapSuggestionsQuery,
   RoadmapTagDto,
+  UpdateRoadmapItemRequestDto,
   UpdateRoadmapRequestDto,
 } from "./roadmap-types";
 
@@ -56,6 +57,12 @@ export interface RoadmapItemService {
     roadmapId: number,
     dayId: number,
     request: AddRoadmapItemRequestDto,
+  ) => Promise<RoadmapItemDto>;
+  /** RM-08: 200 OK with the updated RoadmapItem; only the sent fields change. */
+  updateItem: (
+    roadmapId: number,
+    itemId: number,
+    request: UpdateRoadmapItemRequestDto,
   ) => Promise<RoadmapItemDto>;
   /** RM-09: 200 OK with `data: null`; the item is gone for good, other items are untouched. */
   deleteItem: (roadmapId: number, itemId: number) => Promise<void>;
@@ -109,6 +116,8 @@ export const roadmapService: RoadmapPlanService &
       `roadmaps/${roadmapId}/days/${dayId}/items`,
       request,
     ),
+  updateItem: (roadmapId, itemId, request) =>
+    api.patch<RoadmapItemDto>(`roadmaps/${roadmapId}/items/${itemId}`, request),
   deleteItem: async (roadmapId, itemId) => {
     await api.delete<null>(`roadmaps/${roadmapId}/items/${itemId}`);
   },
