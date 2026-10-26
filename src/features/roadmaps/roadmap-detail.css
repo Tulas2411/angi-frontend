@@ -528,8 +528,71 @@
 
 /* F-28: removing a dish sits at the foot of its card, quiet until hovered or focused. */
 .roadmap-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
   margin-top: auto;
   padding-top: var(--space-2);
+}
+
+/* F-30: like and dislike at the bottom right of a dish; the choice cannot change afterwards. */
+.roadmap-item-rate {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  max-width: 100%;
+  margin-left: auto;
+}
+.roadmap-rate-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 36px;
+  padding: 6px var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.roadmap-rate-button:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.roadmap-rate-button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.roadmap-rate-button[data-value="like"][aria-pressed="true"] {
+  border-color: var(--success-line);
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.roadmap-rate-button[data-value="dislike"][aria-pressed="true"] {
+  border-color: var(--error-line);
+  background: var(--error-bg);
+  color: var(--error-ink);
+}
+/* Rated: nothing left to press; the other button is dimmed. */
+.roadmap-rate-button[aria-disabled="true"] {
+  cursor: default;
+}
+.roadmap-rate-button[aria-disabled="true"]:not([aria-pressed="true"]) {
+  opacity: 0.45;
+}
+.roadmap-rate-button[aria-disabled="true"]:hover:not([aria-pressed="true"]) {
+  border-color: var(--line);
+  color: var(--muted);
+}
+@media (pointer: coarse) {
+  .roadmap-rate-button {
+    min-height: 40px;
+  }
 }
 .roadmap-item-remove {
   gap: var(--space-1);

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  removeFailedNotice,
   removeItemError,
   removeNotice,
   removeReloadFailed,
@@ -86,6 +87,9 @@ describe("RM-09 errors and messages", () => {
     );
     expect(removeNotice("already-gone", "Bún bò Huế")).toMatch(
       /Bún bò Huế không còn trong lộ trình/,
+    );
+    expect(removeFailedNotice("Bún bò Huế", "Lỗi mạng.")).toBe(
+      "Chưa xóa được Bún bò Huế. Lỗi mạng.",
     );
     expect(removeReloadFailed).toMatch(/đã được xóa nhưng chưa tải lại/);
   });

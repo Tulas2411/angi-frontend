@@ -19,6 +19,7 @@ export default defineConfig({
     "roadmap-generate.spec.ts",
     "roadmap-reorder.spec.ts",
     "roadmap-add-position.spec.ts",
+    "roadmap-rate.spec.ts",
     "roadmap-agent.spec.ts",
   ],
   workers: 1,

@@ -13,7 +13,7 @@ Màn `/roadmaps/{roadmapId}` (chỉ `TRAVELER`) gọi thật RM-03 `GET /api/v1/
 - **Tổng quan (RM-03 `overview`):** thời gian, số ngày, số món, điểm xuất phát, ngân sách, chi phí dự kiến, ngày tạo và cập nhật.
 - **Lịch trình (RM-03 `itinerary` + RM-14):**
   - Mỗi ngày là một mục gập được, tên theo ngày thật (`Thứ Sáu, 25 tháng 9`; không có ngày bắt đầu thì `Ngày N`). Mục đóng hiện tên các món của ngày; mục mở hiện `Ngày N · số món · chi phí`. Các ngày mở độc lập; ngày mở gần nhất nằm trong URL (`?day=2`). `day` hoặc `tab` hỏng thì dùng ngày 1 và tab Lịch trình.
-  - Trong ngày, món được gom theo bữa (Bữa sáng, Bữa trưa, Bữa tối, Ăn vặt, Ăn khuya) theo thứ tự backend trả về. Mỗi món: tên, "Dự chi" (giá hiện tại), quán (quận, tỉnh, điểm đánh giá), ảnh. Món có `status` khác `active` hiện "Món đã ngừng bán" (theo ghi chú của RM-03); `isAvailable = false` hiện "Tạm hết món". `source = ai` hiện "ANGI gợi ý"; `myFeedback` hiện đã thích / không thích.
+  - Trong ngày, món được gom theo bữa (Bữa sáng, Bữa trưa, Bữa tối, Ăn vặt, Ăn khuya) theo thứ tự backend trả về. Mỗi món: tên, "Dự chi" (giá hiện tại), quán (quận, tỉnh, điểm đánh giá), ảnh. Món có `status` khác `active` hiện "Món đã ngừng bán" (theo ghi chú của RM-03); `isAvailable = false` hiện "Tạm hết món". `source = ai` hiện "ANGI gợi ý"; `myFeedback` cho biết nút thích hoặc không thích nào đã được chọn (F-30, xem `docs/roadmap-rate-dish.vi.md`).
   - Cuối ngày: "Tổng dự chi hôm nay" (`dayCost`).
   - **RM-14 chỉ được gọi cho ngày đang mở khi tab Lịch trình đang hiển thị**, mỗi cặp (ngày, điểm xuất phát) tối đa một lần: đóng rồi mở lại ngày, hay đổi tab rồi quay lại, đều không gọi lại. Ngày không có đủ điểm (không món, hoặc một món mà không có điểm xuất phát) không gọi. Việc này giảm lượt gọi Mapbox Directions ở backend.
   - Chặng hiện trước mỗi món như "Connection 1 → 2" của Figma, dạng viên: `2,35 km · Khoảng 9 phút` kèm `Khách sạn Sala Đà Nẵng → Bún bò Huế` (điểm xuất phát gọi theo tên điểm đã chấm, hoặc "Điểm xuất phát"). Đầu ngày có tổng "Cả ngày: 7,9 km · 27 phút".
@@ -34,7 +34,7 @@ Màn `/roadmaps/{roadmapId}` (chỉ `TRAVELER`) gọi thật RM-03 `GET /api/v1/
 
 ## Giới hạn hiện tại
 
-- Chỉ xem. Khung Figma còn Hoàn tác / Làm lại, Chia sẻ, Trợ lý món ăn, "Thêm món", nút thích / không thích, gợi ý quán, "Hỏi AI" và giờ cụ thể của bữa. Các phần này không có thao tác tương ứng trong RM-03 / RM-14 (hoặc thuộc task sau: RM-05..13), nên chưa làm và không có nút giả. Phương thức di chuyển giữ mặc định `driving`; RM-14 hỗ trợ thêm `walking` và `cycling` nhưng task này chưa yêu cầu.
+- Chỉ xem. Khung Figma còn Hoàn tác / Làm lại, Chia sẻ, Trợ lý món ăn, "Thêm món", gợi ý quán, "Hỏi AI" và giờ cụ thể của bữa. Các phần này không có thao tác tương ứng trong RM-03 / RM-14 (hoặc thuộc task sau: RM-05..13), nên chưa làm và không có nút giả. Phương thức di chuyển giữ mặc định `driving`; RM-14 hỗ trợ thêm `walking` và `cycling` nhưng task này chưa yêu cầu.
 - RM-14 không trả geometry/polyline. Bản đồ hiển thị các điểm dừng thật, không vẽ đường theo phố giả và không gọi Mapbox Directions lần thứ hai. Thẻ địa điểm không bịa địa chỉ đường, giờ mở cửa, số lượt đánh giá hoặc ảnh nhà hàng: hai API hiện tại chỉ có tên/quận/tỉnh/tọa độ/điểm trung bình của quán và ảnh món. RM-12 thuộc tích hợp khác.
 - Chặng ghi "Khoảng N phút" mà không nói loại xe, vì RM-14 mặc định `driving` của Mapbox (Figma ghi "đi xe máy").
 - Mục "Lộ trình của tôi" trên thanh điều hướng chưa được tô đậm khi đang ở trang chi tiết (chỉ khớp đúng `/roadmaps`).

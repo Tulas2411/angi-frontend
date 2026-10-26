@@ -12,6 +12,8 @@ import type {
   RoadmapRouteDto,
   RoadmapSuggestionsDto,
   RoadmapSuggestionsQuery,
+  RateRoadmapItemRequestDto,
+  RateRoadmapItemResponseDto,
   RoadmapTagDto,
   UpdateRoadmapItemRequestDto,
   UpdateRoadmapRequestDto,
@@ -64,6 +66,12 @@ export interface RoadmapItemService {
     itemId: number,
     request: UpdateRoadmapItemRequestDto,
   ) => Promise<RoadmapItemDto>;
+  /** RM-13: 201 Created; a dish of the roadmap is rated once and the rating cannot change. */
+  rateItem: (
+    roadmapId: number,
+    itemId: number,
+    request: RateRoadmapItemRequestDto,
+  ) => Promise<RateRoadmapItemResponseDto>;
   /** RM-09: 200 OK with `data: null`; the item is gone for good, other items are untouched. */
   deleteItem: (roadmapId: number, itemId: number) => Promise<void>;
 }
@@ -118,6 +126,11 @@ export const roadmapService: RoadmapPlanService &
     ),
   updateItem: (roadmapId, itemId, request) =>
     api.patch<RoadmapItemDto>(`roadmaps/${roadmapId}/items/${itemId}`, request),
+  rateItem: (roadmapId, itemId, request) =>
+    api.post<RateRoadmapItemResponseDto>(
+      `roadmaps/${roadmapId}/items/${itemId}/feedback`,
+      request,
+    ),
   deleteItem: async (roadmapId, itemId) => {
     await api.delete<null>(`roadmaps/${roadmapId}/items/${itemId}`);
   },

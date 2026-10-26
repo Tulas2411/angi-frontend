@@ -11,11 +11,16 @@ export function removeItemError(error: unknown) {
   return { gone: false, message: getErrorMessage(error) };
 }
 
-/** What the traveler reads after the dialog closes. */
+/** What the traveler reads after the dish is gone. */
 export function removeNotice(outcome: RemoveOutcome, dishName: string) {
   return outcome === "removed"
     ? `Đã xóa ${dishName} khỏi lộ trình.`
     : `${dishName} không còn trong lộ trình (có thể đã được xóa ở nơi khác). Danh sách đã được cập nhật.`;
+}
+
+/** The delete itself failed (network, 5xx…): the dish is still in the roadmap. */
+export function removeFailedNotice(dishName: string, message: string) {
+  return `Chưa xóa được ${dishName}. ${message}`;
 }
 
 /** The item is deleted but RM-03 could not be read again, so the screen may still show it. */

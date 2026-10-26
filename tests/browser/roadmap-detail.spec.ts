@@ -393,7 +393,10 @@ test("RM-03 shows the hero, the day list, the first day with its legs and its to
   await expect(first).toContainText("Dự chi 45.000 VND");
   await expect(first).toContainText("Quán Bún bò Huế · Quận Hải Châu");
   await expect(first).toContainText("4,6 sao");
-  await expect(first).toContainText("Bạn đã thích món này");
+  // myFeedback "like": the like button shows it (F-30) and the rating cannot change.
+  await expect(
+    first.getByRole("button", { name: /^Bạn đã thích Bún bò Huế/ }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(items(page).nth(2)).toContainText("ANGI gợi ý");
 
   // RM-14 sample: origin → 1, 1 → 2, 2 → 3, then the day total.
