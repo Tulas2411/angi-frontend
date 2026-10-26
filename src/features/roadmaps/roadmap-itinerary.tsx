@@ -892,6 +892,7 @@ export function RoadmapItinerary({
           roadmapId={roadmapId}
           overview={overview}
           day={addDay}
+          days={itinerary}
           initialSlot={addTarget.slot}
           defaultProvince={addTarget.province}
           gpsOrigin={

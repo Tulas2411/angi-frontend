@@ -82,13 +82,22 @@ export function suggestionsQueryString(query: RoadmapSuggestionsQuery) {
   return params.toString();
 }
 
-/** RM-07 body for a suggested dish: the reco request id lets the backend link the choice. */
+/**
+ * RM-07 body for a suggested dish: the reco request id lets the backend link the choice.
+ * `sortOrder` is the place inside the meal; left out, the dish goes to the end of the meal.
+ */
 export function buildAddItemRequest(
   dish: Pick<DishCardDto, "id">,
   mealSlot: MealSlot,
   requestId: string,
+  sortOrder?: number,
 ): AddRoadmapItemRequestDto {
-  return { dishId: dish.id, mealSlot, recoRequestId: requestId };
+  return {
+    dishId: dish.id,
+    mealSlot,
+    ...(sortOrder === undefined ? {} : { sortOrder }),
+    recoRequestId: requestId,
+  };
 }
 
 /** The province most of the roadmap's restaurants are in; empty when nothing is known yet. */
@@ -190,6 +199,13 @@ export function addItemError(error: unknown) {
     return {
       unavailable: false,
       message: "Thông tin món chưa hợp lệ. Hãy thử chọn lại món.",
+    };
+  // RM-08 while making room: a dish of that meal was removed in the meantime.
+  if (code === "ROADMAP_ITEM_NOT_FOUND")
+    return {
+      unavailable: false,
+      message:
+        "Một món trong bữa này vừa bị xóa nên chưa xếp được vị trí. Hãy chọn lại vị trí rồi thử lại.",
     };
   return { unavailable: false, message: getErrorMessage(error) };
 }

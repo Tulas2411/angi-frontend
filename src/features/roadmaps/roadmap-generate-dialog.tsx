@@ -1,5 +1,6 @@
 "use client";
 import {
+  Fragment,
   useEffect,
   useId,
   useRef,
@@ -307,8 +308,10 @@ export function RoadmapGenerateDialog({
 
   const replaceNow = form.replaceExisting && replacing > 0;
   const footer =
+    // Each phase's buttons have their own key: React must not reuse the button that was just
+    // clicked ("Chỉnh điều kiện") as the next phase's submit button, or that same click submits.
     phase.kind === "form" ? (
-      <>
+      <Fragment key="form">
         <Button variant="secondary" onClick={onClose} disabled={submitting}>
           Hủy
         </Button>
@@ -320,9 +323,9 @@ export function RoadmapGenerateDialog({
         >
           {replaceNow ? "Xóa món cũ và tạo lại" : "Tạo lịch bằng AI"}
         </Button>
-      </>
+      </Fragment>
     ) : phase.kind === "running" ? (
-      <>
+      <Fragment key="running">
         {stalled && (
           <Button
             variant="secondary"
@@ -337,18 +340,20 @@ export function RoadmapGenerateDialog({
         <Button variant="secondary" onClick={onClose}>
           Đóng, ANGI vẫn tạo ở nền
         </Button>
-      </>
+      </Fragment>
     ) : phase.kind === "done" ? (
-      <Button onClick={onClose}>Xem lộ trình</Button>
+      <Button key="done" onClick={onClose}>
+        Xem lộ trình
+      </Button>
     ) : (
-      <>
+      <Fragment key="failed">
         <Button variant="secondary" onClick={onClose}>
           Đóng
         </Button>
         <Button onClick={() => setPhase({ kind: "form" })}>
           Chỉnh điều kiện
         </Button>
-      </>
+      </Fragment>
     );
 
   let content: ReactNode;
