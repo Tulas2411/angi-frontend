@@ -54,18 +54,18 @@ const summary: RoadmapSummaryDto = {
 };
 
 describe("RM-01 plan form", () => {
-  it("requires the destination, a title and 1–30 days", () => {
+  it("requires the destination, a title and 1–7 days", () => {
     expect(
       Object.keys(
         validateRoadmapForm({ ...emptyRoadmapForm, numDays: "" }, null),
       ),
     ).toEqual(["province", "title", "numDays"]);
     expect(validateRoadmapForm(values, null)).toEqual({});
-    for (const numDays of ["0", "31", "2.5", "abc"])
+    for (const numDays of ["0", "8", "30", "2.5", "abc"])
       expect(validateRoadmapForm({ ...values, numDays }, null)).toHaveProperty(
         "numDays",
       );
-    expect(validateRoadmapForm({ ...values, numDays: "30" }, null)).toEqual({});
+    expect(validateRoadmapForm({ ...values, numDays: "7" }, null)).toEqual({});
     expect(
       validateRoadmapForm({ ...values, title: "x".repeat(201) }, null),
     ).toHaveProperty("title");

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
 import { Icon, Media } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
@@ -25,6 +25,17 @@ import { mostCommonProvince, nextMealSlot } from "./roadmap-add-item-rules";
 import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
 import { RoadmapGenerateDialog } from "./roadmap-generate-dialog";
+import { useItemDrag, type GripProps } from "./roadmap-item-drag";
+import {
+  applyPatches,
+  moveAnnouncement,
+  moveItemError,
+  moveReloadFailed,
+  patchBody,
+  planMove,
+  stepTarget,
+  type MoveTarget,
+} from "./roadmap-reorder-rules";
 import { RoadmapRemoveItemDialog } from "./roadmap-remove-item-dialog";
 import {
   removeNotice,
@@ -44,6 +55,9 @@ import type {
 type RouteState =
   | { status: "error"; message: string }
   | { status: "ready"; route: RoadmapRouteDto };
+
+/** How long a success notice stays; a warning stays until the traveler acts again. */
+const successNoticeMs = 5000;
 
 /** What follows a removal, shown in the day it happened in. */
 interface DayNotice {
@@ -77,12 +91,22 @@ function ItemCard({
   selected,
   onSelect,
   onRemove,
+  reorder,
+  dragging,
 }: {
   item: RoadmapItemDto;
   order: number;
+  /** The grip is held: the card lifts, the leg line above it stays put. */
+  dragging: boolean;
   selected: boolean;
   onSelect: () => void;
   onRemove: () => void;
+  reorder: {
+    busy: boolean;
+    hintId: string;
+    grip: GripProps;
+    onStep: (direction: -1 | 1) => void;
+  };
 }) {
   const { dish } = item;
   const notice = dishNotice(dish);
@@ -91,11 +115,34 @@ function ItemCard({
     .join(", ");
   return (
     <article
-      className="roadmap-item"
+      className={`roadmap-item ${dragging ? "is-dragging" : ""}`.trim()}
       data-selected={selected}
       aria-labelledby={`roadmap-item-${item.id}`}
     >
       <div className="card roadmap-item-text">
+        <button
+          type="button"
+          className="roadmap-item-grip"
+          aria-label={`Đổi thứ tự ${dish.name}`}
+          aria-describedby={reorder.hintId}
+          aria-keyshortcuts="ArrowUp ArrowDown"
+          aria-disabled={reorder.busy || undefined}
+          title="Kéo để đổi thứ tự"
+          {...reorder.grip}
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+            event.preventDefault();
+            if (!reorder.busy) reorder.onStep(event.key === "ArrowUp" ? -1 : 1);
+          }}
+        >
+          <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            {[4.5, 11.5].flatMap((x) =>
+              [3.5, 8, 12.5].map((y) => (
+                <circle key={`${x}-${y}`} cx={x} cy={y} r="1.5" />
+              )),
+            )}
+          </svg>
+        </button>
         <h5 id={`roadmap-item-${item.id}`}>
           <span className="roadmap-item-order" aria-hidden>
             {order}
@@ -167,6 +214,8 @@ function DayPanel({
   onAdd,
   onRemove,
   onGenerate,
+  onMove,
+  moving,
   notice,
 }: {
   day: RoadmapDayDto;
@@ -184,9 +233,32 @@ function DayPanel({
   onRemove: (item: RoadmapItemDto) => void;
   /** Opens the AI dialog for this day. */
   onGenerate: () => void;
+  /** The traveler dropped a dish somewhere else in this day (RM-08). */
+  onMove: (itemId: number, target: MoveTarget) => void;
+  /** A move is being saved: no new one can start. */
+  moving: boolean;
   notice: DayNotice | null;
 }) {
   const noticeRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const focusGrip = useRef<number | null>(null);
+  const { drag, gripProps } = useItemDrag({
+    containerRef: bodyRef,
+    disabled: moving,
+    onDrop: onMove,
+  });
+  // A keyboard move re-renders the card in its new place: give the grip its focus back.
+  useEffect(() => {
+    const id = focusGrip.current;
+    if (id === null) return;
+    const grip = bodyRef.current?.querySelector<HTMLElement>(
+      `[data-item-id="${id}"] .roadmap-item-grip`,
+    );
+    if (grip) {
+      grip.focus();
+      focusGrip.current = null;
+    }
+  }, [day.items]);
   // The removed card is gone with the focus on it: move the focus to what happened.
   useEffect(() => {
     if (notice) noticeRef.current?.focus();
@@ -224,7 +296,17 @@ function DayPanel({
           : dayDishSummary(day.items)}
       </p>
       {open && (
-        <div id={bodyId} className="roadmap-day-body stack">
+        <div
+          id={bodyId}
+          ref={bodyRef}
+          className="roadmap-day-body stack"
+          aria-busy={moving || undefined}
+          data-dragging={drag ? "true" : undefined}
+        >
+          <p id={`reorder-hint-${day.dayNumber}`} className="sr-only">
+            Kéo biểu tượng ở góc thẻ món để đổi thứ tự, hoặc bấm phím mũi tên
+            lên xuống khi đang chọn biểu tượng đó.
+          </p>
           <div className="roadmap-day-actions">
             <Button onClick={() => onAdd()}>+ Thêm món</Button>
             <Button variant="secondary" onClick={onGenerate}>
@@ -306,6 +388,7 @@ function DayPanel({
               <div
                 key={`${group.mealSlot}-${group.items[0].id}`}
                 className="roadmap-meal"
+                data-meal={group.mealSlot}
               >
                 <div className="roadmap-meal-header">
                   <h4 className="roadmap-meal-heading">
@@ -322,7 +405,7 @@ function DayPanel({
                   {group.items.map((item) => {
                     const leg = legs?.get(item.id);
                     return (
-                      <li key={item.id}>
+                      <li key={item.id} data-item-id={item.id}>
                         {leg && (
                           <p className="roadmap-leg">
                             <span className="roadmap-leg-connector">
@@ -356,6 +439,22 @@ function DayPanel({
                           selected={selectedItemId === item.id}
                           onSelect={() => onSelectItem(item.id)}
                           onRemove={() => onRemove(item)}
+                          dragging={drag?.itemId === item.id}
+                          reorder={{
+                            busy: moving,
+                            hintId: `reorder-hint-${day.dayNumber}`,
+                            grip: gripProps(item.id),
+                            onStep: (direction) => {
+                              const target = stepTarget(
+                                day.items,
+                                item.id,
+                                direction,
+                              );
+                              if (!target) return;
+                              focusGrip.current = item.id;
+                              onMove(item.id, target);
+                            },
+                          }}
                         />
                       </li>
                     );
@@ -367,6 +466,17 @@ function DayPanel({
             <p className="roadmap-empty-day">
               Ngày này chưa có món nào. Bấm “Thêm món” để chọn món ANGI gợi ý.
             </p>
+          )}
+          {drag?.indicator && (
+            <div
+              className="roadmap-drop-indicator"
+              aria-hidden
+              style={{
+                top: drag.indicator.top,
+                left: drag.indicator.left,
+                width: drag.indicator.width,
+              }}
+            />
           )}
           {day.items.length > 0 && (
             <p className="roadmap-day-total">
@@ -392,7 +502,7 @@ function DayPanel({
 export function RoadmapItinerary({
   roadmapId,
   overview,
-  itinerary,
+  itinerary: serverItinerary,
   openDays,
   onToggleDay,
   active,
@@ -404,6 +514,7 @@ export function RoadmapItinerary({
   onItemAdded,
   onItemRemoved,
   onItemsGenerated,
+  onItemsMoved,
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
@@ -422,7 +533,27 @@ export function RoadmapItinerary({
   onItemRemoved: () => Promise<void>;
   /** RM-10 job succeeded: the parent reloads the roadmap, rejecting when that fails. */
   onItemsGenerated: () => Promise<void>;
+  /** RM-08 saved a new order: the parent reloads the roadmap, rejecting when that fails. */
+  onItemsMoved: () => Promise<void>;
 }) {
+  // The order the traveler chose is shown at once; RM-03 confirms it (or takes it back).
+  const [moved, setMoved] = useState<{
+    dayNumber: number;
+    items: RoadmapItemDto[];
+  } | null>(null);
+  const [moving, setMoving] = useState(false);
+  const [announcement, setAnnouncement] = useState("");
+  const itinerary = useMemo(
+    () =>
+      moved
+        ? serverItinerary.map((day) =>
+            day.dayNumber === moved.dayNumber
+              ? { ...day, items: moved.items }
+              : day,
+          )
+        : serverItinerary,
+    [serverItinerary, moved],
+  );
   const [generateTarget, setGenerateTarget] = useState<{
     scope: GenerationScope;
     dayNumber: number;
@@ -432,6 +563,12 @@ export function RoadmapItinerary({
     item: RoadmapItemDto;
   } | null>(null);
   const [notice, setNotice] = useState<DayNotice | null>(null);
+  // "Đã xóa … khỏi lộ trình." is only confirmation: it goes away by itself after 5 seconds.
+  useEffect(() => {
+    if (notice?.tone !== "success") return;
+    const timer = setTimeout(() => setNotice(null), successNoticeMs);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const [addTarget, setAddTarget] = useState<{
     dayNumber: number;
     slot: MealSlot;
@@ -469,6 +606,9 @@ export function RoadmapItinerary({
         : { latitude: gpsLatitude, longitude: gpsLongitude };
     for (const day of itinerary) {
       if (!openDays.includes(day.dayNumber)) continue;
+      // The order shown is not saved yet: RM-14 would still answer for the old one. It is asked
+      // once the roadmap is read again, with the order the backend confirms.
+      if (moved?.dayNumber === day.dayNumber) continue;
       if (!wantsDayRoute(overview, day.items, gpsOrigin !== undefined))
         continue;
       const key = routeKey(day, gpsLatitude, gpsLongitude);
@@ -496,6 +636,7 @@ export function RoadmapItinerary({
   }, [
     active,
     itinerary,
+    moved,
     openDays,
     overview,
     gpsLatitude,
@@ -517,6 +658,44 @@ export function RoadmapItinerary({
   const removeDay = removeTarget
     ? itinerary.find((day) => day.dayNumber === removeTarget.dayNumber)
     : undefined;
+
+  /**
+   * Saves a new place for one dish (RM-08, one call per dish whose position changed), then reads
+   * the roadmap again. A failure takes the shown order back and says so in the day.
+   */
+  async function moveItem(
+    dayNumber: number,
+    itemId: number,
+    target: MoveTarget,
+  ) {
+    const day = serverItinerary.find((entry) => entry.dayNumber === dayNumber);
+    if (!day || moving) return;
+    const patches = planMove(day.items, itemId, target);
+    if (!patches.length) return;
+    setMoving(true);
+    setNotice(null);
+    setMoved({ dayNumber, items: applyPatches(day.items, patches) });
+    setAnnouncement(moveAnnouncement(day.items, itemId, target));
+    try {
+      for (const patch of patches)
+        await service.updateItem(roadmapId, patch.itemId, patchBody(patch));
+      await onItemsMoved();
+      if (mounted.current) setMoved(null);
+    } catch (caught) {
+      if (!mounted.current) return;
+      setMoved(null);
+      setAnnouncement("");
+      let text = moveItemError(caught);
+      try {
+        await onItemsMoved();
+      } catch {
+        text = moveReloadFailed;
+      }
+      if (mounted.current) setNotice({ dayNumber, tone: "warning", text });
+    } finally {
+      if (mounted.current) setMoving(false);
+    }
+  }
 
   /** The item is gone: leave the map selection, say so in its day and read RM-03 again. */
   async function itemRemoved(outcome: RemoveOutcome) {
@@ -663,6 +842,10 @@ export function RoadmapItinerary({
               setNotice(null);
               setGenerateTarget({ scope: "day", dayNumber: day.dayNumber });
             }}
+            moving={moving}
+            onMove={(itemId, target) =>
+              void moveItem(day.dayNumber, itemId, target)
+            }
             onAdd={(slot) =>
               setAddTarget({
                 dayNumber: day.dayNumber,
@@ -673,6 +856,9 @@ export function RoadmapItinerary({
           />
         );
       })}
+      <p className="sr-only" role="status" aria-live="polite">
+        {announcement}
+      </p>
       {generateTarget && generateDay && (
         <RoadmapGenerateDialog
           roadmapId={roadmapId}

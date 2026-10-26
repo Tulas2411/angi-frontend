@@ -39,6 +39,7 @@ export function RoadmapDetailView({
   onItemAdded,
   onItemRemoved,
   onItemsGenerated,
+  onItemsMoved,
   userId,
 }: {
   detail: RoadmapDetailDto;
@@ -51,6 +52,8 @@ export function RoadmapDetailView({
   onItemRemoved: () => Promise<void>;
   /** Reloads the roadmap after an AI job succeeded; rejects when the reload fails. */
   onItemsGenerated: () => Promise<void>;
+  /** Reloads the roadmap after dishes were reordered; rejects when the reload fails. */
+  onItemsMoved: () => Promise<void>;
   userId: number;
 }) {
   const { overview, itinerary, budget } = detail;
@@ -325,6 +328,7 @@ export function RoadmapDetailView({
             onItemAdded={onItemAdded}
             onItemRemoved={onItemRemoved}
             onItemsGenerated={onItemsGenerated}
+            onItemsMoved={onItemsMoved}
           />
           {tab === "itinerary" && (
             <div className="roadmap-itinerary-budget">

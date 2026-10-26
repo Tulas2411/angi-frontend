@@ -180,14 +180,14 @@ test("client validation blocks an incomplete plan without calling RM-01", async 
   page,
 }) => {
   await open(page);
-  await page.getByLabel(/^Số ngày/).fill("31");
+  await page.getByLabel(/^Số ngày/).fill("8");
   await submit(page).click();
   await expect(
     page.getByText("Chọn tỉnh / thành phố bạn muốn đến."),
   ).toBeVisible();
   await expect(page.getByText("Tên lộ trình là bắt buộc.")).toBeVisible();
   await expect(
-    page.getByText("Số ngày phải là số nguyên từ 1 đến 30."),
+    page.getByText("Số ngày phải là số nguyên từ 1 đến 7."),
   ).toBeVisible();
   await expect(page.getByLabel(/^Bạn muốn ăn ở đâu\?/)).toBeFocused();
   expect(creates).toEqual([]);
