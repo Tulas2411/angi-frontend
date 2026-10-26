@@ -1,0 +1,155 @@
+/* F-26 "ANGI lên lịch giúp bạn": AI generation dialog and its entry banner. */
+
+.roadmap-ai-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow: 5px 6px 0 rgb(34 34 34 / 0.12);
+}
+
+.roadmap-ai-banner h3 {
+  margin-bottom: var(--space-1);
+  font-size: 20px;
+}
+
+.roadmap-ai-banner p {
+  color: var(--muted);
+}
+
+.roadmap-ai-banner .button {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.roadmap-generate {
+  padding-top: var(--space-2);
+}
+
+.roadmap-generate-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.roadmap-generate-meals {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.roadmap-generate-meals legend,
+.roadmap-generate-legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.roadmap-generate-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+/* Tag chips are real buttons: wrap, keep a comfortable target. */
+.roadmap-generate-tags .roadmap-generate-chips {
+  gap: var(--space-2);
+}
+
+.roadmap-generate-more {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.roadmap-generate-more > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.roadmap-generate-more[open] > summary {
+  margin-bottom: var(--space-4);
+}
+
+.roadmap-generate-replace {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--control);
+}
+
+.roadmap-generate-progress {
+  padding-top: var(--space-4);
+}
+
+.roadmap-generate-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.roadmap-generate-steps {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap-generate-steps li {
+  position: relative;
+  padding: var(--space-3) var(--space-4) var(--space-3) 44px;
+  border-radius: var(--radius-md);
+  background: var(--control);
+  color: var(--muted);
+}
+
+.roadmap-generate-steps li::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: var(--space-4);
+  width: 14px;
+  height: 14px;
+  transform: translateY(-50%);
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.roadmap-generate-steps li[data-state="active"] {
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.roadmap-generate-steps li[data-state="done"] {
+  color: var(--success-ink);
+}
+
+.roadmap-generate-steps li[data-state="done"]::before {
+  background: currentColor;
+}
+
+@media (max-width: 700px) {
+  .roadmap-ai-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-4);
+  }
+  .roadmap-generate-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-generate-steps li {
+    transition: none;
+  }
+}

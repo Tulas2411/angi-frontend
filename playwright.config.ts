@@ -16,6 +16,7 @@ export default defineConfig({
     "my-roadmaps.spec.ts",
     "roadmap-detail.spec.ts",
     "roadmap-add-item.spec.ts",
+    "roadmap-generate.spec.ts",
   ],
   workers: 1,
   timeout: 60000,
