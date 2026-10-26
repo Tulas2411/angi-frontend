@@ -36,6 +36,7 @@ export function RoadmapDetailView({
   service,
   onItemAdded,
   onItemRemoved,
+  onItemsGenerated,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
@@ -45,6 +46,8 @@ export function RoadmapDetailView({
   onItemAdded: () => Promise<void>;
   /** Reloads the roadmap after an item was deleted; rejects when the reload fails. */
   onItemRemoved: () => Promise<void>;
+  /** Reloads the roadmap after an AI job succeeded; rejects when the reload fails. */
+  onItemsGenerated: () => Promise<void>;
 }) {
   const { overview, itinerary, budget } = detail;
   const firstDay = itinerary.find((day) => day.dayNumber === initialDay);
@@ -284,6 +287,7 @@ export function RoadmapDetailView({
             onMapRouteChange={receiveMapRoute}
             onItemAdded={onItemAdded}
             onItemRemoved={onItemRemoved}
+            onItemsGenerated={onItemsGenerated}
           />
           {tab === "itinerary" && (
             <div className="roadmap-itinerary-budget">

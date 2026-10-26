@@ -3,12 +3,16 @@ import { suggestionsQueryString } from "./roadmap-add-item-rules";
 import type {
   AddRoadmapItemRequestDto,
   CreateRoadmapRequestDto,
+  GenerateRoadmapRequestDto,
+  GenerateRoadmapResponseDto,
+  GenerationJobDto,
   RoadmapDetailDto,
   RoadmapItemDto,
   RoadmapPageDto,
   RoadmapRouteDto,
   RoadmapSuggestionsDto,
   RoadmapSuggestionsQuery,
+  RoadmapTagDto,
   UpdateRoadmapRequestDto,
 } from "./roadmap-types";
 
@@ -57,13 +61,31 @@ export interface RoadmapItemService {
   deleteItem: (roadmapId: number, itemId: number) => Promise<void>;
 }
 
-/** Everything the roadmap detail screen calls: RM-03, RM-14, RM-06, RM-07 and RM-09. */
-export type RoadmapScreenService = RoadmapDetailService & RoadmapItemService;
+export interface RoadmapGenerationService {
+  /** RM-10: 202 Accepted; the job runs in the background (`status` is always queued). */
+  generate: (
+    roadmapId: number,
+    request: GenerateRoadmapRequestDto,
+  ) => Promise<GenerateRoadmapResponseDto>;
+  /** RM-11: where a job stands; the app polls it every 2–3 seconds. */
+  generationJob: (
+    roadmapId: number,
+    jobId: number,
+  ) => Promise<GenerationJobDto>;
+  /** CAT-02: the tags the traveler can prefer or avoid (public catalog). */
+  tags: () => Promise<RoadmapTagDto[]>;
+}
+
+/** Everything the roadmap detail screen calls: RM-03, RM-14, RM-06, RM-07, RM-09, RM-10 and RM-11. */
+export type RoadmapScreenService = RoadmapDetailService &
+  RoadmapItemService &
+  RoadmapGenerationService;
 
 export const roadmapService: RoadmapPlanService &
   RoadmapListService &
   RoadmapDetailService &
-  RoadmapItemService = {
+  RoadmapItemService &
+  RoadmapGenerationService = {
   create: (request) => api.post<RoadmapDetailDto>("roadmaps", request),
   update: (roadmapId, request) =>
     api.patch<RoadmapDetailDto>(`roadmaps/${roadmapId}`, request),
@@ -90,4 +112,14 @@ export const roadmapService: RoadmapPlanService &
   deleteItem: async (roadmapId, itemId) => {
     await api.delete<null>(`roadmaps/${roadmapId}/items/${itemId}`);
   },
+  generate: (roadmapId, request) =>
+    api.post<GenerateRoadmapResponseDto>(
+      `roadmaps/${roadmapId}/generate`,
+      request,
+    ),
+  generationJob: (roadmapId, jobId) =>
+    api.get<GenerationJobDto>(
+      `roadmaps/${roadmapId}/generation-jobs/${jobId}`,
+    ),
+  tags: () => api.get<RoadmapTagDto[]>("tags"),
 };

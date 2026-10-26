@@ -24,6 +24,7 @@ import { RoadmapAddItemDialog } from "./roadmap-add-item-dialog";
 import { mostCommonProvince, nextMealSlot } from "./roadmap-add-item-rules";
 import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
+import { RoadmapGenerateDialog } from "./roadmap-generate-dialog";
 import { RoadmapRemoveItemDialog } from "./roadmap-remove-item-dialog";
 import {
   removeNotice,
@@ -32,6 +33,7 @@ import {
 } from "./roadmap-remove-item-rules";
 import type { RoadmapScreenService } from "./roadmap-service";
 import type {
+  GenerationScope,
   MealSlot,
   RoadmapDayDto,
   RoadmapItemDto,
@@ -164,6 +166,7 @@ function DayPanel({
   onSelectItem,
   onAdd,
   onRemove,
+  onGenerate,
   notice,
 }: {
   day: RoadmapDayDto;
@@ -179,6 +182,8 @@ function DayPanel({
   onAdd: (slot?: MealSlot) => void;
   /** Asks to remove an item of this day (the parent confirms and calls RM-09). */
   onRemove: (item: RoadmapItemDto) => void;
+  /** Opens the AI dialog for this day. */
+  onGenerate: () => void;
   notice: DayNotice | null;
 }) {
   const noticeRef = useRef<HTMLDivElement>(null);
@@ -222,6 +227,9 @@ function DayPanel({
         <div id={bodyId} className="roadmap-day-body stack">
           <div className="roadmap-day-actions">
             <Button onClick={() => onAdd()}>+ Thêm món</Button>
+            <Button variant="secondary" onClick={onGenerate}>
+              Gợi ý bằng AI
+            </Button>
             {maps && (
               <a
                 className="button button-secondary"
@@ -235,11 +243,7 @@ function DayPanel({
             )}
           </div>
           {notice && (
-            <div
-              ref={noticeRef}
-              tabIndex={-1}
-              className="roadmap-day-notice"
-            >
+            <div ref={noticeRef} tabIndex={-1} className="roadmap-day-notice">
               <Alert tone={notice.tone}>{notice.text}</Alert>
             </div>
           )}
@@ -399,6 +403,7 @@ export function RoadmapItinerary({
   onMapRouteChange,
   onItemAdded,
   onItemRemoved,
+  onItemsGenerated,
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
@@ -415,7 +420,13 @@ export function RoadmapItinerary({
   onItemAdded: () => Promise<void>;
   /** RM-09 succeeded: the parent reloads the roadmap, rejecting when that fails. */
   onItemRemoved: () => Promise<void>;
+  /** RM-10 job succeeded: the parent reloads the roadmap, rejecting when that fails. */
+  onItemsGenerated: () => Promise<void>;
 }) {
+  const [generateTarget, setGenerateTarget] = useState<{
+    scope: GenerationScope;
+    dayNumber: number;
+  } | null>(null);
   const [removeTarget, setRemoveTarget] = useState<{
     dayNumber: number;
     item: RoadmapItemDto;
@@ -497,6 +508,12 @@ export function RoadmapItinerary({
   const addDay = addTarget
     ? itinerary.find((day) => day.dayNumber === addTarget.dayNumber)
     : undefined;
+  const generateDay = generateTarget
+    ? itinerary.find((day) => day.dayNumber === generateTarget.dayNumber)
+    : undefined;
+  /** The roadmap keeps no destination: reuse what the traveler typed, else the dishes' province. */
+  const knownProvince = () =>
+    recallDestination(roadmapId) || mostCommonProvince(itinerary);
   const removeDay = removeTarget
     ? itinerary.find((day) => day.dayNumber === removeTarget.dayNumber)
     : undefined;
@@ -563,6 +580,26 @@ export function RoadmapItinerary({
   return (
     <div className="roadmap-itinerary stack">
       <h2 className="sr-only">Lịch trình</h2>
+      <section className="roadmap-ai-banner" aria-labelledby="roadmap-ai-title">
+        <div>
+          <h3 id="roadmap-ai-title">Để ANGI lên lịch giúp bạn</h3>
+          <p>
+            ANGI chọn món hợp với bạn và gom các quán gần nhau trong từng ngày.
+            Bạn xem lại rồi sửa từng món nếu muốn.
+          </p>
+        </div>
+        <Button
+          onClick={() => {
+            setNotice(null);
+            setGenerateTarget({
+              scope: "full",
+              dayNumber: itinerary[0]?.dayNumber ?? 1,
+            });
+          }}
+        >
+          Tạo lộ trình bằng AI
+        </Button>
+      </section>
       {overview.originMode === "gps" && (
         <div className="roadmap-gps stack-sm">
           {gps.status === "granted" ? (
@@ -622,18 +659,38 @@ export function RoadmapItinerary({
               setNotice(null);
               setRemoveTarget({ dayNumber: day.dayNumber, item });
             }}
+            onGenerate={() => {
+              setNotice(null);
+              setGenerateTarget({ scope: "day", dayNumber: day.dayNumber });
+            }}
             onAdd={(slot) =>
               setAddTarget({
                 dayNumber: day.dayNumber,
                 slot: slot ?? nextMealSlot(day),
-                // The roadmap keeps no destination: reuse what the traveler typed, else the dishes' province.
-                province:
-                  recallDestination(roadmapId) || mostCommonProvince(itinerary),
+                province: knownProvince(),
               })
             }
           />
         );
       })}
+      {generateTarget && generateDay && (
+        <RoadmapGenerateDialog
+          roadmapId={roadmapId}
+          overview={overview}
+          itinerary={itinerary}
+          initialScope={generateTarget.scope}
+          initialDayId={generateDay.dayId}
+          defaultProvince={knownProvince()}
+          gpsOrigin={
+            gpsLatitude === undefined || gpsLongitude === undefined
+              ? undefined
+              : { latitude: gpsLatitude, longitude: gpsLongitude }
+          }
+          service={service}
+          onGenerated={onItemsGenerated}
+          onClose={() => setGenerateTarget(null)}
+        />
+      )}
       {removeTarget && removeDay && (
         <RoadmapRemoveItemDialog
           roadmapId={roadmapId}

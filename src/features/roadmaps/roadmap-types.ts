@@ -207,3 +207,56 @@ export interface RoadmapSuggestionsQuery {
   /** 1..50, the backend default is 20. */
   limit?: number;
 }
+
+/** RM-10 `scope`: the whole roadmap, one day (needs `dayId`) or one meal of a day (needs both). */
+export type GenerationScope = "full" | "day" | "slot";
+
+/** RM-11 `status`; RM-10 always answers `queued`. */
+export type GenerationStatus = "queued" | "running" | "succeeded" | "failed";
+
+/**
+ * RM-10 body (API Design v1.8, sheet "Chi tiết Request-Response" r151–r163). `province` is
+ * required because a roadmap keeps no destination; everything else is optional.
+ */
+export interface GenerateRoadmapRequestDto {
+  scope: GenerationScope;
+  /** Required for `day` and `slot`. */
+  dayId?: number;
+  /** Required for `slot`. */
+  mealSlot?: MealSlot;
+  /** true = the items of the covered meals are deleted before generating; default false. */
+  replaceExisting?: boolean;
+  province: string;
+  /** Meals to fill (default breakfast, lunch, dinner); one dish per meal. */
+  mealSlots?: MealSlot[];
+  /** VND, whole number, ≥ 0. */
+  maxPricePerMeal?: number;
+  /** Preferred tags (not a filter). */
+  tagIds?: number[];
+  /** Dishes with any of these tags are left out. */
+  excludeTagIds?: number[];
+  /** ≤ 500 characters. */
+  note?: string;
+  /** GPS position for a `gps` roadmap; both coordinates go together. */
+  currentLatitude?: number;
+  currentLongitude?: number;
+  /** 1..50, the backend default is 10. */
+  radiusKm?: number;
+}
+
+/** RM-10 `202 Accepted` data (r164–r165). */
+export interface GenerateRoadmapResponseDto {
+  jobId: number;
+  status: "queued";
+}
+
+/** RM-11 `200 OK` data (r166–r172). `createdItemIds` is empty until the job has finished. */
+export interface GenerationJobDto {
+  jobId: number;
+  scope: GenerationScope;
+  status: GenerationStatus;
+  errorMessage: string | null;
+  createdItemIds: number[];
+  createdAt: string;
+  finishedAt: string | null;
+}

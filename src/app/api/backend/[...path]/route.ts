@@ -6,6 +6,7 @@ import { publicOperation } from "@/shared/api/public-proxy";
 import {
   roadmapOperation,
   roadmapOperationHasBody,
+  roadmapOperationStatus,
 } from "@/shared/api/roadmap-proxy";
 
 export const runtime = "nodejs";
@@ -113,7 +114,9 @@ async function handle(request: Request, context: Context) {
           token: auth.accessToken,
         });
       }),
-      menuOperation?.status ?? (request.method === "POST" ? 201 : 200),
+      menuOperation?.status ??
+        roadmapOperationStatus(request.method, endpoint) ??
+        (request.method === "POST" ? 201 : 200),
     );
   } catch (error) {
     return fail(error, session);
