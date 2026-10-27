@@ -17,12 +17,13 @@ The repository is Next.js App Router, React, strict TypeScript and npm. The encr
 | `src/features/auth`                | Session, roles and landing pages, login/register/recovery forms, server helpers             |
 | `src/features/account`             | Account page, rules and service for ME-01/02/03                                             |
 | `src/features/discovery`           | Public homepage and its local content                                                       |
+| `src/features/explore`             | Public dishes and restaurants (DISH, REST, REV-01, REP-01): pages, DTOs, rules, service     |
 | `src/features/owner`               | Owner pages, services, rules and DTOs for OWN-01..18                                        |
 | `src/shared/api`                   | Browser client, error model, server HTTP helpers, owner-menu proxy rules                    |
 
 ## Earlier workspace screens
 
-Screens built before the shared shell (`/demo/*`, `(explore)`, owner reviews, moderation, administration) keep `PlatformProvider`, `src/mocks` and `WorkspaceShell`. Their stylesheet is `src/styles/legacy-workspace.css`, generated from the previous global CSS and scoped under `.legacy-ui` (`LegacyScope`), so it cannot change the integrated screens.
+Screens built before the shared shell (`/demo/*`, `(explore)` guides, owner reviews, moderation, administration) keep `PlatformProvider`, `src/mocks` and `WorkspaceShell`. Their stylesheet is `src/styles/legacy-workspace.css`, generated from the previous global CSS and scoped under `.legacy-ui` (`LegacyScope`), so it cannot change the integrated screens.
 
 ## Data boundary
 

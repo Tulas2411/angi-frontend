@@ -51,6 +51,18 @@ export function publicOperation(
   if (method === "GET" && /^restaurants\/[1-9]\d*\/reviews$/.test(endpoint))
     return { body: false, status: 200, allowGuest: true };
 
+  // CAT-02 Tags — public (filters of the dish list, also used by owner and roadmap screens)
+  if (method === "GET" && endpoint === "tags")
+    return { body: false, status: 200, allowGuest: true };
+
+  // REV-01 Feedback Restaurant — [Authorize(Roles = "TRAVELER")], 201 Created
+  if (method === "POST" && /^restaurants\/[1-9]\d*\/reviews$/.test(endpoint))
+    return { body: true, status: 201, allowGuest: false };
+
+  // REP-01 Report Restaurant — [Authorize(Roles = "TRAVELER")], 201 Created
+  if (method === "POST" && /^restaurants\/[1-9]\d*\/reports$/.test(endpoint))
+    return { body: true, status: 201, allowGuest: false };
+
   // F-18 Roll Dish — [Authorize(Roles = "TRAVELER")] → cần session
   if (method === "POST" && endpoint === "dishes/roll")
     return { body: true, status: 200, allowGuest: false };

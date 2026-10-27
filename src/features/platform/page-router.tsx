@@ -6,11 +6,6 @@ import { Button, Card, Alert } from "@/shared/ui";
 import { ActionLink, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { usePlatform } from "./provider";
 import { useWorkspace, WorkspaceScope } from "@/components/layout/workspace";
-import {
-  DiscoveryPage,
-  DiscoveryList,
-  RestaurantDetail,
-} from "@/features/discovery/pages";
 import { BlogDetail, BlogEditor, BlogList } from "@/features/blogs/pages";
 import {
   AccountPage,
@@ -47,7 +42,6 @@ import {
   SubmissionQueue,
 } from "@/features/moderation/pages";
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
-import { DishDetail } from "@/features/discovery/pages";
 import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
 import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
 import { RestaurantBusinessHoursPage } from "@/features/owner/restaurant-business-hours-page";
@@ -171,32 +165,9 @@ export function PageRouter({
     return <RestaurantRegistrationPage />;
 
   if (status !== "ready") {
-    if (area === "dishes" && id) {
-      const fallback = data.dishes.find(
-        (d) => d.id === id && d.moderation === "visible",
-      );
-      if (fallback) return <DishDetail id={id} />;
-    }
-
-    if (area === "restaurants" && id) {
-      const fallback = data.restaurants.find(
-        (r) => r.id === id && r.moderation === "visible",
-      );
-      if (fallback) return <RestaurantDetail id={id} />;
-    }
-
     if (area === "guides" && id) {
       const fallback = data.blogs.find((b) => b.id === id);
       if (fallback) return <BlogDetail id={id} />;
-    }
-
-    if (
-      area === "restaurants" ||
-      area === "dishes" ||
-      area === "guides" ||
-      !area
-    ) {
-      return <DiscoveryPage />;
     }
 
     return <UnavailablePage />;
@@ -213,15 +184,6 @@ export function PageRouter({
   )
     return <AuthFlowPage flow={area as AuthFlow} demo={demo} />;
   if (role === "GUEST" || role === "TRAVELER") {
-    if (!area) return <DiscoveryPage />;
-    if (area === "restaurants")
-      return id ? (
-        <RestaurantDetail id={id} />
-      ) : (
-        <DiscoveryList kind="restaurants" />
-      );
-    if (area === "dishes")
-      return id ? <DishDetail id={id} /> : <DiscoveryList kind="dishes" />;
     if (
       role === "GUEST" &&
       area === "guides" &&

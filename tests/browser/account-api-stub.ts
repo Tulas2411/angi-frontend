@@ -53,7 +53,13 @@ export function profileSample(role: RoleCode = "TRAVELER"): UserProfileDto {
 
 /** Answers a feature's own routes; returns false to fall through to the account routes. */
 export type StubHandler = (
-  request: { method: string; url: string; body: unknown },
+  request: {
+    method: string;
+    url: string;
+    body: unknown;
+    /** Lower-case request headers, e.g. `authorization` (absent for a guest). */
+    headers: Record<string, string | string[] | undefined>;
+  },
   send: (
     status: number,
     data: unknown,
@@ -61,6 +67,14 @@ export type StubHandler = (
     errors?: Record<string, string[]>,
   ) => void,
 ) => boolean;
+
+function parseBody(raw: string): unknown {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return raw;
+  }
+}
 
 export async function startAccountStub(
   port = 5164,
@@ -126,7 +140,9 @@ export async function startAccountStub(
         {
           method: request.method ?? "GET",
           url: request.url ?? "",
-          body: raw ? (JSON.parse(raw) as unknown) : null,
+          // A multipart upload (MEDIA-01) is not JSON: the handler gets its raw text.
+          body: raw ? parseBody(raw) : null,
+          headers: request.headers,
         },
         send,
       )
