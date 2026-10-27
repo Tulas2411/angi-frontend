@@ -55,14 +55,14 @@ describe("province catalog boundary", () => {
     expect(searchText("Tỉnh Điện Biên")).toContain(searchText("dien bien"));
     expect(searchText("Thành phố Đà Nẵng")).toContain(searchText("DA NANG"));
   });
-  it("uses the current V2 provider and preserves the province codes", async () => {
+  it("uses the pre-merger V1 provider and preserves the province codes", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json(catalog));
     vi.stubGlobal("fetch", fetcher);
     const response = await GET();
     expect(response.status).toBe(200);
     expect((await response.json()).data).toEqual(readProvinceCatalog(catalog));
     expect(fetcher).toHaveBeenCalledWith(
-      "https://provinces.open-api.vn/api/v2/",
+      "https://provinces.open-api.vn/api/v1/",
       expect.objectContaining({ next: { revalidate: 86400 } }),
     );
   });

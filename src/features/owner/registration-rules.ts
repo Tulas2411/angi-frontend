@@ -12,6 +12,7 @@ export const emptyRestaurantForm: RestaurantFormValues = {
   description: "",
   addressLine: "",
   provinceName: "",
+  district: "",
   ward: "",
   priceLevel: "",
 };
@@ -26,6 +27,7 @@ export function validateRestaurantForm(
     phone: 20,
     addressLine: 255,
     provinceName: 100,
+    district: 100,
     ward: 100,
     description: 2000,
   };
@@ -34,13 +36,16 @@ export function validateRestaurantForm(
     phone: "Số điện thoại",
     addressLine: "Địa chỉ",
     provinceName: "Tỉnh / thành phố",
+    district: "Quận / huyện",
     ward: "Phường / xã",
     description: "Mô tả",
   };
   for (const field of Object.keys(limits) as (keyof typeof limits)[]) {
     const value = values[field].trim();
     if (
-      ["name", "phone", "addressLine", "provinceName"].includes(field) &&
+      ["name", "phone", "addressLine", "provinceName", "district"].includes(
+        field,
+      ) &&
       !value
     )
       errors[field] = `${labels[field]} là bắt buộc.`;
@@ -86,6 +91,7 @@ export function buildRestaurantRequest(
     name: values.name.trim(),
     phone: values.phone.trim(),
     addressLine: values.addressLine.trim(),
+    district: values.district.trim(),
     provinceName: values.provinceName.trim(),
     latitude: location.latitude,
     longitude: location.longitude,
@@ -120,6 +126,7 @@ const visibleFields = new Set([
   "description",
   "addressLine",
   "provinceName",
+  "district",
   "ward",
   "location",
   "priceLevel",
@@ -128,8 +135,8 @@ const visibleFields = new Set([
 ]);
 
 /**
- * Backend rules that no form control can show (for example a legacy `district` requirement)
- * would otherwise leave the owner with a generic error and nothing to fix.
+ * Backend rules that no form control can show would otherwise leave the owner with a generic
+ * error and nothing to fix.
  */
 export function hiddenFieldMessages(fields: Record<string, string>): string {
   return Object.entries(fields)

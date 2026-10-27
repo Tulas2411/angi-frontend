@@ -15,8 +15,11 @@ import {
 } from "@/components/ui/primitives";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ProvinceField } from "@/components/domain/province-field";
-import { WardField } from "@/components/domain/ward-field";
-import { provinceNameKey } from "@/shared/locations/provinces";
+import { DistrictField, WardField } from "@/components/domain/ward-field";
+import {
+  districtNameKey,
+  provinceNameKey,
+} from "@/shared/locations/provinces";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import {
   buildProfilePatch,
@@ -211,8 +214,13 @@ function RestaurantProfileEditor({
     setValues((current) => ({
       ...current,
       [key]: value,
+      // A new province empties its district and ward; a new district empties its ward.
       ...(key === "provinceName" &&
       provinceNameKey(value) !== provinceNameKey(current.provinceName)
+        ? { district: "", ward: "" }
+        : {}),
+      ...(key === "district" &&
+      districtNameKey(value) !== districtNameKey(current.district)
         ? { ward: "" }
         : {}),
     }));
@@ -389,7 +397,7 @@ function RestaurantProfileEditor({
                     change("addressLine", event.target.value)
                   }
                 />
-                <div className="grid-2">
+                <div className="grid-3 address-areas">
                   <ProvinceField
                     label="Tỉnh / thành phố"
                     name="provinceName"
@@ -398,10 +406,20 @@ function RestaurantProfileEditor({
                     error={errors.provinceName}
                     onChange={(value) => change("provinceName", value)}
                   />
+                  <DistrictField
+                    label="Quận / huyện"
+                    name="district"
+                    provinceName={values.provinceName}
+                    maxLength={100}
+                    value={values.district}
+                    error={errors.district}
+                    onChange={(value) => change("district", value)}
+                  />
                   <WardField
                     label="Phường / xã"
                     name="ward"
                     provinceName={values.provinceName}
+                    districtName={values.district}
                     maxLength={100}
                     value={values.ward}
                     error={errors.ward}

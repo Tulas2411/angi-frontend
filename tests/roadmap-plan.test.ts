@@ -261,7 +261,11 @@ describe("province from the picked origin", () => {
     expect(
       provinceFromOrigin({
         ...point,
-        addressDetails: { provinceName: "Thành phố Đà Nẵng", ward: "" },
+        addressDetails: {
+          provinceName: "Thành phố Đà Nẵng",
+          district: "",
+          ward: "",
+        },
       }),
     ).toEqual({
       province: "Thành phố Đà Nẵng",
@@ -271,7 +275,10 @@ describe("province from the picked origin", () => {
   it("asks the traveler to choose when no province could be matched", () => {
     for (const picked of [
       point,
-      { ...point, addressDetails: { provinceName: "  ", ward: "" } },
+      {
+        ...point,
+        addressDetails: { provinceName: "  ", district: "", ward: "" },
+      },
     ])
       expect(provinceFromOrigin(picked)).toMatchObject({
         province: "",
