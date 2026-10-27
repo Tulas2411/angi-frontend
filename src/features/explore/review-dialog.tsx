@@ -2,7 +2,10 @@
 import { useRef, useState } from "react";
 import { Alert, Button } from "@/shared/ui";
 import { Dialog, TextArea } from "@/components/ui/primitives";
-import { ImageAttachments, type Attachment } from "./explore-attachments";
+import {
+  ImageAttachments,
+  type Attachment,
+} from "@/components/domain/image-attachments";
 import {
   maxReviewImages,
   maxReviewLength,
@@ -149,12 +152,11 @@ export function ReviewDialog({
         <ImageAttachments
           label="Ảnh món ăn"
           helper="Tối đa 5 ảnh JPG, PNG hoặc WEBP, mỗi ảnh dưới 5 MB."
-          purpose="review"
           max={maxReviewImages}
           value={images}
           onChange={setImages}
           onUploading={setUploading}
-          service={service}
+          upload={(file) => service.upload(file, "review")}
         />
         {failure && <Alert>{failure}</Alert>}
       </form>

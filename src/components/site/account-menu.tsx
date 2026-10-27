@@ -68,6 +68,12 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
             <Link href={roadmapRoutes.plan} className="menu-item">
               Lập lộ trình mới
             </Link>
+            <Link href="/guides/mine" className="menu-item">
+              Bài viết của tôi
+            </Link>
+            <Link href="/guides/new" className="menu-item">
+              Viết cẩm nang
+            </Link>
           </>
         )}
         <Link href="/" className="menu-item">

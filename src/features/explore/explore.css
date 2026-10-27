@@ -300,24 +300,17 @@
 }
 
 /* -------------------------------------------------------------- dialogs */
-.explore-stars,
-.explore-reasons {
+.explore-stars {
   min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
 }
-.explore-stars legend,
-.explore-reasons legend {
+.explore-stars legend {
   padding: 0;
   margin-bottom: var(--space-2);
   font-size: var(--text-sm);
   font-weight: 600;
-}
-.explore-reasons {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 .explore-star-row {
   display: flex;
@@ -348,63 +341,6 @@
 .explore-star-row .helper {
   margin-left: var(--space-3);
 }
-.explore-attachment-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: var(--space-3);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.explore-attachment-list li {
-  position: relative;
-}
-.explore-attachment-list .media {
-  aspect-ratio: 1;
-  border-radius: var(--radius-md);
-}
-.explore-attach-add {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  width: 100%;
-  aspect-ratio: 1;
-  padding: var(--space-2);
-  border: 1px dashed var(--line-strong);
-  border-radius: var(--radius-md);
-  background: var(--card);
-  color: var(--muted);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  text-align: center;
-  cursor: pointer;
-}
-.explore-attach-add > span:first-child {
-  font-size: 24px;
-  line-height: 1;
-}
-.explore-attach-add:hover:not(:disabled) {
-  border-color: var(--ink);
-  color: var(--ink);
-}
-.explore-attach-add:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-.explore-attach-add:disabled {
-  cursor: progress;
-  opacity: 0.6;
-}
-.explore-attachment-list li > .button {
-  position: absolute;
-  top: var(--space-1);
-  right: var(--space-1);
-  background: var(--card);
-}
-
 /* ------------------------------------------------------------ responsive */
 @media (max-width: 1000px) {
   .explore-grid {

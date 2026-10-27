@@ -3,38 +3,39 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "@/shared/ui";
 import { Icon, Media } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
-import { validateEvidenceImage } from "./explore-rules";
-import type { ExploreService } from "./explore-service";
+import { validateUpload } from "@/shared/format";
+import "./image-attachments.css";
 
 export interface Attachment {
-  /** `media_files.id` from MEDIA-01, sent as `imageMediaIds` / `evidenceMediaIds`. */
+  /** `media_files.id` from MEDIA-01, sent as `imageMediaIds`, `evidenceMediaIds` and so on. */
   mediaId: number;
   url: string;
   name: string;
 }
 
 /**
- * Photos for a review or a report. Every file is uploaded at once (MEDIA-01) so the form only
- * holds ids the backend already knows; a failed file is reported and the others are kept.
+ * Photos for a review, a report or a blog. Every file is uploaded at once (MEDIA-01) so the form
+ * only holds ids the backend already knows; a failed file is reported and the others are kept.
  */
 export function ImageAttachments({
   label,
   helper,
-  purpose,
   max,
   value,
   onChange,
   onUploading,
-  service,
+  upload,
+  addLabel = "Chọn ảnh",
 }: {
   label: string;
   helper: string;
-  purpose: "review" | "report_evidence";
   max: number;
   value: Attachment[];
   onChange: (next: Attachment[]) => void;
   onUploading: (uploading: boolean) => void;
-  service: Pick<ExploreService, "upload">;
+  /** Uploads one file with the purpose of the form; rejects with the backend's error. */
+  upload: (file: File) => Promise<{ id: number; url: string }>;
+  addLabel?: string;
 }) {
   const id = useId();
   const input = useRef<HTMLInputElement>(null);
@@ -54,7 +55,7 @@ export function ImageAttachments({
       setProblem(`Chỉ đính kèm tối đa ${max} ảnh.`);
       return;
     }
-    const invalid = files.map(validateEvidenceImage).find(Boolean);
+    const invalid = files.map((file) => validateUpload(file)).find(Boolean);
     if (invalid) {
       setProblem(invalid);
       return;
@@ -66,7 +67,7 @@ export function ImageAttachments({
     let failure = "";
     for (const file of files) {
       try {
-        const media = await service.upload(file, purpose);
+        const media = await upload(file);
         added.push({ mediaId: media.id, url: media.url, name: file.name });
       } catch (caught) {
         failure = `Chưa tải được “${file.name}”: ${getErrorMessage(caught)}`;
@@ -80,7 +81,7 @@ export function ImageAttachments({
   }
 
   return (
-    <div className="field explore-attachments">
+    <div className="field attachments">
       <div className="between">
         <label htmlFor={id}>{label}</label>
         <span className="helper">
@@ -102,7 +103,7 @@ export function ImageAttachments({
         }}
         suppressHydrationWarning
       />
-      <ul className="explore-attachment-list">
+      <ul className="attachment-list">
         {value.map((file) => (
           <li key={file.mediaId}>
             <Media src={file.url} alt={file.name} />
@@ -122,13 +123,13 @@ export function ImageAttachments({
           <li>
             <button
               type="button"
-              className="explore-attach-add"
+              className="attachment-add"
               disabled={busy}
               onClick={() => input.current?.click()}
               suppressHydrationWarning
             >
               <span aria-hidden>＋</span>
-              {busy ? "Đang tải ảnh…" : "Chọn ảnh"}
+              {busy ? "Đang tải ảnh…" : addLabel}
             </button>
           </li>
         )}
