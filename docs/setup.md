@@ -38,7 +38,7 @@ Public variables are selected at build time; restart development or rebuild afte
 
 Manual coordinates and browser geolocation always work. A public Mapbox token enables the map, POI search and address prefill; the account must support permanent geocoding (`permanent=true`) because the coordinates are stored on the restaurant. Restrict the token to your application origins. `./scripts/sync-mapbox-env.ps1` copies the backend's public token into `.env.local` (or `.env`) and refuses secret tokens. Automated suites never use a real token: they set a placeholder and intercept all Mapbox requests. See [manual Mapbox checks](mapbox-features.vi.md) and [address prefill](map-address-prefill.vi.md).
 
-Province and ward suggestions come from the public [Provinces Open API V2](https://provinces.open-api.vn/) (34 provinces/cities after the July 2025 merger) through `/api/locations/provinces[/{code}/wards]`; no key is needed. Owner forms use province → ward with no district input, and typed values stay editable when the catalogue is unavailable. See [the V2 address note](address-entry-v2.vi.md).
+Province, district and ward suggestions come from the public [Provinces Open API V1](https://provinces.open-api.vn/) (63 provinces/cities, the catalogue before the July 2025 merger, with districts) through `/api/locations/provinces[/{code}/districts]` and `/api/locations/districts/{code}/wards`; no key is needed. Owner forms use province → district → ward (the district is required by OWN-01), and typed values stay editable when the catalogue is unavailable. See [the address note](address-entry-v2.vi.md).
 
 ## Checks
 

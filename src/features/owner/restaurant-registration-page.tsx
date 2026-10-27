@@ -11,8 +11,8 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
-import { WardField } from "@/components/domain/ward-field";
-import { provinceNameKey } from "@/shared/locations/provinces";
+import { DistrictField, WardField } from "@/components/domain/ward-field";
+import { districtNameKey, provinceNameKey } from "@/shared/locations/provinces";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { ownerProfileHref, ownerRoutes, ownerVerificationHref } from "./routes";
@@ -95,8 +95,13 @@ export function RestaurantRegistrationPage() {
     setValues((previous) => ({
       ...previous,
       [field]: value,
+      // A new province empties its district and ward; a new district empties its ward.
       ...(field === "provinceName" &&
       provinceNameKey(value) !== provinceNameKey(previous.provinceName)
+        ? { district: "", ward: "" }
+        : {}),
+      ...(field === "district" &&
+      districtNameKey(value) !== districtNameKey(previous.district)
         ? { ward: "" }
         : {}),
     }));
@@ -244,16 +249,11 @@ export function RestaurantRegistrationPage() {
     );
   }
   return (
-    <div className="stack form-page">
+    <div className="stack form-page registration-page">
       <PageHeading
-        eyebrow="Dành cho chủ nhà hàng"
         title="Đăng ký nhà hàng của bạn"
-        description="Một tài khoản chủ nhà hàng chỉ đăng ký một nhà hàng. Bạn có thể bổ sung giờ mở cửa sau."
+        description="Một tài khoản chủ nhà hàng đăng ký một nhà hàng. Sau khi đăng ký, nhà hàng ở trạng thái chưa xác minh và chưa hiển thị công khai; giờ mở cửa có thể bổ sung sau."
       />
-      <Alert tone="info">
-        Sau khi đăng ký, nhà hàng ở trạng thái chưa xác minh và chưa hiển thị
-        công khai.
-      </Alert>
       <form
         className="stack"
         noValidate
@@ -262,171 +262,230 @@ export function RestaurantRegistrationPage() {
         aria-busy={blocked}
       >
         {error && <Alert>{error}</Alert>}
-        <fieldset disabled={blocked} className="registration-fields stack">
-          <Card title="Thông tin nhà hàng">
-            <p className="helper">Các mục có dấu * là bắt buộc.</p>
-            <Field
-              label="Tên nhà hàng"
-              name="name"
-              value={values.name}
-              required
-              maxLength={200}
-              autoComplete="organization"
-              error={errors.name}
-              onChange={(event) => update("name", event.target.value)}
-            />
-            <div className="grid-2">
-              <Field
-                label="Số điện thoại nhà hàng"
-                name="phone"
-                type="tel"
-                autoComplete="tel"
-                value={values.phone}
-                required
-                maxLength={20}
-                error={errors.phone}
-                onChange={(event) => update("phone", event.target.value)}
-              />
-              <Field
-                label="Email nhà hàng"
-                name="email"
-                type="email"
-                autoComplete="email"
-                value={values.email}
-                error={errors.email}
-                onChange={(event) => update("email", event.target.value)}
-              />
-            </div>
-            <Field
-              label="Website"
-              name="website"
-              type="url"
-              placeholder="https://"
-              value={values.website}
-              error={errors.website}
-              onChange={(event) => update("website", event.target.value)}
-            />
-            <TextArea
-              label="Mô tả"
-              name="description"
-              value={values.description}
-              maxLength={2000}
-              error={errors.description}
-              onChange={(event) => update("description", event.target.value)}
-            />
-            <Field
-              label="Địa chỉ"
-              name="addressLine"
-              value={values.addressLine}
-              required
-              maxLength={255}
-              autoComplete="street-address"
-              error={errors.addressLine}
-              onChange={(event) => update("addressLine", event.target.value)}
-            />
-            <div className="grid-2">
-              <ProvinceField
-                label="Tỉnh / thành phố"
-                name="provinceName"
-                value={values.provinceName}
-                required
-                maxLength={100}
-                error={errors.provinceName}
-                onChange={(value) => update("provinceName", value)}
-              />
-              <WardField
-                label="Phường / xã"
-                name="ward"
-                provinceName={values.provinceName}
-                value={values.ward}
-                maxLength={100}
-                error={errors.ward}
-                onChange={(value) => update("ward", value)}
-              />
-            </div>
-            <div className="stack-sm">
-              <Button
-                name="location"
-                variant="secondary"
-                aria-invalid={!!errors.location}
-                aria-describedby="restaurant-location-help"
-                onClick={() => setMapOpen(true)}
-              >
-                Chọn vị trí trên bản đồ *
-              </Button>
-              <p
-                id="restaurant-location-help"
-                className={errors.location ? "field-error" : "helper"}
-              >
-                {errors.location ||
-                  (location
-                    ? `Đã chọn: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
-                    : "Chọn vị trí chính xác của nhà hàng để khách có thể tìm đường.")}
+        <fieldset disabled={blocked} className="registration-fields">
+          <section
+            className="registration-section"
+            aria-labelledby="registration-info"
+          >
+            <div className="registration-intro">
+              <h2 id="registration-info">Thông tin nhà hàng</h2>
+              <p className="helper">
+                Tên và số điện thoại hiển thị cho thực khách. Các mục có dấu *
+                là bắt buộc.
               </p>
-              {location?.addressNotice && (
-                <p className="helper" role="status">
-                  {location.addressNotice}
-                </p>
-              )}
             </div>
-            <SelectField
-              label="Mức giá (không bắt buộc)"
-              name="priceLevel"
-              error={errors.priceLevel}
-              value={values.priceLevel}
-              onChange={(value) => update("priceLevel", value)}
-              options={[
-                { value: "", label: "Chưa chọn" },
-                ...[1, 2, 3, 4].map((level) => ({
-                  value: String(level),
-                  label: `Mức giá ${level} · ${"₫".repeat(level)}`,
-                })),
-              ]}
-            />
-          </Card>
-          <Card title="Hình ảnh nhà hàng">
-            <RestaurantImageUpload
-              label="Ảnh bìa"
-              max={1}
-              files={cover}
-              disabled={blocked}
-              error={errors.coverMediaId}
-              onChange={(files) => {
-                setCover(files);
-                setErrors((previous) => ({ ...previous, coverMediaId: "" }));
-              }}
-              onPending={setCoverPending}
-              service={service}
-            />
-            <RestaurantImageUpload
-              label="Ảnh nhà hàng"
-              max={10}
-              files={gallery}
-              disabled={blocked}
-              error={errors.imageMediaIds}
-              onChange={(files) => {
-                setGallery(files);
-                setErrors((previous) => ({ ...previous, imageMediaIds: "" }));
-              }}
-              onPending={setGalleryPending}
-              service={service}
-            />
-          </Card>
+            <div className="card registration-panel">
+              <Field
+                label="Tên nhà hàng"
+                name="name"
+                value={values.name}
+                required
+                maxLength={200}
+                autoComplete="organization"
+                error={errors.name}
+                onChange={(event) => update("name", event.target.value)}
+              />
+              <div className="grid-2">
+                <Field
+                  label="Số điện thoại nhà hàng"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  value={values.phone}
+                  required
+                  maxLength={20}
+                  error={errors.phone}
+                  onChange={(event) => update("phone", event.target.value)}
+                />
+                <Field
+                  label="Email nhà hàng"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  value={values.email}
+                  error={errors.email}
+                  onChange={(event) => update("email", event.target.value)}
+                />
+              </div>
+              <div className="grid-2">
+                <Field
+                  label="Website"
+                  name="website"
+                  type="url"
+                  placeholder="https://"
+                  value={values.website}
+                  error={errors.website}
+                  onChange={(event) => update("website", event.target.value)}
+                />
+                <SelectField
+                  label="Mức giá (không bắt buộc)"
+                  name="priceLevel"
+                  error={errors.priceLevel}
+                  value={values.priceLevel}
+                  onChange={(value) => update("priceLevel", value)}
+                  options={[
+                    { value: "", label: "Chưa chọn" },
+                    ...[1, 2, 3, 4].map((level) => ({
+                      value: String(level),
+                      label: `Mức giá ${level} · ${"₫".repeat(level)}`,
+                    })),
+                  ]}
+                />
+              </div>
+              <TextArea
+                label="Mô tả"
+                name="description"
+                value={values.description}
+                maxLength={2000}
+                error={errors.description}
+                onChange={(event) => update("description", event.target.value)}
+              />
+            </div>
+          </section>
+          <section
+            className="registration-section"
+            aria-labelledby="registration-address"
+          >
+            <div className="registration-intro">
+              <h2 id="registration-address">Địa chỉ và vị trí</h2>
+              <p className="helper">
+                Chọn vị trí trên bản đồ để điền sẵn địa chỉ, rồi kiểm tra tỉnh/
+                thành, quận/huyện và phường/xã.
+              </p>
+            </div>
+            <div className="card registration-panel">
+              <div className="registration-location">
+                <div>
+                  <p className="registration-location-title">
+                    Vị trí trên bản đồ *
+                  </p>
+                  <p
+                    id="restaurant-location-help"
+                    className={errors.location ? "field-error" : "helper"}
+                  >
+                    {errors.location ||
+                      (location
+                        ? `Đã chọn: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+                        : "Chọn vị trí chính xác của nhà hàng để khách có thể tìm đường.")}
+                  </p>
+                  {location?.addressNotice && (
+                    <p className="helper" role="status">
+                      {location.addressNotice}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  name="location"
+                  variant="secondary"
+                  aria-invalid={!!errors.location}
+                  aria-describedby="restaurant-location-help"
+                  onClick={() => setMapOpen(true)}
+                >
+                  {location ? "Đổi vị trí" : "Chọn vị trí trên bản đồ *"}
+                </Button>
+              </div>
+              <Field
+                label="Địa chỉ"
+                name="addressLine"
+                value={values.addressLine}
+                required
+                maxLength={255}
+                autoComplete="street-address"
+                placeholder="Số nhà, tên đường"
+                error={errors.addressLine}
+                onChange={(event) => update("addressLine", event.target.value)}
+              />
+              <div className="grid-3 address-areas">
+                <ProvinceField
+                  label="Tỉnh / thành phố"
+                  name="provinceName"
+                  value={values.provinceName}
+                  required
+                  maxLength={100}
+                  error={errors.provinceName}
+                  onChange={(value) => update("provinceName", value)}
+                />
+                <DistrictField
+                  label="Quận / huyện"
+                  name="district"
+                  provinceName={values.provinceName}
+                  value={values.district}
+                  required
+                  maxLength={100}
+                  error={errors.district}
+                  onChange={(value) => update("district", value)}
+                />
+                <WardField
+                  label="Phường / xã"
+                  name="ward"
+                  provinceName={values.provinceName}
+                  districtName={values.district}
+                  value={values.ward}
+                  maxLength={100}
+                  error={errors.ward}
+                  onChange={(value) => update("ward", value)}
+                />
+              </div>
+            </div>
+          </section>
+          <section
+            className="registration-section"
+            aria-labelledby="registration-photos"
+          >
+            <div className="registration-intro">
+              <h2 id="registration-photos">Hình ảnh nhà hàng</h2>
+              <p className="helper">
+                Một ảnh bìa và tối đa 10 ảnh quán. Không bắt buộc, có thể thêm
+                sau trong hồ sơ.
+              </p>
+            </div>
+            <div className="card registration-panel">
+              <RestaurantImageUpload
+                label="Ảnh bìa"
+                max={1}
+                files={cover}
+                disabled={blocked}
+                error={errors.coverMediaId}
+                onChange={(files) => {
+                  setCover(files);
+                  setErrors((previous) => ({ ...previous, coverMediaId: "" }));
+                }}
+                onPending={setCoverPending}
+                service={service}
+              />
+              <RestaurantImageUpload
+                label="Ảnh nhà hàng"
+                max={10}
+                files={gallery}
+                disabled={blocked}
+                error={errors.imageMediaIds}
+                onChange={(files) => {
+                  setGallery(files);
+                  setErrors((previous) => ({
+                    ...previous,
+                    imageMediaIds: "",
+                  }));
+                }}
+                onPending={setGalleryPending}
+                service={service}
+              />
+            </div>
+          </section>
         </fieldset>
         <div className="actions registration-actions">
-          <Button
-            type="submit"
-            loading={busy}
-            disabled={coverPending || galleryPending}
-          >
-            Đăng ký nhà hàng
-          </Button>
           <Button
             variant="secondary"
             disabled={blocked}
             onClick={requestCancel}
           >
             Hủy
+          </Button>
+          <Button
+            type="submit"
+            loading={busy}
+            disabled={coverPending || galleryPending}
+          >
+            Đăng ký nhà hàng
           </Button>
         </div>
       </form>
@@ -453,6 +512,7 @@ export function RestaurantRegistrationPage() {
               location: "",
               addressLine: "",
               provinceName: "",
+              district: "",
               ward: "",
             }));
           }}

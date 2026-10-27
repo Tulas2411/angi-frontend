@@ -1,7 +1,8 @@
 import { ApiError } from "@/shared/api/error";
 import { fail, ok } from "@/shared/api/http";
-import { readWardCatalog } from "@/shared/locations/provinces";
+import { readDistrictCatalog } from "@/shared/locations/provinces";
 
+/** Districts of one V1 province (pre-merger catalog); only that province is fetched. */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ code: string }> },
@@ -12,9 +13,8 @@ export async function GET(
       new ApiError(400, "BAD_REQUEST", "Mã tỉnh/thành không hợp lệ."),
     );
   try {
-    // Fetch only the selected province, rather than the entire national ward tree.
     const response = await fetch(
-      `https://provinces.open-api.vn/api/v2/p/${code}?depth=2`,
+      `https://provinces.open-api.vn/api/v1/p/${code}?depth=2`,
       { next: { revalidate: 86400 }, signal: AbortSignal.timeout(5000) },
     );
     if (!response.ok) throw new Error();
@@ -24,24 +24,24 @@ export async function GET(
       typeof payload !== "object" ||
       !("code" in payload) ||
       payload.code !== Number(code) ||
-      !("wards" in payload) ||
-      !Array.isArray(payload.wards) ||
-      payload.wards.some(
-        (ward: unknown) =>
-          !ward ||
-          typeof ward !== "object" ||
-          !("province_code" in ward) ||
-          ward.province_code !== Number(code),
+      !("districts" in payload) ||
+      !Array.isArray(payload.districts) ||
+      payload.districts.some(
+        (district: unknown) =>
+          !district ||
+          typeof district !== "object" ||
+          !("province_code" in district) ||
+          district.province_code !== Number(code),
       )
     )
       throw new Error();
-    return ok(readWardCatalog(payload.wards));
+    return ok(readDistrictCatalog(payload.districts));
   } catch {
     return fail(
       new ApiError(
         503,
         "SERVICE_UNAVAILABLE",
-        "Chưa tải được gợi ý phường/xã. Bạn có thể nhập tên đầy đủ.",
+        "Chưa tải được gợi ý quận/huyện. Bạn có thể nhập tên đầy đủ.",
       ),
     );
   }
