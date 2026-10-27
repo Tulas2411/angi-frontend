@@ -13,6 +13,7 @@ export interface SiteNavigation {
 export const discoveryNav: readonly SiteNavItem[] = [
   { href: exploreRoutes.dishes, label: "Món ăn", match: "prefix" },
   { href: exploreRoutes.restaurants, label: "Quán ăn", match: "prefix" },
+  { href: "/guides", label: "Cẩm nang", match: "prefix" },
 ];
 
 /** Primary navigation of the header; the owner workspace has its own and no discovery. */

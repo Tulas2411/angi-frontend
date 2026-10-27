@@ -6,7 +6,6 @@ import { Button, Card, Alert } from "@/shared/ui";
 import { ActionLink, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { usePlatform } from "./provider";
 import { useWorkspace, WorkspaceScope } from "@/components/layout/workspace";
-import { BlogDetail, BlogEditor, BlogList } from "@/features/blogs/pages";
 import {
   AccountPage,
   NotificationsPage,
@@ -127,7 +126,7 @@ export function PageRouter({
   role: RoleCode | "GUEST";
   segments?: string[];
 }) {
-  const { status, data, mode } = usePlatform(),
+  const { status, mode } = usePlatform(),
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
@@ -165,11 +164,6 @@ export function PageRouter({
     return <RestaurantRegistrationPage />;
 
   if (status !== "ready") {
-    if (area === "guides" && id) {
-      const fallback = data.blogs.find((b) => b.id === id);
-      if (fallback) return <BlogDetail id={id} />;
-    }
-
     return <UnavailablePage />;
   }
   if (
@@ -184,32 +178,7 @@ export function PageRouter({
   )
     return <AuthFlowPage flow={area as AuthFlow} demo={demo} />;
   if (role === "GUEST" || role === "TRAVELER") {
-    if (
-      role === "GUEST" &&
-      area === "guides" &&
-      (id === "new" || operation === "edit")
-    )
-      return (
-        <div className="container workspace">
-          <Card title="Đăng nhập để viết cẩm nang">
-            <ActionLink href="/login">Đăng nhập</ActionLink>
-          </Card>
-        </div>
-      );
-    if (area === "guides")
-      return id === "new" ? (
-        <BlogEditor />
-      ) : id ? (
-        operation === "edit" ? (
-          <BlogEditor id={id} />
-        ) : (
-          <BlogDetail id={id} />
-        )
-      ) : (
-        <BlogList />
-      );
     if (role === "TRAVELER") {
-      if (area === "my-guides") return <BlogList mine />;
       if (area === "profile" || area === "account")
         return id === "edit" ? <AccountPage profile /> : <ProfileViewPage />;
       if (area === "preferences" || area === "survey")
@@ -219,8 +188,6 @@ export function PageRouter({
       if (area === "roadmaps")
         return id === "new" ? (
           <NewTripPage />
-        ) : id === "share" ? (
-          <BlogEditor share />
         ) : id ? (
           <RoadmapPage id={id} />
         ) : (

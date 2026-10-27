@@ -63,6 +63,38 @@ export function publicOperation(
   if (method === "POST" && /^restaurants\/[1-9]\d*\/reports$/.test(endpoint))
     return { body: true, status: 201, allowGuest: false };
 
+  // BLOG-01..03 — [AllowAnonymous] (BLOG-02 returns `likedByMe`, `isMine` when a token is sent)
+  if (method === "GET" && endpoint === "blogs")
+    return { body: false, status: 200, allowGuest: true };
+  if (method === "GET" && /^blogs\/[1-9]\d*$/.test(endpoint))
+    return { body: false, status: 200, allowGuest: true };
+  if (method === "GET" && /^blogs\/[1-9]\d*\/comments$/.test(endpoint))
+    return { body: false, status: 200, allowGuest: true };
+
+  // BLOG-04..11, BLOG-05 and REP-02 — [Authorize(Roles = "TRAVELER")]
+  if (method === "POST" && endpoint === "blogs")
+    return { body: true, status: 201, allowGuest: false };
+  if (method === "GET" && endpoint === "me/blogs")
+    return { body: false, status: 200, allowGuest: false };
+  if (method === "PATCH" && /^blogs\/[1-9]\d*$/.test(endpoint))
+    return { body: true, status: 200, allowGuest: false };
+  if (method === "DELETE" && /^blogs\/[1-9]\d*$/.test(endpoint))
+    return { body: false, status: 200, allowGuest: false };
+  if (
+    (method === "PUT" || method === "DELETE") &&
+    /^blogs\/[1-9]\d*\/like$/.test(endpoint)
+  )
+    return { body: false, status: 200, allowGuest: false };
+  if (method === "POST" && /^blogs\/[1-9]\d*\/comments$/.test(endpoint))
+    return { body: true, status: 201, allowGuest: false };
+  if (
+    method === "DELETE" &&
+    /^blogs\/[1-9]\d*\/comments\/[1-9]\d*$/.test(endpoint)
+  )
+    return { body: false, status: 200, allowGuest: false };
+  if (method === "POST" && /^blogs\/[1-9]\d*\/reports$/.test(endpoint))
+    return { body: true, status: 201, allowGuest: false };
+
   // F-18 Roll Dish — [Authorize(Roles = "TRAVELER")] → cần session
   if (method === "POST" && endpoint === "dishes/roll")
     return { body: true, status: 200, allowGuest: false };

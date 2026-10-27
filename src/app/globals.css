@@ -1259,8 +1259,9 @@ select.input {
   .site-header > .site-nav {
     order: 3;
     width: 100%;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: var(--space-8);
+    gap: var(--space-2) var(--space-8);
   }
   .site-nav a {
     padding-block: 4px;
@@ -1292,7 +1293,7 @@ select.input {
     display: none;
   }
   .site-nav {
-    gap: var(--space-5);
+    gap: var(--space-2) var(--space-5);
     font-size: var(--text-sm);
   }
   .app-main {

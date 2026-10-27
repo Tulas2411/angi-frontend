@@ -4,14 +4,14 @@ Các trang công khai của ducbui (danh sách và chi tiết món, danh sách v
 
 Mã nguồn nằm trong `src/features/explore/`:
 
-| File                                                                | Việc                                                               |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `explore-types.ts`, `explore-service.ts`                            | DTO và lời gọi API (đọc công khai, ghi cần phiên Traveler)         |
-| `explore-rules.ts`                                                  | Nhãn, định dạng, bộ lọc ↔ URL, kiểm tra form, lỗi theo `errorCode` |
-| `dish-list-page.tsx`, `dish-detail-page.tsx`                        | `/dishes`, `/dishes/{id}`                                          |
-| `restaurant-list-page.tsx`, `restaurant-detail-page.tsx`            | `/restaurants`, `/restaurants/{id}`                                |
-| `review-dialog.tsx`, `report-dialog.tsx`, `explore-attachments.tsx` | Viết đánh giá, báo cáo quán, tải ảnh thật lên (MEDIA-01)           |
-| `explore-cards.tsx`, `explore.css`, `use-remote.ts`                 | Thẻ món/quán, kiểu dáng, hook tải dữ liệu theo khóa                |
+| File                                                     | Việc                                                                                                                                   |
+| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `explore-types.ts`, `explore-service.ts`                 | DTO và lời gọi API (đọc công khai, ghi cần phiên Traveler)                                                                             |
+| `explore-rules.ts`                                       | Nhãn, định dạng, bộ lọc ↔ URL, kiểm tra form, lỗi theo `errorCode`                                                                     |
+| `dish-list-page.tsx`, `dish-detail-page.tsx`             | `/dishes`, `/dishes/{id}`                                                                                                              |
+| `restaurant-list-page.tsx`, `restaurant-detail-page.tsx` | `/restaurants`, `/restaurants/{id}`                                                                                                    |
+| `review-dialog.tsx`                                      | Viết đánh giá (REV-01); hộp thoại báo cáo và tải ảnh dùng chung ở `src/components/domain/report-dialog.tsx` và `image-attachments.tsx` |
+| `explore-cards.tsx`, `explore.css`, `use-remote.ts`      | Thẻ món/quán, kiểu dáng, hook tải dữ liệu theo khóa                                                                                    |
 
 Khung trang: `src/components/public-shell.tsx` (route group `src/app/(site)`), cùng `SiteHeader`, `SiteNav`, `AccountMenu`, `SiteFooter` với trang chủ và khu làm việc. Thanh điều hướng dùng chung ở `src/components/site/navigation.ts`.
 

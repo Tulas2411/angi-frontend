@@ -48,6 +48,7 @@ export function PublicHomePage({
             <a href="#mon-ngon">Khám phá món</a>
             <Link href="/dishes">Món ăn</Link>
             <Link href="/restaurants">Quán ăn</Link>
+            <Link href="/guides">Cẩm nang</Link>
           </nav>
         }
       >
@@ -290,6 +291,7 @@ export function PublicHomePage({
           { href: "#mon-ngon", label: "Khám phá món Việt", anchor: true },
           { href: "/dishes", label: "Tất cả món ăn" },
           { href: "/restaurants", label: "Quán ăn" },
+          { href: "/guides", label: "Cẩm nang ẩm thực" },
           user
             ? { href: "/account", label: "Tài khoản của tôi" }
             : {
