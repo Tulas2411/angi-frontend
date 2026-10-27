@@ -1,12 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readMapAddress, type MapLocation } from "@/shared/maps/mapbox";
 import { loadProvinceCatalog } from "@/shared/locations/province-service";
+import { loadWardCatalog } from "@/shared/locations/ward-service";
 import {
-  loadDistrictCatalog,
-  loadWardCatalog,
-} from "@/shared/locations/ward-service";
-import {
-  matchMapDistrict,
   matchMapProvince,
   matchMapWard,
 } from "@/features/owner/restaurant-address-rules";
@@ -26,16 +22,11 @@ vi.mock("@/shared/locations/province-service", () => ({
   loadProvinceCatalog: vi.fn(),
 }));
 vi.mock("@/shared/locations/ward-service", () => ({
-  loadDistrictCatalog: vi.fn(),
   loadWardCatalog: vi.fn(),
 }));
 
 const provinces = [{ code: 1, name: "Thành phố Hà Nội" }];
-const districts = [
-  { code: 2, name: "Quận Hoàn Kiếm" },
-  { code: 1, name: "Quận Ba Đình" },
-];
-const wards = [{ code: 37, name: "Phường Hàng Bạc" }];
+const wards = [{ code: 1, name: "Phường Hoàn Kiếm" }];
 const pin: MapLocation = {
   name: "Vị trí đã chọn",
   latitude: 21.028501,
@@ -53,15 +44,13 @@ const address = feature("address", "12 Hàng Bạc", {
     street_name: "Hàng Bạc",
   },
   region: { name: "Hà Nội" },
-  place: { name: "Quận Hoàn Kiếm" },
-  locality: { name: "Hàng Bạc" },
+  locality: { name: "Hoàn Kiếm" },
   country: { country_code: "VN" },
 });
 const payload = { features: [feature("region", "Hà Nội"), address] };
 
 beforeEach(() => {
   vi.mocked(loadProvinceCatalog).mockReset().mockResolvedValue(provinces);
-  vi.mocked(loadDistrictCatalog).mockReset().mockResolvedValue(districts);
   vi.mocked(loadWardCatalog).mockReset().mockResolvedValue(wards);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -73,8 +62,7 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
       address: "12 Hàng Bạc",
       addressContext: {
         region: "Hà Nội",
-        place: "Quận Hoàn Kiếm",
-        locality: "Hàng Bạc",
+        locality: "Hoàn Kiếm",
         countryCode: "vn",
       },
     });
@@ -94,22 +82,9 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
       ),
     ).toBeNull();
   });
-  it("matches V1 province, district and ward names without promoting a district to a ward", () => {
+  it("matches canonical V2 names without guessing old districts or ambiguous wards", () => {
     const point = readMapAddress(payload, pin)!;
     expect(matchMapProvince(point, provinces)).toEqual(provinces[0]);
-    expect(matchMapDistrict(point, districts)).toEqual(districts[0]);
-    expect(
-      matchMapDistrict(
-        { ...pin, fullAddress: "12 Hàng Bạc, Hoàn Kiếm, Hà Nội" },
-        districts,
-      ),
-    ).toBeUndefined();
-    expect(
-      matchMapDistrict(
-        { ...pin, fullAddress: "1 Điện Biên Phủ, Quận Ba Đình, Hà Nội" },
-        districts,
-      ),
-    ).toEqual(districts[1]);
     expect(matchMapWard(point, wards)).toEqual(wards[0]);
     expect(
       matchMapWard(
@@ -148,11 +123,7 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
     const selected = {
       ...pin,
       address: "12 Hàng Bạc",
-      addressDetails: {
-        provinceName: provinces[0].name,
-        district: districts[0].name,
-        ward: wards[0].name,
-      },
+      addressDetails: { provinceName: provinces[0].name, ward: wards[0].name },
     };
     const next = fillRestaurantFromPlace(values, selected);
     expect(next).toMatchObject({
@@ -170,6 +141,7 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
     });
     expect(request).not.toHaveProperty("addressDetails");
     expect(request).not.toHaveProperty("addressContext");
+    expect(request).not.toHaveProperty("district");
     const profile = fillRestaurantFromPlace(
       profileFormFromRestaurant(ownerRestaurantSample),
       selected,
@@ -180,6 +152,7 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
         ...selected.addressDetails,
         latitude: pin.latitude,
         longitude: pin.longitude,
+        district: null,
       },
     );
     expect(fillRestaurantFromPlace(values, pin)).toEqual(values);
@@ -201,12 +174,9 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
     expect(url.searchParams.get("language")).toBe("vi");
     expect(point.addressDetails).toEqual({
       provinceName: provinces[0].name,
-      district: districts[0].name,
       ward: wards[0].name,
     });
-    // Districts of the province, then wards of the district (V1 codes).
-    expect(loadDistrictCatalog).toHaveBeenCalledWith(1);
-    expect(loadWardCatalog).toHaveBeenCalledWith(2);
+    expect(loadWardCatalog).toHaveBeenCalledWith(1);
     await resolveRestaurantAddress(
       point,
       "pk.offline-fixture",
@@ -226,7 +196,6 @@ describe("Owner map address prefilling (offline fixtures only)", () => {
     expect(partial.address).toBe("12 Hàng Bạc");
     expect(partial.addressDetails).toEqual({
       provinceName: provinces[0].name,
-      district: districts[0].name,
       ward: "",
     });
     expect(partial.addressNotice).toBeTruthy();

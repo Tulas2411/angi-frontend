@@ -20,8 +20,8 @@ export interface MapLocation {
   featureType?: string;
   operationalStatus?: string;
   addressContext?: MapAddressContext;
-  /** Canonical V1 administrative names, resolved only in an address-entry flow. */
-  addressDetails?: { provinceName: string; district: string; ward: string };
+  /** Canonical V2 administrative names, resolved only in an address-entry flow. */
+  addressDetails?: { provinceName: string; ward: string };
   addressNotice?: string;
 }
 

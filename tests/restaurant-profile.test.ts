@@ -46,6 +46,7 @@ describe("OWN-03 partial updates", () => {
       description: null,
       website: null,
       ward: null,
+      district: null,
       priceLevel: null,
     });
   });
@@ -77,28 +78,16 @@ describe("OWN-03 partial updates", () => {
       priceLevel: expect.any(String),
     });
   });
-  it("sends the district like the other address fields: only when it changes, null when emptied", () => {
+  it("clears the legacy district only when administrative address values change", () => {
     expect(
       buildProfilePatch(
         { ...values, ward: "Phường Hải Châu" },
         location,
         original,
       ),
-    ).toEqual({ ward: "Phường Hải Châu" });
-    expect(
-      buildProfilePatch(
-        { ...values, district: "Quận Thanh Khê" },
-        location,
-        original,
-      ),
-    ).toEqual({ district: "Quận Thanh Khê" });
-    expect(
-      buildProfilePatch({ ...values, district: " " }, location, original),
-    ).toEqual({ district: null });
+    ).toEqual({ ward: "Phường Hải Châu", district: null });
     expect(validateProfilePatch({ district: null })).toEqual({});
-    expect(validateProfilePatch({ district: "a".repeat(101) })).toEqual({
-      district: "Quận / huyện không được vượt quá 100 ký tự.",
-    });
+    expect(validateProfilePatch({ district: "" })).toEqual({});
     expect(
       buildProfilePatch({ ...values, name: "Quán A" }, location, original),
     ).not.toHaveProperty("district");

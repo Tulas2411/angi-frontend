@@ -38,8 +38,7 @@ export interface RegisterRestaurantRequestDto {
   name: string;
   phone: string;
   addressLine: string;
-  /** Required by OWN-01 (pre-merger district, from the V1 catalog). */
-  district: string;
+  district?: string | null;
   provinceName: string;
   latitude: number;
   longitude: number;
@@ -144,7 +143,6 @@ export interface RestaurantFormValues {
   description: string;
   addressLine: string;
   provinceName: string;
-  district: string;
   ward: string;
   priceLevel: string;
 }

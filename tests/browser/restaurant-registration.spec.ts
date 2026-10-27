@@ -178,17 +178,12 @@ async function fill(page: Page, useWardSuggestions = true) {
   await page.getByLabel("Số điện thoại nhà hàng").fill("02438262648");
   await page.getByLabel("Địa chỉ", { exact: false }).fill("24 Nguyễn Hữu Huân");
   await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
-  const district = page.getByRole("combobox", { name: "Quận / huyện" });
-  await district.fill(useWardSuggestions ? "ba dinh" : "Quận Ba Đình");
-  if (useWardSuggestions)
-    await page
-      .getByRole("option", { name: "Quận Ba Đình", exact: true })
-      .click();
+  await expect(page.getByLabel("Quận / huyện")).toHaveCount(0);
   const ward = page.getByRole("combobox", { name: "Phường / xã" });
-  await ward.fill(useWardSuggestions ? "dien bien" : "Phường Điện Biên");
+  await ward.fill(useWardSuggestions ? "ba dinh" : "Phường Ba Đình");
   if (useWardSuggestions)
     await page
-      .getByRole("option", { name: "Phường Điện Biên", exact: true })
+      .getByRole("option", { name: "Phường Ba Đình", exact: true })
       .click();
 }
 async function pickLocation(page: Page) {
@@ -230,7 +225,6 @@ test("saving a pin prefills the street and current province/ward, replacing the 
                 context: {
                   address: { name: "18 Hoàng Hoa Thám" },
                   region: { name: "Hà Nội" },
-                  place: { name: "Quận Ba Đình" },
                   locality: { name: "Ngọc Hà" },
                   country: { country_code: "VN" },
                 },
@@ -245,11 +239,8 @@ test("saving a pin prefills the street and current province/ward, replacing the 
   await page.getByLabel("Địa chỉ", { exact: false }).fill("Địa chỉ cũ");
   await page.getByLabel("Tỉnh / thành phố").fill("Thành phố Hà Nội");
   await page
-    .getByRole("combobox", { name: "Quận / huyện" })
-    .fill("Quận Hoàn Kiếm");
-  await page
     .getByRole("combobox", { name: "Phường / xã" })
-    .fill("Phường Hàng Bạc");
+    .fill("Phường Ba Đình");
   await page.getByRole("button", { name: "Chọn vị trí trên bản đồ" }).click();
   const dialog = page.getByRole("dialog", { name: "Chọn vị trí nhà hàng" });
   await dialog
@@ -265,9 +256,6 @@ test("saving a pin prefills the street and current province/ward, replacing the 
   await expect(page.getByLabel("Tỉnh / thành phố")).toHaveValue(
     "Thành phố Hà Nội",
   );
-  await expect(
-    page.getByRole("combobox", { name: "Quận / huyện" }),
-  ).toHaveValue("Quận Ba Đình");
   await expect(page.getByRole("combobox", { name: "Phường / xã" })).toHaveValue(
     "Phường Ngọc Hà",
   );
@@ -393,13 +381,13 @@ test("multipart media and a numeric OWN-01 request preserve 201 and produce unve
   expect(requests[0]).toMatchObject({
     name: "Bếp Nhà",
     provinceName: "Thành phố Hà Nội",
-    district: "Quận Ba Đình",
-    ward: "Phường Điện Biên",
+    ward: "Phường Ba Đình",
     latitude: 21.0285,
     longitude: 105.8542,
     coverMediaId: 9001,
   });
   expect(requests[0]).not.toHaveProperty("priceLevel");
+  expect(requests[0]).not.toHaveProperty("district");
   expect(uploads[0].type).toMatch(/^multipart\/form-data; boundary=/);
   expect(uploads[0].body).toContain('name="purpose"');
   expect(uploads[0].body).toContain("restaurant");

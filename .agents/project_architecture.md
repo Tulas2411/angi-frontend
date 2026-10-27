@@ -38,7 +38,7 @@ ANGI (Ăn Gì) helps travelers discover Vietnamese regional dishes and restauran
 | Traveler roadmap detail (F-21)                               | RM-03, RM-14, RM-06, RM-07, RM-08, RM-09, RM-10, RM-11, RM-13               | `/roadmaps/{roadmapId}`                                                                          |
 | Traveler roadmap list (F-20)                                 | RM-02                                    | `/roadmaps`                                                                                      |
 | Traveler roadmap planner (F-19)                              | RM-01, RM-04                             | `/roadmaps/new`                                                                                  |
-| Province, district and ward suggestions                      | Public Provinces Open API V1 (via proxy) | used by owner address forms                                                                      |
+| Province and ward suggestions                                | Public Provinces Open API V2 (via proxy) | used by owner address forms                                                                      |
 
 Earlier workspace screens that remain (demo fixtures unless noted): Traveler pages (profile, roadmaps, notifications) and the Owner/Moderator/Administrator previews under `/demo/*`; owner reviews, notifications and the remaining owner pages through `(protected)/(legacy)/restaurant/[...segments]`; `/moderation/*` and `/administration/*`. Their pages live in `features/{profile,roadmaps,moderation,admin,platform}`, use `PlatformProvider` and `src/mocks`, and render inside `WorkspaceShell` wrapped in `LegacyScope`. Authors integrate them endpoint by endpoint; see the [scope inventory](../docs/scope-inventory.md).
 
@@ -127,7 +127,7 @@ Browser code calls only same-origin routes through `src/shared/api/client.ts`:
 
 - `/api/auth/[action]` — `register`, `verify-email`, `verify-email/resend`, `forgot-password`, `reset-password`, `login`, `google`, `refresh`, `logout`, `session`. Login stores the backend token pair in an encrypted HttpOnly cookie (`iron-session`); tokens never reach browser JavaScript.
 - `/api/backend/[...path]` — authenticated proxy. A request must match an exact `METHOD path` entry (account `me`, `me/password`, `owner/restaurant…`, `media`, `tags`, verification resubmission, and the validated owner-menu operations). Mutations check `Origin`. Owner paths additionally require the `RESTAURANT_OWNER` role. Anything else answers `404 ROUTE_NOT_FOUND`.
-- `/api/locations/provinces[/{code}/districts]`, `/api/locations/districts/{code}/wards` — public administrative catalogue before the 2025 merger (Provinces Open API V1: province, district, ward), cached. OWN-01 requires the district.
+- `/api/locations/provinces[/{code}/wards]` — public administrative catalogue (Provinces Open API V2, after the 2025 merger), cached.
 
 Rules: `ApiResponse.data` is unwrapped by the client; failures raise `ApiError` and callers branch on `errorCode`, never on localized text. `withAuth` refreshes an expired access token once (single-flight), saves the rotated pair and retries once after `UNAUTHORIZED`. Logout revokes the refresh token and the local session. Process-local session registries do not support multi-instance deployments without a shared store.
 

@@ -2,10 +2,10 @@ import { ApiError } from "@/shared/api/error";
 import { fail, ok } from "@/shared/api/http";
 import { readProvinceCatalog } from "@/shared/locations/provinces";
 
-/** The 63 provinces from before the 2025 merger (V1); districts and wards follow on demand. */
+/** Current two-level administrative catalog after the July 2025 merger. */
 export async function GET() {
   try {
-    const response = await fetch("https://provinces.open-api.vn/api/v1/", {
+    const response = await fetch("https://provinces.open-api.vn/api/v2/", {
       next: { revalidate: 86400 },
       signal: AbortSignal.timeout(5000),
     });
