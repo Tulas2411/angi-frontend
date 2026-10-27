@@ -329,10 +329,10 @@ h2:focus {
 .registration-location-title {
   font-weight: 600;
 }
-/* Province, district and ward side by side; they stack on narrow screens. */
-.grid-3.address-areas {
+/* Province and ward side by side; they stack on narrow screens. */
+.address-areas {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
   align-items: start;
 }
@@ -344,7 +344,7 @@ h2:focus {
   .registration-intro {
     padding-top: 0;
   }
-  .grid-3.address-areas {
+  .address-areas {
     grid-template-columns: minmax(0, 1fr);
   }
 }

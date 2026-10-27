@@ -11,8 +11,8 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
-import { DistrictField, WardField } from "@/components/domain/ward-field";
-import { districtNameKey, provinceNameKey } from "@/shared/locations/provinces";
+import { WardField } from "@/components/domain/ward-field";
+import { provinceNameKey } from "@/shared/locations/provinces";
 import { PageHeading } from "@/components/layout/page-heading";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { ownerProfileHref, ownerRoutes, ownerVerificationHref } from "./routes";
@@ -95,13 +95,9 @@ export function RestaurantRegistrationPage() {
     setValues((previous) => ({
       ...previous,
       [field]: value,
-      // A new province empties its district and ward; a new district empties its ward.
+      // A new province empties its ward.
       ...(field === "provinceName" &&
       provinceNameKey(value) !== provinceNameKey(previous.provinceName)
-        ? { district: "", ward: "" }
-        : {}),
-      ...(field === "district" &&
-      districtNameKey(value) !== districtNameKey(previous.district)
         ? { ward: "" }
         : {}),
     }));
@@ -350,7 +346,7 @@ export function RestaurantRegistrationPage() {
               <h2 id="registration-address">Địa chỉ và vị trí</h2>
               <p className="helper">
                 Chọn vị trí trên bản đồ để điền sẵn địa chỉ, rồi kiểm tra tỉnh/
-                thành, quận/huyện và phường/xã.
+                thành và phường/xã.
               </p>
             </div>
             <div className="card registration-panel">
@@ -395,7 +391,7 @@ export function RestaurantRegistrationPage() {
                 error={errors.addressLine}
                 onChange={(event) => update("addressLine", event.target.value)}
               />
-              <div className="grid-3 address-areas">
+              <div className="grid-2 address-areas">
                 <ProvinceField
                   label="Tỉnh / thành phố"
                   name="provinceName"
@@ -405,21 +401,10 @@ export function RestaurantRegistrationPage() {
                   error={errors.provinceName}
                   onChange={(value) => update("provinceName", value)}
                 />
-                <DistrictField
-                  label="Quận / huyện"
-                  name="district"
-                  provinceName={values.provinceName}
-                  value={values.district}
-                  required
-                  maxLength={100}
-                  error={errors.district}
-                  onChange={(value) => update("district", value)}
-                />
                 <WardField
                   label="Phường / xã"
                   name="ward"
                   provinceName={values.provinceName}
-                  districtName={values.district}
                   value={values.ward}
                   maxLength={100}
                   error={errors.ward}
@@ -512,7 +497,6 @@ export function RestaurantRegistrationPage() {
               location: "",
               addressLine: "",
               provinceName: "",
-              district: "",
               ward: "",
             }));
           }}

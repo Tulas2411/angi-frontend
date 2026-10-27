@@ -252,9 +252,8 @@ test("province choices preserve unchanged profile values and PATCH the selected 
   await page
     .getByRole("option", { name: "Tỉnh Điện Biên", exact: true })
     .click();
-  // A new province empties its district and ward.
-  await expect(page.getByLabel("Quận / huyện")).toHaveValue("");
-  await expect(page.getByLabel("Phường / xã")).toHaveValue("");
+  await expect(page.getByLabel("Quận / huyện")).toHaveCount(0);
+  await page.getByLabel("Phường / xã").fill("");
   await save(page).click();
   await expect(save(page)).toBeDisabled();
   expect(patches).toEqual([

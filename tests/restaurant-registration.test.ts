@@ -14,7 +14,6 @@ const values = {
   phone: "02438262648",
   addressLine: "24 Nguyễn Hữu Huân",
   provinceName: "Thành phố Hà Nội",
-  district: "Quận Hoàn Kiếm",
 };
 const location = { name: "Nhà hàng", latitude: 21.0285, longitude: 105.8542 };
 
@@ -25,14 +24,7 @@ describe("restaurant registration contract", () => {
     );
     expect(
       Object.keys(validateRestaurantForm(emptyRestaurantForm, null)),
-    ).toEqual([
-      "name",
-      "phone",
-      "addressLine",
-      "provinceName",
-      "district",
-      "location",
-    ]);
+    ).toEqual(["name", "phone", "addressLine", "provinceName", "location"]);
     expect(validateRestaurantForm(values, location)).toEqual({});
     expect(
       validateRestaurantForm(values, { ...location, latitude: NaN }),
@@ -73,7 +65,6 @@ describe("restaurant registration contract", () => {
       phone: values.phone,
       addressLine: values.addressLine,
       provinceName: values.provinceName,
-      district: values.district,
       latitude: location.latitude,
       longitude: location.longitude,
       coverMediaId: 9001,
@@ -81,6 +72,7 @@ describe("restaurant registration contract", () => {
     });
     expect(request).not.toHaveProperty("verificationStatus");
     expect(request).not.toHaveProperty("ownerId");
+    expect(request).not.toHaveProperty("district");
   });
   it("keeps backend PascalCase field errors associated with the form and coordinates", () => {
     expect(
@@ -106,14 +98,12 @@ describe("restaurant registration contract", () => {
       validateRestaurantImage({ type: "application/pdf", size: 200 }),
     ).not.toBeNull();
   });
-  it("shows the district error on its field and surfaces only rules no control can show", () => {
+  it("surfaces backend rules that no form control can show, such as a legacy district rule", () => {
     const fields = restaurantFieldErrors({
       Name: ["Tên chưa hợp lệ."],
-      District: ["Quận/huyện là bắt buộc."],
-      Slug: ["Tên đã được dùng."],
+      district: ["Quận/huyện là bắt buộc."],
     });
-    expect(fields.district).toBe("Quận/huyện là bắt buộc.");
-    expect(hiddenFieldMessages(fields)).toBe("Tên đã được dùng.");
+    expect(hiddenFieldMessages(fields)).toBe("Quận/huyện là bắt buộc.");
     expect(hiddenFieldMessages({ name: "Tên chưa hợp lệ." })).toBe("");
   });
 });

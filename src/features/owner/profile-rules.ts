@@ -12,7 +12,6 @@ export function profileFormFromRestaurant(
     phone: restaurant.phone ?? "",
     addressLine: restaurant.addressLine,
     provinceName: restaurant.provinceName ?? "",
-    district: restaurant.district ?? "",
     description: restaurant.description ?? "",
     email: restaurant.email ?? "",
     website: restaurant.website ?? "",
@@ -35,13 +34,7 @@ export function buildProfilePatch(
     const value = values[key].trim();
     if (value !== (original[key] ?? "").trim()) patch[key] = value;
   }
-  for (const key of [
-    "description",
-    "email",
-    "website",
-    "district",
-    "ward",
-  ] as const) {
+  for (const key of ["description", "email", "website", "ward"] as const) {
     const text = values[key].trim();
     const value = (key === "email" ? text.toLowerCase() : text) || null;
     const current = original[key]?.trim() || null;
@@ -50,6 +43,12 @@ export function buildProfilePatch(
     )
       patch[key] = value;
   }
+  // Clear obsolete district data only when the owner edits administrative areas.
+  if (
+    original.district &&
+    (patch.provinceName !== undefined || patch.ward !== undefined)
+  )
+    patch.district = null;
   for (const key of ["latitude", "longitude"] as const) {
     const coordinate = location?.[key];
     if (typeof coordinate === "number" && coordinate !== original[key])
@@ -96,7 +95,7 @@ export function validateProfilePatch(
   if (patch.ward && patch.ward.length > 100)
     errors.ward = "Phường / xã không được vượt quá 100 ký tự.";
   if (patch.district && patch.district.length > 100)
-    errors.district = "Quận / huyện không được vượt quá 100 ký tự.";
+    errors.district = "Địa chỉ cũ không được vượt quá 100 ký tự.";
   if (patch.email && !/^[^\s@]+@[^\s@]+$/.test(patch.email))
     errors.email = "Email không đúng định dạng.";
   if (patch.website) {

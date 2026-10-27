@@ -25,7 +25,6 @@ export function restaurantLocationFromProfile(
     fullAddress: [
       restaurant.addressLine,
       restaurant.ward,
-      restaurant.district,
       restaurant.provinceName,
     ]
       .filter(Boolean)
@@ -35,7 +34,6 @@ export function restaurantLocationFromProfile(
     source: "angi",
     addressContext: {
       region: restaurant.provinceName ?? undefined,
-      place: restaurant.district ?? undefined,
       locality: restaurant.ward ?? undefined,
       countryCode: "vn",
     },
@@ -52,7 +50,6 @@ export function fillRestaurantFromPlace(
     ...values,
     addressLine: point.address?.trim() || values.addressLine,
     provinceName: point.addressDetails?.provinceName ?? values.provinceName,
-    district: point.addressDetails?.district ?? values.district,
     ward: point.addressDetails?.ward ?? values.ward,
     name: poi && !values.name.trim() ? point.name : values.name,
     phone: poi && !values.phone.trim() ? (point.phone ?? "") : values.phone,

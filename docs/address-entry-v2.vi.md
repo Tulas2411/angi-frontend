@@ -1,44 +1,22 @@
-# Nhập địa chỉ ba cấp (tỉnh/thành, quận/huyện, phường/xã)
+# Nhập địa chỉ theo mô hình hai cấp
 
-> Tên file giữ nguyên để liên kết cũ không gãy. Từ ngày 27/10/2026 các ô địa chỉ dùng **danh mục trước sáp nhập** (Provinces Open API **V1**: 63 tỉnh/thành, có cấp quận/huyện), thay cho V2 (34 tỉnh/thành, không có quận/huyện).
+Các ô tỉnh/thành dùng Provinces Open API V2, gồm 34 tỉnh/thành sau sáp nhập tháng 07/2025. Form đăng ký và hồ sơ nhà hàng chỉ còn địa chỉ chi tiết, tỉnh/thành và phường/xã.
 
-## Vì sao đổi
+- Chọn tỉnh/thành, sau đó nhập phường/xã để tìm gợi ý trực thuộc tỉnh đó. Có thể tìm không dấu và chọn bằng chuột hoặc phím mũi tên/Enter.
+- Đổi tỉnh/thành sẽ xóa phường/xã đang nhập để tránh lưu sai địa chỉ. Tải danh mục không tự chuyển đổi hồ sơ cũ. Tên tỉnh cũ không còn trong V2 vẫn được giữ nguyên cho đến khi chủ quán sửa.
+- Nếu API gợi ý lỗi, có thể nhập tên đầy đủ bằng tay và tải lại danh sách mà không mất nội dung. Gợi ý không thay đổi tọa độ đã chọn trên bản đồ.
+- Các ô tìm địa điểm, điểm đến lịch ăn và tìm nhà hàng cũng dùng danh mục tỉnh/thành V2.
 
-Backend OWN-01 (`RegisterRestaurantRequestDtoValidator`) bắt buộc `district` ("Quận/huyện là bắt buộc."), đúng với API Design v1.8 (sheet "Chi tiết Request-Response" r253: `district` bắt buộc ở OWN-01; r270: không bắt buộc ở OWN-03). Danh mục V2 không có cấp quận/huyện nên form đăng ký không gửi được giá trị hợp lệ. Chủ dự án yêu cầu thêm ô Quận/huyện và dùng lại danh mục cũ.
+FE lấy tỉnh/thành qua `GET /api/locations/provinces`. Phường/xã được lấy qua `GET /api/locations/provinces/{code}/wards`, tương ứng `https://provinces.open-api.vn/api/v2/p/{code}?depth=2`. Chỉ tải phường/xã của tỉnh được chọn; không tải cây hành chính toàn quốc. Mã hành chính phục vụ gợi ý, không được gửi thay cho tên trong hồ sơ nhà hàng.
 
-## Cách hoạt động
+> Ngày 27/10/2026 form đăng ký từng thử danh mục V1 (63 tỉnh, có ô Quận / huyện bắt buộc) rồi quay lại V2 theo yêu cầu của chủ dự án. Bố cục mới của form đăng ký (ba mục "Thông tin nhà hàng", "Địa chỉ và vị trí", "Hình ảnh nhà hàng", khối chọn vị trí trên bản đồ đứng đầu mục địa chỉ, tỉnh/thành và phường/xã trên một hàng) được giữ lại. Chọn vị trí trên bản đồ điền địa chỉ chi tiết, tỉnh/thành và phường/xã như mô tả ở [map-address-prefill](map-address-prefill.vi.md).
 
-- **Tỉnh / thành phố:** `GET /api/locations/provinces` → `https://provinces.open-api.vn/api/v1/` (63 tỉnh/thành, cache 1 ngày).
-- **Quận / huyện:** `GET /api/locations/provinces/{code}/districts` → `api/v1/p/{code}?depth=2`. Chỉ tải quận/huyện của tỉnh đã chọn; route kiểm tra mã tỉnh (1–99) và `province_code` của từng quận/huyện.
-- **Phường / xã:** `GET /api/locations/districts/{code}/wards` → `api/v1/d/{code}?depth=2`. Chỉ tải phường/xã của quận/huyện đã chọn; route kiểm tra mã quận/huyện (1–999) và `district_code`.
-- Route cũ `/api/locations/provinces/{code}/wards` (V2) đã bị xóa.
-- Ô nào cũng gõ được tên đầy đủ khi gợi ý lỗi, có nút tải lại danh sách và không mất nội dung đang nhập. Tìm không dấu ("ba dinh" ra "Quận Ba Đình"); "Quận Hải Châu" và "Hải Châu" được xem là một.
-- Đổi tỉnh/thành xóa quận/huyện và phường/xã; đổi quận/huyện xóa phường/xã, để không lưu địa chỉ lệch cấp.
-- Mã hành chính chỉ dùng để lấy gợi ý; hồ sơ nhà hàng lưu tên.
+## Đồng bộ backend và hợp đồng API
 
-## Form đăng ký nhà hàng (OWN-01)
+Yêu cầu ngày 16/10/2026 thay thế việc bắt buộc nhập quận/huyện. Backend OWN-01 chấp nhận thiếu hoặc `null` ở `district`; OWN-03 cho phép xóa giá trị cũ bằng `district: null`. Trường dữ liệu này vẫn được giữ để đọc hồ sơ cũ. Cột database đã cho phép null nên không cần migration.
 
-- Ô **Quận / huyện \*** bắt buộc (tối đa 100 ký tự), nằm giữa Tỉnh/thành và Phường/xã; FE gửi `district` trong body.
-- Lỗi `District` từ backend hiện ngay dưới ô, không còn là thông báo chung.
-- Bố cục mới: ba mục "Thông tin nhà hàng", "Địa chỉ và vị trí", "Hình ảnh nhà hàng", mỗi mục có phần giới thiệu ngắn bên trái và khung nhập bên phải (xếp chồng khi màn hình dưới 900px). Trong mục địa chỉ, khối chọn vị trí trên bản đồ đứng đầu (chọn vị trí sẽ điền sẵn địa chỉ), sau đó là địa chỉ chi tiết và ba ô tỉnh/quận/phường trên một hàng. Nút "Hủy" và "Đăng ký nhà hàng" nằm bên phải cuối form.
+Khi đăng ký mới, FE không gửi `district`. Khi chỉnh tỉnh/thành hoặc phường/xã của hồ sơ cũ, FE gửi `district: null`; sửa các thông tin khác không tự xóa địa chỉ cũ. Phường/xã vẫn là trường tùy chọn theo hợp đồng hiện có.
 
-## Hồ sơ nhà hàng (OWN-03)
+API Design v1.8 hiện còn đánh dấu `district` bắt buộc ở OWN-01 và không cho null trong mô tả OWN-03. Đây là chênh lệch tài liệu cần cập nhật theo yêu cầu mới, không được che bằng cách điền giả quận/huyện. Chi tiết đối chiếu và kết quả kiểm thử nằm trong [verification.md](verification.md).
 
-Ô Quận/huyện cũng có trong tab Thông tin. `district` được gửi như các trường địa chỉ khác: chỉ khi thay đổi, `null` khi xóa trống. FE không còn tự gửi `district: null` khi chủ quán sửa tỉnh/thành hay phường/xã như cách làm với V2 trước đây.
-
-## Điền địa chỉ từ bản đồ
-
-Khi lưu một điểm mới, FE dùng ngữ cảnh địa chỉ của bản đồ: tỉnh/thành từ `region`, quận/huyện từ `place` hoặc phần "Quận …/Huyện …/Thị xã …" trong địa chỉ đầy đủ, rồi phường/xã từ `locality`/`neighborhood` trong danh sách phường/xã của quận/huyện đó. Không đoán khi có hơn một kết quả trùng tên, và không lấy tên quận/huyện làm phường/xã.
-
-## Ảnh hưởng tới màn khác
-
-Các ô tỉnh/thành ở trang Khám phá, lập lộ trình và trợ lý món ăn dùng chung danh mục, nên giờ cũng gợi ý 63 tỉnh/thành theo tên cũ. Tên tỉnh/thành mà backend dùng để lọc phải khớp tên này.
-
-## Kiểm tra
-
-| Kiểm tra                                                                                                                                                  | Kết quả                                                                                                                                                                                                      |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Unit test (`tests/wards.test.ts`, `provinces.test.ts`, `restaurant-registration.test.ts`, `restaurant-profile.test.ts`, `restaurant-map-address.test.ts`) | Đạt: route quận/huyện và phường/xã V1 (kiểm tra mã, dữ liệu lệch cấp, lỗi nhà cung cấp), cache theo mã cha, đăng ký bắt buộc và gửi `district`, hồ sơ gửi `district` khi đổi, đối chiếu quận/huyện từ bản đồ |
-| Spec trình duyệt `restaurant-registration`, `restaurant-profile`, `provinces` (bộ `playwright.map.config.ts`)                                             | Đã cập nhật cho ba cấp nhưng **chưa chạy**, vì bộ này gắn với Mapbox (để chủ dự án tự chạy)                                                                                                                  |
-| Ảnh chụp form đăng ký 1440px và 390px (danh mục được stub)                                                                                                | Đã xem                                                                                                                                                                                                       |
-| Backend thật                                                                                                                                              | Chưa chạy                                                                                                                                                                                                    |
+Sau khi lấy thay đổi, khởi động lại FE và backend để dùng cùng hợp đồng mới. Nếu dùng Docker local, chạy lại dịch vụ API theo cấu hình local của bạn; dữ liệu địa chỉ cũ được giữ nguyên.
