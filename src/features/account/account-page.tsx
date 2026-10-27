@@ -25,9 +25,12 @@ import {
   DISPLAY_NAME_MIN,
   PASSWORD_MAX,
   PASSWORD_MIN,
+  PHONE_DIGITS,
   PHONE_MAX,
+  PHONE_PREFIXES,
   profileFormFromProfile,
   validatePasswordForm,
+  validatePhone,
   validateProfilePatch,
   type PasswordFormValues,
 } from "./account-rules";
@@ -108,6 +111,7 @@ function AccountEditor({
   const [saving, setSaving] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const submitting = useRef(false);
   const patch = buildProfilePatch(values, profile);
   const dirty = Object.keys(patch).length > 0;
@@ -117,10 +121,24 @@ function AccountEditor({
     setErrors((current) => ({ ...current, [key]: "" }));
     setSuccess("");
   }
+  /** The phone field reports its own format error once the user left it. */
+  function changePhone(value: string) {
+    change("phone", value);
+    if (phoneTouched) {
+      const invalid = validatePhone(value);
+      setErrors((current) => ({ ...current, phone: invalid ?? "" }));
+    }
+  }
+  function blurPhone() {
+    setPhoneTouched(true);
+    const invalid = validatePhone(values.phone);
+    setErrors((current) => ({ ...current, phone: invalid ?? "" }));
+  }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving || submitting.current || !dirty) return;
     const invalid = validateProfilePatch(patch);
+    setPhoneTouched(true);
     setErrors(invalid);
     setSuccess("");
     setError("");
@@ -159,6 +177,7 @@ function AccountEditor({
     setErrors({});
     setError("");
     setSuccess("");
+    setPhoneTouched(false);
   }
   return (
     <div className="stack">
@@ -234,11 +253,14 @@ function AccountEditor({
               label="Số điện thoại"
               name="phone"
               type="tel"
+              inputMode="tel"
               value={values.phone}
-              onChange={(event) => change("phone", event.target.value)}
+              onChange={(event) => changePhone(event.target.value)}
+              onBlur={blurPhone}
               maxLength={PHONE_MAX}
               autoComplete="tel"
               error={errors.phone}
+              helper={`Số di động Việt Nam gồm ${PHONE_DIGITS} chữ số, bắt đầu bằng ${PHONE_PREFIXES.join(", ")}.`}
               disabled={saving}
             />
             <TextArea

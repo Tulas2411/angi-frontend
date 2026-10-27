@@ -73,6 +73,40 @@ test("client validation blocks an invalid name without calling the backend", asy
   expect(stub.patches).toEqual([]);
 });
 
+test("an invalid phone number is reported on that field without calling the backend", async ({
+  page,
+}) => {
+  await open(page);
+  const phone = page.getByLabel("Số điện thoại");
+  await phone.fill("12345");
+  await phone.blur();
+  await expect(
+    page.getByText("Số điện thoại phải gồm đúng 10 chữ số."),
+  ).toBeVisible();
+  await phone.fill("0112345678");
+  await phone.blur();
+  await expect(
+    page.getByText(/Số điện thoại phải bắt đầu bằng/),
+  ).toBeVisible();
+  await phone.fill("09012abcde");
+  await phone.blur();
+  await expect(page.getByText(/chữ số và các ký tự phân tách/)).toBeVisible();
+  expect(stub.patches).toEqual([]);
+});
+
+test("a phone number with separators is normalized before it is sent", async ({
+  page,
+}) => {
+  await open(page);
+  const phone = page.getByLabel("Số điện thoại");
+  await phone.fill("090 123 4568");
+  await phone.blur();
+  await expect(page.getByText(/chữ số và các ký tự phân tách/)).toBeHidden();
+  await save(page).click();
+  await expect(page.getByText("Đã lưu thông tin tài khoản.")).toBeVisible();
+  expect(stub.patches).toEqual([{ phone: "0901234568" }]);
+});
+
 test("a failed save keeps every edit and shows the backend field error", async ({
   page,
 }) => {
@@ -83,11 +117,11 @@ test("a failed save keeps every edit and shows the backend field error", async (
     errors: { Phone: ["Số điện thoại không hợp lệ."] },
   };
   await name(page).fill("Tên khác");
-  await page.getByLabel("Số điện thoại").fill("abc");
+  await page.getByLabel("Số điện thoại").fill("0909999999");
   await save(page).click();
   await expect(page.getByText("Số điện thoại không hợp lệ.")).toBeVisible();
   await expect(name(page)).toHaveValue("Tên khác");
-  await expect(page.getByLabel("Số điện thoại")).toHaveValue("abc");
+  await expect(page.getByLabel("Số điện thoại")).toHaveValue("0909999999");
   stub.failPatch = null;
   await save(page).click();
   await expect(page.getByText("Đã lưu thông tin tài khoản.")).toBeVisible();
