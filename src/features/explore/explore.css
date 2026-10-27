@@ -1,0 +1,431 @@
+/* Public discovery: dish and restaurant lists, their detail pages, review and report dialogs. */
+
+/* ---------------------------------------------------------------- lists */
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+.explore-card {
+  position: relative;
+  flex: 1;
+  gap: 0;
+  padding: var(--space-3);
+  transition:
+    box-shadow var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.explore-card:hover,
+.explore-card:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+/* The title link covers the whole card, so the card is one link to the detail page. */
+.explore-card h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+.explore-card h3 a:focus-visible {
+  outline: none;
+}
+.explore-card h3 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+.explore-card > .media {
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-md);
+}
+.explore-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+}
+.explore-card h3 {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.explore-price {
+  font-weight: 600;
+}
+.explore-price-lg {
+  font-size: var(--text-lg);
+}
+.explore-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore-chips > span {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-more {
+  display: flex;
+  justify-content: center;
+}
+
+/* -------------------------------------------------------------- filters */
+.explore-filters {
+  gap: var(--space-4);
+}
+.explore-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.explore-tags {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.explore-tags legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* --------------------------------------------------------------- detail */
+.explore-back a {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.explore-back a:hover {
+  color: var(--ink);
+}
+.explore-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+.explore-hero h1 {
+  overflow-wrap: anywhere;
+}
+.explore-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.explore-gallery > .media {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+}
+.explore-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-thumbs button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--control);
+  cursor: pointer;
+}
+.explore-thumbs button[aria-pressed="true"] {
+  border-color: var(--ink);
+}
+.explore-thumbs button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-thumbs img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.explore-thumbs .media {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+}
+.explore-restaurant {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.explore-restaurant > .media {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+}
+.explore-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* -------------------------------------------------------------- reviews */
+.explore-rating-summary {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: center;
+}
+.explore-rating-big {
+  font-family: var(--font-heading);
+  font-size: 56px;
+  line-height: 1;
+}
+.explore-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-breakdown-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  padding: 4px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.explore-breakdown-row:hover,
+.explore-breakdown-row.selected {
+  background: var(--control);
+}
+.explore-breakdown-row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-bar {
+  display: block;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--control-active);
+  overflow: hidden;
+}
+.explore-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+}
+.explore-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-6);
+}
+.explore-review-filters .field {
+  min-width: 220px;
+}
+.explore-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.explore-review > header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.explore-review p {
+  overflow-wrap: anywhere;
+}
+.explore-review-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-review-images .media {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+}
+.explore-reply {
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+}
+.explore-stars-static {
+  color: var(--coral);
+  letter-spacing: 2px;
+  white-space: nowrap;
+}
+.explore-stars-static .off {
+  color: var(--line-strong);
+}
+
+/* -------------------------------------------------------------- dialogs */
+.explore-stars,
+.explore-reasons {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.explore-stars legend,
+.explore-reasons legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.explore-star-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.explore-star {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--line-strong);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.explore-star.on {
+  color: var(--coral);
+}
+.explore-star:hover {
+  background: var(--control);
+}
+.explore-star:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-star-row .helper {
+  margin-left: var(--space-3);
+}
+.explore-attachment-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-attachment-list li {
+  position: relative;
+}
+.explore-attachment-list .media {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+}
+.explore-attach-add {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  aspect-ratio: 1;
+  padding: var(--space-2);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+}
+.explore-attach-add > span:first-child {
+  font-size: 24px;
+  line-height: 1;
+}
+.explore-attach-add:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+.explore-attach-add:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-attach-add:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+.explore-attachment-list li > .button {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+  background: var(--card);
+}
+
+/* ------------------------------------------------------------ responsive */
+@media (max-width: 1000px) {
+  .explore-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .explore-hero,
+  .explore-info,
+  .explore-rating-summary,
+  .explore-restaurant {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+}
+@media (max-width: 560px) {
+  .explore-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .explore-review-filters .field {
+    min-width: 0;
+    width: 100%;
+  }
+}

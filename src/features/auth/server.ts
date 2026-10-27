@@ -187,6 +187,11 @@ export async function requireUser(
   return auth.user;
 }
 
+/** The signed-in user of any role, or null for a guest; never redirects. */
+export async function readSessionUser(): Promise<AuthUserDto | null> {
+  return readAuth(await getSession())?.user ?? null;
+}
+
 /**
  * Đọc phiên cho các trang công khai — KHÔNG chuyển hướng khi chưa đăng nhập.
  *

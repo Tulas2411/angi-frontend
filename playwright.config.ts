@@ -21,6 +21,7 @@ export default defineConfig({
     "roadmap-add-position.spec.ts",
     "roadmap-rate.spec.ts",
     "roadmap-agent.spec.ts",
+    "explore.spec.ts",
   ],
   workers: 1,
   timeout: 60000,

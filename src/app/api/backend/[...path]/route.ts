@@ -1,4 +1,9 @@
-import { backend, getSession, withAuth } from "@/features/auth/server";
+import {
+  backend,
+  getSession,
+  readAuth,
+  withAuth,
+} from "@/features/auth/server";
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
@@ -98,14 +103,26 @@ async function handle(request: Request, context: Context) {
       return ok(data, status);
     }
     // Public-but-anonymous endpoints — bỏ qua withAuth (BE đã cho phép AllowAnonymous).
+    // A signed-in traveler's token is sent when there is one (personal ranking, `myReview`);
+    // a guest, or a session that can no longer be refreshed, is served anonymously.
     if (publicOp?.allowGuest) {
-      return ok(
-        await backend<unknown>(`${endpoint}${query}`, {
+      const send = (token?: string) =>
+        backend<unknown>(`${endpoint}${query}`, {
           method: request.method,
           body,
-        }),
-        publicOp.status,
-      );
+          token,
+        });
+      if (!readAuth(session)) return ok(await send(), publicOp.status);
+      try {
+        return ok(
+          await withAuth(session, (auth) => send(auth.accessToken)),
+          publicOp.status,
+        );
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401)
+          return ok(await send(), publicOp.status);
+        throw error;
+      }
     }
     // Public-yet-authenticated endpoints (roll dish, impressions, …) — vẫn chạy withAuth.
     if (publicOp && !publicOp.allowGuest) {

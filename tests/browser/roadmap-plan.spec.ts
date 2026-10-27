@@ -171,7 +171,7 @@ test("only a signed-in Traveler can open the planner; others go to their landing
   await expect(page).toHaveURL(/\/roadmaps\/new$/);
   await expect(
     page
-      .getByRole("navigation", { name: "Điều hướng lộ trình" })
+      .getByRole("navigation", { name: "Điều hướng chính" })
       .getByRole("link", { name: "Lập lộ trình" }),
   ).toHaveAttribute("aria-current", "page");
 });
