@@ -9,6 +9,7 @@ import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
+import { notificationOperation } from "@/shared/api/notification-proxy";
 import {
   roadmapOperation,
   roadmapOperationHasBody,
@@ -43,6 +44,7 @@ async function handle(request: Request, context: Context) {
     const menuOperation = ownerMenuOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
+    const notificationOp = notificationOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
@@ -53,6 +55,7 @@ async function handle(request: Request, context: Context) {
       !roadmapRoute &&
       !menuOperation &&
       !agentOp &&
+      !notificationOp &&
       !publicOp
     ) {
       throw new ApiError(
@@ -67,6 +70,7 @@ async function handle(request: Request, context: Context) {
       request.method !== "GET" &&
       menuOperation?.body !== false &&
       publicOp?.body !== false &&
+      notificationOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
       if (endpoint === "media") {
@@ -157,6 +161,7 @@ async function handle(request: Request, context: Context) {
         });
       }),
       menuOperation?.status ??
+        notificationOp?.status ??
         roadmapOperationStatus(request.method, endpoint) ??
         (request.method === "POST" ? 201 : 200),
     );

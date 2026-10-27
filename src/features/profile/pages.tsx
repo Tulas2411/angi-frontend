@@ -915,7 +915,7 @@ export function PreferencesPage({ survey = false }: { survey?: boolean }) {
 }
 
 export function NotificationsPage() {
-  const { mutate } = usePlatform(),
+  const { mutate, mode } = usePlatform(),
     { user, base } = useWorkspace();
   // Map role workspace sang key nhóm trong mock (mặc định TRAVELER nếu GUEST)
   const roleKey: "TRAVELER" | "RESTAURANT_OWNER" | "MOD" | "ADMIN" =
@@ -927,9 +927,12 @@ export function NotificationsPage() {
     import("@/api/services/notification-service").NotificationItem[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  /** Số thông báo chưa đọc của toàn bộ danh sách (BE trả về, không phải trang hiện tại). */
+  const [unreadCount, setUnreadCount] = useState(0);
   /** Số thông báo trên mỗi trang. */
   const PAGE_SIZE = 10;
   // Mọi request có id để bỏ qua response cũ khi user đổi tab nhanh.
@@ -952,11 +955,14 @@ export function NotificationsPage() {
         setPage(1);
         setTotalPages(res.totalPages);
         setTotalItems(res.totalItems);
+        setUnreadCount(res.unreadCount);
+        setFailed(false);
       } catch {
         if (cancelled || id !== requestIdRef.current) return;
         setItems([]);
         setTotalPages(1);
         setTotalItems(0);
+        setFailed(true);
       } finally {
         if (!cancelled && id === requestIdRef.current) setLoading(false);
       }
@@ -989,16 +995,19 @@ export function NotificationsPage() {
       setPage(p);
       setTotalPages(res.totalPages);
       setTotalItems(res.totalItems);
+      setUnreadCount(res.unreadCount);
+      setFailed(false);
     } catch {
       if (id !== requestIdRef.current) return;
       setItems([]);
       setTotalPages(1);
       setTotalItems(0);
+      setFailed(true);
     } finally {
       if (id === requestIdRef.current) setLoading(false);
     }
   }
-  const unread = items.filter((n) => !n.read).length;
+  const unread = unreadCount;
   const canPrev = page > 1;
   const canNext = page < totalPages;
   async function markRead(ids: number[]) {
@@ -1008,21 +1017,32 @@ export function NotificationsPage() {
     );
     try {
       await notificationService.markRead({ notificationIds: ids });
+      setUnreadCount((n) => Math.max(0, n - ids.length));
     } catch {
-      // fallback mock — bỏ qua.
+      // Đánh dấu đã đọc thất bại — giữ trạng thái hiển thị, cho phép thử lại.
     }
   }
   async function markAllRead() {
-    const ids = items.filter((n) => !n.read).map((n) => n.id);
-    if (ids.length === 0) return;
-    await markRead(ids);
-    void mutate((d) => {
-      const myRole = roleKey;
-      d.notices.forEach((n) => {
-        if (n.role === myRole && (ids as unknown as string[]).includes(n.id))
-          n.read = true;
-      });
-    }, "Đã đánh dấu thông báo đã đọc.");
+    if (unread === 0) return;
+    // NOTI-03: `all: true` đánh dấu mọi thông báo chưa đọc của tài khoản.
+    setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+    setUnreadCount(0);
+    try {
+      await notificationService.markRead({ markAll: true });
+    } catch {
+      // Đánh dấu đã đọc thất bại — giữ trạng thái hiển thị, cho phép thử lại.
+    }
+    // Chỉ đồng bộ dữ liệu minh họa; ở live mode không có API lưu AppData.
+    if (mode === "demo") {
+      const ids = items.filter((n) => !n.read).map((n) => n.id);
+      void mutate((d) => {
+        const myRole = roleKey;
+        d.notices.forEach((n) => {
+          if (n.role === myRole && (ids as unknown as string[]).includes(n.id))
+            n.read = true;
+        });
+      }, "Đã đánh dấu thông báo đã đọc.");
+    }
   }
   return (
     <div className="container workspace notifications-page stack">
@@ -1069,7 +1089,12 @@ export function NotificationsPage() {
         {loading && (
           <li className="notifications-empty">Đang tải thông báo…</li>
         )}
-        {!loading && items.length === 0 && (
+        {!loading && failed && (
+          <li className="notifications-empty">
+            Không tải được thông báo. Vui lòng thử lại.
+          </li>
+        )}
+        {!loading && !failed && items.length === 0 && (
           <li className="notifications-empty">
             {tab === "unread"
               ? "Bạn đã xem hết thông báo."
@@ -1077,6 +1102,7 @@ export function NotificationsPage() {
           </li>
         )}
         {!loading &&
+          !failed &&
           items.map((n) => (
             <NotificationRow
               key={n.id}
@@ -1087,7 +1113,7 @@ export function NotificationsPage() {
           ))}
       </ul>
 
-      {!loading && items.length > 0 && (
+      {!loading && !failed && items.length > 0 && (
         <nav className="notifications-pagination" aria-label="Phân trang">
           <button
             type="button"

@@ -1,5 +1,28 @@
 "use client";
 import { fireAndForget } from "@/shared/api/fire-and-forget";
+import {
+  toNotificationList,
+  type MarkNotificationsReadWireDto,
+  type NotificationListWireDto,
+  type NotificationUnreadWireDto,
+  type NotificationWireDto,
+} from "./notification-types";
+import type {
+  NotificationItem,
+  NotificationListResponse,
+  NotificationReadRequest,
+  NotificationReadResponse,
+  NotificationUnreadResponse,
+} from "./notification-types";
+
+export type {
+  NotificationItem,
+  NotificationKind,
+  NotificationListResponse,
+  NotificationReadRequest,
+  NotificationReadResponse,
+  NotificationUnreadResponse,
+} from "./notification-types";
 
 /**
  * NotificationService — abstraction để giao diện không phụ thuộc
@@ -11,57 +34,12 @@ import { fireAndForget } from "@/shared/api/fire-and-forget";
  *   3. Singleton mặc định — gọi BE, fallback mock nếu lỗi / 401.
  */
 
-export type NotificationKind =
-  | "submission_approved"
-  | "submission_rejected"
-  | "submission_changes"
-  | "social"
-  | "roadmap"
-  | "system";
-
-export interface NotificationItem {
-  id: number;
-  title: string;
-  body: string;
-  /** ISO 8601 string (giữ nguyên từ BE). */
-  createdAt: string;
-  read: boolean;
-  /** Slug tương đối trong workspace, vd "verification" / "roadmaps/ha-noi". */
-  destination?: string;
-  /** Nhóm thông báo dùng để chọn icon + tone. */
-  kind?: NotificationKind;
-  /** Tuỳ chọn, vd tên actor. */
-  actor?: { displayName: string; avatarUrl?: string | null };
-}
-
-export interface NotificationListResponse {
-  items: NotificationItem[];
-  page: number;
-  pageSize: number;
-  totalItems: number;
-  totalPages: number;
-  unreadCount: number;
-}
-
-export interface NotificationUnreadResponse {
-  unreadCount: number;
-}
-
+/** Query nội bộ của FE; `read` được đổi thành `isRead` khi gửi lên BE. */
 export interface NotificationListQuery {
   page?: number;
   pageSize?: number;
   /** Lọc trạng thái đã đọc / chưa đọc. */
   read?: boolean;
-}
-
-export interface NotificationReadRequest {
-  notificationIds?: number[];
-  /** Đánh dấu tất cả là đã đọc. */
-  markAll?: boolean;
-}
-
-export interface NotificationReadResponse {
-  updated: number;
 }
 
 export interface NotificationService {
@@ -243,6 +221,8 @@ export function createMockNotificationService(
  * `/api/v1/me/notifications...`, nên ta gọi qua `/api/backend/me/notifications...`
  * cho bản live (giống cơ chế `me`). Trong demo mode, FE gọi thẳng
  * `/api/backend/me/...` cũng hoạt động vì Next.js rewrite về BE.
+ *
+ * Tên field gửi lên đúng theo hợp đồng BE: query `isRead`, body `{ ids, all }`.
  */
 export function createLiveNotificationService(
   fetcher: typeof fetch = fetch,
@@ -262,7 +242,7 @@ export function createLiveNotificationService(
     const body = (await res.json().catch(() => null)) as {
       data?: T;
       success?: boolean;
-      items?: NotificationItem[];
+      items?: NotificationWireDto[];
       unreadCount?: number;
       updated?: number;
       page?: number;
@@ -281,11 +261,11 @@ export function createLiveNotificationService(
       const url = await path("", {
         page: query.page,
         pageSize: query.pageSize,
-        read: query.read,
+        isRead: query.read,
       });
       const res = await fetcher(url, { credentials: "include" });
       if (!res.ok) throw new UnavailableNotificationError();
-      return unwrap<NotificationListResponse>(res);
+      return toNotificationList(await unwrap<NotificationListWireDto>(res));
     },
     async unreadCount() {
       const res = await fetcher(
@@ -293,7 +273,7 @@ export function createLiveNotificationService(
         { credentials: "include" },
       );
       if (!res.ok) throw new UnavailableNotificationError();
-      return unwrap<NotificationUnreadResponse>(res);
+      return await unwrap<NotificationUnreadWireDto>(res);
     },
     async markRead(request) {
       const res = await fetcher(await path("/read"), {
@@ -301,12 +281,12 @@ export function createLiveNotificationService(
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          notificationIds: request.notificationIds,
-          markAll: request.markAll,
+          ids: request.notificationIds,
+          all: request.markAll,
         }),
       });
       if (!res.ok) throw new UnavailableNotificationError();
-      return unwrap<NotificationReadResponse>(res);
+      return await unwrap<MarkNotificationsReadWireDto>(res);
     },
   };
 }
