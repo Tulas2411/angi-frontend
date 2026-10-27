@@ -22,6 +22,7 @@ export default defineConfig({
     "roadmap-rate.spec.ts",
     "roadmap-agent.spec.ts",
     "explore.spec.ts",
+    "blogs.spec.ts",
   ],
   workers: 1,
   timeout: 60000,

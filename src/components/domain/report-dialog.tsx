@@ -2,35 +2,51 @@
 import { useRef, useState } from "react";
 import { Alert, Button } from "@/shared/ui";
 import { Choice, Dialog, TextArea } from "@/components/ui/primitives";
-import { ImageAttachments, type Attachment } from "./explore-attachments";
+import { ImageAttachments, type Attachment } from "./image-attachments";
 import {
   maxReportEvidence,
   maxReportLength,
-  reportError,
   reportProblems,
-  reportReasons,
-} from "./explore-rules";
-import type { ExploreService } from "./explore-service";
-import type { ReportReasonCode } from "./explore-types";
+} from "@/shared/report-rules";
+import "./report-dialog.css";
 
-/** REP-01: a Traveler reports a restaurant; the report waits for a Moderator (status `pending`). */
-export function ReportDialog({
-  restaurantId,
-  restaurantName,
-  service,
+export interface ReportReason<Code extends string> {
+  value: Code;
+  label: string;
+}
+
+export interface ReportRequest<Code extends string> {
+  reasonCode: Code;
+  description?: string;
+  evidenceMediaIds?: number[];
+}
+
+/**
+ * A Traveler reports a restaurant (REP-01) or a blog (REP-02): the reason, an optional description
+ * and up to five photos uploaded with MEDIA-01 (`report_evidence`). The report waits for a Moderator.
+ */
+export function ReportDialog<Code extends string>({
+  title,
+  reasons,
+  send,
+  upload,
+  errorOf,
   open,
   onClose,
   onSent,
 }: {
-  restaurantId: number;
-  restaurantName: string;
-  service: Pick<ExploreService, "reportRestaurant" | "upload">;
+  title: string;
+  reasons: readonly ReportReason<Code>[];
+  send: (request: ReportRequest<Code>) => Promise<unknown>;
+  upload: (file: File) => Promise<{ id: number; url: string }>;
+  /** `settled` means the report is already there (409), so there is nothing to retry. */
+  errorOf: (error: unknown) => { settled: boolean; message: string };
   open: boolean;
   onClose: () => void;
   /** `already` is true when a report of this traveler was already waiting. */
   onSent: (already: boolean) => void;
 }) {
-  const [reason, setReason] = useState<ReportReasonCode>("wrong_info");
+  const [reason, setReason] = useState<Code>(reasons[0].value);
   const [description, setDescription] = useState("");
   const [evidence, setEvidence] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -53,7 +69,7 @@ export function ReportDialog({
     sending.current = true;
     setBusy(true);
     try {
-      await service.reportRestaurant(restaurantId, {
+      await send({
         reasonCode: reason,
         description: description.trim() || undefined,
         evidenceMediaIds: evidence.length
@@ -62,7 +78,7 @@ export function ReportDialog({
       });
       onSent(false);
     } catch (caught) {
-      const result = reportError(caught);
+      const result = errorOf(caught);
       if (result.settled) onSent(true);
       else setFailure(result.message);
     } finally {
@@ -75,7 +91,7 @@ export function ReportDialog({
     <Dialog
       open={open}
       onClose={close}
-      title={`Báo cáo ${restaurantName}`}
+      title={title}
       footer={
         <>
           <Button variant="secondary" onClick={close} disabled={busy}>
@@ -99,13 +115,13 @@ export function ReportDialog({
         }}
         noValidate
       >
-        <fieldset className="explore-reasons">
+        <fieldset className="report-reasons">
           <legend>Lý do báo cáo</legend>
-          {reportReasons.map((item) => (
+          {reasons.map((item) => (
             <Choice
               key={item.value}
               kind="radio"
-              name="restaurant-report-reason"
+              name="report-reason"
               label={item.label}
               checked={reason === item.value}
               onChange={() => setReason(item.value)}
@@ -124,12 +140,11 @@ export function ReportDialog({
         <ImageAttachments
           label="Ảnh bằng chứng"
           helper="Tối đa 5 ảnh JPG, PNG hoặc WEBP, mỗi ảnh dưới 5 MB."
-          purpose="report_evidence"
           max={maxReportEvidence}
           value={evidence}
           onChange={setEvidence}
           onUploading={setUploading}
-          service={service}
+          upload={upload}
         />
         {failure && <Alert>{failure}</Alert>}
       </form>

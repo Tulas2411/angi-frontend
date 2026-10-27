@@ -66,6 +66,7 @@ async function handle(request: Request, context: Context) {
     if (
       request.method !== "GET" &&
       menuOperation?.body !== false &&
+      publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
       if (endpoint === "media") {

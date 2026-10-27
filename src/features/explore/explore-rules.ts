@@ -1,5 +1,5 @@
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { money, validateUpload } from "@/shared/format";
+import { money } from "@/shared/format";
 import type {
   BrowseDishesQuery,
   BrowseRestaurantsQuery,
@@ -16,9 +16,7 @@ export const dishPageSize = 12;
 export const restaurantPageSize = 12;
 export const reviewPageSize = 10;
 export const maxReviewImages = 5;
-export const maxReportEvidence = 5;
 export const maxReviewLength = 2000;
-export const maxReportLength = 1000;
 
 export const dishFormLabels: Record<DishForm, string> = {
   soup: "Món nước",
@@ -281,18 +279,6 @@ export function reviewProblems(rating: number, content: string) {
   return problems;
 }
 
-export function reportProblems(reason: ReportReasonCode, description: string) {
-  const problems: { description?: string } = {};
-  const text = description.trim();
-  if (reason === "other" && !text)
-    problems.description = "Hãy mô tả lý do khi chọn “Lý do khác”.";
-  else if (text.length > maxReportLength)
-    problems.description = `Mô tả tối đa ${maxReportLength} ký tự.`;
-  return problems;
-}
-
-export const validateEvidenceImage = (file: File) => validateUpload(file);
-
 /** REV-01 failures by `errorCode`; `settled` means the traveler already reviewed this restaurant. */
 export function reviewError(error: unknown) {
   const code = error instanceof ApiError ? error.errorCode : "";
@@ -331,3 +317,5 @@ export function visibleReply(review: ReviewDto) {
 export function parseEntityId(value: string): number | null {
   return /^[1-9]\d{0,9}$/.test(value) ? Number(value) : null;
 }
+
+export { reportProblems } from "@/shared/report-rules";

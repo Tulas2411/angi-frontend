@@ -250,6 +250,14 @@ export function RoadmapDetailView({
                 <Badge tone="warning">Vượt ngân sách</Badge>
               )}
             </p>
+            <p>
+              <Link
+                className="button button-secondary"
+                href={`/guides/new?roadmap=${overview.id}`}
+              >
+                Chia sẻ lộ trình
+              </Link>
+            </p>
           </div>
           <Media
             className="roadmap-hero-media"

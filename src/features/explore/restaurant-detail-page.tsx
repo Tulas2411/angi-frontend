@@ -26,6 +26,8 @@ import {
   ratingText,
   reviewDate,
   reviewPageSize,
+  reportError,
+  reportReasons,
   reviewSortOptions,
   visibleReply,
 } from "./explore-rules";
@@ -36,7 +38,7 @@ import type {
   ReviewDto,
   ReviewSort,
 } from "./explore-types";
-import { ReportDialog } from "./report-dialog";
+import { ReportDialog } from "@/components/domain/report-dialog";
 import { ReviewDialog } from "./review-dialog";
 import { useRemote } from "./use-remote";
 import "./explore.css";
@@ -482,9 +484,11 @@ export function RestaurantDetailPage({
       {reportOpen && (
         <ReportDialog
           open
-          restaurantId={restaurantId}
-          restaurantName={restaurant.name}
-          service={service}
+          title={`Báo cáo ${restaurant.name}`}
+          reasons={reportReasons}
+          send={(request) => service.reportRestaurant(restaurantId, request)}
+          upload={(file) => service.upload(file, "report_evidence")}
+          errorOf={reportError}
           onClose={() => setReportOpen(false)}
           onSent={(already) => {
             setReportOpen(false);
