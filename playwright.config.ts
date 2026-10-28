@@ -23,6 +23,8 @@ export default defineConfig({
     "roadmap-agent.spec.ts",
     "explore.spec.ts",
     "blogs.spec.ts",
+    "notifications.spec.ts",
+    "roll.spec.ts",
   ],
   workers: 1,
   timeout: 60000,

@@ -1,0 +1,210 @@
+/* NOTI-01..03: one column of rows, an unread row marked by a coral dot and a white surface. */
+.notifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: min(100%, 880px);
+}
+.notifications-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+.notifications-heading h1 {
+  font-size: 32px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+}
+.notifications-line {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notification-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 16px 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: transparent;
+  transition: border-color var(--duration-fast) ease;
+}
+.notification-row[data-unread] {
+  background: var(--card);
+}
+.notification-row:hover,
+.notification-row:focus-within {
+  border-color: var(--line-strong);
+}
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 8px;
+  border-radius: 50%;
+}
+.notification-row[data-unread] .notification-dot {
+  background: var(--coral);
+}
+.notification-text {
+  min-width: 0;
+}
+.notification-text h2 {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.notification-row[data-unread] .notification-text h2 {
+  font-weight: 700;
+}
+.notification-text h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+/* The whole row opens the notification; the read button stays on top of it. */
+.notification-text h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+}
+.notification-row:has(a) {
+  position: relative;
+  cursor: pointer;
+}
+.notification-text h2 a:focus-visible {
+  outline: none;
+}
+.notification-text h2 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+.notification-text p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.notification-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.notification-read {
+  position: relative;
+  z-index: 1;
+  min-height: 32px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.notification-read:hover {
+  border-color: var(--ink);
+}
+.notification-read:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.notification-read:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.notifications-skeleton {
+  height: 76px;
+  border-radius: 12px;
+  background: var(--control);
+}
+.notifications-problem {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+}
+.notifications-problem h2 {
+  font-size: 18px;
+}
+
+/* Header badge: the bell beside the account menu. */
+.notification-bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: var(--ink);
+  transition: background var(--duration-fast) ease;
+}
+.notification-bell:hover,
+.notification-bell[aria-current="page"] {
+  background: var(--control);
+}
+.notification-bell:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.notification-bell .icon img {
+  width: 22px;
+  height: 22px;
+}
+.notification-bell-count {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--canvas);
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .notifications-heading h1 {
+    font-size: 26px;
+  }
+  .notification-row {
+    grid-template-columns: 8px minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .notification-side {
+    grid-column: 2;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
