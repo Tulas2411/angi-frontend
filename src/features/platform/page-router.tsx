@@ -178,6 +178,8 @@ export function PageRouter({
     if (role === "TRAVELER") {
       if (area === "profile" || area === "account")
         return <AccountPage profile={id === "edit"} />;
+      // F-18 moved to /roll, on DISH-03.
+      if (area === "roll") redirect("/roll");
       if (area === "roadmaps")
         return id === "new" ? (
           <NewTripPage />

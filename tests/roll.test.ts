@@ -1,81 +1,89 @@
 import { describe, expect, it } from "vitest";
 import { ApiError } from "@/shared/api/error";
+import type { TagDto } from "@/features/explore/explore-types";
 import {
-  emptyRollFilters,
   maxExcludedDishes,
+  revealedCards,
   rollError,
   rollRequest,
+  tabConditions,
+  vegetarianTag,
 } from "@/features/roll/roll-rules";
 
-/** F-18 Roll Dish: the DISH-03 body built from the screen's conditions. */
-describe("roll request", () => {
-  it("sends an empty body when nothing is chosen", () => {
-    expect(rollRequest(emptyRollFilters, [], null)).toEqual({});
-  });
+/** F-18 Roll Dish: what each tab of ducbui's screen asks DISH-03 and DISH-01 for. */
+const tags: TagDto[] = [
+  { id: 1, tagType: "meal_time", code: "snack", name: "Ăn vặt" },
+  { id: 5, tagType: "dietary", code: "vegetarian", name: "Món chay" },
+  { id: 7, tagType: "category", code: "noodle", name: "Món nước" },
+];
 
-  it("sends only the conditions that are set", () => {
-    expect(
-      rollRequest(
-        {
-          ...emptyRollFilters,
-          mealTime: "lunch",
-          province: "  Thành phố Đà Nẵng ",
-          maxPrice: "50000",
-          tagIds: [3, 5],
-        },
-        [105],
-        null,
-      ),
-    ).toEqual({
-      mealTime: "lunch",
-      province: "Thành phố Đà Nẵng",
-      maxPrice: 50000,
-      tagIds: [3, 5],
-      excludeDishIds: [105],
+describe("roll tabs", () => {
+  it("Món Việt is every dish; Dưới 50k is the price", () => {
+    expect(tabConditions("viet", tags)).toEqual({
+      roll: {},
+      strip: { limit: 8 },
+    });
+    expect(tabConditions("budget", tags)).toEqual({
+      roll: { maxPrice: 50000 },
+      strip: { limit: 8, maxPrice: 50000 },
     });
   });
 
-  it("a nearby roll sends the position and radius instead of the province", () => {
-    expect(
-      rollRequest(
-        {
-          ...emptyRollFilters,
-          province: "Thành phố Hà Nội",
-          nearby: true,
-          radiusKm: "5",
-        },
-        [],
-        { latitude: 21.0285119, longitude: 105.8541789 },
-      ),
-    ).toEqual({ latitude: 21.028512, longitude: 105.854179, radiusKm: 5 });
+  it("Ăn nhẹ is the snack meal time, the strip uses its tag when there is one", () => {
+    expect(tabConditions("light", tags)).toEqual({
+      roll: { mealTime: "snack" },
+      strip: { limit: 8, tagIds: [1] },
+    });
+    expect(tabConditions("light", [])).toEqual({
+      roll: { mealTime: "snack" },
+      strip: { limit: 8 },
+    });
   });
 
-  it("falls back to the province while the position is unknown", () => {
+  it("Ăn chay needs the dietary tag and is unavailable without it", () => {
+    expect(vegetarianTag(tags)?.id).toBe(5);
     expect(
-      rollRequest(
-        { ...emptyRollFilters, province: "Thành phố Huế", nearby: true },
-        [],
-        null,
-      ),
-    ).toEqual({ province: "Thành phố Huế" });
-  });
-
-  it("leaves out at most the last 50 dishes", () => {
-    const shown = Array.from({ length: 60 }, (_, index) => index + 1);
-    const request = rollRequest(emptyRollFilters, shown, null);
-    expect(request.excludeDishIds).toHaveLength(maxExcludedDishes);
-    expect(request.excludeDishIds?.[0]).toBe(11);
+      vegetarianTag([{ id: 9, tagType: "dietary", code: "x", name: "Đồ chay" }])
+        ?.id,
+    ).toBe(9);
+    expect(tabConditions("vegetarian", tags)).toEqual({
+      roll: { tagIds: [5] },
+      strip: { limit: 8, tagIds: [5] },
+    });
+    expect(tabConditions("vegetarian", [tags[2]])).toBeNull();
   });
 });
 
-describe("roll errors", () => {
-  it("asks to loosen the conditions when no dish is left", () => {
-    const failure = rollError(new ApiError(404, "NO_CANDIDATE", "x"));
-    expect(failure.exhausted).toBe(true);
-    expect(failure.message).toMatch(/Không còn món/);
+describe("roll request and reveal", () => {
+  it("roll again leaves out the dishes already shown, the last 50 at most", () => {
+    expect(rollRequest({ maxPrice: 50000 }, [])).toEqual({ maxPrice: 50000 });
+    expect(rollRequest({}, [105, 106])).toEqual({ excludeDishIds: [105, 106] });
+    const shown = Array.from({ length: 60 }, (_, index) => index + 1);
+    const request = rollRequest({}, shown);
+    expect(request.excludeDishIds).toHaveLength(maxExcludedDishes);
+    expect(request.excludeDishIds?.[0]).toBe(11);
   });
 
-  it("keeps any other failure as a plain message", () => {
+  it("puts the rolled dish third of five, under the marker", () => {
+    const strip = [1, 2, 3, 4, 5].map((id) => ({ id }));
+    expect(revealedCards(strip, { id: 9 })).toEqual({
+      cards: [{ id: 1 }, { id: 2 }, { id: 9 }, { id: 3 }, { id: 4 }],
+      selected: 2,
+    });
+    // Already on the strip: shown once, still in the middle.
+    expect(
+      revealedCards(strip, { id: 4 }).cards.map((dish) => dish.id),
+    ).toEqual([1, 2, 4, 3, 5]);
+    expect(revealedCards([], { id: 9 })).toEqual({
+      cards: [{ id: 9 }],
+      selected: 0,
+    });
+  });
+
+  it("NO_CANDIDATE asks to change the tab, other failures keep their message", () => {
+    expect(rollError(new ApiError(404, "NO_CANDIDATE", "x")).exhausted).toBe(
+      true,
+    );
     expect(
       rollError(new ApiError(503, "SERVICE_UNAVAILABLE", "Bận")).exhausted,
     ).toBe(false);

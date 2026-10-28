@@ -1,6 +1,11 @@
 import { api } from "@/shared/api/client";
 import { exploreService } from "@/features/explore/explore-service";
-import type { DishDetailDto, TagDto } from "@/features/explore/explore-types";
+import type {
+  BrowseDishesQuery,
+  DishCardDto,
+  DishDetailDto,
+  TagDto,
+} from "@/features/explore/explore-types";
 
 export type RollMealTime = "breakfast" | "lunch" | "dinner" | "snack";
 
@@ -15,7 +20,6 @@ export interface RollDishRequestDto {
   excludeDishIds?: number[];
   latitude?: number;
   longitude?: number;
-  /** 0.5..50, default 3; needs latitude and longitude. */
   radiusKm?: number;
 }
 
@@ -26,12 +30,18 @@ export interface RollDishResponseDto {
   dish: DishDetailDto;
 }
 
+/**
+ * F-18 Roll Dish: DISH-03 picks the dish; DISH-01 fills the spinning strip with real dishes of
+ * the same conditions, and CAT-02 finds the tags behind the tabs.
+ */
 export interface RollService {
   roll(request: RollDishRequestDto): Promise<RollDishResponseDto>;
+  strip(query: BrowseDishesQuery): Promise<DishCardDto[]>;
   tags(): Promise<TagDto[]>;
 }
 
 export const rollService: RollService = {
   roll: (request) => api.post("dishes/roll", request),
+  strip: async (query) => (await exploreService.browseDishes(query)).items,
   tags: () => exploreService.tags(),
 };
