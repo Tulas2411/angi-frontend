@@ -28,6 +28,7 @@ export function navigationFor(
         { href: ownerRoutes.profile, label: "Nhà hàng", match: "prefix" },
         { href: ownerRoutes.verification, label: "Xác minh", match: "prefix" },
         { href: ownerRoutes.menu, label: "Thực đơn", match: "prefix" },
+        { href: ownerRoutes.reviews, label: "Đánh giá", match: "prefix" },
       ],
     };
   if (role === "TRAVELER")

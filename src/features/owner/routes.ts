@@ -5,6 +5,7 @@ export const ownerRoutes = {
   profile: "/restaurant/profile",
   verification: "/restaurant/verification",
   menu: "/restaurant/menu",
+  reviews: "/restaurant/reviews",
 } as const;
 
 export type OwnerProfileTab = "information" | "photos" | "hours" | "status";

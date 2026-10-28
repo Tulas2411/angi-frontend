@@ -101,7 +101,8 @@
 
 .owner-reviews-filters {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Bản thật có hai bộ lọc, bản minh họa có ba: cột tự co giãn cho cả hai. */
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: var(--space-4);
   align-items: end;
 }

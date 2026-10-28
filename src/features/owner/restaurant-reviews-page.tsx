@@ -1,31 +1,38 @@
 "use client";
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   Avatar,
-  ConfirmDialog,
   Dialog,
   EmptyState,
   Pagination,
   SelectField,
+  Skeleton,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/workspace";
-import { dateLabel, pageSlice, relativeTimeLabel } from "@/features/platform/rules";
+import { PageHeading } from "@/components/layout/page-heading";
+import { relativeTimeLabel } from "@/shared/format";
 import {
-  ownerReviewsSeed,
-  summarizeOwnerReviews,
-  type OwnerReviewSeed,
-} from "@/mocks/owner-reviews";
+  REPLY_MAX_LENGTH,
+  canReply,
+  ownerReviewFieldErrors,
+  ownerReviewsErrorMessage,
+  ownerReviewsQuery,
+  replyRequest,
+  replyStatusLabels,
+  validateReplyContent,
+  type OwnerRatingFilter,
+  type OwnerReplyFilter,
+} from "./owner-reviews-rules";
+import {
+  ownerReviewsService,
+} from "./owner-reviews-service";
+import type { ReviewDto, ReviewReplyDto } from "./owner-reviews-types";
 import "./restaurant-reviews.css";
 
-const REPLY_MAX = 1000;
-const REPLY_FIELD_ID = "owner-reply-field";
 /** Số đánh giá hiển thị trên mỗi trang. */
 const PAGE_SIZE = 10;
-
-type SortValue = "newest" | "oldest" | "highest" | "lowest";
-type ReplyFilter = "all" | "unanswered" | "answered";
+const REPLY_FIELD_ID = "owner-reply-field";
 
 /** Dải sao trang trí; số sao thật luôn có nhãn chữ bên cạnh. */
 function Stars({ rating, large = false }: { rating: number; large?: boolean }) {
@@ -54,78 +61,24 @@ function Stars({ rating, large = false }: { rating: number; large?: boolean }) {
   );
 }
 
-function RatingSummary({ reviews }: { reviews: OwnerReviewSeed[] }) {
-  const summary = summarizeOwnerReviews(reviews);
-  const peak = Math.max(1, ...summary.breakdown.map((item) => item.count));
-  return (
-    <Card title="Tổng quan đánh giá">
-      <div className="owner-reviews-summary">
-        <div className="owner-reviews-score">
-          <span className="owner-reviews-score-value">
-            {summary.ratingAvg.toFixed(1)}
-          </span>
-          <div className="owner-reviews-score-meta">
-            <Stars rating={Math.round(summary.ratingAvg)} large />
-            <span className="owner-reviews-score-count">
-              {summary.visible} đánh giá đang hiển thị
-            </span>
-          </div>
-        </div>
-        <ul className="owner-reviews-breakdown">
-          {summary.breakdown.map((item) => (
-            <li key={item.rating} className="owner-reviews-breakdown-row">
-              <span>{item.rating} sao</span>
-              <span
-                className="owner-reviews-breakdown-track"
-                role="img"
-                aria-label={`${item.rating} sao: ${item.count} đánh giá`}
-              >
-                <span
-                  className="owner-reviews-breakdown-fill"
-                  style={{ width: `${(item.count / peak) * 100}%` }}
-                />
-              </span>
-              <span className="owner-reviews-breakdown-count">{item.count}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-      <dl className="owner-reviews-counts">
-        <div className="owner-reviews-count">
-          <dt>Đã phản hồi</dt>
-          <dd>{summary.answered}</dd>
-        </div>
-        <div className="owner-reviews-count">
-          <dt>Chưa phản hồi</dt>
-          <dd>{summary.unanswered}</dd>
-        </div>
-        <div className="owner-reviews-count">
-          <dt>Đang bị ẩn</dt>
-          <dd>{summary.total - summary.visible}</dd>
-        </div>
-      </dl>
-    </Card>
-  );
-}
-
 function ReviewItem({
   review,
+  busy,
   onReply,
 }: {
-  review: OwnerReviewSeed;
-  onReply: (review: OwnerReviewSeed) => void;
+  review: ReviewDto;
+  busy: boolean;
+  onReply: (review: ReviewDto) => void;
 }) {
-  const visible = review.moderation === "visible";
+  const visible = canReply(review.status);
   return (
     <li className="owner-review">
       <div className="owner-review-main">
-        <Avatar name={review.author} />
+        <Avatar name={review.user.displayName} image={review.user.avatarUrl} />
         <div className="owner-review-heading">
-          <strong>{review.author}</strong>
+          <strong>{review.user.displayName}</strong>
           <div className="owner-review-meta">
-            <span>{relativeTimeLabel(review.date)}</span>
-            {review.visitedFrom && <span>· Ghé {dateLabel(review.visitedFrom)}</span>}
-            <span>· {review.likes} lượt thích</span>
+            <span>{relativeTimeLabel(review.createdAt)}</span>
           </div>
         </div>
         <div className="owner-review-rating">
@@ -140,7 +93,9 @@ function ReviewItem({
           thị với người kiểm duyệt của ANGI.
         </p>
       )}
-      {visible && <p className="owner-review-text">{review.text}</p>}
+      {visible && review.content && (
+        <p className="owner-review-text">{review.content}</p>
+      )}
 
       {visible && review.images.length > 0 && (
         <ul className="owner-review-images">
@@ -149,7 +104,7 @@ function ReviewItem({
               <img
                 className="owner-review-image"
                 src={image}
-                alt={`Ảnh thực khách ${review.author} đăng kèm, ảnh ${index + 1}`}
+                alt={`Ảnh thực khách ${review.user.displayName} đăng kèm, ảnh ${index + 1}`}
               />
             </li>
           ))}
@@ -160,16 +115,20 @@ function ReviewItem({
         <div className="owner-review-reply">
           <div className="owner-review-reply-head">
             <strong>Phản hồi của Bếp Nhà</strong>
-            {review.replyPending ? (
-              <Badge tone="warning">Đang chờ kiểm duyệt</Badge>
-            ) : (
-              <Badge tone="success">Đang hiển thị</Badge>
-            )}
+            <Badge
+              tone={
+                review.reply.status === "visible"
+                  ? "success"
+                  : review.reply.status === "hidden"
+                    ? "warning"
+                    : "error"
+              }
+            >
+              {replyStatusLabels[review.reply.status]}
+            </Badge>
           </div>
-          <p className="owner-review-reply-text">
-            {review.reply}
-          </p>
-          {review.replyPending && (
+          <p className="owner-review-reply-text">{review.reply.content}</p>
+          {review.reply.status !== "visible" && (
             <p className="helper owner-review-reply-note">
               Phản hồi đang chờ người kiểm duyệt của ANGI duyệt trước khi hiển
               thị với thực khách.
@@ -181,72 +140,91 @@ function ReviewItem({
       <div className="owner-review-actions">
         <Button
           variant={review.reply ? "secondary" : "primary"}
-          disabled={!visible}
+          disabled={!visible || busy}
           onClick={() => onReply(review)}
         >
           {review.reply ? "Sửa phản hồi" : "Phản hồi"}
         </Button>
-        {!visible && <span className="helper">Chỉ phản hồi đánh giá đang hiển thị.</span>}
+        {!visible && (
+          <span className="helper">Chỉ phản hồi đánh giá đang hiển thị.</span>
+        )}
       </div>
     </li>
   );
 }
 
+/**
+ * Trang "Lắng nghe thực khách" của chủ nhà hàng — OWN-19 và OWN-20.
+ *
+ * Danh sách, bộ lọc và phân trang đều do backend quyết định: mỗi thay đổi bộ
+ * lọc gọi lại OWN-19 với `replied`/`rating`/`page` tương ứng.
+ */
 export function RestaurantReviewsPage() {
-  const [reviews, setReviews] = useState<OwnerReviewSeed[]>(() =>
-    structuredClone(ownerReviewsSeed),
-  );
-  const [filter, setFilter] = useState<ReplyFilter>("all");
-  const [stars, setStars] = useState("all");
-  const [sort, setSort] = useState<SortValue>("newest");
-  const [editing, setEditing] = useState<OwnerReviewSeed | null>(null);
-  const [text, setText] = useState("");
-  const [error, setError] = useState("");
-  const [removing, setRemoving] = useState<OwnerReviewSeed | null>(null);
-  const [saved, setSaved] = useState("");
-  const [busy, setBusy] = useState(false);
+  const service = ownerReviewsService;
+  const [reviews, setReviews] = useState<ReviewDto[]>([]);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [replyFilter, setReplyFilter] = useState<OwnerReplyFilter>("all");
+  const [ratingFilter, setRatingFilter] = useState<OwnerRatingFilter>("all");
+  const [saved, setSaved] = useState("");
+  const [editing, setEditing] = useState<ReviewDto | null>(null);
+  const [text, setText] = useState("");
+  const [fieldError, setFieldError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [error, setError] = useState("");
+  /** Khoá của lần tải đã hoàn tất; khác `requestKey` nghĩa là đang tải. */
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+
+  const query = useMemo(
+    () => ownerReviewsQuery(replyFilter, ratingFilter, page, PAGE_SIZE),
+    [replyFilter, ratingFilter, page],
+  );
+
+  /** Mỗi bộ lọc, trang hay lần thử lại đều là một khoá tải khác nhau. */
+  const requestKey = `${replyFilter}|${ratingFilter}|${page}|${attempt}`;
+  const loading = loadedKey !== requestKey;
+
+  useEffect(() => {
+    let ignore = false;
+    service
+      .list(query)
+      .then((result) => {
+        if (ignore) return;
+        setReviews(result.items);
+        setTotalItems(result.totalItems);
+        setTotalPages(Math.max(1, result.totalPages));
+        setError("");
+        setLoadedKey(requestKey);
+      })
+      .catch((caught) => {
+        if (ignore) return;
+        setError(ownerReviewsErrorMessage(caught));
+        setLoadedKey(requestKey);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [service, query, requestKey]);
 
   /** Đưa tiêu điểm về ô nhập khi báo lỗi để người dùng sửa ngay. */
   function focusReplyField() {
     document.getElementById(REPLY_FIELD_ID)?.focus();
   }
 
-  const rows = useMemo(() => {
-    const filtered = reviews.filter((review) => {
-      if (filter === "unanswered" && review.reply) return false;
-      if (filter === "answered" && !review.reply) return false;
-      if (stars !== "all" && review.rating !== Number(stars)) return false;
-      return true;
-    });
-    const sorted = [...filtered];
-    if (sort === "newest") sorted.sort((a, b) => b.date.localeCompare(a.date));
-    if (sort === "oldest") sorted.sort((a, b) => a.date.localeCompare(b.date));
-    if (sort === "highest") sorted.sort((a, b) => b.rating - a.rating);
-    if (sort === "lowest") sorted.sort((a, b) => a.rating - b.rating);
-    return sorted;
-  }, [reviews, filter, stars, sort]);
-
-  /** Chỉ cắt trang sau khi lọc và sắp xếp để trang luôn khớp danh sách. */
-  const paged = useMemo(
-    () => pageSlice(rows, page, PAGE_SIZE),
-    [rows, page],
-  );
-
-  /**
-   * Đổi bộ lọc hoặc sắp xếp thì về lại trang đầu cho khỏi trang trống.
-   * `setter` là `useState` setter nên nhận `string` và tự thu hẹp kiểu.
-   */
   function changeFilter<T>(setter: (value: T) => void) {
     return (value: string) => {
       setter(value as T);
       setPage(1);
+      setSaved("");
     };
   }
 
-  function openReply(review: OwnerReviewSeed) {
+  function openReply(review: ReviewDto) {
     setEditing(review);
-    setText(review.reply ?? "");
+    setText(review.reply?.content ?? "");
+    setFieldError("");
     setError("");
     setSaved("");
   }
@@ -254,83 +232,67 @@ export function RestaurantReviewsPage() {
   function closeReply() {
     setEditing(null);
     setText("");
-    setError("");
+    setFieldError("");
   }
 
-  function submitReply(event: FormEvent<HTMLFormElement>) {
+  async function submitReply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!editing) return;
-    const content = text.trim();
-    if (!content) {
-      setError("Phản hồi không được để trống.");
-      focusReplyField();
-      return;
-    }
-    if (content.length > REPLY_MAX) {
-      setError(`Phản hồi không vượt quá ${REPLY_MAX} ký tự.`);
+    if (!editing || busy) return;
+    const invalid = validateReplyContent(text);
+    setFieldError(invalid ?? "");
+    if (invalid) {
       focusReplyField();
       return;
     }
     setBusy(true);
-    setReviews((current) =>
-      current.map((review) =>
-        review.id === editing.id
-          ? {
-              ...review,
-              reply: content,
-              // Giao diện chưa nối API nên phản hồi mới được đánh dấu là
-              // đang chờ kiểm duyệt, đúng như luồng thật của backend.
-              replyPending: review.reply ? false : true,
-              replyModeration: "visible",
-            }
-          : review,
-      ),
-    );
-    const author = editing.author;
-    closeReply();
-    setBusy(false);
-    setSaved(`Đã gửi phản hồi tới ${author}.`);
-  }
-
-  function removeReply(review: OwnerReviewSeed) {
-    setReviews((current) =>
-      current.map((item) =>
-        item.id === review.id
-          ? {
-              ...item,
-              reply: undefined,
-              replyModeration: undefined,
-              replyPending: false,
-            }
-          : item,
-      ),
-    );
-    setRemoving(null);
-    setSaved(`Đã gỡ phản hồi của ${review.author}.`);
+    setError("");
+    setSaved("");
+    try {
+      const reply: ReviewReplyDto = await service.reply(
+        editing.id,
+        replyRequest(text),
+      );
+      const hadReply = !!editing.reply;
+      setReviews((current) =>
+        current.map((review) =>
+          review.id === editing.id ? { ...review, reply } : review,
+        ),
+      );
+      const author = editing.user.displayName;
+      closeReply();
+      setSaved(
+        hadReply
+          ? `Đã cập nhật phản hồi tới ${author}.`
+          : `Đã gửi phản hồi tới ${author}.`,
+      );
+    } catch (caught) {
+      const fields = ownerReviewFieldErrors(caught);
+      const fieldMessage = fields.content ?? "";
+      setFieldError(fieldMessage);
+      setError(ownerReviewsErrorMessage(caught));
+      if (fieldMessage) focusReplyField();
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="stack owner-reviews">
       <PageHeading
+        eyebrow="Nhà hàng của tôi"
         title="Lắng nghe thực khách"
         description="Đọc đánh giá và phản hồi từng trải nghiệm."
       />
 
-      <Alert tone="info">
-        Đang xem dữ liệu minh họa. Phản hồi gửi đi chỉ lưu trong phiên này và chưa
-        được gửi lên máy chủ.
-      </Alert>
-
       {saved && <Alert tone="success">{saved}</Alert>}
-
-      <RatingSummary reviews={reviews} />
+      {error && <Alert>{error}</Alert>}
 
       <Card title="Bộ lọc">
         <div className="owner-reviews-filters">
           <SelectField
             label="Phản hồi"
-            value={filter}
-            onChange={changeFilter(setFilter)}
+            value={replyFilter}
+            onChange={changeFilter(setReplyFilter)}
             options={[
               { value: "all", label: "Tất cả" },
               { value: "unanswered", label: "Chưa phản hồi" },
@@ -339,8 +301,8 @@ export function RestaurantReviewsPage() {
           />
           <SelectField
             label="Số sao"
-            value={stars}
-            onChange={changeFilter(setStars)}
+            value={String(ratingFilter)}
+            onChange={changeFilter(setRatingFilter)}
             options={[
               { value: "all", label: "Mọi mức sao" },
               ...[5, 4, 3, 2, 1].map((value) => ({
@@ -349,31 +311,23 @@ export function RestaurantReviewsPage() {
               })),
             ]}
           />
-          <SelectField
-            label="Sắp xếp"
-            value={sort}
-            onChange={changeFilter((value) => setSort(value as SortValue))}
-            options={[
-              { value: "newest", label: "Mới nhất" },
-              { value: "oldest", label: "Cũ nhất" },
-              { value: "highest", label: "Sao cao nhất" },
-              { value: "lowest", label: "Sao thấp nhất" },
-            ]}
-          />
         </div>
       </Card>
 
-      <Card title={`${rows.length} đánh giá`}>
-        {rows.length === 0 ? (
+      <Card title={`${totalItems} đánh giá`}>
+        {loading ? (
+          <Skeleton />
+        ) : reviews.length === 0 ? (
           <EmptyState title="Không có đánh giá phù hợp">
             Thử đổi bộ lọc để xem thêm đánh giá của thực khách.
           </EmptyState>
         ) : (
           <ul className="owner-reviews-list">
-            {paged.items.map((review) => (
+            {reviews.map((review) => (
               <ReviewItem
                 key={review.id}
                 review={review}
+                busy={busy}
                 onReply={openReply}
               />
             ))}
@@ -381,29 +335,36 @@ export function RestaurantReviewsPage() {
         )}
       </Card>
 
-      {rows.length > PAGE_SIZE && (
+      {!loading && totalPages > 1 && (
         <Pagination
-          total={rows.length}
+          total={totalItems}
           page={page}
           size={PAGE_SIZE}
-          onChange={setPage}
+          onChange={(value) => {
+            setPage(value);
+            setSaved("");
+          }}
         />
+      )}
+
+      {error && !loading && (
+        <div className="actions">
+          <Button
+            variant="secondary"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Thử lại
+          </Button>
+        </div>
       )}
 
       <Dialog
         open={!!editing}
         onClose={closeReply}
-        title={`Phản hồi ${editing?.author ?? ""}`}
+        focusField
+        title={`Phản hồi ${editing?.user.displayName ?? ""}`}
         footer={
           <>
-            {editing?.reply && (
-              <Button
-                variant="destructive"
-                onClick={() => setRemoving(editing)}
-              >
-                Gỡ phản hồi
-              </Button>
-            )}
             <Button variant="secondary" onClick={closeReply}>
               Hủy
             </Button>
@@ -429,31 +390,16 @@ export function RestaurantReviewsPage() {
             value={text}
             onChange={(event) => {
               setText(event.target.value);
-              if (error) setError("");
+              if (fieldError) setFieldError("");
             }}
-            error={error}
+            error={fieldError}
             helper="Cảm ơn thực khách và cho biết bước tiếp theo bạn sẽ làm."
-            maxLength={REPLY_MAX}
+            maxLength={REPLY_MAX_LENGTH}
             rows={6}
             required
           />
         </form>
       </Dialog>
-
-      <ConfirmDialog
-        open={!!removing}
-        title="Gỡ phản hồi này?"
-        label="Gỡ phản hồi"
-        cancelLabel="Giữ phản hồi"
-        destructive
-        onClose={() => setRemoving(null)}
-        onConfirm={() => removing && removeReply(removing)}
-      >
-        <p>
-          Phản hồi của Bếp Nhà cho {removing?.author ?? ""} sẽ bị gỡ khỏi đánh
-          giá này. Thực khách sẽ không còn thấy phản hồi của nhà hàng.
-        </p>
-      </ConfirmDialog>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
+import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
 import { notificationOperation } from "@/shared/api/notification-proxy";
@@ -42,6 +43,7 @@ async function handle(request: Request, context: Context) {
     const { path } = await context.params;
     const endpoint = path.join("/");
     const menuOperation = ownerMenuOperation(request.method, endpoint);
+    const reviewsOperation = ownerReviewsOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     const notificationOp = notificationOperation(request.method, endpoint);
@@ -54,6 +56,7 @@ async function handle(request: Request, context: Context) {
       !resubmission &&
       !roadmapRoute &&
       !menuOperation &&
+      !reviewsOperation &&
       !agentOp &&
       !notificationOp &&
       !publicOp
@@ -161,6 +164,7 @@ async function handle(request: Request, context: Context) {
         });
       }),
       menuOperation?.status ??
+        reviewsOperation?.status ??
         notificationOp?.status ??
         roadmapOperationStatus(request.method, endpoint) ??
         (request.method === "POST" ? 201 : 200),

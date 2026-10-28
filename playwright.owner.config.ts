@@ -38,6 +38,7 @@ export default defineConfig({
     "verification-resubmission.spec.ts",
     "restaurant-menu.spec.ts",
     "menu-approval.spec.ts",
+    "owner-reviews-live.spec.ts",
   ],
   workers: 1,
   timeout: 60000,

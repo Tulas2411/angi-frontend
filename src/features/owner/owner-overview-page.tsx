@@ -152,6 +152,11 @@ function Overview({ restaurant }: { restaurant: OwnerRestaurantDto }) {
           title="Thực đơn"
           text="Quản lý món đang bán, bản nháp và lịch sử gửi duyệt."
         />
+        <QuickLink
+          href={ownerRoutes.reviews}
+          title="Đánh giá thực khách"
+          text="Đọc đánh giá của thực khách và phản hồi trong đúng ngữ cảnh."
+        />
       </div>
     </div>
   );

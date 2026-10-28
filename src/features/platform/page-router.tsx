@@ -46,6 +46,7 @@ import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page"
 import { RestaurantBusinessHoursPage } from "@/features/owner/restaurant-business-hours-page";
 import { RestaurantOperatingStatusPage } from "@/features/owner/restaurant-operating-status-page";
 import { RestaurantReviewsPage } from "@/features/owner/restaurant-reviews-page";
+import { RestaurantReviewsDemoPage } from "@/features/owner/restaurant-reviews-demo-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -157,6 +158,9 @@ export function PageRouter({
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "verification")
     return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
 
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "reviews")
+    return <RestaurantReviewsPage />;
+
   if (
     role === "RESTAURANT_OWNER" &&
     (area === "register" || (mode === "live" && !area))
@@ -204,7 +208,7 @@ export function PageRouter({
     if (area === "verification")
       return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
     if (area === "menu") return <OwnerMenuPage />;
-    if (area === "reviews") return <RestaurantReviewsPage />;
+    if (area === "reviews") return <RestaurantReviewsDemoPage />;
     if (area === "notifications") return <NotificationsPage />;
     if (area === "account") return <AccountPage />;
   }
