@@ -128,3 +128,32 @@ The frontend was reduced to backend-integrated screens and the rest of the app w
 - **Reduced motion.** `prefers-reduced-motion` sets animation and transition durations to `0s` globally.
 - **No backend calls.** The page makes no backend request; the recommendation, search and roadmap behavior remains local editorial content. HOME-01 exists in the backend but is intentionally not used.
 - **Tests.** `tests/browser/public-home.spec.ts` (run with `npm run test:browser`) covers search and filters, no-JavaScript behavior, keyboard/Escape/focus restoration, the taste and roadmap examples, owner redirect versus signed-in homepage for the other roles, photo hit areas, reduced motion and layouts at 1440, 768, 390 and 320px.
+
+## UI refresh (October 2026)
+
+Owner-requested visual refresh of `/`, 2026-10-27. No Jira key. Branch `feat/ui-refresh-homepage`, created from `origin/dev` (`abe5b14`). Changes remain unstaged and uncommitted. Palette, fonts, copy, routes, data and backend behavior are unchanged.
+
+- **Type scale.** Homepage text below 12px is gone: every fixed size in `public-home.css` from 9–14px now uses the theme tokens `--text-xs` (12), `--text-sm` (13) and `--text-base` (15). Lead paragraphs are 17–18px; section headings share one `clamp(32px, 3.6vw, 48px)` scale. Section spacing uses one value, `--home-section-space` (`clamp(56px, 7vw, 96px)`).
+- **Elevation.** Three homepage-local shadows (`--home-shadow-rest`, `--home-shadow-lift`, `--home-shadow-coral`). Journey steps, taste example, roadmap board, search box, filter pills and CTAs rest on a soft shadow and lift on hover. The journey row (`.home-path`) is now three cards instead of a ruled strip.
+- **Bubbles.** Decorative, `aria-hidden` blurred bubbles behind the hero (`.home-bubbles`), three floating taste chips around the hero photo (`.home-hero-chips`, the third is hidden at ≤360px) and two translucent bubbles in the coral invitation card. Behind the hero a faint dotted map route (`.home-route`, `aria-hidden`, low opacity with a slight blur) runs from the left edge to the right edge of the screen with six coral map pins whose tips sit on its stops; its dashes drift slowly only with `prefers-reduced-motion: no-preference`. Image containers are never animated, so screenshot/stability checks stay deterministic.
+- **Dropdown.** The three in-page anchors in the header are grouped under a "Tính năng" dropdown (`src/components/site/nav-dropdown.tsx`, styles in `globals.css`). It is a button disclosure (`aria-expanded`/`aria-controls`), not `<details>`, so the account menu remains the header's only `group`. It closes on outside click, Escape (focus returns to the button), blur, resize and link choice; at ≤700px the panel spans the header bar within the gutters.
+- **Motion.** The header gains a shadow after 120px of scrolling, sections rise in as they enter the viewport and swapped taste/roadmap photos fade in. Scroll-driven effects use `animation-timeline` behind `@supports` and run only with `prefers-reduced-motion: no-preference`; reduced motion also stops bubble floating and hover lifts.
+- `.home-page` uses `overflow-x: clip` so decorations never create horizontal scrolling (the sticky header is unaffected).
+
+### Verification — 2026-10-27
+
+- ESLint on changed folders, `tsc --noEmit` and Prettier (`--end-of-line auto`; the Windows checkout is CRLF) passed. Full Vitest: **262 tests passed**.
+- `npx playwright test -c playwright.config.ts public-home.spec.ts routes.spec.ts`: **30 tests passed** (the four layout tests were rerun after removing an infinite animation from the hero inset photo, which had prevented Playwright from treating that image as stable). Chromium 1248 was installed into the ignored `.cache/browsers`.
+- Inspected `artifacts/homepage/home-1440.png` and `home-390.png`; layout tests confirm no horizontal overflow at 1440, 768, 390 and 320px. The dropdown has no dedicated browser test yet.
+- No API mapping: no endpoint, DTO, payload, validation or error contract is involved.
+
+### Account menu hover — 2026-10-27
+
+A site-wide header restyle (nav capsule, pill links, ghost login button, avatar ring) was tried and then rolled back at the owner's request; the header looks as it did before this branch, apart from the homepage "Tính năng" dropdown above.
+
+The account menu (`AccountMenu`, shared by every signed-in page) now also opens on mouse hover:
+
+- Hovering the avatar opens the panel; leaving the avatar and panel closes it after 160ms, so the pointer can cross the gap (a transparent `::before` strip on the panel also bridges it). Touch input ignores hover and keeps tap-to-toggle.
+- A mouse click on a hover-opened menu keeps it open; keyboard activation, Escape (focus returns to the avatar), outside click, blur, resize and navigation behave as before.
+- The panel slides down while opening (opacity, `translate` and a top-down `clip-path` reveal) and slides back up while closing. The exit uses `::details-content` with `content-visibility … allow-discrete`; browsers without it close instantly. Reduced motion makes both instant.
+- The full default Playwright suite passed **177 tests**. A temporary hover check (open on hover, stay open while moving onto a panel link and on click, close after leaving) passed and was not kept; it captured mid-transition and open frames for inspection.

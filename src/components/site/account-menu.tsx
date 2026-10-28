@@ -12,10 +12,15 @@ import { roadmapRoutes } from "@/features/roadmaps/routes";
 export function AccountMenu({ user }: { user: AuthUserDto }) {
   const path = usePathname();
   const menu = useRef<HTMLDetailsElement>(null);
+  // Mouse hover opens the menu; leaving closes it after a short grace period
+  // so the pointer can cross the gap between the avatar and the panel.
+  const hoverOpened = useRef(false);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   // Close after navigation.
   useEffect(() => {
     menu.current?.removeAttribute("open");
   }, [path]);
+  useEffect(() => () => clearTimeout(leaveTimer.current), []);
   // Close on outside click, Escape, blur and resize; Escape returns focus to the trigger.
   useEffect(() => {
     const element = menu.current;
@@ -41,8 +46,35 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
     };
   }, []);
   return (
-    <details className="account-menu" ref={menu}>
-      <summary aria-label={`Tài khoản ${user.displayName}`}>
+    <details
+      className="account-menu"
+      ref={menu}
+      onPointerEnter={(event) => {
+        if (event.pointerType !== "mouse") return;
+        clearTimeout(leaveTimer.current);
+        if (!menu.current?.open) hoverOpened.current = true;
+        menu.current?.setAttribute("open", "");
+      }}
+      onPointerLeave={(event) => {
+        if (event.pointerType !== "mouse") return;
+        clearTimeout(leaveTimer.current);
+        leaveTimer.current = setTimeout(() => {
+          hoverOpened.current = false;
+          menu.current?.removeAttribute("open");
+        }, 160);
+      }}
+      onToggle={() => {
+        if (!menu.current?.open) hoverOpened.current = false;
+      }}
+    >
+      <summary
+        aria-label={`Tài khoản ${user.displayName}`}
+        onClick={(event) => {
+          // A mouse click on a hover-opened menu keeps it open instead of
+          // toggling it shut; keyboard activation (detail 0) still toggles.
+          if (event.detail > 0 && hoverOpened.current) event.preventDefault();
+        }}
+      >
         <Avatar name={user.displayName} image={user.avatarUrl} />
       </summary>
       <div
