@@ -1,6 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AccountMenu } from "@/components/site/account-menu";
+import {
+  NavDropdown,
+  type NavDropdownItem,
+} from "@/components/site/nav-dropdown";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { Icon } from "@/components/ui/primitives";
@@ -20,6 +24,37 @@ import {
   type HomeSelection,
 } from "./home-content";
 import "./public-home.css";
+
+/** Stops on the hero route, in % of its box: the path's joints (x / 1440, y / 400). */
+const homeRouteStops: readonly (readonly [number, number])[] = [
+  [15.28, 62.5],
+  [29.17, 80],
+  [44.44, 52.5],
+  [59.72, 70],
+  [75, 42.5],
+  [88.89, 57.5],
+];
+
+const homeFeatureLinks: readonly NavDropdownItem[] = [
+  {
+    href: "#goi-y",
+    label: "Gợi ý hợp gu",
+    description: "Món ăn theo khẩu vị riêng",
+  },
+  {
+    href: "#lich-trinh",
+    label: "Lịch trình ẩm thực",
+    description: "Ghép bữa ngon theo từng ngày",
+  },
+  {
+    href: "#mon-ngon",
+    label: "Khám phá món",
+    description: "Bộ sưu tập cảm hứng món Việt",
+  },
+];
+
+// Decorative taste bubbles floating around the hero photo.
+const heroTasteChips = ["Đậm đà", "Thanh nhẹ", "Ấm bụng"] as const;
 
 /**
  * Public homepage. Its recommendation, roadmap and dish-collection blocks are
@@ -43,9 +78,7 @@ export function PublicHomePage({
       <SiteHeader
         nav={
           <nav className="site-nav" aria-label="Điều hướng chính">
-            <a href="#goi-y">Gợi ý hợp gu</a>
-            <a href="#lich-trinh">Lịch trình ẩm thực</a>
-            <a href="#mon-ngon">Khám phá món</a>
+            <NavDropdown label="Tính năng" items={homeFeatureLinks} />
             <Link href="/dishes">Món ăn</Link>
             <Link href="/restaurants">Quán ăn</Link>
             <Link href="/guides">Cẩm nang</Link>
@@ -75,6 +108,33 @@ export function PublicHomePage({
       </SiteHeader>
       <main id="noi-dung" tabIndex={-1}>
         <section className="home-hero" aria-labelledby="home-title">
+          <div className="home-bubbles" aria-hidden>
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          {/* A faint map route with its stops, running the full width of the screen. */}
+          <div className="home-route" aria-hidden>
+            <svg
+              className="home-route-line"
+              viewBox="0 0 1440 400"
+              preserveAspectRatio="none"
+            >
+              <path d="M0 300 C110 300 140 250 220 250 S330 320 420 320 S560 210 640 210 S780 280 860 280 S1000 170 1080 170 S1200 230 1280 230 S1390 150 1440 150" />
+            </svg>
+            {homeRouteStops.map(([x, y]) => (
+              <svg
+                key={x}
+                className="home-route-pin"
+                viewBox="0 0 24 32"
+                style={{ left: `${x}%`, top: `${y}%` }}
+              >
+                <path d="M12 0C5.4 0 0 5.2 0 11.6 0 20.3 12 32 12 32s12-11.7 12-20.4C24 5.2 18.6 0 12 0Z" />
+                <circle cx="12" cy="11.5" r="4.5" />
+              </svg>
+            ))}
+          </div>
           <div className="home-hero-copy">
             <p className="home-eyebrow">
               <span className="home-dot" /> Người bạn đồng hành ẩm thực của bạn
@@ -127,6 +187,11 @@ export function PublicHomePage({
                 sizes="(max-width: 700px) 120px, 180px"
               />
             </div>
+            <ul className="home-hero-chips" aria-hidden>
+              {heroTasteChips.map((chip) => (
+                <li key={chip}>{chip}</li>
+              ))}
+            </ul>
             <figcaption className="home-hero-caption">
               <span className="home-caption-symbol" aria-hidden>
                 ↗
