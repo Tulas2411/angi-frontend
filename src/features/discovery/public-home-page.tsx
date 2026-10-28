@@ -23,6 +23,7 @@ import {
   selectHomeDishes,
   type HomeSelection,
 } from "./home-content";
+import { HomeRoadmapStart } from "./home-roadmap-start";
 import "./public-home.css";
 
 /** Stops on the hero route, in % of its box: the path's joints (x / 1440, y / 400). */
@@ -57,9 +58,9 @@ const homeFeatureLinks: readonly NavDropdownItem[] = [
 const heroTasteChips = ["Đậm đà", "Thanh nhẹ", "Ấm bụng"] as const;
 
 /**
- * Public homepage. Its recommendation, roadmap and dish-collection blocks are
- * editorial product introductions: they use no backend data and are labelled as
- * illustrations. `user` is set for a signed-in role that has no workspace yet.
+ * Public homepage with a real RM-01 quick planner for Travelers. The taste,
+ * roadmap preview and dish collection remain labelled editorial examples.
+ * Only browser-safe user details cross into the account menu and quick planner.
  */
 export function PublicHomePage({
   selection,
@@ -107,6 +108,7 @@ export function PublicHomePage({
         )}
       </SiteHeader>
       <main id="noi-dung" tabIndex={-1}>
+        <HomeRoadmapStart role={user?.role ?? null} />
         <section className="home-hero" aria-labelledby="home-title">
           <div className="home-bubbles" aria-hidden>
             <span />
@@ -139,11 +141,11 @@ export function PublicHomePage({
             <p className="home-eyebrow">
               <span className="home-dot" /> Người bạn đồng hành ẩm thực của bạn
             </p>
-            <h1 id="home-title">
+            <h2 id="home-title">
               Ăn <span className="home-underline">đúng gu.</span>
               <br />
               Đi thật đã.
-            </h1>
+            </h2>
             <p className="home-hero-description">
               Tìm món hợp khẩu vị, rồi biến những bữa ăn thành một lịch trình
               đáng nhớ. Cùng ANGI khám phá Việt Nam theo gu của riêng bạn.
@@ -175,7 +177,6 @@ export function PublicHomePage({
                 alt="Bún thịt nướng với rau xanh, đồ chua và lạc rang"
                 fill
                 sizes="(max-width: 700px) 100vw, 50vw"
-                preload
                 className="home-hero-image"
               />
             </div>

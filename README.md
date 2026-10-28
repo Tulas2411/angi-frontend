@@ -18,7 +18,7 @@ The product UI is Vietnamese. Team documentation and code identifiers are Englis
 
 | Area                                                                                             | Backend operations            | Status                                                                                                 |
 | ------------------------------------------------------------------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------ |
-| Public homepage (`/`)                                                                            | none                          | Editorial: local dish collection, URL search/filters, dish dialogs, unsaved taste and roadmap examples |
+| Public homepage (`/`)                                                                            | RM-01                         | Three-field quick roadmap creation for Travelers; editorial dish collection, search/filters, dialogs and unsaved taste/roadmap examples |
 | Register, verify email, resend, recover password                                                 | AUTH-01, 02, 03, 08, 09       | Connected                                                                                              |
 | Login, Google login (when configured), refresh, logout                                           | AUTH-04..07                   | Connected; encrypted HttpOnly session                                                                  |
 | Account profile and password (`/account`)                                                        | ME-01, ME-02, ME-03           | Connected for every role                                                                               |
@@ -94,7 +94,7 @@ Real data and login need the backend. Prepare `angi-backend` following its own R
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The homepage works without a backend. Register or sign in to use the rest.
+Open [http://localhost:3000](http://localhost:3000). The homepage's editorial content works without a backend. The quick planner uses province suggestions and requires backend authentication/RM-01 to save a roadmap. See [homepage quick planner](docs/home-roadmap-starter.vi.md).
 
 ## Routes and access
 

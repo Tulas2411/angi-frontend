@@ -57,7 +57,18 @@ test.afterAll(async () => {
 test.beforeEach(async ({ context }) => {
   backendCalls = 0;
   await context.route("**/*", (route) => {
-    const host = new URL(route.request().url()).hostname;
+    const url = new URL(route.request().url());
+    if (url.pathname === "/api/locations/provinces")
+      return route.fulfill({
+        json: {
+          success: true,
+          data: [
+            { code: 1, name: "Thành phố Hà Nội" },
+            { code: 48, name: "Thành phố Đà Nẵng" },
+          ],
+        },
+      });
+    const host = url.hostname;
     return ["localhost", "127.0.0.1"].includes(host)
       ? route.continue()
       : route.abort();
@@ -72,7 +83,7 @@ test("guest can explore, search without accents, filter, reload and go back with
   await page.goto("/");
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("heading", { level: 1 })).toContainText(
-    "Ăn đúng gu.",
+    "Chuyến đi ngon,",
   );
   await expect(page.locator("article")).toHaveCount(8);
   await page.getByLabel("Bữa tiếp theo, bạn đang thèm gì?").fill("bun cha");

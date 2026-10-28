@@ -9,6 +9,7 @@ export default defineConfig({
   testDir: "./tests/browser",
   testMatch: [
     "public-home.spec.ts",
+    "home-roadmap.spec.ts",
     "auth-flows.spec.ts",
     "routes.spec.ts",
     "account.spec.ts",

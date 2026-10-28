@@ -1,6 +1,12 @@
 # Public homepage preview
 
-> **Update 10/2026:** run the homepage suite with `npm run test:browser` (`playwright.config.ts`). The per-suite configs mentioned below were merged; the current behavior is summarized in [Current behavior](#current-behavior-october-2026-cleanup).
+## Hover shadow edge fix — 2026-10-28
+
+The photo cloud now allows visible overflow so enlarged photos, blur and soft shadows fade naturally instead of being cut into a straight line at its bounds. Page-level horizontal clipping remains in place. The isolated production build and all six focused existing browser checks passed: mouse/keyboard photo focus, all eight photos at 320px, and homepage/modal layouts at 1440, 768, 390 and 320px. Reviewed the desktop hover screenshot; the hard shadow cutoff is gone. Changed-file Prettier and `git diff --check` passed. No Mapbox or external provider requests were used.
+
+After verification, reopened backend `origin/dev` API Design Ver1.8 (`Backend API`, row 19, HOME-01; SHA-256 `EF1E765849999D771A910152EEAAB9B8BFD2BC8D356F3B450059B6877605F21C`). This CSS-only fix has no API mapping and changes no endpoint, DTO, validation or error behavior.
+
+> **Update 2026-10-28:** the homepage now starts with a real three-field RM-01 quick planner, followed by the existing hero. The historical editorial-only descriptions and verification counts below apply to earlier revisions. See [quick planner behavior and verification](home-roadmap-starter.vi.md). Homepage tests are included in `playwright.config.ts`; run focused coverage with `npx playwright test tests/browser/home-roadmap.spec.ts tests/browser/public-home.spec.ts`.
 
 
 Owner-requested homepage redesign, 2026-10-22. No Jira key was assigned. Branch: `feat/public-homepage`, created without an upstream from the latest fetched `origin/dev` (`93d502f`). Changes remain unstaged and uncommitted.
