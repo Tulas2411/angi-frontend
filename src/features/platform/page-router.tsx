@@ -1,23 +1,13 @@
 "use client";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import type { RoleCode } from "@/features/auth/types";
 import { Button, Card, Alert } from "@/shared/ui";
 import { ActionLink, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { usePlatform } from "./provider";
 import { useWorkspace, WorkspaceScope } from "@/components/layout/workspace";
-import {
-  AccountPage,
-  NotificationsPage,
-  PreferencesPage,
-  ProfileViewPage,
-} from "@/features/profile/pages";
-import {
-  NewTripPage,
-  RoadmapPage,
-  RollDishPage,
-  TripList,
-} from "@/features/roadmaps/pages";
+import { AccountPage } from "@/features/profile/pages";
+import { NewTripPage, RoadmapPage, TripList } from "@/features/roadmaps/pages";
 import {
   OwnerMenuPage,
   OwnerOverview,
@@ -104,9 +94,13 @@ function ModPages({ segments }: { segments: string[] }) {
   if (area === "reports") return <ReportsPage id={id} />;
   if (area === "community") return <CommunityPage />;
   if (area === "reviews") return <ModerationReviews />;
-  if (area === "notifications") return <NotificationsPage />;
+  if (area === "notifications") return <NotificationsRedirect />;
   if (area === "account") return <AccountPage />;
   return <MissingPage />;
+}
+/** Notifications moved to the shared /notifications screen (NOTI-01..03) for every role. */
+function NotificationsRedirect(): never {
+  redirect("/notifications");
 }
 function MissingPage() {
   const { base } = useWorkspace();
@@ -130,6 +124,9 @@ export function PageRouter({
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
+  // Before the workspace data: the shared screen reads NOTI-01 itself.
+  if (role !== "GUEST" && area === "notifications")
+    return <NotificationsRedirect />;
   if (
     role === "RESTAURANT_OWNER" &&
     mode === "live" &&
@@ -180,11 +177,7 @@ export function PageRouter({
   if (role === "GUEST" || role === "TRAVELER") {
     if (role === "TRAVELER") {
       if (area === "profile" || area === "account")
-        return id === "edit" ? <AccountPage profile /> : <ProfileViewPage />;
-      if (area === "preferences" || area === "survey")
-        return <PreferencesPage survey={area === "survey"} />;
-      if (area === "notifications") return <NotificationsPage />;
-      if (area === "roll") return <RollDishPage />;
+        return <AccountPage profile={id === "edit"} />;
       if (area === "roadmaps")
         return id === "new" ? (
           <NewTripPage />
@@ -205,7 +198,6 @@ export function PageRouter({
       return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
     if (area === "menu") return <OwnerMenuPage />;
     if (area === "reviews") return <RestaurantReviewsPage />;
-    if (area === "notifications") return <NotificationsPage />;
     if (area === "account") return <AccountPage />;
   }
   if (role === "MOD") return <ModPages segments={segments} />;
@@ -226,7 +218,6 @@ export function PageRouter({
           <ModPages segments={segments.slice(1)} />
         </WorkspaceScope>
       );
-    if (area === "notifications") return <NotificationsPage />;
     if (area === "account") return <AccountPage />;
   }
   return <MissingPage />;

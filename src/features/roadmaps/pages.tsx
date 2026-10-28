@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -16,10 +16,7 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { MapPicker } from "@/components/domain/map-picker";
-import {
-  MapboxPreview,
-  RestaurantMapButton,
-} from "@/components/domain/mapbox-preview";
+import { MapboxPreview } from "@/components/domain/mapbox-preview";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import {
@@ -31,7 +28,6 @@ import {
 import type { ItineraryItem } from "@/features/platform/contracts";
 import { TripExpenses } from "./expenses";
 import { ProvinceField } from "@/components/domain/province-field";
-import { rollDishService } from "@/api/services/roll-dish-service";
 
 export function TripList() {
   const { data, mutate } = usePlatform(),
@@ -865,174 +861,6 @@ export function RoadmapPage({ id }: { id: string }) {
           </Button>
         </form>
       </Dialog>
-    </div>
-  );
-}
-export function RollDishPage() {
-  const { notify, data } = usePlatform(),
-    { base } = useWorkspace(),
-    [state, setState] = useState<"ready" | "rolling" | "revealed">("ready"),
-    [selected, setSelected] = useState(2),
-    [filter, setFilter] = useState("viet"),
-    timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  const names = [
-      "Phở bò",
-      "Bánh mì trứng",
-      "Bún thịt nướng",
-      "Cơm tấm sườn",
-      "Bánh cuốn",
-    ],
-    prices = [48000, 25000, 45000, 49000, 35000];
-  const servingRestaurants = data.restaurants.filter(
-    (restaurant) =>
-      restaurant.moderation === "visible" &&
-      data.dishes.some(
-        (dish) =>
-          dish.restaurantId === restaurant.id &&
-          dish.serving &&
-          dish.moderation === "visible" &&
-          dish.name
-            .toLocaleLowerCase("vi")
-            .startsWith(names[selected].toLocaleLowerCase("vi")),
-      ),
-  );
-  return (
-    <div className="container roll">
-      <span className="eyebrow">Gợi ý bữa ăn · Roll Dish</span>
-      <h1>Hôm nay ăn gì?</h1>
-      <p className="muted">Để ANGI chọn giúp bạn nhé!</p>
-      <Tabs
-        value={filter}
-        onChange={(value) => {
-          setFilter(value);
-          setState("ready");
-        }}
-        items={[
-          { value: "viet", label: "✓ Món Việt" },
-          { value: "light", label: "Ăn nhẹ" },
-          { value: "vegetarian", label: "Ăn chay" },
-          { value: "budget", label: "✓ Dưới 50k" },
-        ]}
-      />
-      {filter === "vegetarian" ? (
-        <EmptyState title="Chưa có món chay trong bản minh họa">
-          Đổi lựa chọn để xem các món hiện có.
-        </EmptyState>
-      ) : (
-        <>
-          <div
-            className={`roll-track${state === "revealed" ? " is-revealed" : ""}`}
-            aria-busy={state === "rolling"}
-            data-state={state}
-          >
-            <span className="roll-marker" aria-hidden="true" />
-            {(() => {
-              // Khi đang rolling, render 2 lần dãy card để tạo hiệu ứng chạy vô tận (marquee).
-              // Khi revealed, dùng logic căn giữa như cũ để đặt selected vào vị trí marker.
-              const offsets = state === "revealed" ? [0] : [0, 1];
-              return offsets.map((dup) => (
-                <div
-                  key={dup}
-                  className="roll-strip"
-                  aria-hidden={dup === 1 ? "true" : undefined}
-                >
-                  {names.map((_, position) => {
-                    const i =
-                      state === "revealed"
-                        ? (position + selected - 2 + names.length) %
-                          names.length
-                        : position;
-                    const name = names[i];
-                    const isSelected =
-                      state === "revealed" && position === 2;
-                    return (
-                      <Card
-                        key={`${dup}-${name}`}
-                        className={
-                          isSelected
-                            ? "selected"
-                            : state === "revealed"
-                              ? "dimmed"
-                              : ""
-                        }
-                      >
-                        <Media src={`/assets/figma/roll-${i}.png`} alt={name} />
-                        <h3>{name}</h3>
-                        <p className="helper">
-                          {money(prices[i])} · Giá tham khảo
-                        </p>
-                      </Card>
-                    );
-                  })}
-                </div>
-              ));
-            })()}
-          </div>
-          {state === "revealed" ? (
-            <Card className="roll-result" title="Chốt món này nhé!">
-              <h2>{names[selected]}</h2>
-              <p>Khoảng {money(prices[selected])}</p>
-              <p>Hương vị Việt gần gũi cho bữa ăn hôm nay.</p>
-              <div className="actions" style={{ justifyContent: "center" }}>
-                {!!servingRestaurants.length && (
-                  <RestaurantMapButton locations={servingRestaurants} />
-                )}
-                <ActionLink href={`${base}/restaurants`} secondary>
-                  Xem quán ăn
-                </ActionLink>
-                <Button onClick={() => setState("ready")}>Roll lại</Button>
-              </div>
-            </Card>
-          ) : (
-            <Button
-              loading={state === "rolling"}
-              onClick={() => {
-                setState("rolling");
-                // F-18: gọi BE song song (fire-and-forget) — UI vẫn dùng kết quả mock.
-                void rollDishService.roll({
-                  maxPrice: filter === "budget" ? 50000 : undefined,
-                });
-                const reduce = window.matchMedia(
-                  "(prefers-reduced-motion: reduce)",
-                ).matches;
-                timer.current = setTimeout(
-                  () => {
-                    setSelected((i) =>
-                      filter === "light"
-                        ? i === 1
-                          ? 4
-                          : 1
-                        : (i + 1) % names.length,
-                    );
-                    setState("revealed");
-                    notify("Đã chọn món trong bản minh họa.");
-                  },
-                  reduce ? 50 : 2500,
-                );
-              }}
-            >
-              Roll món ngay
-            </Button>
-          )}
-        </>
-      )}
-      <p className="helper" style={{ marginTop: 32 }}>
-        Dữ liệu minh họa · Giá tham khảo · Món mẫu không đại diện cho quán cụ
-        thể
-      </p>
-      <span role="status" className="sr-only">
-        {state === "rolling"
-          ? "Đang chọn món"
-          : state === "revealed"
-            ? `Món đã chọn: ${names[selected]}`
-            : "Sẵn sàng chọn món"}
-      </span>
     </div>
   );
 }

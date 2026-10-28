@@ -22,6 +22,9 @@ const allowedEndpoints = new Set([
   "GET me",
   "PATCH me",
   "PUT me/password",
+  "GET me/notifications",
+  "GET me/notifications/unread-count",
+  "POST me/notifications/read",
   "GET owner/restaurant",
   "PATCH owner/restaurant",
   "PUT owner/restaurant/business-hours",
@@ -158,7 +161,10 @@ async function handle(request: Request, context: Context) {
       }),
       menuOperation?.status ??
         roadmapOperationStatus(request.method, endpoint) ??
-        (request.method === "POST" ? 201 : 200),
+        // NOTI-03 answers 200 OK, unlike the creating POSTs.
+        (request.method === "POST" && endpoint !== "me/notifications/read"
+          ? 201
+          : 200),
     );
   } catch (error) {
     return fail(error, session);
