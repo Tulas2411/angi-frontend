@@ -1,75 +1,96 @@
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import type { RollDishRequestDto, RollMealTime } from "./roll-service";
+import type {
+  BrowseDishesQuery,
+  DishCardDto,
+  TagDto,
+} from "@/features/explore/explore-types";
+import type { RollDishRequestDto } from "./roll-service";
 
 /** DISH-03 accepts at most 50 dishes to leave out. */
 export const maxExcludedDishes = 50;
+/** Cards on the spinning strip (the design shows five). */
+export const stripSize = 5;
 
-export const rollMealOptions: { value: "" | RollMealTime; label: string }[] = [
-  { value: "", label: "Bữa nào cũng được" },
-  { value: "breakfast", label: "Bữa sáng" },
-  { value: "lunch", label: "Bữa trưa" },
-  { value: "dinner", label: "Bữa tối" },
-  { value: "snack", label: "Ăn vặt" },
+export type RollTab = "viet" | "light" | "vegetarian" | "budget";
+
+export const rollTabs: { value: RollTab; label: string }[] = [
+  { value: "viet", label: "✓ Món Việt" },
+  { value: "light", label: "Ăn nhẹ" },
+  { value: "vegetarian", label: "Ăn chay" },
+  { value: "budget", label: "✓ Dưới 50k" },
 ];
 
-export const rollRadiusOptions: { value: string; label: string }[] = [
-  { value: "1", label: "Trong 1 km" },
-  { value: "3", label: "Trong 3 km" },
-  { value: "5", label: "Trong 5 km" },
-  { value: "10", label: "Trong 10 km" },
-  { value: "20", label: "Trong 20 km" },
-];
-
-export interface RollFilters {
-  mealTime: "" | RollMealTime;
-  province: string;
-  maxPrice: string;
-  tagIds: number[];
-  /** Only around the visitor: the coordinates come from the browser, never stored. */
-  nearby: boolean;
-  radiusKm: string;
+/** The dietary tag of vegetarian dishes; its code is data, so it is found by name. */
+export function vegetarianTag(tags: readonly TagDto[]) {
+  return tags.find(
+    (tag) =>
+      tag.tagType === "dietary" &&
+      /chay|vegetarian|vegan/i.test(`${tag.code} ${tag.name}`),
+  );
 }
 
-export const emptyRollFilters: RollFilters = {
-  mealTime: "",
-  province: "",
-  maxPrice: "",
-  tagIds: [],
-  nearby: false,
-  radiusKm: "3",
-};
-
-export interface RollPosition {
-  latitude: number;
-  longitude: number;
+function snackTag(tags: readonly TagDto[]) {
+  return tags.find(
+    (tag) => tag.tagType === "meal_time" && tag.code === "snack",
+  );
 }
 
 /**
- * The DISH-03 body: only the conditions that are set. A nearby roll sends the position with its
- * radius and no province, since the radius already decides where.
+ * What a tab asks for: the DISH-03 body and the DISH-01 query of the strip. "Món Việt" is every
+ * dish on ANGI; "Ăn nhẹ" is the snack meal time; "Dưới 50k" is the price. `null` when the tab
+ * needs a tag the catalog does not have.
  */
-export function rollRequest(
-  filters: RollFilters,
-  excludeDishIds: readonly number[],
-  position: RollPosition | null,
-): RollDishRequestDto {
-  const maxPrice = Number(filters.maxPrice);
-  const province = filters.province.trim();
-  const request: RollDishRequestDto = {};
-  if (filters.mealTime) request.mealTime = filters.mealTime;
-  if (Number.isFinite(maxPrice) && maxPrice > 0) request.maxPrice = maxPrice;
-  if (filters.tagIds.length) request.tagIds = [...filters.tagIds];
-  if (excludeDishIds.length)
-    request.excludeDishIds = excludeDishIds.slice(-maxExcludedDishes);
-  if (filters.nearby && position) {
-    request.latitude = Number(position.latitude.toFixed(6));
-    request.longitude = Number(position.longitude.toFixed(6));
-    request.radiusKm = Number(filters.radiusKm) || 3;
-  } else if (province) request.province = province;
-  return request;
+export function tabConditions(
+  tab: RollTab,
+  tags: readonly TagDto[],
+): { roll: RollDishRequestDto; strip: BrowseDishesQuery } | null {
+  const strip: BrowseDishesQuery = { limit: stripSize + 3 };
+  if (tab === "budget")
+    return { roll: { maxPrice: 50000 }, strip: { ...strip, maxPrice: 50000 } };
+  if (tab === "light") {
+    const snack = snackTag(tags);
+    return {
+      roll: { mealTime: "snack" },
+      strip: snack ? { ...strip, tagIds: [snack.id] } : strip,
+    };
+  }
+  if (tab === "vegetarian") {
+    const tag = vegetarianTag(tags);
+    return tag
+      ? { roll: { tagIds: [tag.id] }, strip: { ...strip, tagIds: [tag.id] } }
+      : null;
+  }
+  return { roll: {}, strip };
 }
 
-/** A failed roll in words; `exhausted` asks the visitor to loosen the conditions. */
+/** The tab's body with the dishes already shown in this series (the last 50). */
+export function rollRequest(
+  conditions: RollDishRequestDto,
+  shown: readonly number[],
+): RollDishRequestDto {
+  return shown.length
+    ? { ...conditions, excludeDishIds: shown.slice(-maxExcludedDishes) }
+    : { ...conditions };
+}
+
+/**
+ * The revealed row: the rolled dish in the middle (third of five, under the marker), the
+ * strip's other dishes around it.
+ */
+export function revealedCards<T extends Pick<DishCardDto, "id">>(
+  strip: readonly T[],
+  rolled: T,
+): { cards: T[]; selected: number } {
+  const others = strip
+    .filter((dish) => dish.id !== rolled.id)
+    .slice(0, stripSize - 1);
+  const selected = Math.min(2, others.length);
+  const cards = [...others];
+  cards.splice(selected, 0, rolled);
+  return { cards, selected };
+}
+
+/** A failed roll in words; `exhausted` asks the visitor to change the tab or start over. */
 export function rollError(error: unknown): {
   message: string;
   exhausted: boolean;
@@ -78,15 +99,7 @@ export function rollError(error: unknown): {
     return {
       exhausted: true,
       message:
-        "Không còn món nào hợp các điều kiện này. Thử đổi bữa, nâng mức giá, bỏ bớt thẻ món hoặc mở rộng bán kính.",
+        "Không còn món nào hợp lựa chọn này. Hãy đổi lựa chọn hoặc roll lại từ đầu.",
     };
   return { exhausted: false, message: getErrorMessage(error) };
 }
-
-export const geolocationMessages = {
-  unsupported:
-    "Trình duyệt này không lấy được vị trí. Bạn có thể chọn tỉnh/thành thay thế.",
-  denied:
-    "Bạn chưa cho phép dùng vị trí. Hãy bật quyền vị trí cho trang này, hoặc chọn tỉnh/thành.",
-  failed: "Chưa lấy được vị trí hiện tại. Thử lại hoặc chọn tỉnh/thành.",
-} as const;
