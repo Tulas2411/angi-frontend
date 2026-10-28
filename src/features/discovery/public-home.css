@@ -174,7 +174,7 @@
   flex-shrink: 0;
   animation: home-dot-pulse 2.4s ease-in-out infinite;
 }
-.home-hero h1 {
+.home-hero h2 {
   font-size: clamp(52px, 5.4vw, 76px);
   line-height: 1.12;
   margin: 24px 0 20px;
@@ -1035,7 +1035,8 @@
   position: relative;
   height: clamp(540px, 50vw, 680px);
   isolation: isolate;
-  overflow: clip;
+  /* Let enlarged photos and their soft shadows fade beyond the cloud bounds. */
+  overflow: visible;
   border-radius: 24px;
 }
 .home-dish-cloud .home-dish-card {
@@ -1426,7 +1427,7 @@
   .home-hero {
     gap: 36px;
   }
-  .home-hero h1 {
+  .home-hero h2 {
     font-size: 64px;
   }
   .home-hero-visual {
@@ -1460,7 +1461,7 @@
   }
 }
 @media (max-width: 1000px) {
-  .home-hero h1 {
+  .home-hero h2 {
     font-size: 58px;
   }
   .home-hero-description {
@@ -1500,7 +1501,7 @@
   }
 }
 @media (max-width: 800px) {
-  .home-hero h1 {
+  .home-hero h2 {
     font-size: 52px;
   }
   .home-hero-visual {
@@ -1586,7 +1587,7 @@
   .home-hero-copy .home-eyebrow {
     font-size: var(--text-xs);
   }
-  .home-hero h1 {
+  .home-hero h2 {
     font-size: clamp(48px, 12vw, 68px);
     margin: 18px 0;
   }
