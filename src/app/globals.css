@@ -369,7 +369,37 @@ h2:focus {
     background var(--duration-fast) ease,
     color var(--duration-fast) ease,
     border-color var(--duration-fast) ease,
-    transform var(--duration-fast) ease;
+    box-shadow var(--duration) var(--ease-out),
+    transform var(--duration) var(--ease-out);
+}
+/* The homepage's lift on every button: it rises on hover and settles when pressed. */
+.button:not(:disabled, [aria-disabled="true"]):hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 6px rgb(34 34 34 / 0.06),
+    0 14px 32px rgb(34 34 34 / 0.12);
+}
+.button:not(:disabled, [aria-disabled="true"]):active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgb(34 34 34 / 0.1);
+}
+/* A trailing arrow (↗, →) leans the way it points. */
+.button > span[aria-hidden]:last-child:not(.icon, .sr-only, .spinner) {
+  transition: transform var(--duration) var(--ease-out);
+}
+.button:not(:disabled, [aria-disabled="true"]):hover
+  > span[aria-hidden]:last-child:not(.icon, .sr-only, .spinner) {
+  transform: translate(2px, -2px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .button > span[aria-hidden] {
+    transition: none;
+  }
+  .button:not(:disabled, [aria-disabled="true"]):hover,
+  .button:not(:disabled, [aria-disabled="true"]):hover > span[aria-hidden] {
+    transform: none;
+  }
 }
 .button-primary {
   background: var(--ink);
@@ -377,9 +407,6 @@ h2:focus {
 }
 .button-primary:hover {
   background: var(--ink-hover);
-}
-.button-primary:active {
-  transform: translateY(1px);
 }
 .button-secondary {
   background: var(--control);

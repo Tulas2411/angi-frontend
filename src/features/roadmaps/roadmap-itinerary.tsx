@@ -406,6 +406,7 @@ function DayPanel({
                     {mealSlotLabels[group.mealSlot]}
                   </h4>
                   <Button
+                    variant="secondary"
                     aria-label={`Thêm món vào ${mealSlotLabels[group.mealSlot].toLowerCase()}`}
                     onClick={() => onAdd(group.mealSlot)}
                   >

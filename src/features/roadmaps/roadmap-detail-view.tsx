@@ -183,6 +183,7 @@ export function RoadmapDetailView({
     <div className="roadmap-detail">
       <aside className="roadmap-detail-nav" inert={agentOpen}>
         <Button
+          variant="secondary"
           className="roadmap-agent-trigger"
           aria-expanded={agentOpen}
           aria-controls="roadmap-agent-panel"
@@ -239,7 +240,7 @@ export function RoadmapDetailView({
       <div className="roadmap-detail-main stack" inert={agentOpen}>
         <div className="roadmap-back-mobile">{back}</div>
         <section className="roadmap-hero" aria-labelledby="roadmap-title">
-          <div className="card roadmap-hero-text stack-sm">
+          <div className="roadmap-hero-text stack-sm">
             <p className="eyebrow">Lộ trình ẩm thực</p>
             <h1 id="roadmap-title">{overview.title}</h1>
             <p className="page-description">{roadmapDateRange(overview)}</p>
@@ -250,7 +251,7 @@ export function RoadmapDetailView({
                 <Badge tone="warning">Vượt ngân sách</Badge>
               )}
             </p>
-            <p>
+            <p className="roadmap-hero-actions">
               <Link
                 className="button button-secondary"
                 href={`/guides/new?roadmap=${overview.id}`}
