@@ -12,6 +12,7 @@ export default defineConfig({
     "restaurant-profile.spec.ts",
     "mapbox.spec.ts",
     "provinces.spec.ts",
+    "home-nearby.spec.ts",
   ],
   webServer: ownerServer("pk.angi-tests-placeholder"),
 });

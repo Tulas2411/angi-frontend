@@ -112,7 +112,7 @@ test("the Traveler header links to the list and marks it as current", async ({
   await expect(
     page
       .getByRole("navigation", { name: "Điều hướng chính" })
-      .getByRole("link", { name: "Lộ trình của tôi" }),
+      .getByRole("link", { name: "Lộ trình", exact: true }),
   ).toHaveAttribute("aria-current", "page");
 });
 

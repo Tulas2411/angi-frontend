@@ -143,15 +143,12 @@ function RoadmapFields({
   return (
     <form
       ref={form}
-      className="home-quick-form"
+      className="home-quick-plan"
       onSubmit={submit}
       noValidate
       aria-label="Tạo lộ trình nhanh"
       aria-busy={busy}
     >
-      <p className="home-quick-form-badge">
-        <span aria-hidden>✦</span> Lên lịch ăn ngon
-      </p>
       <div className="home-quick-fields">
         <div className="home-quick-province">
           <ProvinceField

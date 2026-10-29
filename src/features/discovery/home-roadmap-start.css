@@ -76,23 +76,95 @@
   background: var(--card);
   box-shadow: var(--home-shadow-lift);
 }
-.home-quick-form-badge {
+.home-quick-tabs {
   position: absolute;
   top: -18px;
   left: 32px;
+  right: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.home-quick-tab {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 9px 16px;
+  border: 0;
   border-radius: var(--radius-pill);
-  background: var(--ink);
-  color: var(--card);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
   font-size: var(--text-xs);
   font-weight: 600;
   box-shadow: 0 5px 18px rgb(34 34 34 / 0.12);
+  cursor: pointer;
+  transition:
+    background var(--duration) var(--ease-out),
+    color var(--duration) var(--ease-out);
 }
-.home-quick-form-badge > span {
+.home-quick-tab:hover {
+  background: var(--canvas);
+}
+.home-quick-tab[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.home-quick-tab > span {
   color: var(--coral);
+}
+/* Both panels share one cell, so switching tabs never changes the card's height. */
+.home-quick-panel {
+  grid-area: 1 / 1;
+  width: 100%;
+}
+.home-quick-panel[hidden] {
+  display: block;
+  visibility: hidden;
+}
+.home-quick-plan,
+.home-nearby {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  height: 100%;
+}
+.home-nearby {
+  grid-template-rows: 1fr auto auto;
+}
+.home-nearby-status {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  width: 100%;
+  text-align: center;
+}
+.home-nearby-status > p {
+  margin: 0;
+}
+.home-nearby-eyebrow {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.home-nearby-place {
+  font-family: var(--font-heading);
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.home-nearby-retry {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 .home-quick-fields {
   width: 100%;

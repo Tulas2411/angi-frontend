@@ -16,6 +16,21 @@ export const discoveryNav: readonly SiteNavItem[] = [
   { href: "/guides", label: "Cẩm nang", match: "prefix" },
 ];
 
+/**
+ * Header of the homepage and every Traveler page, in the order the owner chose. Guests see the
+ * same items; the Traveler-only targets send them to sign in.
+ */
+export const travelerNav: readonly SiteNavItem[] = [
+  {
+    href: roadmapRoutes.start,
+    label: "Lộ trình",
+    match: "prefix",
+    matchHref: roadmapRoutes.list,
+  },
+  { href: "/roll", label: "Hôm nay ăn gì?", match: "exact" },
+  ...discoveryNav,
+];
+
 /** Primary navigation of the header; the owner workspace has its own and no discovery. */
 export function navigationFor(
   role: RoleCode | null,
@@ -30,15 +45,7 @@ export function navigationFor(
         { href: ownerRoutes.menu, label: "Thực đơn", match: "prefix" },
       ],
     };
-  if (role === "TRAVELER")
-    return {
-      label: "Điều hướng chính",
-      items: [
-        ...discoveryNav,
-        { href: roadmapRoutes.list, label: "Lộ trình của tôi", match: "exact" },
-        { href: roadmapRoutes.plan, label: "Lập lộ trình", match: "exact" },
-      ],
-    };
-  if (role === null) return { label: "Điều hướng chính", items: discoveryNav };
+  if (role === "TRAVELER" || role === null)
+    return { label: "Điều hướng chính", items: travelerNav };
   return undefined;
 }

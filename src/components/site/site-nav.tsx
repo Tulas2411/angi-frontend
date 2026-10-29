@@ -7,6 +7,8 @@ export interface SiteNavItem {
   label: string;
   /** `exact` matches only the same path; `prefix` also matches nested paths. */
   match?: "exact" | "prefix";
+  /** Path matched for the current page when `href` only redirects (defaults to `href`). */
+  matchHref?: string;
 }
 
 /** Primary navigation of the protected workspace. The current page is exposed through aria-current. */
@@ -21,10 +23,11 @@ export function SiteNav({
   return (
     <nav className="site-nav" aria-label={label}>
       {items.map((item) => {
+        const base = item.matchHref ?? item.href;
         const active =
           item.match === "prefix"
-            ? path === item.href || path.startsWith(`${item.href}/`)
-            : path === item.href;
+            ? path === base || path.startsWith(`${base}/`)
+            : path === base;
         return (
           <Link
             key={item.href}
