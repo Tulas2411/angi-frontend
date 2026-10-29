@@ -42,8 +42,9 @@
 
 /* The strip turns under the marker while DISH-03 answers, then stops on the rolled dish. */
 .roll-track {
-  /* One turn of the strip: its cards, their 16px gaps and the padding on both ends. */
-  --strip-w: calc(var(--strip-count, 5) * (var(--roll-card-w) + 16px) + 136px);
+  /* The gap between two cards and the space before the first one; the spin reads both. */
+  --roll-gap: 16px;
+  --roll-base: 16px;
   position: relative;
   display: flex;
   justify-content: flex-start;
@@ -85,25 +86,17 @@
 .roll-strip {
   display: flex;
   flex-shrink: 0;
-  gap: 16px;
-  width: var(--strip-w);
-  padding-inline: 16px 120px;
+  gap: var(--roll-gap);
+  padding-inline: var(--roll-base) 0;
   will-change: transform;
 }
 .roll-track.is-revealed .roll-strip {
   width: auto;
-  padding-inline: 16px;
+  padding-inline: var(--roll-base);
 }
-.roll-track[aria-busy="true"] .roll-strip {
-  animation: roll-marquee 1.6s linear infinite;
-}
-@keyframes roll-marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(calc(-1 * var(--strip-w)));
-  }
+/* The reel is pulled to the left by the spin; the browser draws it without a transition. */
+.roll-strip.is-reeling {
+  transition: none;
 }
 
 .roll-card {
@@ -305,9 +298,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .roll-track[aria-busy="true"] .roll-strip {
-    animation: none;
-  }
   .roll-card {
     transition: none;
   }
