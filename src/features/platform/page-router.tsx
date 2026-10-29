@@ -36,6 +36,11 @@ import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page"
 import { RestaurantBusinessHoursPage } from "@/features/owner/restaurant-business-hours-page";
 import { RestaurantOperatingStatusPage } from "@/features/owner/restaurant-operating-status-page";
 import { RestaurantReviewsPage } from "@/features/owner/restaurant-reviews-page";
+import { RestaurantReviewsLivePage } from "@/features/owner/restaurant-reviews-live-page";
+import {
+  ModerationReportsPage,
+  ModerationReportDetailPage,
+} from "@/features/moderation/moderation-reports-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -79,8 +84,23 @@ export function UnavailablePage() {
     </div>
   );
 }
+/**
+ * Báo cáo vi phạm trong live mode: danh sách (MOD-RP1) hoặc chi tiết (MOD-RP2).
+ * Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
+ */
+function ModReportsBase({ base, id }: { base: string; id?: string }) {
+  const reportId = Number(id);
+  return Number.isInteger(reportId) && reportId > 0 ? (
+    <ModerationReportDetailPage base={base} reportId={reportId} />
+  ) : (
+    <ModerationReportsPage base={base} />
+  );
+}
+
 function ModPages({ segments }: { segments: string[] }) {
   const [area, id] = segments;
+  const { base } = useWorkspace();
+  const { mode } = usePlatform();
   if (!area) return <ModerationOverview />;
   if (area === "users") return <ModerationUsers id={id} />;
   if (area === "restaurants") return <ModerationRestaurants id={id} />;
@@ -91,7 +111,13 @@ function ModPages({ segments }: { segments: string[] }) {
         id={id}
       />
     );
-  if (area === "reports") return <ReportsPage id={id} />;
+  // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật; bản demo giữ dữ liệu mẫu.
+  if (area === "reports")
+    return mode === "live" ? (
+      <ModReportsBase base={base} id={id} />
+    ) : (
+      <ReportsPage id={id} />
+    );
   if (area === "community") return <CommunityPage />;
   if (area === "reviews") return <ModerationReviews />;
   if (area === "notifications") return <NotificationsRedirect />;
@@ -154,6 +180,16 @@ export function PageRouter({
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "verification")
     return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
 
+  // OWN-19/OWN-20 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "reviews")
+    return <RestaurantReviewsLivePage />;
+
+  // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (mode === "live" && (role === "MOD" || role === "ADMIN") && area === "reports")
+    return (
+      <ModReportsBase base={base} id={id} />
+    );
+
   if (
     role === "RESTAURANT_OWNER" &&
     (area === "register" || (mode === "live" && !area))
@@ -199,7 +235,13 @@ export function PageRouter({
     if (area === "verification")
       return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
     if (area === "menu") return <OwnerMenuPage />;
-    if (area === "reviews") return <RestaurantReviewsPage />;
+    if (area === "reviews")
+      // OWN-19/OWN-20 đã nối API nên bản live đọc thật; bản demo giữ dữ liệu mẫu.
+      return mode === "live" ? (
+        <RestaurantReviewsLivePage />
+      ) : (
+        <RestaurantReviewsPage />
+      );
     if (area === "account") return <AccountPage />;
   }
   if (role === "MOD") return <ModPages segments={segments} />;

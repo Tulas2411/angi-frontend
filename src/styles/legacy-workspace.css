@@ -298,6 +298,16 @@
 & .button-destructive:hover {
   background: #fbdcdb;
 }
+/* Nút đỏ đặc: hành động không thể hoàn tác (bác bỏ đơn), không viền. */
+& .button-danger {
+  background: #a12e32;
+  border: 1.5px solid #a12e32;
+  color: #fff;
+}
+& .button-danger:hover {
+  background: #8a262a;
+  border-color: #8a262a;
+}
 & .badge {
   align-self: flex-start;
 }
