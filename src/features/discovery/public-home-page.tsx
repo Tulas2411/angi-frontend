@@ -1,12 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AccountMenu } from "@/components/site/account-menu";
-import {
-  NavDropdown,
-  type NavDropdownItem,
-} from "@/components/site/nav-dropdown";
+import { navigationFor } from "@/components/site/navigation";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
+import { SiteNav } from "@/components/site/site-nav";
 import { Icon } from "@/components/ui/primitives";
 import type { AuthUserDto } from "@/features/auth/types";
 import { roadmapRoutes } from "@/features/roadmaps/routes";
@@ -36,24 +34,6 @@ const homeRouteStops: readonly (readonly [number, number])[] = [
   [88.89, 57.5],
 ];
 
-const homeFeatureLinks: readonly NavDropdownItem[] = [
-  {
-    href: "#goi-y",
-    label: "Gợi ý hợp gu",
-    description: "Món ăn theo khẩu vị riêng",
-  },
-  {
-    href: "#lich-trinh",
-    label: "Lịch trình ẩm thực",
-    description: "Ghép bữa ngon theo từng ngày",
-  },
-  {
-    href: "#mon-ngon",
-    label: "Khám phá món",
-    description: "Bộ sưu tập cảm hứng món Việt",
-  },
-];
-
 // Decorative taste bubbles floating around the hero photo.
 const heroTasteChips = ["Đậm đà", "Thanh nhẹ", "Ấm bụng"] as const;
 
@@ -71,20 +51,15 @@ export function PublicHomePage({
 }) {
   const dishes = selectHomeDishes(selection);
   const filtered = Boolean(selection.query) || selection.taste !== "all";
+  // The same header items as the Traveler pages (`PublicShell` / `AppShell`).
+  const menu = navigationFor(user?.role ?? null);
   return (
     <div className="home-page">
       <a className="skip-link" href="#noi-dung">
         Đến nội dung chính
       </a>
       <SiteHeader
-        nav={
-          <nav className="site-nav" aria-label="Điều hướng chính">
-            <NavDropdown label="Tính năng" items={homeFeatureLinks} />
-            <Link href="/dishes">Món ăn</Link>
-            <Link href="/restaurants">Quán ăn</Link>
-            <Link href="/guides">Cẩm nang</Link>
-          </nav>
-        }
+        nav={menu && <SiteNav items={menu.items} label={menu.label} />}
       >
         {user ? (
           <AccountMenu user={user} />

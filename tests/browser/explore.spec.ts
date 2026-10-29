@@ -412,7 +412,7 @@ test.describe("dishes", () => {
     ).toBeVisible();
     expect(callsTo("GET", "dishes")[0].authorized).toBe(true);
     await expect(
-      mainNav(page).getByRole("link", { name: "Lộ trình của tôi" }),
+      mainNav(page).getByRole("link", { name: "Lộ trình", exact: true }),
     ).toBeVisible();
   });
 

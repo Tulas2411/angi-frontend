@@ -1,6 +1,6 @@
 import Image from "next/image";
 import type { RoleCode } from "@/features/auth/types";
-import { HomeRoadmapForm } from "./home-roadmap-form";
+import { HomeQuickStart } from "./home-quick-start";
 import "./home-roadmap-start.css";
 
 /** Main homepage entry: a real RM-01 plan, distinct from the editorial roadmap example below. */
@@ -38,7 +38,7 @@ export function HomeRoadmapStart({ role }: { role: RoleCode | null }) {
           <span>Đi theo gu. Ăn theo cách của bạn.</span>
         </div>
       </div>
-      <HomeRoadmapForm role={role} />
+      <HomeQuickStart role={role} />
     </section>
   );
 }

@@ -2,6 +2,8 @@
 export const roadmapRoutes = {
   list: "/roadmaps",
   plan: "/roadmaps/new",
+  /** Redirects to `plan` when the Traveler has no roadmap yet, otherwise to `list`. */
+  start: "/roadmaps/start",
 } as const;
 
 export function roadmapListHref(page: number) {

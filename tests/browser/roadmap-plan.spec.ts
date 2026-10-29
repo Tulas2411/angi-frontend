@@ -172,7 +172,7 @@ test("only a signed-in Traveler can open the planner; others go to their landing
   await expect(
     page
       .getByRole("navigation", { name: "Điều hướng chính" })
-      .getByRole("link", { name: "Lập lộ trình" }),
+      .getByRole("link", { name: "Lộ trình", exact: true }),
   ).toHaveAttribute("aria-current", "page");
 });
 
