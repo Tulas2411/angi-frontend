@@ -367,13 +367,16 @@ test("a card opens a real DISH-02 modal with photos and restaurant links, and cl
 }) => {
   await loginAs(page, "traveler");
   await page.goto("/roll");
-  await expect(page.getByRole("button", { name: /^Xem chi tiết/ })).toHaveCount(
-    4,
+  // The reel repeats the tab's dishes, so a dish shows more than once.
+  await expect(page.getByRole("button", { name: /^Xem chi tiết/ })).not.toHaveCount(
+    0,
   );
-  const trigger = page.getByRole("button", {
-    name: "Xem chi tiết Phở bò tái",
-    exact: true,
-  });
+  const trigger = page
+    .getByRole("button", {
+      name: "Xem chi tiết Phở bò tái",
+      exact: true,
+    })
+    .first();
   await trigger.click();
   const dialog = page.getByRole("dialog", { name: "Phở bò tái", exact: true });
   await expect(dialog).toBeVisible();
@@ -407,6 +410,7 @@ test("a card opens a real DISH-02 modal with photos and restaurant links, and cl
   await expect(result(page)).toBeVisible();
   await page
     .getByRole("button", { name: "Xem chi tiết Bún bò Huế", exact: true })
+    .first()
     .click();
   const chosen = page.getByRole("dialog", { name: "Bún bò Huế", exact: true });
   await expect(chosen).toBeVisible();
@@ -424,6 +428,7 @@ test("dish detail errors retry the read, and removed dishes never show fixture f
   failDetail = "unavailable";
   await page
     .getByRole("button", { name: "Xem chi tiết Phở bò tái", exact: true })
+    .first()
     .click();
   const dialog = page.getByRole("dialog", { name: "Phở bò tái", exact: true });
   await expect(dialog.getByRole("alert")).toBeVisible();
@@ -441,6 +446,7 @@ test("dish detail errors retry the read, and removed dishes never show fixture f
   failDetail = "missing";
   await page
     .getByRole("button", { name: "Xem chi tiết Phở bò tái", exact: true })
+    .first()
     .click();
   await expect(dialog.getByRole("alert")).toContainText(
     "Món này không còn hiển thị hoặc đã được gỡ khỏi ANGI.",
@@ -462,6 +468,7 @@ test("card focus and dish modal fit desktop/mobile and respect reduced motion", 
   await page.goto("/roll");
   await page
     .getByRole("button", { name: "Xem chi tiết Bánh xèo", exact: true })
+    .first()
     .hover();
   await page.screenshot({
     path: join(shots, "roll-card-focus-desktop.png"),
@@ -469,6 +476,7 @@ test("card focus and dish modal fit desktop/mobile and respect reduced motion", 
   });
   await page
     .getByRole("button", { name: "Xem chi tiết Phở bò tái", exact: true })
+    .first()
     .click();
   const dialog = page.getByRole("dialog", { name: "Phở bò tái", exact: true });
   await expect(
