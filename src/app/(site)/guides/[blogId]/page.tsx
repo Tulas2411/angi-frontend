@@ -23,5 +23,9 @@ export default async function Page({
     : user.role === "TRAVELER"
       ? "TRAVELER"
       : "OTHER";
-  return <BlogDetailPage blogId={blogId} viewer={viewer} />;
+  return (
+    <div className="blog-detail-page">
+      <BlogDetailPage blogId={blogId} viewer={viewer} />
+    </div>
+  );
 }

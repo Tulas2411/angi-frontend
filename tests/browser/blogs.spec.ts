@@ -442,9 +442,14 @@ test.beforeEach(async ({ page }) => {
 
 const callsTo = (method: string, path: string) =>
   calls.filter((entry) => entry.method === method && entry.path === path);
-const cards = (page: Page) => page.locator(".blog-lead, .blog-row");
+const cards = (page: Page) => page.locator(".blog-card, .blog-lead, .blog-row");
+const publicCards = (page: Page) => page.locator(".blog-card");
 const cardOf = (page: Page, title: string) =>
   cards(page).filter({
+    has: page.getByRole("link", { name: title, exact: true }),
+  });
+const publicCardOf = (page: Page, title: string) =>
+  publicCards(page).filter({
     has: page.getByRole("link", { name: title, exact: true }),
   });
 const png = Buffer.from(
@@ -474,6 +479,38 @@ test.describe("public list", () => {
     expect(call.authorized).toBe(false);
     expect(call.query.get("pageSize")).toBe("9");
     await expect(page.getByText(/^11 bài, mới nhất ngày/)).toBeVisible();
+  });
+
+  test("the three-dot menu of a card reports the blog (REP-02)", async ({
+    page,
+  }) => {
+    await loginAs(page, "traveler");
+    await page.goto("/guides");
+    const card = publicCardOf(page, "Hành trình 3 ngày ăn ở Đà Nẵng");
+    // The menu is closed until the round button is pressed.
+    await expect(card.getByRole("menu")).toHaveCount(0);
+    await card.getByRole("button", { name: /Tuỳ chọn cho bài/ }).click();
+    await expect(card.getByRole("menu")).toBeVisible();
+    await card.getByRole("menuitem", { name: "Báo cáo bài viết" }).click();
+    const box = page.getByRole("dialog", { name: "Báo cáo bài viết" });
+    await expect(box).toBeVisible();
+    await box.getByLabel("Nội dung rác hoặc quảng cáo").check();
+    await box.getByRole("button", { name: "Gửi báo cáo" }).click();
+    await expect(box).toBeHidden();
+    expect(callsTo("POST", "blogs/45/reports")).toHaveLength(1);
+    await expect(page.getByText("Đã gửi báo cáo.")).toBeVisible();
+  });
+
+  test("a guest is asked to sign in instead of being offered a report", async ({
+    page,
+  }) => {
+    await page.goto("/guides");
+    const card = publicCardOf(page, "Hành trình 3 ngày ăn ở Đà Nẵng");
+    await card.getByRole("button", { name: /Tuỳ chọn cho bài/ }).click();
+    await expect(card.getByText("Đăng nhập để báo cáo bài viết này.")).toBeVisible();
+    await expect(
+      card.getByRole("menuitem", { name: "Báo cáo bài viết" }),
+    ).toHaveCount(0);
   });
 
   test("search, sort and the roadmap filter live in the URL and reach BLOG-01", async ({
@@ -762,13 +799,27 @@ test.describe("my blogs", () => {
     await expect(cardOf(page, "Bài bị gỡ")).toContainText("Đã bị gỡ");
     // A removed blog cannot be edited, only deleted.
     await expect(
-      cardOf(page, "Bài bị gỡ").getByRole("link", { name: "Chỉnh sửa" }),
+      cardOf(page, "Bài bị gỡ").getByRole("link", {
+        name: "Chỉnh sửa bài Bài bị gỡ",
+      }),
     ).toHaveCount(0);
     await expect(
       cardOf(page, "Cà phê trứng ở Hà Nội").getByRole("link", {
-        name: "Chỉnh sửa",
+        name: "Chỉnh sửa bài Cà phê trứng ở Hà Nội",
       }),
     ).toBeVisible();
+    // The status sits on the line under the title; the excerpt is not shown here.
+    await expect(cardOf(page, "Bài bị ẩn").locator(".blog-row-status")).toHaveText(
+      "Đã bị ẩn",
+    );
+    await expect(
+      cardOf(page, "Bài bị ẩn").locator(".blog-excerpt"),
+    ).toHaveCount(0);
+    // The two icons hide until the pointer is over the card.
+    const actions = cardOf(page, "Bài bị ẩn").locator(".blog-row-actions");
+    await expect(actions).toHaveCSS("opacity", "0");
+    await cardOf(page, "Bài bị ẩn").hover();
+    await expect(actions).toHaveCSS("opacity", "1");
     await page.getByRole("tab", { name: "Đã bị ẩn" }).click();
     await expect(page).toHaveURL(/status=hidden/);
     await expect(cards(page)).toHaveCount(1);

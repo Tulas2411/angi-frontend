@@ -7,95 +7,26 @@ import {
   ActionLink,
   Avatar,
   ConfirmDialog,
-  Tabs,
 } from "@/components/ui/primitives";
 import { ReportDialog } from "@/components/domain/report-dialog";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { dateLabel } from "@/shared/format";
-import { restaurantHref } from "@/features/explore/explore-routes";
 import { useRemote } from "@/features/explore/use-remote";
-import { vnd } from "@/features/explore/explore-rules";
+import { exploreService } from "@/features/explore/explore-service";
 import { blogEditHref } from "./blog-cards";
 import { BlogComments } from "./blog-comments";
 import { BlogContent } from "./blog-content";
 import { EyeIcon, HeartIcon } from "./blog-icons";
 import { BlogSkeleton } from "./blog-layout";
-import {
-  blogDate,
-  blogError,
-  blogReportError,
-  blogReportReasons,
-  mealLabels,
-} from "./blog-rules";
+import { BlogMap } from "./blog-map";
+import { BlogPhotos } from "./blog-photos";
+import { BlogRoadmap, useBlogDishCovers, useBlogRoadmapStops } from "./blog-roadmap";
+import { blogDate, blogError, blogReportError, blogReportReasons } from "./blog-rules";
 import { blogService, type BlogService } from "./blog-service";
-import type { BlogLikeDto, RoadmapSnapshotDto } from "./blog-types";
+import type { BlogLikeDto } from "./blog-types";
 import "./blogs.css";
 
 /** Who is reading: only a Traveler likes, comments and reports (BLOG-08, 10, REP-02). */
 export type BlogViewer = "TRAVELER" | "GUEST" | "OTHER";
-
-/** The roadmap the author shared, as it was on the day it was posted. */
-function Snapshot({
-  snapshot,
-  detached,
-}: {
-  snapshot: RoadmapSnapshotDto;
-  detached: boolean;
-}) {
-  const [day, setDay] = useState(0);
-  const current = snapshot.days[Math.min(day, snapshot.days.length - 1)];
-  const dishes = snapshot.days.reduce((sum, d) => sum + d.items.length, 0);
-  return (
-    <section className="blog-panel blog-snapshot" aria-labelledby="blog-trip">
-      <h2 id="blog-trip">Lịch ăn đính kèm</h2>
-      <div>
-        <p className="blog-trip-title">{snapshot.title}</p>
-        <p className="blog-line">
-          {snapshot.startDate ? `${dateLabel(snapshot.startDate)} · ` : ""}
-          {snapshot.numDays} ngày · {dishes} món · {vnd(snapshot.totalCost)}
-        </p>
-      </div>
-      {snapshot.days.length > 1 && (
-        <Tabs
-          label="Ngày trong lịch ăn"
-          value={String(day)}
-          onChange={(value) => setDay(Number(value))}
-          items={snapshot.days.map((entry, index) => ({
-            value: String(index),
-            label: `Ngày ${entry.dayNumber}`,
-          }))}
-        />
-      )}
-      {current?.items.length ? (
-        <ul className="blog-snapshot-items">
-          {current.items.map((item, index) => (
-            <li key={`${item.dishId}-${index}`}>
-              <p className="blog-meal">
-                {mealLabels[item.mealSlot] ?? item.mealSlot}
-              </p>
-              <p className="blog-dish">{item.dishName}</p>
-              <p className="blog-where">
-                <Link href={restaurantHref(item.restaurantId)}>
-                  {item.restaurantName}
-                </Link>
-              </p>
-              <p className="blog-line">
-                {item.address} · <span className="num">{vnd(item.price)}</span>
-              </p>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="blog-line">Ngày này chưa có món.</p>
-      )}
-      <p className="blog-line">
-        Chụp lại lúc đăng bài
-        {detached ? ", lộ trình gốc đã bị xóa" : ""}. Giá và quán có thể đã thay
-        đổi.
-      </p>
-    </section>
-  );
-}
 
 /** F-32 View Detail Blog: BLOG-02 with comments, a like (BLOG-08/09), a report and my own actions. */
 export function BlogDetailPage({
@@ -124,6 +55,16 @@ export function BlogDetailPage({
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeProblem, setRemoveProblem] = useState("");
   const working = useRef(false);
+  const snapshot =
+    state.status === "ready" ? (state.data.roadmapSnapshot ?? null) : null;
+  // The pins of the map come from the restaurants of the shared roadmap.
+  const stops = useBlogRoadmapStops(snapshot, (restaurantId) =>
+    exploreService.restaurant(restaurantId),
+  );
+  // The photos of the dishes come from the dish catalogue.
+  const covers = useBlogDishCovers(snapshot, (dishId) =>
+    exploreService.dish(dishId),
+  );
 
   if (state.status === "loading")
     return (
@@ -196,118 +137,165 @@ export function BlogDetailPage({
   }
 
   return (
-    <div className="blog-page">
-      <nav className="blog-back" aria-label="Quay lại">
-        <Link href="/guides">← Tất cả cẩm nang</Link>
-      </nav>
-      <header className="blog-article-head">
-        <h1>{blog.title}</h1>
-        <div className="blog-article-meta">
-          <p className="blog-byline blog-byline-lg">
-            <Avatar
-              name={blog.author.displayName}
-              image={blog.author.avatarUrl}
-            />
-            <span>
-              <strong>{blog.author.displayName}</strong>
-              <span className="blog-line">
-                {blogDate(blog.publishedAt)}
-                <span aria-hidden> · </span>
-                <span className="blog-views">
-                  <EyeIcon />
-                  <span className="num">{blog.viewCount}</span> lượt xem
-                </span>
-              </span>
-            </span>
-          </p>
-          <div className="blog-article-actions">
-            {viewer === "TRAVELER" ? (
-              <Button
-                variant="secondary"
-                aria-pressed={liked}
-                loading={likeBusy}
-                onClick={() => void toggleLike()}
-              >
-                <span className="blog-like">
-                  <HeartIcon filled={liked} />
-                  {liked ? "Đã thích" : "Thích"} ·{" "}
-                  <span className="num">{likeCount}</span>
-                </span>
-              </Button>
-            ) : (
-              <span className="blog-pill">
-                <HeartIcon />
-                <span className="num">{likeCount}</span> lượt thích
-              </span>
-            )}
-            {blog.isMine && (
-              <>
-                <ActionLink href={blogEditHref(blog.id)} secondary>
-                  Chỉnh sửa
-                </ActionLink>
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setRemoveProblem("");
-                    setRemoveOpen(true);
-                  }}
-                >
-                  Xóa bài viết
-                </Button>
-              </>
-            )}
-            {viewer === "TRAVELER" && !blog.isMine && (
-              <Button variant="tertiary" onClick={() => setReportOpen(true)}>
-                Báo cáo bài viết
-              </Button>
-            )}
-            {viewer === "GUEST" && (
-              <ActionLink href="/login" secondary>
-                Đăng nhập để tương tác
-              </ActionLink>
-            )}
-          </div>
-        </div>
-        {problem && <Alert>{problem}</Alert>}
-        {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
-      </header>
-      {blog.coverUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img className="blog-hero" src={blog.coverUrl} alt="" />
-      )}
-      <div className="blog-columns">
-        <article className="blog-main">
-          <BlogContent html={blog.content} />
-          {blog.images.length > 0 && (
-            <section aria-label="Ảnh trong bài">
-              <ul className="blog-images">
-                {blog.images.map((url, index) => (
-                  <li key={url}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`Ảnh ${index + 1} trong bài ${blog.title}`}
-                      loading="lazy"
-                    />
-                  </li>
-                ))}
-              </ul>
+    <div className="blog-page blog-detail-layout">
+      <div className="blog-detail">
+        <div className="blog-detail-main">
+          <nav className="blog-back" aria-label="Quay lại">
+            <Link href="/guides">← Tất cả cẩm nang</Link>
+          </nav>
+          {/* 1. The cover and the title of the blog, the title over the cover. */}
+          <section className="blog-section blog-hero-section">
+            <div className="blog-hero-top">
+              <header className="blog-article-head">
+              <h1 className="blog-hero-title">{blog.title}</h1>
+              <div className="blog-article-meta">
+                <p className="blog-byline blog-byline-lg">
+                  <Avatar
+                    name={blog.author.displayName}
+                    image={blog.author.avatarUrl}
+                  />
+                  <span>
+                    <strong>{blog.author.displayName}</strong>
+                    <span className="blog-line">
+                      {blogDate(blog.publishedAt)}
+                      <span aria-hidden> · </span>
+                      <span className="blog-views">
+                        <EyeIcon />
+                        <span className="num">{blog.viewCount}</span> lượt xem
+                      </span>
+                    </span>
+                  </span>
+                </p>
+                <div className="blog-article-actions">
+                  {viewer === "TRAVELER" ? (
+                    <Button
+                      variant="secondary"
+                      aria-pressed={liked}
+                      loading={likeBusy}
+                      onClick={() => void toggleLike()}
+                    >
+                      <span className="blog-like">
+                        <HeartIcon filled={liked} />
+                        {liked ? "Đã thích" : "Thích"} ·{" "}
+                        <span className="num">{likeCount}</span>
+                      </span>
+                    </Button>
+                  ) : (
+                    <span className="blog-pill">
+                      <HeartIcon />
+                      <span className="num">{likeCount}</span> lượt thích
+                    </span>
+                  )}
+                  {blog.isMine && (
+                    <>
+                      <ActionLink href={blogEditHref(blog.id)} secondary>
+                        Chỉnh sửa
+                      </ActionLink>
+                      <Button
+                        variant="secondary"
+                        onClick={() => {
+                          setRemoveProblem("");
+                          setRemoveOpen(true);
+                        }}
+                      >
+                        Xóa bài viết
+                      </Button>
+                    </>
+                  )}
+                  {viewer === "TRAVELER" && !blog.isMine && (
+                    <Button
+                      variant="tertiary"
+                      onClick={() => setReportOpen(true)}
+                    >
+                      Báo cáo bài viết
+                    </Button>
+                  )}
+                  {viewer === "GUEST" && (
+                    <ActionLink href="/login" secondary>
+                      Đăng nhập để tương tác
+                    </ActionLink>
+                  )}
+                </div>
+              </div>
+              {problem && <Alert>{problem}</Alert>}
+              {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
+              </header>
+              {blog.coverUrl && (
+                <div className="blog-hero-media">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={blog.coverUrl} alt="" />
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* The description of the blog, its own panel under the cover. */}
+          {blog.content.trim() && (
+            <section className="blog-section blog-desc-panel" aria-labelledby="blog-desc-title">
+              <header className="blog-section-head">
+                <div>
+                  <p className="blog-eyebrow">Mô tả</p>
+                  <h2 id="blog-desc-title" className="blog-section-title">
+                    Câu chuyện của chuyến đi
+                  </h2>
+                </div>
+              </header>
+              <BlogContent html={blog.content} />
             </section>
           )}
-          <BlogComments
-            blogId={blogId}
-            canWrite={viewer === "TRAVELER"}
-            service={service}
-          />
-        </article>
-        {blog.roadmapSnapshot && (
-          <aside className="blog-aside">
-            <Snapshot
-              snapshot={blog.roadmapSnapshot}
+
+          {/* 2. The photos of the trip, two to a row. */}
+          {blog.images.length > 0 && (
+            <BlogPhotos images={blog.images} title={blog.title} />
+          )}
+
+          {/* 3. The roadmap the author shared. */}
+          {snapshot && (
+            <BlogRoadmap
+              snapshot={snapshot}
               detached={blog.roadmapId === null}
+              covers={covers}
             />
-          </aside>
-        )}
+          )}
+
+          {/* 4. The comments of the blog. */}
+          <section className="blog-section" aria-labelledby="blog-comments-heading">
+            <header className="blog-section-head">
+              <div>
+                <p className="blog-eyebrow">Thảo luận</p>
+                <h2 id="blog-comments-heading" className="blog-section-title">
+                  Bình luận
+                </h2>
+              </div>
+            </header>
+            <div className="blog-comments-wrap">
+              <BlogComments
+                blogId={blogId}
+                canWrite={viewer === "TRAVELER"}
+                service={service}
+                showTitle={false}
+              />
+            </div>
+          </section>
+        </div>
+
+        {/* The map of the shared roadmap, on the other half of the screen. */}
+        <aside className="blog-detail-aside">
+          <div className="blog-detail-map">
+            <div className="blog-detail-map-head">
+              <p className="blog-eyebrow">Bản đồ lộ trình</p>
+              <h2 className="blog-section-title">
+                {snapshot ? snapshot.title : "Lộ trình của bài viết"}
+              </h2>
+              {snapshot && (
+                <p className="blog-line">
+                  {snapshot.numDays} ngày · {stops.length} địa điểm có tọa độ
+                </p>
+              )}
+            </div>
+            <BlogMap stops={stops} />
+          </div>
+        </aside>
       </div>
       {reportOpen && (
         <ReportDialog

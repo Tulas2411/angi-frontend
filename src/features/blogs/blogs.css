@@ -176,6 +176,192 @@
   font-size: 40px;
 }
 
+/* ----------------------------------------------- public feed cards (BLOG-01) */
+/* The public list reads like a social feed: cover on top, title with its menu,
+   the excerpt, then the author on the left and the counters on the right. */
+.blog-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.blog-cards > li {
+  display: flex;
+  min-width: 0;
+}
+.blog-card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  transition: border-color var(--duration-fast) ease;
+}
+.blog-card:hover,
+.blog-card:focus-within {
+  border-color: var(--line-strong);
+}
+.blog-cover-card {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 11px 11px 0 0;
+}
+.blog-cover-card.blog-cover-none {
+  font-size: 64px;
+}
+.blog-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px 16px 16px;
+}
+/* The title and its round menu share the first line. */
+.blog-card-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+.blog-card-title h2 {
+  min-width: 0;
+  font-size: 17px;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.blog-card-title h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+}
+.blog-card-title h2 a:focus-visible {
+  outline: none;
+}
+.blog-card-title h2 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+.blog-card .blog-excerpt {
+  -webkit-line-clamp: 3;
+}
+.blog-card .blog-tag {
+  align-self: flex-start;
+}
+.blog-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* The round three-dot button and the menu it opens. */
+.blog-menu {
+  position: relative;
+  z-index: 2;
+  flex: none;
+}
+/* The round menu sits in the top corner of the card, over the cover, and
+   only shows when the pointer reaches the card. */
+.blog-card-menu {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+.blog-card:hover .blog-card-menu,
+.blog-card:focus-within .blog-card-menu {
+  opacity: 1;
+}
+@media (hover: none) {
+  /* Without a pointer there is no hover, so the menu stays visible. */
+  .blog-card-menu {
+    opacity: 1;
+  }
+}
+.blog-card-menu .blog-menu-trigger {
+  width: 34px;
+  height: 34px;
+  border-color: rgb(255 255 255 / 0.5);
+  background: rgb(12 12 14 / 0.5);
+  color: #ffffff;
+  backdrop-filter: blur(6px);
+}
+.blog-card-menu .blog-menu-trigger:hover {
+  background: rgb(12 12 14 / 0.7);
+  color: #ffffff;
+}
+.blog-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+}
+.blog-menu-trigger:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+.blog-menu-trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.blog-menu-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 3;
+  min-width: 200px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.blog-menu-item {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.blog-menu-item:hover {
+  background: var(--control);
+}
+.blog-menu-item:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.blog-menu-note {
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .blog-rows {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -194,15 +380,32 @@
 .blog-row {
   display: grid;
   flex: 1;
-  grid-template-columns: 112px minmax(0, 1fr) auto;
+  grid-template-columns: 112px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   min-width: 0;
   padding: 12px;
 }
 .blog-rows-one .blog-row {
-  grid-template-columns: 80px minmax(0, 1fr) auto;
+  grid-template-columns: 80px minmax(0, 1fr);
   align-items: center;
+}
+/* My own blogs carry the two icons in the top right corner, so the title keeps clear of them. */
+.blog-row-mine h3 {
+  padding-right: 76px;
+}
+/* The like and comment counts sit in the bottom right corner of the card. */
+.blog-row-counts {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+}
+/* The byline stops before the counts in the corner. */
+.blog-row .blog-meta {
+  padding-right: 96px;
 }
 .blog-rows-one .blog-cover-row {
   width: 80px;
@@ -220,12 +423,6 @@
 }
 .blog-rows-one .blog-row-text {
   min-height: 0;
-}
-.blog-row-top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
 }
 .blog-row h3 {
   font-size: 17px;
@@ -296,37 +493,54 @@
   line-height: 20px;
 }
 .blog-row-actions {
-  position: relative;
+  position: absolute;
   z-index: 1;
+  top: 12px;
+  right: 12px;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
 }
-.blog-text-action {
-  padding: 6px 4px;
+/* The icons only show when the pointer is over the card, or when it has focus. */
+.blog-row:hover .blog-row-actions,
+.blog-row:focus-within .blog-row-actions {
+  opacity: 1;
+}
+.blog-icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border: 0;
+  border-radius: 8px;
   background: none;
   color: var(--ink);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
   cursor: pointer;
 }
-.blog-text-action:hover {
-  opacity: 0.68;
+.blog-icon-action:hover {
+  background: var(--control);
 }
-.blog-text-action:focus-visible {
+.blog-icon-action:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-  border-radius: 4px;
 }
-.blog-text-danger {
+.blog-icon-danger {
   color: var(--error-ink);
 }
 
-/* Pale pair, beside the title, never above it. */
+/* The status of my own blog sits on the line under the title. */
+.blog-row-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+}
+
+/* Pale pair, on the line under the title. */
 .blog-pill {
   display: inline-flex;
   flex: none;
@@ -351,6 +565,575 @@
 }
 
 /* ---------------------------------------------------------------- detail */
+/* The detail page takes the whole screen, like the roadmap detail: the blog on
+   the left, the map of the shared roadmap on the right. On a narrow screen the
+   map moves above the blog. */
+.app-shell:has(.blog-detail-page) {
+  --header-height: 72px;
+}
+.app-shell:has(.blog-detail-page) .app-main {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+.app-shell:has(.blog-detail-page) .site-header {
+  width: 100%;
+  max-width: none;
+  padding-inline: var(--space-6);
+}
+.blog-detail-page {
+  min-height: calc(100dvh - var(--header-height));
+}
+.blog-detail-layout {
+  gap: 0;
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 0;
+}
+.blog-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1.16fr) minmax(0, 1fr);
+  gap: 0;
+  align-items: start;
+}
+.blog-detail-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+  padding: var(--space-6) var(--space-8) var(--space-16);
+  border-right: 1px solid var(--line);
+}
+/* Each part of the blog is its own panel, so the four parts read clearly. */
+.blog-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.blog-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+}
+.blog-eyebrow {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.blog-section-title {
+  font-size: 20px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+/* The title lies over the cover, on the same band as the author and the buttons. */
+.blog-hero-section {
+  position: relative;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+/* The cover and the title over it stay together; the description is its own card. */
+.blog-hero-top {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.blog-hero-media {
+  position: relative;
+}
+.blog-hero-media img {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--control);
+}
+.blog-hero-section .blog-article-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  gap: 14px;
+  padding: 76px var(--space-6) var(--space-6);
+  background: linear-gradient(
+    to top,
+    rgb(12 12 14 / 0.86) 0%,
+    rgb(12 12 14 / 0.58) 55%,
+    rgb(12 12 14 / 0) 100%
+  );
+  color: #ffffff;
+}
+.blog-hero-section .blog-article-head h1 {
+  max-width: none;
+  font-size: clamp(24px, 2.2vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.blog-hero-section .blog-byline,
+.blog-hero-section .blog-byline strong,
+.blog-hero-section .blog-line {
+  color: rgb(255 255 255 / 0.88);
+}
+/* Without a cover the title is on the panel itself. */
+.blog-hero-section:not(:has(.blog-hero-media)) .blog-article-head {
+  position: static;
+  padding: 20px;
+  background: none;
+  color: var(--ink);
+}
+.blog-hero-section:not(:has(.blog-hero-media)) .blog-byline,
+.blog-hero-section:not(:has(.blog-hero-media)) .blog-byline strong,
+.blog-hero-section:not(:has(.blog-hero-media)) .blog-line {
+  color: var(--muted);
+}
+.blog-hero-section:not(:has(.blog-hero-media)) .blog-byline strong {
+  color: var(--ink);
+}
+.blog-hero-title {
+  font-size: clamp(24px, 2.2vw, 32px);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+/* The description of the blog, its own panel under the cover. */
+.blog-desc-panel .blog-content {
+  gap: 14px;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.75;
+}
+.blog-desc-panel .blog-content > :first-child {
+  margin-top: 0;
+}
+.blog-desc-panel .blog-content strong {
+  font-weight: 700;
+}
+.blog-desc-panel .blog-content blockquote {
+  padding: 12px 16px;
+  border-left: 3px solid var(--coral);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--control);
+  color: var(--muted);
+}
+.blog-desc-panel .blog-content ul,
+.blog-desc-panel .blog-content ol {
+  margin: 0;
+}
+
+/* The map of the shared roadmap, on the other half of the screen. */
+.blog-detail-aside {
+  position: sticky;
+  top: var(--header-height);
+  height: calc(100dvh - var(--header-height));
+  min-width: 0;
+  overflow: hidden;
+  background: var(--control);
+}
+.blog-detail-map {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 0;
+}
+.blog-detail-map-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+  padding: var(--space-5) var(--space-5) var(--space-3);
+  background: var(--card);
+  border-bottom: 1px solid var(--line);
+}
+.blog-map {
+  position: relative;
+  flex: 1;
+  min-height: 320px;
+  overflow: hidden;
+  background: var(--control);
+}
+.blog-map-surface {
+  position: absolute;
+  inset: 0;
+}
+.blog-map-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+.blog-map-status p {
+  margin: 0 0 8px;
+}
+.blog-map-note {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  right: 12px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+}
+/* The pins of the map carry the name of the dish. */
+.blog-map-pin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 8px;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: var(--coral);
+  color: #ffffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.blog-map-pin[data-tone="1"] {
+  background: #d97706;
+}
+.blog-map-pin[data-tone="2"] {
+  background: #16a34a;
+}
+.blog-map-pin[data-tone="3"] {
+  background: #7c3aed;
+}
+.blog-map-pin[data-tone="4"] {
+  background: #0891b2;
+}
+
+/* The photos of the blog, two to a row; a press opens one full size. */
+.blog-photos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.blog-photo {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: var(--control);
+  cursor: zoom-in;
+  overflow: hidden;
+}
+.blog-photo:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.blog-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  transition: transform var(--duration-fast) ease;
+}
+.blog-photo:hover img {
+  transform: scale(1.03);
+}
+/* The full size photo, over the page. */
+.blog-photo-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(12, 12, 14, 0.86);
+  cursor: zoom-out;
+}
+.blog-photo-lightbox > img {
+  max-width: min(100%, 1100px);
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  cursor: default;
+}
+.blog-photo-close,
+.blog-photo-nav {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.blog-photo-close:hover,
+.blog-photo-nav:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.blog-photo-close:focus-visible,
+.blog-photo-nav:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.blog-photo-close {
+  top: 20px;
+  right: 20px;
+}
+.blog-photo-prev {
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 28px;
+}
+.blog-photo-next {
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 28px;
+}
+.blog-photo-count {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  font-size: 13px;
+}
+
+/* The meals of a day of the shared roadmap, laid out like the roadmap detail. */
+.blog-roadmap-days {
+  display: flex;
+  flex-direction: column;
+}
+.blog-roadmap-day {
+  padding-block: var(--space-5);
+}
+.blog-roadmap-day + .blog-roadmap-day {
+  border-top: 1px solid var(--line);
+}
+.blog-day-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.blog-day-toggle:focus-visible {
+  outline: none;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--focus-ring);
+}
+/* The chevron of the day, turned when the day is open. */
+.blog-day-toggle .roadmap-chevron {
+  flex-shrink: 0;
+  display: inline-flex;
+  width: 17.5px;
+  height: 14px;
+  transform: rotate(-90deg);
+  transition: transform var(--duration-fast) ease;
+}
+.blog-day-toggle[aria-expanded="true"] .roadmap-chevron {
+  transform: rotate(0);
+}
+.blog-roadmap-day h3 {
+  font-size: 17px;
+}
+.blog-day-sub {
+  margin: 4px 0 0;
+  padding-left: calc(17.5px + var(--space-3));
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.blog-day-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+.blog-meal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.blog-meal + .blog-meal {
+  margin-top: var(--space-3);
+}
+/* "Bữa sáng" on a rule, like the roadmap detail. */
+.blog-meal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 48px;
+  padding: var(--space-1) 0 var(--space-2);
+  border-bottom: 1px solid var(--line);
+}
+.blog-meal-heading {
+  min-width: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.blog-meal-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.blog-meal-items > li {
+  min-width: 0;
+}
+/* The dish card: its name with a number, the price and the restaurant. */
+.blog-meal-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.blog-meal-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  transition: border-color var(--duration-fast) ease;
+}
+.blog-meal-item:hover .blog-meal-text {
+  border-color: var(--line-strong);
+}
+/* A dish without a photo keeps the whole width for its text. */
+.blog-meal-item:not(:has(.blog-meal-media)) {
+  grid-template-columns: minmax(0, 1fr);
+}
+/* The photo of the dish, the same shape as on the roadmap. */
+.blog-meal-media {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--control);
+}
+.blog-meal-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 132px;
+  object-fit: cover;
+}
+.blog-meal-item h5 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* The stop number matches the dish's pin on the map. */
+.blog-meal-order {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--control);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.blog-meal-price {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.blog-meal-item .helper a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.blog-day-total {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.blog-roadmap-costs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding-top: 4px;
+}
+.blog-cost-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.blog-cost-block h3 {
+  font-size: 15px;
+}
+/* The comments sit inside the section, without a panel of their own. */
+.blog-comments-wrap .blog-panel {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
 .blog-back a {
   color: var(--muted);
   font-size: 14px;
@@ -403,19 +1186,42 @@
   align-items: center;
   gap: 8px;
 }
+/* Over the cover the buttons read as glass chips. */
+.blog-hero-section .blog-article-actions .button {
+  border-color: rgb(255 255 255 / 0.32);
+  background: rgb(255 255 255 / 0.14);
+  color: #ffffff;
+  backdrop-filter: blur(6px);
+}
+.blog-hero-section .blog-article-actions .button:hover {
+  border-color: rgb(255 255 255 / 0.6);
+  background: rgb(255 255 255 / 0.26);
+}
+.blog-hero-section .blog-article-actions .button[aria-pressed="true"] {
+  border-color: var(--coral);
+  background: var(--coral);
+  color: #ffffff;
+}
+/* The report button reads as a quiet link, without the underline. */
+.blog-hero-section .blog-article-actions .button-tertiary {
+  border-color: rgb(255 255 255 / 0.32);
+  background: rgb(255 255 255 / 0.14);
+  text-decoration: none;
+}
+.blog-hero-section .blog-article-actions .button-tertiary:hover {
+  border-color: rgb(255 255 255 / 0.6);
+  background: rgb(255 255 255 / 0.26);
+  text-decoration: none;
+}
+.blog-hero-section .blog-pill {
+  border-color: rgb(255 255 255 / 0.32);
+  background: rgb(255 255 255 / 0.14);
+  color: #ffffff;
+}
 .blog-like {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-.blog-hero {
-  display: block;
-  width: 100%;
-  max-height: 440px;
-  aspect-ratio: 21 / 9;
-  object-fit: cover;
-  border-radius: 12px;
-  background: var(--control);
 }
 .blog-columns {
   display: grid;
@@ -503,29 +1309,6 @@
   border-radius: 8px;
 }
 
-.blog-trip-title {
-  font-weight: 600;
-}
-.blog-snapshot-items {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.blog-snapshot-items li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: 8px;
-  background: var(--canvas);
-}
-.blog-meal {
-  color: var(--muted);
-  font-size: 13px;
-}
 .blog-dish {
   font-weight: 600;
 }
@@ -631,11 +1414,28 @@
   .blog-toolbar {
     grid-template-columns: minmax(0, 1fr) 200px;
   }
+  .blog-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .blog-columns {
     grid-template-columns: minmax(0, 1fr);
   }
   .blog-aside {
     position: static;
+  }
+  /* The map moves above the blog when the two halves no longer fit. */
+  .blog-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .blog-detail-main {
+    padding: var(--space-5);
+    border-right: 0;
+  }
+  .blog-detail-aside {
+    position: relative;
+    top: auto;
+    height: 440px;
+    min-height: 440px;
   }
 }
 @media (max-width: 760px) {
@@ -646,13 +1446,18 @@
   .blog-lead-text {
     padding: 0 4px 4px;
   }
+  .blog-cards,
   .blog-rows,
   .blog-skeleton-rows {
     grid-template-columns: minmax(0, 1fr);
   }
   .blog-heading h1,
-  .blog-article-head h1 {
+  .blog-article-head h1,
+  .blog-hero-title {
     font-size: 26px;
+  }
+  .blog-roadmap-costs {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (max-width: 560px) {
@@ -683,11 +1488,24 @@
     min-height: 0;
   }
   .blog-row-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-end;
+    top: 8px;
+    right: 8px;
+  }
+  .blog-row-counts {
+    right: 8px;
+    bottom: 8px;
+  }
+  .blog-row .blog-meta {
+    padding-right: 88px;
   }
   .blog-heading-actions .button,
   .blog-article-actions .button {
     flex: 1 1 auto;
+  }
+}
+/* Without a pointer there is no hover, so the icons stay in the top right corner. */
+@media (hover: none) {
+  .blog-row-actions {
+    opacity: 1;
   }
 }

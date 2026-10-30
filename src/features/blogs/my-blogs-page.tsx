@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/primitives";
 import { useRemote } from "@/features/explore/use-remote";
 import { BlogRow, blogEditHref } from "./blog-cards";
+import { PencilIcon, TrashIcon } from "./blog-icons";
 import { BlogHeading, BlogProblem, BlogSkeleton } from "./blog-layout";
 import {
   blogError,
@@ -161,17 +162,19 @@ export function MyBlogsPage({
                   <>
                     {blog.status !== "removed" && (
                       <Link
-                        className="blog-text-action"
+                        className="blog-icon-action"
                         href={blogEditHref(blog.id)}
                         aria-label={`Chỉnh sửa bài ${blog.title}`}
+                        title="Chỉnh sửa"
                       >
-                        Chỉnh sửa
+                        <PencilIcon />
                       </Link>
                     )}
                     <button
                       type="button"
-                      className="blog-text-action blog-text-danger"
+                      className="blog-icon-action blog-icon-danger"
                       aria-label={`Xóa bài ${blog.title}`}
+                      title="Xóa"
                       onClick={() => {
                         setProblem("");
                         setNotice("");
@@ -179,7 +182,7 @@ export function MyBlogsPage({
                       }}
                       suppressHydrationWarning
                     >
-                      Xóa
+                      <TrashIcon />
                     </button>
                   </>
                 }

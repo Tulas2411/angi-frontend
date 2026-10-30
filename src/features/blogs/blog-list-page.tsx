@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Button, Input } from "@/shared/ui";
+import { Alert, Button, Input } from "@/shared/ui";
 import {
   ActionLink,
   Choice,
@@ -9,14 +9,17 @@ import {
   Pagination,
   SelectField,
 } from "@/components/ui/primitives";
+import { ReportDialog } from "@/components/domain/report-dialog";
 import { useRemote } from "@/features/explore/use-remote";
-import { BlogLead, BlogRow } from "./blog-cards";
+import { BlogCard } from "./blog-cards";
 import { BlogHeading, BlogProblem, BlogSkeleton } from "./blog-layout";
 import {
   blogDate,
   blogFiltersFromParams,
   blogFiltersHref,
   blogPageSize,
+  blogReportError,
+  blogReportReasons,
   blogSortOptions,
   type BlogFilters,
 } from "./blog-rules";
@@ -89,10 +92,13 @@ function Toolbar({
 /** F-31 View Public Blog: BLOG-01 with the filters and the page in the URL. */
 export function BlogListPage({
   signedIn,
+  viewerId = null,
   service = blogService,
 }: {
   /** A Traveler can write; a guest is asked to sign in. */
   signedIn: boolean;
+  /** The id of the signed-in Traveler, so their own blogs are not offered for a report. */
+  viewerId?: number | null;
   service?: BlogService;
 }) {
   const router = useRouter();
@@ -110,6 +116,9 @@ export function BlogListPage({
       }),
     key,
   );
+  // The blog whose report is open, and the outcome of the last report.
+  const [reportBlogId, setReportBlogId] = useState<number | null>(null);
+  const [notice, setNotice] = useState("");
   // A bookmarked page past the end falls back to the last page.
   const lastPage =
     state.status === "ready" &&
@@ -181,28 +190,54 @@ export function BlogListPage({
       </div>
     );
   const { data } = state;
-  const [lead, ...rest] = data.items;
+  const reported = data.items.find((blog) => blog.id === reportBlogId) ?? null;
   return (
     <div className="blog-page">
       {heading}
       {toolbar}
-      {!lead ? (
+      {notice && <Alert tone="success">{notice}</Alert>}
+      {data.items.length === 0 ? (
         <EmptyState title="Chưa có cẩm nang phù hợp">
           Thử từ khóa khác, hoặc là người đầu tiên viết một bài.
         </EmptyState>
       ) : (
-        <>
-          <BlogLead blog={lead} />
-          {rest.length > 0 && (
-            <ul className="blog-rows">
-              {rest.map((blog) => (
-                <li key={blog.id}>
-                  <BlogRow blog={blog} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+        <ul className="blog-cards">
+          {data.items.map((blog) => {
+            const mine = viewerId !== null && blog.author.id === viewerId;
+            return (
+              <li key={blog.id}>
+                <BlogCard
+                  blog={blog}
+                  menu={
+                    <>
+                      {signedIn && !mine && (
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="blog-menu-item"
+                          onClick={() => {
+                            setNotice("");
+                            setReportBlogId(blog.id);
+                          }}
+                          suppressHydrationWarning
+                        >
+                          Báo cáo bài viết
+                        </button>
+                      )}
+                      {(!signedIn || mine) && (
+                        <p className="blog-menu-note">
+                          {signedIn
+                            ? "Đây là bài viết của bạn."
+                            : "Đăng nhập để báo cáo bài viết này."}
+                        </p>
+                      )}
+                    </>
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
       )}
       {data.totalPages > 1 && (
         <Pagination
@@ -212,6 +247,25 @@ export function BlogListPage({
           onChange={(next) =>
             router.push(blogFiltersHref({ ...filters, page: next }))
           }
+        />
+      )}
+      {reported && (
+        <ReportDialog
+          open
+          title="Báo cáo bài viết"
+          reasons={blogReportReasons}
+          send={(request) => service.report(reported.id, request)}
+          upload={(file) => service.upload(file, "report_evidence")}
+          errorOf={blogReportError}
+          onClose={() => setReportBlogId(null)}
+          onSent={(already) => {
+            setReportBlogId(null);
+            setNotice(
+              already
+                ? "Báo cáo trước đó của bạn về bài viết này đang chờ xử lý."
+                : "Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.",
+            );
+          }}
         />
       )}
     </div>
