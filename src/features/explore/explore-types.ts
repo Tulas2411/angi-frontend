@@ -146,6 +146,7 @@ export interface BrowseDishesQuery {
   q?: string;
   province?: string;
   tagIds?: number[];
+  excludeTagIds?: number[];
   dishForm?: DishForm;
   minPrice?: number;
   maxPrice?: number;

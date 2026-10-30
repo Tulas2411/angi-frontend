@@ -109,6 +109,508 @@
   gap: var(--space-2);
 }
 
+/* ------------------------------------------------- dish search and filters */
+.dish-search {
+  display: grid;
+  gap: var(--space-4);
+}
+.dish-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.dish-search-box {
+  position: relative;
+  min-width: 0;
+}
+.dish-search-box .input {
+  min-height: 52px;
+  padding-left: 52px;
+  border-radius: var(--radius-pill);
+}
+.dish-search-submit {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+.dish-search-submit:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+.dish-search-submit:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-search-submit svg,
+.dish-filter-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dish-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: 0 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.dish-filter-toggle:hover {
+  border-color: var(--ink);
+}
+.dish-filter-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-filter-toggle svg {
+  transition: transform var(--duration) var(--ease-out);
+}
+/* Open: the accent marks the control that owns the panel below it. */
+.dish-filter-toggle[aria-expanded="true"] {
+  border-color: var(--coral);
+  background: #ffeceb;
+}
+.dish-filter-toggle[aria-expanded="true"] svg {
+  color: var(--coral);
+  transform: rotate(180deg);
+}
+.dish-filter-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  color: var(--ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dish-filter-panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.dish-filter-panel[hidden] {
+  display: none;
+}
+.dish-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.dish-filter-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+}
+.dish-filter-chips {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.dish-filter-chips legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.dish-filter-chips .chip {
+  min-height: 36px;
+  padding: 6px 14px;
+}
+.dish-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+/* ------------------------------------------------------- dish results */
+.dish-results {
+  display: grid;
+  gap: var(--space-4);
+}
+.dish-results-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.dish-view-switcher {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+}
+.dish-view-switcher button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+.dish-view-switcher button:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+.dish-view-switcher button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.dish-view-switcher button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-view-switcher svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.dish-items {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dish-items > li {
+  display: flex;
+  min-width: 0;
+}
+.dish-item {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration) var(--ease-out);
+}
+.dish-item:hover,
+.dish-item:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: 0 8px 24px rgb(34 34 34 / 0.08);
+}
+/* The name covers the whole item, so the item is one link to the dish. */
+.dish-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.dish-name a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.dish-item:has(.dish-name a:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+.dish-name a:focus-visible {
+  outline: none;
+}
+.dish-name {
+  min-width: 0;
+  font-size: 20px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.dish-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.dish-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.dish-likes {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dish-likes svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--coral);
+}
+.dish-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dish-kind,
+.dish-tag {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.dish-kind {
+  background: var(--ink);
+  color: var(--card);
+}
+.dish-tag {
+  background: var(--control);
+  color: var(--ink);
+}
+.dish-description-block {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+.dish-description {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.dish-description.is-loading {
+  width: 100%;
+  height: 3.2em;
+  border-radius: var(--radius-xs);
+  background: var(--control);
+}
+.dish-description[class*="is-clamped-"] {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+}
+.dish-description.is-clamped-list {
+  -webkit-line-clamp: 2;
+}
+.dish-description.is-clamped-detailed {
+  -webkit-line-clamp: 4;
+}
+/* Buttons inside an item sit above the link that covers it. */
+.dish-text-button {
+  position: relative;
+  z-index: 1;
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.dish-text-button:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--focus-ring);
+}
+.dish-place {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--space-3);
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dish-price {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Mode 1: rows across the width with a compact photo. */
+.dish-row {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  padding: var(--space-4);
+}
+.dish-thumb {
+  width: 112px;
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+}
+
+/* Mode 2: two cards a row, a large photo beside the details. */
+.dish-items-detailed {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.dish-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  overflow: hidden;
+}
+.dish-photo {
+  height: 100%;
+  min-height: 280px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.dish-detail .dish-body {
+  padding: var(--space-5);
+}
+.dish-detail .dish-name {
+  font-size: 22px;
+}
+
+/* Mode 3: photos only, the name on the photo. */
+.dish-items-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.dish-tile {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+}
+.dish-tile-photo {
+  aspect-ratio: 4 / 5;
+  border-radius: 0;
+}
+.dish-tile-photo .media-fallback span:last-child {
+  display: none;
+}
+/* A dark fade under the name keeps it readable on any photo. */
+.dish-tile .dish-name {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 48px 12px 12px;
+  background: linear-gradient(to top, rgb(20 16 14 / 0.82), rgb(20 16 14 / 0));
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dish-tile-photo img {
+    transition: transform 600ms var(--ease-out);
+  }
+  .dish-tile:hover .dish-tile-photo img {
+    transform: scale(1.05);
+  }
+}
+
+@media (max-width: 1100px) {
+  .dish-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dish-items-detailed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .dish-filter-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-items-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .dish-search-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-filter-toggle {
+    justify-content: center;
+  }
+  .dish-filter-panel {
+    padding: var(--space-4);
+  }
+  .dish-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-row {
+    grid-template-columns: 80px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-3);
+  }
+  .dish-thumb {
+    width: 80px;
+  }
+  .dish-name {
+    font-size: 18px;
+  }
+  /* A narrow card stacks: the photo above its details. */
+  .dish-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-photo {
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+  .dish-detail .dish-body {
+    padding: var(--space-4);
+  }
+}
+
 /* --------------------------------------------------------------- detail */
 .explore-back a {
   color: var(--muted);

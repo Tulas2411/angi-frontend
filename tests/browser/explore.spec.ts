@@ -77,6 +77,15 @@ const dishes: DishCardDto[] = [
   dish(104, "Cà phê trứng", 35000, "other", []),
   dish(105, "Bún chả", 55000, "dry", [1], 8),
 ];
+/** DISH-02 descriptions: one long enough to be cut, one dish without any. */
+const descriptions: Record<number, string> = {
+  101: "Nước dùng hầm xương 8 tiếng, sả và mắm ruốc",
+  102: "Bánh mì giòn rụm, pate gan nhà làm, chả lụa, dưa leo và rau mùi. ".repeat(
+    5,
+  ),
+  103: "Phở bò tái chín, nước dùng trong.",
+  105: "Chả nướng than hoa ăn kèm bún và nước mắm chua ngọt.",
+};
 const restaurantCard = (
   id: number,
   name: string,
@@ -185,12 +194,16 @@ const handler: StubHandler = ({ method, url, body, headers }, send) => {
     }
     const q = (params.get("q") ?? "").toLowerCase();
     const maxPrice = Number(params.get("maxPrice") ?? "0");
+    const minPrice = Number(params.get("minPrice") ?? "0");
     const form = params.get("dishForm");
     const wanted = params.getAll("tagIds").map(Number);
+    const unwanted = params.getAll("excludeTagIds").map(Number);
     const matches = dishes.filter(
       (entry) =>
         entry.name.toLowerCase().includes(q) &&
         (!maxPrice || entry.price <= maxPrice) &&
+        (!minPrice || entry.price >= minPrice) &&
+        !entry.tags.some((tag) => unwanted.includes(tag.id)) &&
         (!form || entry.dishForm === form) &&
         (!wanted.length || entry.tags.some((tag) => wanted.includes(tag.id))),
     );
@@ -213,7 +226,7 @@ const handler: StubHandler = ({ method, url, body, headers }, send) => {
       send(200, {
         ...found,
         restaurant: card,
-        description: "Nước dùng hầm xương 8 tiếng, sả và mắm ruốc",
+        description: descriptions[found.id] ?? null,
         images: [],
         status: "active",
       });
@@ -371,6 +384,11 @@ const cardOf = (page: Page, name: string) =>
   cards(page).filter({
     has: page.getByRole("heading", { name, exact: true, level: 3 }),
   });
+const dishItems = (page: Page) => page.locator(".dish-item");
+const dishOf = (page: Page, name: string) =>
+  dishItems(page).filter({
+    has: page.getByRole("heading", { name, exact: true, level: 3 }),
+  });
 const mainNav = (page: Page) =>
   page.getByRole("navigation", { name: "Điều hướng chính" });
 const png = Buffer.from(
@@ -386,10 +404,10 @@ test.describe("dishes", () => {
     await expect(
       page.getByRole("heading", { name: "Khám phá món ăn", level: 1 }),
     ).toBeVisible();
-    await expect(cards(page)).toHaveCount(5);
-    await expect(cardOf(page, "Bún bò Huế")).toContainText("45.000");
-    await expect(cardOf(page, "Bún bò Huế")).toContainText("Bún Bò Bà Diệu");
-    await expect(cardOf(page, "Phở bò tái")).toContainText("Tạm hết món");
+    await expect(dishItems(page)).toHaveCount(5);
+    await expect(dishOf(page, "Bún bò Huế")).toContainText("45.000");
+    await expect(dishOf(page, "Bún bò Huế")).toContainText("Bún Bò Bà Diệu");
+    await expect(dishOf(page, "Phở bò tái")).toContainText("Tạm hết món");
     await expect(
       mainNav(page).getByRole("link", { name: "Món ăn" }),
     ).toHaveAttribute("aria-current", "page");
@@ -406,7 +424,7 @@ test.describe("dishes", () => {
     await loginAs(page, "traveler");
     calls = [];
     await page.goto("/dishes");
-    await expect(cards(page)).toHaveCount(5);
+    await expect(dishItems(page)).toHaveCount(5);
     await expect(
       page.locator("summary[aria-label^='Tài khoản']"),
     ).toBeVisible();
@@ -420,27 +438,28 @@ test.describe("dishes", () => {
     page,
   }) => {
     await page.goto("/dishes");
-    await expect(cards(page)).toHaveCount(5);
+    await expect(dishItems(page)).toHaveCount(5);
     await page.getByRole("searchbox", { name: "Tìm món ăn" }).fill("bún");
+    await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
     await page.getByLabel("Loại món").selectOption("dry");
-    await page.getByLabel("Mức giá").selectOption("100000");
+    await page.getByLabel("Giá đến").selectOption("100000");
     await page.getByRole("button", { name: "Bữa trưa" }).click();
-    await page.getByRole("button", { name: "Tìm món" }).click();
+    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
     await expect(page).toHaveURL(/q=b%C3%BAn|q=bún/);
     await expect(page).toHaveURL(/form=dry/);
     await expect(page).toHaveURL(/price=100000/);
     await expect(page).toHaveURL(/tag=1/);
-    await expect(cards(page)).toHaveCount(1);
-    await expect(cardOf(page, "Bún chả")).toBeVisible();
+    await expect(dishItems(page)).toHaveCount(1);
+    await expect(dishOf(page, "Bún chả")).toBeVisible();
     const last = callsTo("GET", "dishes").at(-1)!;
     expect(last.query.get("q")).toBe("bún");
     expect(last.query.get("dishForm")).toBe("dry");
     expect(last.query.get("maxPrice")).toBe("100000");
     expect(last.query.getAll("tagIds")).toEqual(["1"]);
     // Clearing the filters goes back to the whole list.
-    await page.getByRole("button", { name: "Xóa bộ lọc" }).click();
+    await page.getByRole("button", { name: "Đặt lại bộ lọc" }).click();
     await expect(page).toHaveURL(/\/dishes$/);
-    await expect(cards(page)).toHaveCount(5);
+    await expect(dishItems(page)).toHaveCount(5);
   });
 
   test("no result is said, and there is no “Xem thêm” when everything fits one page", async ({
@@ -451,7 +470,7 @@ test.describe("dishes", () => {
       page.getByRole("heading", { name: "Không tìm thấy món phù hợp" }),
     ).toBeVisible();
     await page.goto("/dishes");
-    await expect(cards(page)).toHaveCount(5);
+    await expect(dishItems(page)).toHaveCount(5);
     await expect(
       page.getByRole("button", { name: "Xem thêm món" }),
     ).toHaveCount(0);
@@ -465,9 +484,9 @@ test.describe("dishes", () => {
       dishes.push(dish(200 + index, `Món thêm ${index + 1}`, 30000, "dry", []));
     try {
       await page.goto("/dishes");
-      await expect(cards(page)).toHaveCount(12);
+      await expect(dishItems(page)).toHaveCount(12);
       await page.getByRole("button", { name: "Xem thêm món" }).click();
-      await expect(cards(page)).toHaveCount(14);
+      await expect(dishItems(page)).toHaveCount(14);
       expect(callsTo("GET", "dishes").at(-1)!.query.get("cursor")).toBe("c12");
       await expect(
         page.getByRole("button", { name: "Xem thêm món" }),
@@ -485,14 +504,14 @@ test.describe("dishes", () => {
     ).toBeVisible();
     failList = null;
     await page.getByRole("button", { name: "Thử lại" }).click();
-    await expect(cards(page)).toHaveCount(5);
+    await expect(dishItems(page)).toHaveCount(5);
   });
 
   test("a dish opens its detail with the restaurant that sells it", async ({
     page,
   }) => {
     await page.goto("/dishes");
-    await cardOf(page, "Bún bò Huế").getByRole("link").click();
+    await dishOf(page, "Bún bò Huế").getByRole("link").click();
     await expect(page).toHaveURL(/\/dishes\/101$/);
     await expect(
       page.getByRole("heading", { name: "Bún bò Huế", level: 1 }),
@@ -523,6 +542,169 @@ test.describe("dishes", () => {
       page.getByRole("heading", { name: "Trang này chưa có" }),
     ).toBeVisible();
   });
+  test("three layouts show the same dishes, the choice is remembered and keeps the search", async ({
+    page,
+  }) => {
+    await page.goto("/dishes?q=b%C3%BAn");
+    await expect(dishItems(page)).toHaveCount(2);
+    const switcher = page.getByRole("group", { name: "Kiểu hiển thị" });
+    // Two-column details are the default.
+    await expect(
+      switcher.getByRole("button", { name: "Lưới chi tiết" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".dish-detail")).toHaveCount(2);
+    await expect(dishOf(page, "Bún bò Huế")).toContainText("Món nước");
+    await expect(dishOf(page, "Bún bò Huế")).toContainText("Bữa trưa");
+    await expect(dishOf(page, "Bún bò Huế")).toContainText(
+      "Nước dùng hầm xương 8 tiếng",
+    );
+    await expect(
+      dishOf(page, "Bún bò Huế").getByLabel("12 lượt thích"),
+    ).toBeVisible();
+
+    await switcher.getByRole("button", { name: "Danh sách" }).click();
+    await expect(page.locator(".dish-row")).toHaveCount(2);
+    await expect(dishOf(page, "Bún chả")).toContainText("Chả nướng than hoa");
+    await expect(page).toHaveURL(/q=b%C3%BAn/);
+
+    await switcher.getByRole("button", { name: "Thư viện ảnh" }).click();
+    await expect(page.locator(".dish-tile")).toHaveCount(2);
+    // Only the photo and the name: no price, tag, description or like count.
+    await expect(
+      dishOf(page, "Bún bò Huế").getByRole("heading", { level: 3 }),
+    ).toBeVisible();
+    await expect(
+      page.locator(
+        ".dish-tile :is(.dish-likes, .dish-kinds, .dish-place, .dish-description, .badge)",
+      ),
+    ).toHaveCount(0);
+    await expect(dishOf(page, "Bún bò Huế")).not.toContainText("45.000");
+
+    await page.reload();
+    await expect(page.locator(".dish-tile")).toHaveCount(2);
+    await expect(
+      switcher.getByRole("button", { name: "Thư viện ảnh" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    await dishOf(page, "Bún bò Huế").getByRole("link").click();
+    await expect(page).toHaveURL(/\/dishes\/101$/);
+  });
+
+  test("the filter panel opens and closes without losing what was chosen", async ({
+    page,
+  }) => {
+    await page.goto("/dishes");
+    await expect(dishItems(page)).toHaveCount(5);
+    const toggle = page.getByRole("button", { name: "Hiện bộ lọc" });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByLabel("Giá từ")).toBeHidden();
+    await toggle.click();
+    const hide = page.getByRole("button", { name: "Ẩn bộ lọc" });
+    await expect(hide).toHaveAttribute("aria-expanded", "true");
+    await page.getByLabel("Giá từ").selectOption("50000");
+    await page
+      .getByRole("group", { name: "Không ăn (bỏ món có thẻ)" })
+      .getByRole("button", { name: "Món nước" })
+      .click();
+    await hide.click();
+    await expect(page.getByLabel("Giá từ")).toBeHidden();
+    await page.getByRole("button", { name: /Hiện bộ lọc/ }).click();
+    await expect(page.getByLabel("Giá từ")).toHaveValue("50000");
+    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
+    await expect(page).toHaveURL(/min=50000/);
+    await expect(page).toHaveURL(/notag=2/);
+    // Bún chả (55.000, no noodle tag) is the only dish left; the panel stays open.
+    await expect(dishItems(page)).toHaveCount(1);
+    await expect(dishOf(page, "Bún chả")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Ẩn bộ lọc/ })).toBeVisible();
+    const last = callsTo("GET", "dishes").at(-1)!;
+    expect(last.query.get("minPrice")).toBe("50000");
+    expect(last.query.getAll("excludeTagIds")).toEqual(["2"]);
+    // Collapsed, the applied filters still apply and are counted on the button.
+    await page.getByRole("button", { name: /Ẩn bộ lọc/ }).click();
+    await expect(
+      page.getByRole("button", { name: /Hiện bộ lọc/ }),
+    ).toContainText("2");
+    await expect(dishItems(page)).toHaveCount(1);
+  });
+
+  test("a price range that cannot match is refused before searching", async ({
+    page,
+  }) => {
+    await page.goto("/dishes");
+    await expect(dishItems(page)).toHaveCount(5);
+    const before = callsTo("GET", "dishes").length;
+    await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
+    await page.getByLabel("Giá từ").selectOption("100000");
+    await page.getByLabel("Giá đến").selectOption("50000");
+    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
+    await expect(page.getByText("Giá từ phải thấp hơn giá đến.")).toBeVisible();
+    expect(callsTo("GET", "dishes")).toHaveLength(before);
+  });
+
+  test("descriptions come from the dish detail, a long one can be read in full", async ({
+    page,
+  }) => {
+    await page.goto("/dishes");
+    await expect(dishItems(page)).toHaveCount(5);
+    await expect(dishOf(page, "Cà phê trứng")).toContainText(
+      "Món này chưa có mô tả.",
+    );
+    const long = dishOf(page, "Bánh mì pate");
+    const more = long.getByRole("button", { name: "Đọc thêm" });
+    await expect(more).toHaveAttribute("aria-expanded", "false");
+    await more.click();
+    await expect(long.getByRole("button", { name: "Thu gọn" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await expect(page).toHaveURL(/\/dishes$/);
+    // Each dish is read once, also after switching layouts.
+    await page
+      .getByRole("group", { name: "Kiểu hiển thị" })
+      .getByRole("button", { name: "Danh sách" })
+      .click();
+    await expect(page.locator(".dish-row")).toHaveCount(5);
+    const reads = calls.filter(
+      (call) => call.method === "GET" && /^dishes\/\d+$/.test(call.path),
+    );
+    expect(reads).toHaveLength(5);
+  });
+
+  for (const [width, label] of [
+    [1440, "desktop"],
+    [820, "tablet"],
+    [390, "mobile"],
+  ] as const)
+    test(`every layout and the open panel fit the ${label} width (${width}px)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/dishes");
+      await expect(dishItems(page)).toHaveCount(5);
+      await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
+      for (const view of ["Danh sách", "Lưới chi tiết", "Thư viện ảnh"]) {
+        await page
+          .getByRole("group", { name: "Kiểu hiển thị" })
+          .getByRole("button", { name: view })
+          .click();
+        const overflow = await page.evaluate(
+          () => document.documentElement.scrollWidth - window.innerWidth,
+        );
+        expect(overflow, view).toBeLessThanOrEqual(0);
+      }
+      // Two detail cards a row only where there is room for them.
+      await page
+        .getByRole("group", { name: "Kiểu hiển thị" })
+        .getByRole("button", { name: "Lưới chi tiết" })
+        .click();
+      const [a, b] = await page
+        .locator(".dish-detail")
+        .evaluateAll((items) =>
+          items.slice(0, 2).map((item) => item.getBoundingClientRect().top),
+        );
+      if (width === 1440) expect(Math.abs(a - b)).toBeLessThan(2);
+      else expect(b).toBeGreaterThan(a);
+    });
 });
 
 test.describe("restaurants", () => {

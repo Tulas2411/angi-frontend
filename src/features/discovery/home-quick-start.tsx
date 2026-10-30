@@ -8,7 +8,7 @@ import { useNearbyProvince } from "./use-nearby-province";
 type QuickTab = "plan" | "nearby";
 const tabs: readonly { value: QuickTab; label: string }[] = [
   { value: "plan", label: "Lên lịch ăn ngon" },
-  { value: "nearby", label: "Ăn quanh đây" },
+  { value: "nearby", label: "Món ngon quanh bạn" },
 ];
 
 /**
