@@ -7,8 +7,13 @@ import {
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
+import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
+import {
+  isModeratorRole,
+  moderationReportsOperation,
+} from "@/shared/api/moderation-proxy";
 import {
   roadmapOperation,
   roadmapOperationHasBody,
@@ -32,6 +37,7 @@ const allowedEndpoints = new Set([
   "POST owner/restaurant",
   "POST owner/restaurant/verifications",
   "GET owner/restaurant/verifications",
+  "GET owner/restaurant/reviews",
   "POST media",
   "GET tags",
   "GET roadmaps",
@@ -44,6 +50,8 @@ async function handle(request: Request, context: Context) {
     const { path } = await context.params;
     const endpoint = path.join("/");
     const menuOperation = ownerMenuOperation(request.method, endpoint);
+    const ownerReviews = ownerReviewsOperation(request.method, endpoint);
+    const moderation = moderationReportsOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     const resubmission =
@@ -55,6 +63,8 @@ async function handle(request: Request, context: Context) {
       !resubmission &&
       !roadmapRoute &&
       !menuOperation &&
+      !ownerReviews &&
+      !moderation &&
       !agentOp &&
       !publicOp
     ) {
@@ -69,6 +79,8 @@ async function handle(request: Request, context: Context) {
     if (
       request.method !== "GET" &&
       menuOperation?.body !== false &&
+      ownerReviews?.body !== false &&
+      moderation?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
@@ -139,6 +151,44 @@ async function handle(request: Request, context: Context) {
           }),
         ),
         publicOp.status,
+      );
+    }
+    // MOD-RP1..MOD-RP4 — chỉ Mod và Admin được vào hàng đợi báo cáo.
+    if (moderation) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được xử lý báo cáo.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        moderation.status,
+      );
+    }
+    // OWN-19/OWN-20 — chủ nhà hàng đọc và trả lời đánh giá của mình.
+    if (ownerReviews) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (auth.user.role !== "RESTAURANT_OWNER")
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ chủ nhà hàng được xem đánh giá.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        ownerReviews.status,
       );
     }
     return ok(

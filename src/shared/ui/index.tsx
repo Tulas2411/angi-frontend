@@ -4,7 +4,12 @@ import type {
   ReactNode,
 } from "react";
 export type ButtonVariant =
-  "primary" | "secondary" | "tertiary" | "destructive" | "icon";
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "destructive"
+  | "danger"
+  | "icon";
 export function Button({
   className = "",
   variant = "primary",

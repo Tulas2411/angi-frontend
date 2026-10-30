@@ -448,6 +448,7 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
   destructive = false,
+  danger = false,
   loading = false,
   label = "Xác nhận",
   cancelLabel = "Hủy",
@@ -458,6 +459,8 @@ export function ConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
   destructive?: boolean;
+  /** Nút xác nhận đỏ đặc cho hành động không thể hoàn tác. */
+  danger?: boolean;
   loading?: boolean;
   label?: string;
   cancelLabel?: string;
@@ -473,7 +476,9 @@ export function ConfirmDialog({
             {cancelLabel}
           </Button>
           <Button
-            variant={destructive ? "destructive" : "primary"}
+            variant={
+              danger ? "danger" : destructive ? "destructive" : "primary"
+            }
             onClick={onConfirm}
             loading={loading}
           >

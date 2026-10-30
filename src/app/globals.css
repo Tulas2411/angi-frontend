@@ -440,6 +440,16 @@ h2:focus {
 .button-destructive:hover {
   background: #fbdcdb;
 }
+/* Nút đỏ đặc: hành động không thể hoàn tác (bác bỏ đơn), không viền. */
+.button-danger {
+  background: var(--error-ink);
+  border-color: var(--error-ink);
+  color: #fff;
+}
+.button-danger:hover {
+  background: #8a262a;
+  border-color: #8a262a;
+}
 .button-icon {
   min-width: 44px;
   min-height: 44px;
