@@ -31,7 +31,15 @@ export const dishFormOptions: { value: "" | DishForm; label: string }[] = [
   { value: "other", label: dishFormLabels.other },
 ];
 
-/** Upper price limits offered next to the dish search (VND). */
+/** Lower price limits of the dish filters (VND). */
+export const dishMinPriceOptions: { value: string; label: string }[] = [
+  { value: "", label: "Không giới hạn" },
+  { value: "20000", label: "Từ 20.000 ₫" },
+  { value: "50000", label: "Từ 50.000 ₫" },
+  { value: "100000", label: "Từ 100.000 ₫" },
+];
+
+/** Upper price limits of the dish filters (VND). */
 export const dishPriceOptions: { value: string; label: string }[] = [
   { value: "", label: "Mọi mức giá" },
   { value: "50000", label: "Dưới 50.000 ₫" },
@@ -169,54 +177,105 @@ export function reviewDate(value: string) {
 }
 
 /** List filters kept in the URL, so a search can be shared and the back button works. */
-export function dishQueryFromParams(params: URLSearchParams): {
+export interface DishFilters {
   q: string;
   province: string;
   form: "" | DishForm;
+  /** VND, one of `dishMinPriceOptions`; empty for no lower limit. */
+  minPrice: string;
+  /** VND, one of `dishPriceOptions`; empty for no upper limit. */
   maxPrice: string;
+  /** DISH-01 `tagIds`: any tag of one tag type, every tag type that has a choice. */
   tagIds: number[];
-} {
+  /** DISH-01 `excludeTagIds`: leave out a dish carrying any of these. */
+  excludeTagIds: number[];
+}
+
+export const emptyDishFilters: DishFilters = {
+  q: "",
+  province: "",
+  form: "",
+  minPrice: "",
+  maxPrice: "",
+  tagIds: [],
+  excludeTagIds: [],
+};
+
+const ids = (values: string[]) =>
+  [...new Set(values.map(Number))].filter(
+    (id) => Number.isInteger(id) && id > 0,
+  );
+
+export function dishQueryFromParams(params: URLSearchParams): DishFilters {
   const form = params.get("form");
+  const known = (
+    options: readonly { value: string }[],
+    value: string | null,
+  ) => (value && options.some((o) => o.value === value) ? value : "");
   return {
     q: params.get("q") ?? "",
     province: params.get("province") ?? "",
     form: form === "soup" || form === "dry" || form === "other" ? form : "",
-    maxPrice: dishPriceOptions.some((o) => o.value === params.get("price"))
-      ? (params.get("price") ?? "")
-      : "",
-    tagIds: params
-      .getAll("tag")
-      .map(Number)
-      .filter((id) => Number.isInteger(id) && id > 0),
+    minPrice: known(dishMinPriceOptions, params.get("min")),
+    maxPrice: known(dishPriceOptions, params.get("price")),
+    tagIds: ids(params.getAll("tag")),
+    excludeTagIds: ids(params.getAll("notag")),
   };
 }
 
+/** A lower price above the upper one cannot match anything; say so instead of searching. */
+export function dishPriceProblem(
+  filters: Pick<DishFilters, "minPrice" | "maxPrice">,
+) {
+  return filters.minPrice &&
+    filters.maxPrice &&
+    Number(filters.minPrice) >= Number(filters.maxPrice)
+    ? "Giá từ phải thấp hơn giá đến."
+    : "";
+}
+
 export function dishApiQuery(
-  filters: ReturnType<typeof dishQueryFromParams>,
+  filters: DishFilters,
   cursor?: string,
 ): BrowseDishesQuery {
   return {
     q: filters.q.trim() || undefined,
     province: filters.province.trim() || undefined,
     dishForm: filters.form || undefined,
+    minPrice: filters.minPrice ? Number(filters.minPrice) : undefined,
     maxPrice: filters.maxPrice ? Number(filters.maxPrice) : undefined,
     tagIds: filters.tagIds.length ? filters.tagIds : undefined,
+    excludeTagIds: filters.excludeTagIds.length
+      ? filters.excludeTagIds
+      : undefined,
     cursor,
     limit: dishPageSize,
   };
 }
 
-export function dishFiltersHref(
-  filters: ReturnType<typeof dishQueryFromParams>,
-) {
+export function dishFiltersHref(filters: DishFilters) {
   const params = new URLSearchParams();
   if (filters.q.trim()) params.set("q", filters.q.trim());
   if (filters.province.trim()) params.set("province", filters.province.trim());
   if (filters.form) params.set("form", filters.form);
+  if (filters.minPrice) params.set("min", filters.minPrice);
   if (filters.maxPrice) params.set("price", filters.maxPrice);
   for (const id of filters.tagIds) params.append("tag", String(id));
+  for (const id of filters.excludeTagIds) params.append("notag", String(id));
   const text = params.toString();
   return text ? `/dishes?${text}` : "/dishes";
+}
+
+/** How many filters of the panel are set (the search box is not one), for the toggle button. */
+export function activeDishFilterCount(filters: DishFilters) {
+  return (
+    (filters.province.trim() ? 1 : 0) +
+    (filters.form ? 1 : 0) +
+    (filters.minPrice ? 1 : 0) +
+    (filters.maxPrice ? 1 : 0) +
+    filters.tagIds.length +
+    filters.excludeTagIds.length
+  );
 }
 
 export function restaurantQueryFromParams(params: URLSearchParams) {

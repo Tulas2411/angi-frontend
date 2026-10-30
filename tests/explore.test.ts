@@ -1,9 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  activeDishFilterCount,
   businessHoursByDay,
   dishApiQuery,
   dishFiltersHref,
+  dishPriceProblem,
   dishQueryFromParams,
+  emptyDishFilters,
   googleMapsPlaceHref,
   operatingBadge,
   parseEntityId,
@@ -98,22 +101,26 @@ describe("explore filters in the URL", () => {
   it("reads and writes the dish filters", () => {
     const filters = dishQueryFromParams(
       new URLSearchParams(
-        "q=bún bò&province=Thành phố Hà Nội&form=soup&price=50000&tag=3&tag=x&tag=9",
+        "q=bún bò&province=Thành phố Hà Nội&form=soup&min=20000&price=50000&tag=3&tag=x&tag=9&tag=3&notag=5",
       ),
     );
     expect(filters).toEqual({
       q: "bún bò",
       province: "Thành phố Hà Nội",
       form: "soup",
+      minPrice: "20000",
       maxPrice: "50000",
       tagIds: [3, 9],
+      excludeTagIds: [5],
     });
     expect(dishApiQuery(filters, "abc")).toEqual({
       q: "bún bò",
       province: "Thành phố Hà Nội",
       dishForm: "soup",
+      minPrice: 20000,
       maxPrice: 50000,
       tagIds: [3, 9],
+      excludeTagIds: [5],
       cursor: "abc",
       limit: 12,
     });
@@ -125,12 +132,35 @@ describe("explore filters in the URL", () => {
       "/dishes",
     );
   });
+  it("counts the panel filters and refuses a price range that cannot match", () => {
+    expect(activeDishFilterCount(emptyDishFilters)).toBe(0);
+    expect(
+      activeDishFilterCount({
+        ...emptyDishFilters,
+        q: "phở",
+        province: "Thành phố Huế",
+        maxPrice: "50000",
+        tagIds: [1, 2],
+        excludeTagIds: [5],
+      }),
+    ).toBe(5);
+    expect(dishPriceProblem({ minPrice: "100000", maxPrice: "50000" })).toBe(
+      "Giá từ phải thấp hơn giá đến.",
+    );
+    expect(dishPriceProblem({ minPrice: "50000", maxPrice: "50000" })).not.toBe(
+      "",
+    );
+    expect(dishPriceProblem({ minPrice: "20000", maxPrice: "50000" })).toBe("");
+    expect(dishPriceProblem({ minPrice: "", maxPrice: "50000" })).toBe("");
+  });
   it("ignores values the API does not know", () => {
     const filters = dishQueryFromParams(
-      new URLSearchParams("form=pizza&price=1"),
+      new URLSearchParams("form=pizza&price=1&min=7&notag=0"),
     );
     expect(filters.form).toBe("");
     expect(filters.maxPrice).toBe("");
+    expect(filters.minPrice).toBe("");
+    expect(filters.excludeTagIds).toEqual([]);
     const restaurants = restaurantQueryFromParams(
       new URLSearchParams("sort=distance&price=9&rating=2&page=-3"),
     );

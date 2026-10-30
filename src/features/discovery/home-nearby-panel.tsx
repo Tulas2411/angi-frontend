@@ -1,6 +1,9 @@
 "use client";
 import Link from "next/link";
-import { dishFiltersHref } from "@/features/explore/explore-rules";
+import {
+  dishFiltersHref,
+  emptyDishFilters,
+} from "@/features/explore/explore-rules";
 import { exploreRoutes } from "@/features/explore/explore-routes";
 import { Alert, Button } from "@/shared/ui";
 import type { NearbyProvinceState } from "./use-nearby-province";
@@ -56,11 +59,8 @@ export function HomeNearbyPanel({
       {state.status === "found" ? (
         <Link
           href={dishFiltersHref({
-            q: "",
+            ...emptyDishFilters,
             province: state.province.name,
-            form: "",
-            maxPrice: "",
-            tagIds: [],
           })}
           className="button button-primary home-quick-submit"
         >
