@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   dataId,
   filterFromParam,
+  notificationCategory,
+  notificationDayGroup,
   notificationHref,
   notificationsHref,
   notificationTime,
   unreadBadge,
 } from "@/features/notifications/notification-rules";
+import { notificationPageNumbers } from "@/features/notifications/notification-page-numbers";
 
 /** NOTI-01..03 helpers: where a notification leads, the list URL, the badge and the time. */
 describe("notification destinations", () => {
@@ -105,5 +108,45 @@ describe("notification list helpers", () => {
     expect(notificationTime("2026-10-27T10:00:00Z", now)).toBe("Hôm qua");
     expect(notificationTime("2026-10-10T10:00:00Z", now)).toMatch(/2026/);
     expect(notificationTime("not a date", now)).toBe("");
+  });
+});
+
+describe("notification grouping", () => {
+  it("names the kind of news so a row can show an icon and a tag", () => {
+    expect(notificationCategory("BLOG_COMMENTED").key).toBe("blog");
+    expect(notificationCategory("BLOG_LIKED").key).toBe("blog");
+    expect(notificationCategory("ROADMAP_GENERATED").key).toBe("roadmap");
+    expect(notificationCategory("REVIEW_REPLIED").key).toBe("review");
+    expect(notificationCategory("MENU_REJECTED").key).toBe("menu");
+    expect(notificationCategory("VERIFICATION_APPROVED").key).toBe(
+      "verification",
+    );
+    expect(notificationCategory("REPORT_RESOLVED").key).toBe("report");
+    expect(notificationCategory("ACCOUNT_SANCTIONED").key).toBe("account");
+    // An unknown backend type still gets a readable name.
+    expect(notificationCategory("SOMETHING_NEW").key).toBe("general");
+    expect(notificationCategory("SOMETHING_NEW").label).toBe("Thông báo");
+  });
+
+  it("buckets a notification by the day it arrived", () => {
+    const now = Date.parse("2026-10-28T10:00:00Z");
+    expect(notificationDayGroup("2026-10-28T09:00:00Z", now)).toBe("today");
+    expect(notificationDayGroup("2026-10-27T09:00:00Z", now)).toBe("yesterday");
+    expect(notificationDayGroup("2026-10-24T09:00:00Z", now)).toBe("week");
+    expect(notificationDayGroup("2026-10-01T09:00:00Z", now)).toBe("older");
+    expect(notificationDayGroup("not a date", now)).toBe("older");
+  });
+});
+
+describe("notification pagination", () => {
+  it("lists every page when there are only a few", () => {
+    expect(notificationPageNumbers(1, 3)).toEqual([1, 2, 3]);
+    expect(notificationPageNumbers(2, 6)).toEqual([1, 2, 3, 4, 5, 6]);
+  });
+
+  it("keeps the first, the last and the neighbours of the current page", () => {
+    expect(notificationPageNumbers(5, 12)).toEqual([1, "gap", 4, 5, 6, "gap", 12]);
+    expect(notificationPageNumbers(1, 12)).toEqual([1, 2, "gap", 12]);
+    expect(notificationPageNumbers(12, 12)).toEqual([1, "gap", 11, 12]);
   });
 });

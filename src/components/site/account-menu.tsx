@@ -48,7 +48,7 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
   }, []);
   return (
     <>
-      <NotificationBell />
+      <NotificationBell role={user.role} />
       <details
         className="account-menu"
         ref={menu}

@@ -4,7 +4,7 @@ import { ownerRoutes, ownerVerificationHref } from "@/features/owner/routes";
 import { roadmapDetailHref } from "@/features/roadmaps/routes";
 import type { NotificationDto } from "./notification-types";
 
-export const notificationPageSize = 20;
+export const notificationPageSize = 10;
 /** NOTI-03 accepts at most 100 ids per call. */
 export const maxReadIds = 100;
 
@@ -63,6 +63,57 @@ export function notificationHref(
   return null;
 }
 
+/**
+ * The kind of news a notification carries, used to pick its badge and colour.
+ * The backend type is a free-form string, so anything unknown falls back to "general".
+ */
+export type NotificationCategory =
+  | "blog"
+  | "review"
+  | "roadmap"
+  | "menu"
+  | "verification"
+  | "report"
+  | "account"
+  | "general";
+
+export interface NotificationCategoryInfo {
+  key: NotificationCategory;
+  /** A readable name of the kind of news, shown as a tag on a row. */
+  label: string;
+}
+
+const CATEGORIES: Record<NotificationCategory, NotificationCategoryInfo> = {
+  blog: { key: "blog", label: "Bài viết" },
+  review: { key: "review", label: "Đánh giá" },
+  roadmap: { key: "roadmap", label: "Lộ trình" },
+  menu: { key: "menu", label: "Thực đơn" },
+  verification: { key: "verification", label: "Xác minh" },
+  report: { key: "report", label: "Báo cáo" },
+  account: { key: "account", label: "Tài khoản" },
+  general: { key: "general", label: "Thông báo" },
+};
+
+const CATEGORY_BY_PREFIX: [string, NotificationCategory][] = [
+  ["BLOG_", "blog"],
+  ["REVIEW_", "review"],
+  ["RESTAURANT_REVIEWED", "review"],
+  ["ROADMAP_", "roadmap"],
+  ["MENU_", "menu"],
+  ["VERIFICATION_", "verification"],
+  ["REPORT_", "report"],
+  ["ACCOUNT_", "account"],
+];
+
+export function notificationCategory(type: string): NotificationCategoryInfo {
+  for (const [prefix, key] of CATEGORY_BY_PREFIX)
+    if (type === prefix || type.startsWith(prefix)) return CATEGORIES[key];
+  return CATEGORIES.general;
+}
+
+/** How many notifications the bell dropdown shows. */
+export const notificationPreviewSize = 5;
+
 const relative = new Intl.RelativeTimeFormat("vi-VN", { numeric: "auto" });
 const fullDate = new Intl.DateTimeFormat("vi-VN", {
   timeZone: "Asia/Bangkok",
@@ -93,3 +144,31 @@ export function fullNotificationTime(createdAt: string) {
 export function unreadBadge(count: number) {
   return count > 99 ? "99+" : String(count);
 }
+
+/**
+ * A date bucket for the list: "Hôm nay", "Hôm qua", then the weekday for the last
+ * week and the full date beyond that.
+ */
+export type NotificationDayGroup = "today" | "yesterday" | "week" | "older";
+
+export function notificationDayGroup(
+  createdAt: string,
+  now = Date.now(),
+): NotificationDayGroup {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "older";
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const day = 86400000;
+  if (date.getTime() >= startOfToday.getTime()) return "today";
+  if (date.getTime() >= startOfToday.getTime() - day) return "yesterday";
+  if (date.getTime() >= startOfToday.getTime() - 7 * day) return "week";
+  return "older";
+}
+
+export const notificationDayLabels: Record<NotificationDayGroup, string> = {
+  today: "Hôm nay",
+  yesterday: "Hôm qua",
+  week: "Tuần này",
+  older: "Trước đó",
+};
