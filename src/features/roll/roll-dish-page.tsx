@@ -25,15 +25,12 @@ import {
   type RollService,
 } from "./roll-service";
 import {
-  brakeDurationFor,
-  brakeTravel,
-  cruiseDuration,
-  cruiseTravel,
   maxTravel,
-  planBrake,
+  planSpin,
   readGeometry,
   reelLength,
-  type StripGeometry,
+  spinTravel,
+  type SpinPlan,
 } from "./roll-spin-rules";
 import "./roll-dish.css";
 import { RollDishDialog, type RollDishPreview } from "./roll-dish-dialog";
@@ -43,9 +40,6 @@ type State =
   | { status: "rolling" }
   | { status: "revealed"; result: RollDishResponseDto }
   | { status: "error"; message: string; exhausted: boolean };
-
-/** The reel turns this long at least, so a quick answer still reads as a roll. */
-const minimumTurn = cruiseDuration;
 
 /**
  * F-18 Roll Dish ("Hôm nay ăn gì?"), ducbui's layout on real data: the tab picks the conditions,
@@ -68,9 +62,8 @@ export function RollDishPage({
   const [previewOpen, setPreviewOpen] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const reelRef = useRef<HTMLDivElement>(null);
-  // The reel's travel is written to the DOM every frame; React re-renders only when the reel's
-  // content changes.
-  const travel = useRef(0);
+  // The reel's cards. They are drawn once per spin: the reel is only translated while it turns,
+  // so the browser never has to lay it out again and the movement never stutters.
   const [cards, setCards] = useState<(DishCardDto | null)[]>([]);
 
   function showDish(dish: Pick<DishCardDto, "id" | "name">) {
@@ -136,77 +129,32 @@ export function RollDishPage({
   }, [strip]);
 
   /**
-   * The reel turns fast and then brakes to a full stop on the rolled dish. The dish cycle
-   * repeats, so every dish of the tab goes by before the answer rests under the marker.
+   * The reel turns and then brakes to a full stop on the rolled dish.
    *
-   * The returned promise settles when the reel has come to a stop; `brake` starts the slowdown.
+   * The plan is made before the reel moves, so nothing in the DOM changes while it turns: the
+   * browser only has to translate one layer. The speed falls from the cruise speed to a full stop
+   * without a jump, so the reel never appears to stutter.
+   *
+   * The returned promise settles when the reel has come to a stop.
    */
-  const spin = useCallback(
-    (geometry: StripGeometry): {
-      stopped: Promise<void>;
-      brake: (dish: RollDishResponseDto["dish"]) => void;
-    } => {
-      let braking: {
-        from: number;
-        distance: number;
-        duration: number;
-        startedAt: number;
-      } | null = null;
-      const stopped = new Promise<void>((resolve) => {
-        let frame = 0;
-        let startedAt = 0;
-        const loop = (now: number) => {
-          if (!startedAt) startedAt = now;
-          if (braking) {
-            const u = (now - braking.startedAt) / braking.duration;
-            travel.current = brakeTravel(
-              braking.from,
-              braking.distance,
-              u,
-            );
-            if (u >= 1) {
-              cancelAnimationFrame(frame);
-              resolve();
-              return;
-            }
-          } else {
-            travel.current = cruiseTravel(now - startedAt);
-          }
-          const reel = reelRef.current;
-          if (reel)
-            reel.style.transform = `translate3d(${-travel.current}px, 0, 0)`;
-          frame = requestAnimationFrame(loop);
-        };
-        frame = requestAnimationFrame(loop);
-      });
-      // The brake is armed when the answer is in, so the reel keeps turning at full speed while
-      // the answer comes in and then slows down to a stop.
-      const brake = (dish: RollDishResponseDto["dish"]) => {
-        if (braking) return;
-        const from = travel.current;
-        // The rolled dish waits in the slot that comes to rest under the marker, so the reel has
-        // to show it there.
-        const residue = Math.max(
-          0,
-          strip.findIndex((item) => item.id === dish.id),
-        );
-        const plan = planBrake(
-          geometry,
-          from,
-          residue,
-          Math.max(1, strip.length),
-        );
-        braking = {
-          from,
-          distance: plan.distance,
-          duration: brakeDurationFor(plan.distance),
-          startedAt: performance.now(),
-        };
+  const spin = useCallback((plan: SpinPlan): Promise<void> => {
+    return new Promise<void>((resolve) => {
+      const startedAt = performance.now();
+      const loop = (now: number) => {
+        const elapsed = now - startedAt;
+        const travel = spinTravel(plan, elapsed);
+        const reel = reelRef.current;
+        if (reel)
+          reel.style.transform = `translate3d(${-travel}px, 0, 0)`;
+        if (elapsed >= plan.cruiseEnd + plan.brake) {
+          resolve();
+          return;
+        }
+        requestAnimationFrame(loop);
       };
-      return { stopped, brake };
-    },
-    [strip],
-  );
+      requestAnimationFrame(loop);
+    });
+  }, []);
 
   async function roll(again: boolean) {
     if (rolling.current || !conditions) return;
@@ -219,38 +167,39 @@ export function RollDishPage({
     try {
       const track = trackRef.current;
       const geometry = track ? readGeometry(track) : null;
-      // The reel starts from the beginning of its run.
-      travel.current = 0;
-      const reel = reelRef.current;
-      if (reel) reel.style.transform = "translate3d(0, 0, 0)";
-      const running = geometry ? spin(geometry) : null;
+      // The answer comes in first: the whole spin is planned from it, so the reel's cards and its
+      // stop are known before it moves and nothing changes in the middle of the turn.
       const result = await service.roll(rollRequest(conditions.roll, exclude));
-      if (reduce || !geometry || !track || !running) {
+      if (reduce || !geometry || !track || !strip.length) {
         setShown([...exclude, result.dish.id]);
         setState({ status: "revealed", result });
         return;
       }
-      // The rolled dish waits in the slot that comes to rest under the marker, so the reel shows
-      // it in every slot of its residue.
       const cycle = strip;
       const length = Math.max(1, cycle.length);
+      // The residue of the rolled dish: the slots of the cycle that hold it.
       const residue = Math.max(
         0,
         cycle.findIndex((dish) => dish.id === result.dish.id),
       );
+      const plan = planSpin(geometry, residue, length);
+      // The rolled dish waits in the slot that comes to rest under the marker, so the reel shows
+      // it there. The reel is drawn before it starts to move.
       setCards(
-        Array.from(
-          { length: reelLength(geometry, maxTravel()) },
-          (_, index) =>
-            index % length === residue
-              ? result.dish
-              : cycle[index % length] ?? null,
+        Array.from({ length: reelLength(geometry, maxTravel()) }, (_, index) =>
+          index % length === residue
+            ? result.dish
+            : (cycle[index % length] ?? null),
         ),
       );
-      // The reel turns for a moment even when the answer is already there.
-      await new Promise((resolve) => setTimeout(resolve, minimumTurn));
-      running.brake(result.dish);
-      await running.stopped;
+      // The reel starts from the beginning of its run.
+      const reel = reelRef.current;
+      if (reel) reel.style.transform = "translate3d(0, 0, 0)";
+      // One frame for the browser to draw the reel before it starts to move.
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => resolve()),
+      );
+      await spin(plan);
       setShown([...exclude, result.dish.id]);
       setState({ status: "revealed", result });
     } catch (caught) {

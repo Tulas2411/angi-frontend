@@ -3,26 +3,29 @@
  *
  * The strip is a reel of cards that is pulled to the left. `travel` is the number of pixels the
  * reel has travelled; the card under the marker is the one whose centre sits in the middle of the
- * track. The reel turns fast first and then brakes with an easing that starts at the cruise speed
- * and ends at a full stop, the way a case opening slows down before it lands.
+ * track.
+ *
+ * The whole spin is planned before it starts: the reel winds up to the cruise speed, turns at
+ * that speed and then brakes to a full stop on the rolled dish. The speed is the same at both
+ * ends of every phase, so the reel never appears to stutter: it never stands still in the middle
+ * of the spin and its speed never jumps where the brake begins.
  */
 
 /** The fast phase, in pixels per second. */
 export const cruiseSpeed = 2400;
-/** The fast phase, in milliseconds. */
+/** How long the reel winds up from a standstill, in milliseconds. */
+export const rampDuration = 140;
+/** How long the reel turns at the cruise speed before it brakes, in milliseconds. */
 export const cruiseDuration = 2200;
-/** The slow phase, in milliseconds. */
-export const brakeDuration = 2800;
 /**
- * The shape of the slow phase. The bigger the number, the later the reel slows down: the reel
- * keeps most of its speed at first and then crawls into the marker.
+ * The shape of the slow phase. The speed at `u` is `cruiseSpeed·(1 − u)^(shape − 1)`: the reel
+ * keeps most of its speed at first and then crawls into the marker. The bigger the number, the
+ * later the reel slows down.
  */
 export const brakeShape = 2.6;
-/** The pixels the reel covers while it brakes. It starts at the cruise speed, so it takes the
- * shape to cover exactly this distance in the brake time. */
-export const brakeDistance =
-  (cruiseSpeed * brakeDuration) / 1000 / brakeShape;
-/** The whole spin lasts this long: the fast phase and the slow phase. */
+/** How long the reel brakes to a full stop, in milliseconds. */
+export const brakeDuration = 2800;
+/** The whole spin, in milliseconds: the fast phase and the slow phase. */
 export const spinDuration = cruiseDuration + brakeDuration;
 
 /** The strip's layout, measured from the track before a spin starts. */
@@ -37,14 +40,20 @@ export interface StripGeometry {
   base: number;
 }
 
-/** The plan of the brake that ends a spin. */
-export interface BrakePlan {
-  /** The slot that comes to rest under the marker; it holds the rolled dish. */
-  slot: number;
-  /** The travel of the resting reel. */
-  travel: number;
+/** The plan of a spin: where it slows down and where it stops. */
+export interface SpinPlan {
+  /** When the brake starts, in milliseconds from the start of the spin. */
+  cruiseEnd: number;
+  /** How long the slow phase lasts, in milliseconds. */
+  brake: number;
+  /** The travel when the brake starts. */
+  brakeStart: number;
   /** The pixels the reel covers while it brakes. */
   distance: number;
+  /** The travel of the resting reel. */
+  travel: number;
+  /** The slot that comes to rest under the marker; it holds the rolled dish. */
+  slot: number;
 }
 
 /** How far the marker sits from the reel's origin. */
@@ -60,83 +69,114 @@ export function restingTravel(
   return slot * geometry.step - markerOffset(geometry);
 }
 
-/** The travel of the fast phase. It never runs further than the cruise distance. */
-export function cruiseTravel(elapsed: number): number {
-  return (cruiseSpeed * Math.min(cruiseDuration, Math.max(0, elapsed))) / 1000;
-}
-
 /**
- * The travel of the slow phase. The easing `1 − (1 − u)^shape` starts at the cruise speed and
- * comes to a full stop, so the reel slows down late and lands softly.
+ * The travel of the fast phase. It is never clamped: the reel keeps turning at the cruise speed
+ * until the brake starts, so it never stands still in the middle of a spin.
  */
-export function brakeTravel(from: number, distance: number, u: number): number {
-  const clamped = Math.min(1, Math.max(0, u));
-  return from + distance * (1 - Math.pow(1 - clamped, brakeShape));
-}
-
-/** The speed of the slow phase at `u`, in pixels per second. */
-export function brakeSpeed(u: number, distance: number): number {
-  const clamped = Math.min(1, Math.max(0, u));
+export function cruiseTravel(elapsed: number): number {
+  const t = Math.max(0, elapsed);
+  if (t <= rampDuration)
+    return (cruiseSpeed * t * t) / (2000 * rampDuration);
   return (
-    ((distance * brakeShape * Math.pow(1 - clamped, brakeShape - 1)) /
-      brakeDuration) *
-    1000
+    (cruiseSpeed * rampDuration) / 2000 +
+    (cruiseSpeed * (t - rampDuration)) / 1000
   );
 }
 
-/** How long a brake over `distance` pixels lasts. */
-export function brakeDurationFor(distance: number): number {
-  return (brakeDistance * brakeDuration) / Math.max(1, distance);
+/** The pixels the reel covers per millisecond while it brakes, on average. */
+export function brakeRate(): number {
+  return cruiseSpeed / (1000 * brakeShape);
+}
+
+/** The furthest the reel travels in a spin, with room for the rounding of the landing slot. */
+export function maxTravel(): number {
+  return cruiseTravel(cruiseDuration) + brakeRate() * brakeDuration + 600;
 }
 
 /**
- * The plan of the brake that starts at `travel`: the slot that comes to rest under the marker and
- * the distance the reel still has to cover. The slot keeps the residue of the rolled dish inside
- * the cycle, so the winner is the card that rests under the marker.
+ * The plan of the spin that ends on the rolled dish.
+ *
+ * The landing slot and the brake belong together: the slot fixes the distance the brake has to
+ * cover, and the distance fixes how long the brake takes, so the brake always starts at exactly
+ * the cruise speed and ends at a full stop. The speed therefore never jumps where the brake
+ * begins.
+ *
+ * The landing slot keeps the residue of the rolled dish, so the winner is the card that comes to
+ * rest under the marker.
  */
-export function planBrake(
+export function planSpin(
   geometry: StripGeometry,
-  travel: number,
   residue: number,
   cycleLength: number,
-): BrakePlan {
+): SpinPlan {
   const length = Math.max(1, cycleLength);
-  // The slot whose brake lasts closest to the wanted run wins, so the reel always slows down in
-  // the same rhythm.
-  let slot = -1;
+  const start = cruiseTravel(cruiseDuration);
+  const ideal = brakeRate() * brakeDuration;
+  // The slots of the rolled dish, from the closest one to the start of the brake. The slot whose
+  // distance is closest to the ideal brake distance wins, so the reel always slows down in the
+  // same rhythm.
+  let slot = Math.max(0, residue);
   let distance = 0;
   let best = Number.POSITIVE_INFINITY;
-  for (let round = 0; round < 200; round += 1) {
+  for (let round = 0; round < 400; round += 1) {
     const candidate = residue + round * length;
-    const run = restingTravel(geometry, candidate) - travel;
+    const run = restingTravel(geometry, candidate) - start;
     if (run > 0) {
-      const score = Math.abs(run - brakeDistance);
+      const score = Math.abs(run - ideal);
       if (score < best) {
         best = score;
         slot = candidate;
         distance = run;
       }
+      if (run > ideal + geometry.step) break;
     }
-    if (run > brakeDistance * 3) break;
   }
-  if (slot < 0) {
-    slot = Math.max(0, residue);
-    distance = Math.max(1, restingTravel(geometry, slot) - travel);
-  }
-  return { slot, travel: restingTravel(geometry, slot), distance };
+  if (distance <= 0) distance = Math.max(1, ideal);
+  // A brake that starts at the cruise speed and ends at a full stop lasts exactly this long.
+  const brake = (distance * brakeShape * 1000) / cruiseSpeed;
+  return {
+    cruiseEnd: cruiseDuration,
+    brake,
+    brakeStart: start,
+    distance,
+    travel: start + distance,
+    slot,
+  };
+}
+
+/**
+ * The travel of a spin at `elapsed` milliseconds. The curve is continuous: the wind-up ends at the
+ * cruise speed, the fast phase ends at the cruise speed and the slow phase ends at a full stop.
+ */
+export function spinTravel(plan: SpinPlan, elapsed: number): number {
+  const t = Math.max(0, elapsed);
+  if (t <= plan.cruiseEnd) return cruiseTravel(t);
+  const u = Math.min(1, (t - plan.cruiseEnd) / plan.brake);
+  return (
+    plan.brakeStart +
+    plan.distance * (1 - Math.pow(1 - u, brakeShape))
+  );
+}
+
+/** The speed of a spin at `elapsed` milliseconds, in pixels per second. */
+export function spinSpeed(plan: SpinPlan, elapsed: number): number {
+  const t = Math.max(0, elapsed);
+  if (t <= rampDuration) return (cruiseSpeed * t) / rampDuration;
+  if (t <= plan.cruiseEnd) return cruiseSpeed;
+  const u = Math.min(1, (t - plan.cruiseEnd) / plan.brake);
+  return (
+    (plan.distance * brakeShape * 1000 * Math.pow(1 - u, brakeShape - 1)) /
+    plan.brake
+  );
 }
 
 /** The cards the reel needs so its right end still fills the track at `travel`. */
 export function reelLength(geometry: StripGeometry, travel: number): number {
   return Math.max(
     1,
-    Math.ceil((travel + geometry.trackWidth - geometry.base) / geometry.step) + 1,
+    Math.ceil((travel + geometry.trackWidth - geometry.base) / geometry.step) +
+      1,
   );
-}
-
-/** The furthest the reel can travel: the fast phase plus the slow phase. */
-export function maxTravel(): number {
-  return cruiseTravel(cruiseDuration) + brakeDistance;
 }
 
 /** The geometry of the strip the track shows right now. */
