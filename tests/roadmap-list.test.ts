@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   isOverBudget,
   parseRoadmapPage,
+  roadmapCountdown,
   roadmapDateRange,
   roadmapItemsLabel,
   roadmapListPageSize,
   roadmapOriginText,
+  roadmapShortRange,
+  vietnamToday,
   vnd,
 } from "@/features/roadmaps/roadmap-list-rules";
 import { roadmapListHref } from "@/features/roadmaps/routes";
@@ -86,5 +89,51 @@ describe("RM-02 list presentation", () => {
       "Vị trí hiện tại",
     );
     expect(roadmapOriginText({ ...sample, originMode: "none" })).toBeNull();
+  });
+});
+
+describe("roadmap card", () => {
+  it("writes the dates short, the year once", () => {
+    expect(roadmapShortRange(sample)).toBe("10 – 12 thg 10, 2026");
+    expect(
+      roadmapShortRange({
+        ...sample,
+        startDate: "2026-10-30",
+        endDate: "2026-11-02",
+      }),
+    ).toBe("30 thg 10 – 2 thg 11, 2026");
+    expect(
+      roadmapShortRange({
+        ...sample,
+        startDate: "2026-12-31",
+        endDate: "2027-01-02",
+      }),
+    ).toBe("31 thg 12, 2026 – 2 thg 1, 2027");
+    expect(
+      roadmapShortRange({
+        ...sample,
+        startDate: "2026-10-10",
+        endDate: "2026-10-10",
+      }),
+    ).toBe("10 thg 10, 2026");
+    expect(
+      roadmapShortRange({ ...sample, startDate: null, endDate: null }),
+    ).toBe("Chưa chọn ngày đi");
+  });
+
+  it("says how soon the trip starts, that it is under way, or nothing once it is over", () => {
+    expect(roadmapCountdown(sample, "2026-10-08")).toBe("2 ngày tới");
+    expect(roadmapCountdown(sample, "2026-10-09")).toBe("Ngày mai");
+    expect(roadmapCountdown(sample, "2026-10-10")).toBe("Hôm nay");
+    expect(roadmapCountdown(sample, "2026-10-11")).toBe("Đang diễn ra");
+    expect(roadmapCountdown(sample, "2026-10-13")).toBeNull();
+    expect(
+      roadmapCountdown({ ...sample, startDate: null }, "2026-10-08"),
+    ).toBeNull();
+  });
+
+  it("takes today in Vietnam, not in UTC", () => {
+    // 2026-10-09 18:30 UTC is already 2026-10-10 in Vietnam.
+    expect(vietnamToday(new Date("2026-10-09T18:30:00Z"))).toBe("2026-10-10");
   });
 });

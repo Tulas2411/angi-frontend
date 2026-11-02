@@ -1,8 +1,8 @@
-/* F-20 "Lộ trình của tôi": card grid on the shared page width. */
+/* F-20 "Lộ trình của tôi": card grid on the shared page width, four roadmaps a row. */
 
 .roadmap-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-6);
   margin: 0;
   padding: 0;
@@ -14,82 +14,155 @@
   min-width: 0;
 }
 
+/* A card is its cover and two lines under it: no frame, the photo carries it. */
 .roadmap-card {
   position: relative;
+  display: flex;
   flex: 1;
-  gap: 0;
-  padding: var(--space-3);
-  transition:
-    box-shadow var(--duration-fast) ease,
-    border-color var(--duration-fast) ease;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.roadmap-card-cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+}
+.roadmap-card-cover > .media {
+  aspect-ratio: 3 / 2;
+  border-radius: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .roadmap-card-cover img {
+    transition: transform 500ms var(--ease-out);
+  }
+  .roadmap-card:hover .roadmap-card-cover img {
+    transform: scale(1.04);
+  }
 }
 
-.roadmap-card:hover,
-.roadmap-card:focus-within {
-  border-color: var(--line-strong);
-  box-shadow: var(--shadow);
+/* How soon the trip starts, and a budget warning, on the top left of the cover. */
+.roadmap-card-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 120px);
+}
+.roadmap-card-badges > span {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--coral);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.roadmap-card-badges > .is-warning {
+  color: var(--warning-ink);
+}
+
+/* Share on the top right; it sits above the link that covers the card. */
+.roadmap-card-share {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(20 16 14 / 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--duration-fast) ease;
+}
+.roadmap-card-share:hover {
+  background: rgb(20 16 14 / 0.75);
+}
+.roadmap-card-share:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.roadmap-card-share svg {
+  fill: currentColor;
 }
 
 /* The title link covers the whole card, so the card is one link to the detail page. */
+.roadmap-card h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.roadmap-card h2 a {
+  color: inherit;
+  text-decoration: none;
+}
 .roadmap-card h2 a::after {
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
 }
-
+.roadmap-card:hover h2 a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .roadmap-card h2 a:focus-visible {
   outline: none;
 }
-
 .roadmap-card h2 a:focus-visible::after {
   box-shadow: var(--focus-ring);
 }
 
-.roadmap-card > .media {
-  aspect-ratio: 16 / 10;
-  border-radius: var(--radius-md);
-}
-
-.roadmap-card-body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-3) var(--space-3);
-}
-
-.roadmap-card h2 {
-  font-size: 20px;
-  overflow-wrap: anywhere;
-}
-
-.roadmap-card-chips {
+/* Who, when, how long and how many dishes, separated by dots. */
+.roadmap-card-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 4px 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
 }
-
-.roadmap-card-chips > span {
-  padding: 6px var(--space-3);
-  border-radius: var(--radius-pill);
+.roadmap-card-meta > span:not(.roadmap-card-owner) + span::before {
+  content: "•";
+  margin-inline: 8px;
+  font-size: 10px;
+  vertical-align: 2px;
+}
+.roadmap-card-owner {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-right: 8px;
+  border-radius: 50%;
   background: var(--control);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
-/* Money and origin text stay readable and wrap instead of overflowing the card. */
-.roadmap-card .detail-list {
-  margin-top: auto;
+@media (max-width: 1280px) {
+  .roadmap-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
-
-.roadmap-card .detail-list dd {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-@media (max-width: 1100px) {
+@media (max-width: 1000px) {
   .roadmap-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
