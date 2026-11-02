@@ -332,6 +332,7 @@ function RestaurantProfileEditor({
             {tab === "information" ? (
               <Card title="Thông tin nhà hàng" className="stack">
                 <Field
+                  placeholder="Ví dụ: Bún Bò Bà Diệu"
                   label="Tên nhà hàng"
                   name="name"
                   required
@@ -342,6 +343,7 @@ function RestaurantProfileEditor({
                 />
                 <div className="grid-2">
                   <Field
+                    placeholder="Ví dụ: 0236 3812 345"
                     label="Số điện thoại nhà hàng"
                     name="phone"
                     type="tel"
@@ -351,6 +353,7 @@ function RestaurantProfileEditor({
                     onChange={(event) => change("phone", event.target.value)}
                   />
                   <Field
+                    placeholder="lienhe@nhahang.vn"
                     label="Email nhà hàng"
                     name="email"
                     type="email"
@@ -369,6 +372,7 @@ function RestaurantProfileEditor({
                   onChange={(event) => change("website", event.target.value)}
                 />
                 <TextArea
+                  placeholder="Món đặc trưng, không gian, điều làm quán khác biệt…"
                   label="Mô tả"
                   name="description"
                   maxLength={2000}
@@ -379,6 +383,7 @@ function RestaurantProfileEditor({
                   }
                 />
                 <Field
+                  placeholder="Số nhà, tên đường"
                   label="Địa chỉ"
                   name="addressLine"
                   required

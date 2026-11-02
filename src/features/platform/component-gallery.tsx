@@ -90,6 +90,7 @@ export function ComponentGallery() {
       <Card title="Trường nhập">
         <div className="grid-3">
           <Field
+            placeholder="Ví dụ: Nguyễn Văn An"
             label="Tên hiển thị"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -97,13 +98,20 @@ export function ComponentGallery() {
             required
           />
           <Field
+            placeholder="ten@email.com"
             label="Email có lỗi"
             type="email"
             defaultValue="chua-hop-le"
             error="Nhập email hợp lệ."
           />
-          <Field label="Chỉ xem" value="Tuấn Nguyễn Minh" readOnly />
           <Field
+            placeholder="Chỉ xem"
+            label="Chỉ xem"
+            value="Tuấn Nguyễn Minh"
+            readOnly
+          />
+          <Field
+            placeholder="Ví dụ: 500000"
             label="Ngân sách"
             type="number"
             defaultValue={3500000}
@@ -123,9 +131,15 @@ export function ComponentGallery() {
               { value: "selected", label: "Đã chọn" },
             ]}
           />
-          <Field label="Không khả dụng" disabled value="Chờ API" />
+          <Field
+            placeholder="Không khả dụng"
+            label="Không khả dụng"
+            disabled
+            value="Chờ API"
+          />
         </div>
         <TextArea
+          placeholder="Nhập mô tả…"
           label="Mô tả"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -247,6 +261,7 @@ export function ComponentGallery() {
       </Card>
       <Card title="Bảng, bộ lọc và phân trang">
         <Field
+          placeholder="Nhập tên nhà hàng…"
           label="Tìm nhà hàng"
           value={text}
           onChange={(e) => {
@@ -368,7 +383,11 @@ export function ComponentGallery() {
           </Alert>
         ) : (
           <div className="stack">
-            <Field label="Tên hiển thị" defaultValue="Tuấn Nguyễn Minh" />
+            <Field
+              placeholder="Ví dụ: Nguyễn Văn An"
+              label="Tên hiển thị"
+              defaultValue="Tuấn Nguyễn Minh"
+            />
             <p>
               Nội dung cuộn trong hộp thoại; Escape đóng và trả tiêu điểm về nút
               mở.

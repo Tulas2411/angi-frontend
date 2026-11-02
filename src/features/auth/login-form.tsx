@@ -74,6 +74,7 @@ export default function LoginForm() {
           error={fields.email}
         />
         <PasswordField
+          placeholder="Nhập mật khẩu"
           label="Mật khẩu"
           name="password"
           autoComplete="current-password"

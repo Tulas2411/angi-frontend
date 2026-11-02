@@ -11,7 +11,11 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { PageHeading } from "@/components/layout/workspace";
-import { dateLabel, pageSlice, relativeTimeLabel } from "@/features/platform/rules";
+import {
+  dateLabel,
+  pageSlice,
+  relativeTimeLabel,
+} from "@/features/platform/rules";
 import {
   ownerReviewsSeed,
   summarizeOwnerReviews,
@@ -85,7 +89,9 @@ function RatingSummary({ reviews }: { reviews: OwnerReviewSeed[] }) {
                   style={{ width: `${(item.count / peak) * 100}%` }}
                 />
               </span>
-              <span className="owner-reviews-breakdown-count">{item.count}</span>
+              <span className="owner-reviews-breakdown-count">
+                {item.count}
+              </span>
             </li>
           ))}
         </ul>
@@ -124,7 +130,9 @@ function ReviewItem({
           <strong>{review.author}</strong>
           <div className="owner-review-meta">
             <span>{relativeTimeLabel(review.date)}</span>
-            {review.visitedFrom && <span>· Ghé {dateLabel(review.visitedFrom)}</span>}
+            {review.visitedFrom && (
+              <span>· Ghé {dateLabel(review.visitedFrom)}</span>
+            )}
             <span>· {review.likes} lượt thích</span>
           </div>
         </div>
@@ -166,9 +174,7 @@ function ReviewItem({
               <Badge tone="success">Đang hiển thị</Badge>
             )}
           </div>
-          <p className="owner-review-reply-text">
-            {review.reply}
-          </p>
+          <p className="owner-review-reply-text">{review.reply}</p>
           {review.replyPending && (
             <p className="helper owner-review-reply-note">
               Phản hồi đang chờ người kiểm duyệt của ANGI duyệt trước khi hiển
@@ -186,7 +192,9 @@ function ReviewItem({
         >
           {review.reply ? "Sửa phản hồi" : "Phản hồi"}
         </Button>
-        {!visible && <span className="helper">Chỉ phản hồi đánh giá đang hiển thị.</span>}
+        {!visible && (
+          <span className="helper">Chỉ phản hồi đánh giá đang hiển thị.</span>
+        )}
       </div>
     </li>
   );
@@ -228,10 +236,7 @@ export function RestaurantReviewsPage() {
   }, [reviews, filter, stars, sort]);
 
   /** Chỉ cắt trang sau khi lọc và sắp xếp để trang luôn khớp danh sách. */
-  const paged = useMemo(
-    () => pageSlice(rows, page, PAGE_SIZE),
-    [rows, page],
-  );
+  const paged = useMemo(() => pageSlice(rows, page, PAGE_SIZE), [rows, page]);
 
   /**
    * Đổi bộ lọc hoặc sắp xếp thì về lại trang đầu cho khỏi trang trống.
@@ -317,8 +322,8 @@ export function RestaurantReviewsPage() {
       />
 
       <Alert tone="info">
-        Đang xem dữ liệu minh họa. Phản hồi gửi đi chỉ lưu trong phiên này và chưa
-        được gửi lên máy chủ.
+        Đang xem dữ liệu minh họa. Phản hồi gửi đi chỉ lưu trong phiên này và
+        chưa được gửi lên máy chủ.
       </Alert>
 
       {saved && <Alert tone="success">{saved}</Alert>}
@@ -371,11 +376,7 @@ export function RestaurantReviewsPage() {
         ) : (
           <ul className="owner-reviews-list">
             {paged.items.map((review) => (
-              <ReviewItem
-                key={review.id}
-                review={review}
-                onReply={openReply}
-              />
+              <ReviewItem key={review.id} review={review} onReply={openReply} />
             ))}
           </ul>
         )}
@@ -424,6 +425,7 @@ export function RestaurantReviewsPage() {
             thông tin cá nhân và giữ giọng điệu lịch sự.
           </p>
           <TextArea
+            placeholder="Cảm ơn thực khách và phản hồi góp ý…"
             id={REPLY_FIELD_ID}
             label="Phản hồi của nhà hàng"
             value={text}

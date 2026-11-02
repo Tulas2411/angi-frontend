@@ -440,6 +440,7 @@ function VerificationEditor({
           <form ref={form} className="stack" onSubmit={prepare} noValidate>
             <div className="grid-2">
               <Field
+                placeholder="Tên trên giấy phép kinh doanh"
                 label="Tên pháp lý"
                 name="legalName"
                 required
@@ -450,6 +451,7 @@ function VerificationEditor({
                 onChange={(event) => change("legalName", event.target.value)}
               />
               <Field
+                placeholder="Ví dụ: 0101234567"
                 label="Số giấy phép kinh doanh"
                 name="businessLicenseNo"
                 required
@@ -463,6 +465,7 @@ function VerificationEditor({
               />
             </div>
             <Field
+              placeholder="Ví dụ: 0101234567"
               label="Mã số thuế (không bắt buộc)"
               name="taxCode"
               maxLength={20}
@@ -492,6 +495,7 @@ function VerificationEditor({
               />
             </div>
             <TextArea
+              placeholder="Thông tin thêm cho người duyệt…"
               label="Ghi chú gửi người duyệt (không bắt buộc)"
               name="ownerNote"
               maxLength={1000}

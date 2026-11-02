@@ -201,6 +201,7 @@ function AccountEditor({
           {error && <Alert>{error}</Alert>}
           <form className="stack" noValidate onSubmit={save} aria-busy={saving}>
             <Field
+              placeholder="Tên bạn muốn mọi người thấy"
               label="Tên hiển thị"
               name="displayName"
               value={values.displayName}
@@ -214,12 +215,14 @@ function AccountEditor({
               disabled={saving}
             />
             <Field
+              placeholder="ten@email.com"
               label="Email"
               value={profile.email}
               readOnly
               helper="Email đăng nhập, không thể thay đổi tại đây."
             />
             <Field
+              placeholder="Ví dụ: 0901 234 567"
               label="Số điện thoại"
               name="phone"
               type="tel"
@@ -231,6 +234,7 @@ function AccountEditor({
               disabled={saving}
             />
             <TextArea
+              placeholder="Đôi dòng về bạn và khẩu vị của bạn…"
               label="Giới thiệu"
               name="bio"
               value={values.bio}
@@ -361,6 +365,7 @@ function PasswordDialog({
         {error && <Alert>{error}</Alert>}
         {hasPassword && (
           <PasswordField
+            placeholder="Nhập mật khẩu đang dùng"
             label="Mật khẩu hiện tại"
             name="currentPassword"
             autoComplete="current-password"
@@ -372,6 +377,7 @@ function PasswordDialog({
           />
         )}
         <PasswordField
+          placeholder="Ít nhất 8 ký tự"
           label="Mật khẩu mới"
           name="newPassword"
           autoComplete="new-password"
@@ -384,6 +390,7 @@ function PasswordDialog({
           disabled={busy}
         />
         <PasswordField
+          placeholder="Nhập lại mật khẩu mới"
           label="Nhập lại mật khẩu mới"
           name="confirmPassword"
           autoComplete="new-password"

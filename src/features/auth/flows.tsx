@@ -25,7 +25,8 @@ export function AuthFlowPage({
 }) {
   const router = useRouter();
   const params = useSearchParams();
-  const resetToken = flow === "reset-password" ? params.get("token") ?? "" : "";
+  const resetToken =
+    flow === "reset-password" ? (params.get("token") ?? "") : "";
   const [name, setName] = useState(""),
     [email, setEmail] = useState(""),
     [role, setRole] = useState("TRAVELER"),
@@ -136,7 +137,7 @@ export function AuthFlowPage({
         }
       />
       <Card className="soft">
-      {invalidToken && !resetToken ? (
+        {invalidToken && !resetToken ? (
           <Alert>
             Liên kết không hợp lệ hoặc đã hết hạn. Yêu cầu một liên kết mới.
           </Alert>
@@ -162,7 +163,10 @@ export function AuthFlowPage({
             </p>
             {flow === "reset-password" ? (
               <div className="auth-links-vertical">
-                <Link href="/login" className="button button-primary auth-link-button">
+                <Link
+                  href="/login"
+                  className="button button-primary auth-link-button"
+                >
                   Đăng nhập
                 </Link>
               </div>
@@ -201,6 +205,7 @@ export function AuthFlowPage({
           >
             {flow === "register" && (
               <Field
+                placeholder="Tên bạn muốn mọi người thấy"
                 label="Tên hiển thị"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -212,6 +217,7 @@ export function AuthFlowPage({
             )}
             {(flow === "register" || flow === "forgot-password") && (
               <Field
+                placeholder="ten@email.com"
                 label="Email"
                 type="email"
                 value={email}
@@ -224,6 +230,7 @@ export function AuthFlowPage({
             {needsPassword && (
               <>
                 <Field
+                  placeholder="Ít nhất 8 ký tự"
                   label={flow === "register" ? "Mật khẩu" : "Mật khẩu mới"}
                   type={show ? "text" : "password"}
                   value={password}
@@ -235,6 +242,7 @@ export function AuthFlowPage({
                   helper="8–64 ký tự, có ít nhất một chữ cái và một chữ số."
                 />
                 <Field
+                  placeholder="Nhập lại mật khẩu"
                   label="Nhập lại mật khẩu"
                   type={show ? "text" : "password"}
                   value={confirm}

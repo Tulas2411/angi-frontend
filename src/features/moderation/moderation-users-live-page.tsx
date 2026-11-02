@@ -80,7 +80,9 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
   const [error, setError] = useState("");
   const [saved, setSaved] = useState("");
   const [attempt, setAttempt] = useState(0);
-  const [sanctioning, setSanctioning] = useState<RestrictionTarget | null>(null);
+  const [sanctioning, setSanctioning] = useState<RestrictionTarget | null>(
+    null,
+  );
   const [lifting, setLifting] = useState<RestrictionTarget | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -135,6 +137,7 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
       <Card title="Bộ lọc">
         <div className="grid-3">
           <Field
+            placeholder="Nhập tên hoặc email…"
             label="Tìm theo tên hoặc email"
             type="search"
             value={query}
@@ -221,7 +224,10 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
                 label: "Thao tác",
                 render: (person) => (
                   <div className="actions">
-                    <ActionLink href={`${base}/users/${person.userId}`} secondary>
+                    <ActionLink
+                      href={`${base}/users/${person.userId}`}
+                      secondary
+                    >
                       Hồ sơ →
                     </ActionLink>
                     <Button
@@ -383,6 +389,7 @@ function SanctionDialog({
         />
       )}
       <TextArea
+        placeholder="Nêu hành vi vi phạm và căn cứ…"
         label="Lý do xử phạt"
         value={reason}
         onChange={(event) => {
@@ -433,6 +440,7 @@ function LiftDialog({
         Tài khoản sẽ trở lại trạng thái <strong>Đang hoạt động</strong>.
       </p>
       <TextArea
+        placeholder="Vì sao gỡ hạn chế cho tài khoản này…"
         label="Lý do gỡ hạn chế"
         value={reason}
         onChange={(event) => {
@@ -451,11 +459,7 @@ function LiftDialog({
  * MOD-U2 — hồ sơ chi tiết của một người dùng: thông tin, lịch sử xử phạt và
  * nhà hàng của chủ nhà hàng.
  */
-export function ModerationUserDetailPage({
-  userId,
-}: {
-  userId: number;
-}) {
+export function ModerationUserDetailPage({ userId }: { userId: number }) {
   const service: ModerationUsersService = moderationUsersService;
   const [detail, setDetail] = useState<ModeratedUserDetailDto | null>(null);
   const [error, setError] = useState("");

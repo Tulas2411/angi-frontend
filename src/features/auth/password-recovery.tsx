@@ -50,6 +50,7 @@ export function ForgotPasswordForm() {
     <form className="stack" noValidate onSubmit={submit} aria-busy={busy}>
       {error && <Alert>{error}</Alert>}
       <Field
+        placeholder="ten@email.com"
         label="Email"
         name="email"
         type="email"
@@ -140,6 +141,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
     <form className="stack" noValidate onSubmit={submit} aria-busy={busy}>
       {error && <Alert>{error}</Alert>}
       <PasswordField
+        placeholder="Ít nhất 8 ký tự"
         label="Mật khẩu mới"
         name="newPassword"
         value={password}
@@ -152,6 +154,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
         disabled={busy}
       />
       <PasswordField
+        placeholder="Nhập lại mật khẩu mới"
         label="Nhập lại mật khẩu"
         name="confirmPassword"
         value={confirm}

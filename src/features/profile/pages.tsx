@@ -37,9 +37,9 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
   const defaults = {
     name:
       source?.displayName ??
-      (profile ? data.profile.name : user?.displayName ?? ""),
+      (profile ? data.profile.name : (user?.displayName ?? "")),
     phone: source?.phone ?? (useMock ? data.profile.phone : ""),
-    bio: source?.bio ?? (useMock ? data.profile.bio ?? "" : ""),
+    bio: source?.bio ?? (useMock ? (data.profile.bio ?? "") : ""),
   };
   const [draft, setDraft] = useState<{
     source: UserProfileDto | null;
@@ -74,7 +74,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
     ? profile
       ? data.profile.name
       : (user?.displayName ?? "")
-    : ((source?.displayName ?? user?.displayName) ?? "");
+    : (source?.displayName ?? user?.displayName ?? "");
   const email = useMock
     ? (user?.email ?? "")
     : (source?.email ?? user?.email ?? "");
@@ -93,8 +93,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
           for (const blog of d.blogs) {
             if (blog.author === user.displayName) blog.author = trimmed;
             for (const comment of blog.comments)
-              if (comment.author === user.displayName)
-                comment.author = trimmed;
+              if (comment.author === user.displayName) comment.author = trimmed;
           }
         d.profile = {
           name: trimmed,
@@ -103,14 +102,12 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
           avatar: files[0]?.url ?? d.profile.avatar,
         };
       });
-      fireAndForget(
-        "me.patch",
-        () =>
-          profileService.updateMyProfile({
-            displayName: trimmed,
-            phone: phone || undefined,
-            bio: bio || undefined,
-          }),
+      fireAndForget("me.patch", () =>
+        profileService.updateMyProfile({
+          displayName: trimmed,
+          phone: phone || undefined,
+          bio: bio || undefined,
+        }),
       );
       return;
     }
@@ -195,13 +192,15 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                         return;
                       }
                       setUploadError("");
-                      const url = await new Promise<string>((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = () => resolve(String(reader.result));
-                        reader.onerror = () =>
-                          reject(new Error("Không đọc được tệp."));
-                        reader.readAsDataURL(picked);
-                      });
+                      const url = await new Promise<string>(
+                        (resolve, reject) => {
+                          const reader = new FileReader();
+                          reader.onload = () => resolve(String(reader.result));
+                          reader.onerror = () =>
+                            reject(new Error("Không đọc được tệp."));
+                          reader.readAsDataURL(picked);
+                        },
+                      );
                       setFiles([
                         {
                           id: crypto.randomUUID(),
@@ -244,21 +243,16 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
 
             {/* CỘT PHẢI: form thông tin cá nhân */}
             <Card className="soft" title="Thông tin cá nhân">
-              {error && (
-                <Alert tone="error">{error}</Alert>
-              )}
+              {error && <Alert tone="error">{error}</Alert>}
               {saved && !error && (
                 <Alert tone="success">Đã lưu thay đổi vào hồ sơ của bạn.</Alert>
               )}
               {!useMock && live.loading && (
                 <p className="helper">Đang tải hồ sơ từ máy chủ…</p>
               )}
-              <form
-                id="profile-form"
-                className="stack"
-                onSubmit={saveProfile}
-              >
+              <form id="profile-form" className="stack" onSubmit={saveProfile}>
                 <Field
+                  placeholder="Tên bạn muốn mọi người thấy"
                   label="Tên hiển thị"
                   value={name}
                   onChange={(e) => updateDraft({ name: e.target.value })}
@@ -268,18 +262,21 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   helper="Từ 2 đến 100 ký tự."
                 />
                 <Field
+                  placeholder="ten@email.com"
                   label="Email"
                   value={email}
                   readOnly
                   helper="Email tài khoản · Chỉ xem"
                 />
                 <Field
+                  placeholder="Ví dụ: 0901 234 567"
                   label="Số điện thoại"
                   value={phone}
                   onChange={(e) => updateDraft({ phone: e.target.value })}
                   maxLength={20}
                 />
                 <TextArea
+                  placeholder="Đôi dòng về bạn và khẩu vị của bạn…"
                   label="Giới thiệu"
                   value={bio}
                   onChange={(e) => updateDraft({ bio: e.target.value })}
@@ -287,10 +284,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   helper="Không bắt buộc."
                 />
                 <div className="actions">
-                  <Button
-                    type="submit"
-                    loading={useMock ? busy : live.saving}
-                  >
+                  <Button type="submit" loading={useMock ? busy : live.saving}>
                     Lưu thay đổi
                   </Button>
                   <Button
@@ -313,14 +307,13 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
           />
           <div className="split-content">
             <Card className="soft" title="Thông tin cá nhân">
-              {error && (
-                <Alert tone="error">{error}</Alert>
-              )}
+              {error && <Alert tone="error">{error}</Alert>}
               {saved && !error && (
                 <Alert tone="success">Đã lưu thay đổi vào hồ sơ của bạn.</Alert>
               )}
               <form className="stack" onSubmit={saveProfile}>
                 <Field
+                  placeholder="Tên bạn muốn mọi người thấy"
                   label="Tên hiển thị"
                   value={name}
                   onChange={(e) => updateDraft({ name: e.target.value })}
@@ -330,12 +323,14 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   helper="Từ 2 đến 100 ký tự."
                 />
                 <Field
+                  placeholder="ten@email.com"
                   label="Email"
                   value={email}
                   readOnly
                   helper="Email tài khoản · Chỉ xem"
                 />
                 <Field
+                  placeholder="Ví dụ: 0901 234 567"
                   label="Số điện thoại"
                   value={phone}
                   onChange={(e) => updateDraft({ phone: e.target.value })}
@@ -349,6 +344,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   />
                 )}
                 <TextArea
+                  placeholder="Đôi dòng về bạn và khẩu vị của bạn…"
                   label="Giới thiệu"
                   value={bio}
                   onChange={(e) => updateDraft({ bio: e.target.value })}
@@ -356,10 +352,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   helper="Không bắt buộc."
                 />
                 <div className="actions">
-                  <Button
-                    type="submit"
-                    loading={useMock ? busy : live.saving}
-                  >
+                  <Button type="submit" loading={useMock ? busy : live.saving}>
                     Lưu hồ sơ
                   </Button>
                   <Button variant="secondary" onClick={resetForm}>
@@ -378,7 +371,9 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
                   </div>
                 </div>
                 <p className="helper">
-                  {useMock ? "Đang hoạt động · Dữ liệu minh họa" : "Đang hoạt động"}
+                  {useMock
+                    ? "Đang hoạt động · Dữ liệu minh họa"
+                    : "Đang hoạt động"}
                 </p>
                 <div className="actions">
                   <Button
@@ -436,6 +431,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
           }}
         >
           <Field
+            placeholder="Nhập mật khẩu đang dùng"
             label="Mật khẩu hiện tại"
             type="password"
             autoComplete="current-password"
@@ -444,6 +440,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
             required
           />
           <Field
+            placeholder="Ít nhất 8 ký tự"
             label="Mật khẩu mới"
             type="password"
             autoComplete="new-password"
@@ -454,6 +451,7 @@ export function AccountPage({ profile = false }: { profile?: boolean }) {
             required
           />
           <Field
+            placeholder="Nhập lại mật khẩu mới"
             label="Nhập lại mật khẩu mới"
             type="password"
             autoComplete="new-password"

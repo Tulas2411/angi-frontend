@@ -426,6 +426,7 @@ export function MapLocationDialog({
             </div>
             <div className="grid-2">
               <Field
+                placeholder="Ví dụ: 21.028511"
                 label="Vĩ độ"
                 type="number"
                 step="any"
@@ -437,6 +438,7 @@ export function MapLocationDialog({
                 }
               />
               <Field
+                placeholder="Ví dụ: 105.804817"
                 label="Kinh độ"
                 type="number"
                 step="any"

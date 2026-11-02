@@ -203,8 +203,7 @@ export function ModerationReportsPage({ base }: { base: string }) {
               },
               {
                 label: "Lý do",
-                render: (row) =>
-                  reasonLabels[row.reasonCode] ?? row.reasonCode,
+                render: (row) => reasonLabels[row.reasonCode] ?? row.reasonCode,
               },
               {
                 label: "Người báo cáo",
@@ -279,9 +278,7 @@ export function ModerationReportsPage({ base }: { base: string }) {
           Báo cáo về <strong>{dismissing?.targetName}</strong> sẽ được đánh dấu
           là đã bác bỏ. Đối tượng bị báo cáo không bị ẩn hay xử phạt.
         </p>
-        <p>
-          Các báo cáo đang mở khác về cùng đối tượng cũng sẽ được bác bỏ.
-        </p>
+        <p>Các báo cáo đang mở khác về cùng đối tượng cũng sẽ được bác bỏ.</p>
       </ConfirmDialog>
     </div>
   );
@@ -500,6 +497,7 @@ export function ModerationReportDetailPage({
             }))}
           />
           <TextArea
+            placeholder="Tóm tắt kết luận sau khi xử lý…"
             label="Ghi chú kết luận"
             value={note}
             onChange={(event) => setNote(event.target.value)}
@@ -511,11 +509,10 @@ export function ModerationReportDetailPage({
             onChange={setRelated}
           />
           <div className="actions">
-            <Button onClick={() => setConfirm(true)}>Kiểm tra và kết luận</Button>
-            <Button
-              variant="danger"
-              onClick={() => setConfirmDismiss(true)}
-            >
+            <Button onClick={() => setConfirm(true)}>
+              Kiểm tra và kết luận
+            </Button>
+            <Button variant="danger" onClick={() => setConfirmDismiss(true)}>
               Bác bỏ đơn
             </Button>
           </div>
@@ -598,6 +595,7 @@ export function ModerationReportDetailPage({
           {related && " Các báo cáo đang mở cùng đối tượng cũng bị bác bỏ."}
         </p>
         <TextArea
+          placeholder="Vì sao báo cáo này không hợp lệ…"
           label="Lý do bác bỏ"
           value={dismissNote}
           onChange={(event) => setDismissNote(event.target.value)}

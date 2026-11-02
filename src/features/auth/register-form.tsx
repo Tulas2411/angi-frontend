@@ -175,6 +175,7 @@ export default function RegisterForm() {
     <form onSubmit={submit} className="stack" noValidate aria-busy={busy}>
       {topError && <Alert>{topError}</Alert>}
       <Field
+        placeholder="Tên bạn muốn mọi người thấy"
         label="Tên hiển thị"
         name="name"
         value={name}
@@ -187,6 +188,7 @@ export default function RegisterForm() {
         disabled={busy}
       />
       <Field
+        placeholder="ten@email.com"
         label="Email"
         name="email"
         type="email"
@@ -199,6 +201,7 @@ export default function RegisterForm() {
         disabled={busy}
       />
       <PasswordField
+        placeholder="Ít nhất 8 ký tự"
         label="Mật khẩu"
         name="password"
         value={password}
@@ -211,6 +214,7 @@ export default function RegisterForm() {
         disabled={busy}
       />
       <PasswordField
+        placeholder="Nhập lại mật khẩu"
         label="Nhập lại mật khẩu"
         name="confirm"
         value={confirm}

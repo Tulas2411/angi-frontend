@@ -194,6 +194,7 @@ export function MenuItemEditor({
         >
           {problem && <Alert tone="error">{problem}</Alert>}
           <Field
+            placeholder="Ví dụ: Bún bò Huế"
             label="Tên món"
             autoFocus
             required
@@ -206,6 +207,7 @@ export function MenuItemEditor({
             }
           />
           <TextArea
+            placeholder="Nguyên liệu, khẩu vị, khẩu phần…"
             label="Mô tả món"
             required
             maxLength={2000}
@@ -219,6 +221,7 @@ export function MenuItemEditor({
           />
           <div className="grid-2">
             <Field
+              placeholder="Ví dụ: 45000"
               label="Giá (VND)"
               type="number"
               min={0}
@@ -247,6 +250,7 @@ export function MenuItemEditor({
             />
           </div>
           <Field
+            placeholder="Ví dụ: 1"
             label="Thứ tự hiển thị"
             type="number"
             min={0}

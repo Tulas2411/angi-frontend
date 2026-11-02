@@ -264,7 +264,11 @@ export function NewTripPage() {
         onClose={() => setInvite(false)}
       >
         <div className="stack">
-          <Field label="Email người bạn" type="email" />
+          <Field
+            placeholder="ban@email.com"
+            label="Email người bạn"
+            type="email"
+          />
           <Alert tone="info">
             Mời cộng tác chưa khả dụng. Bạn có thể đính kèm lịch ăn khi viết cẩm
             nang.
@@ -566,6 +570,7 @@ export function RoadmapPage({ id }: { id: string }) {
               }}
             >
               <Field
+                placeholder="Ví dụ: 3 ngày ăn ngon Hà Nội"
                 label="Tên chuyến đi"
                 name="name"
                 defaultValue={trip.name}
@@ -754,6 +759,7 @@ export function RoadmapPage({ id }: { id: string }) {
           }}
         >
           <Field
+            placeholder="Ví dụ: 1500000"
             label="Ngân sách"
             type="number"
             min={0}
@@ -791,6 +797,7 @@ export function RoadmapPage({ id }: { id: string }) {
           }}
         >
           <TextArea
+            placeholder="Ghi chú cho ngày này…"
             label="Ghi chú của bạn"
             value={note}
             onChange={(e) => setNote(e.target.value)}

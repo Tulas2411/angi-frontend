@@ -293,6 +293,7 @@ function OperatingStatusEditor({
               }))}
             />
             <TextArea
+              placeholder="Ví dụ: Nghỉ Tết từ 28 đến mùng 5"
               label="Lý do (không bắt buộc)"
               name="note"
               maxLength={500}
