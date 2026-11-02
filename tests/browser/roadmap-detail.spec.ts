@@ -19,6 +19,151 @@ let detail: RoadmapDetailDto;
 let routeCalls: string[] = [];
 let failRoute = 0;
 let failDetail = 0;
+let placeCalls: string[] = [];
+let addCalls: { dayId: string; body: unknown }[] = [];
+
+// DISH-02 / REST-02 / REST-04 / RM-06 answers, shaped like the API Design JSON samples.
+const dishDetail = {
+  id: 1602,
+  name: "Bún bò Huế",
+  price: 45000,
+  coverUrl: "/assets/figma/dish-0.png",
+  dishForm: "soup",
+  isAvailable: true,
+  likeCount: 128,
+  dislikeCount: 9,
+  tags: [{ id: 3, tagType: "category", code: "bun", name: "Bún" }],
+  rank: null,
+  description: "Nước dùng hầm xương bò, thơm sả và mắm ruốc.",
+  images: ["/assets/figma/dish-1.png"],
+  status: "active",
+  restaurant: {
+    id: 7,
+    name: "Quán Bún bò Huế",
+    slug: "quan-bun-bo-hue",
+    coverUrl: null,
+    addressLine: "12 Lê Duẩn",
+    ward: "Phường Hải Châu",
+    provinceName: "Thành phố Đà Nẵng",
+    latitude: 16.067812,
+    longitude: 108.220116,
+    priceLevel: 2,
+    ratingAvg: 4.6,
+    ratingCount: 3,
+    operatingStatus: "open",
+    isOpenNow: true,
+    distanceKm: null,
+  },
+};
+const restaurantDetail = {
+  ...dishDetail.restaurant,
+  description: "Quán gia đình mở từ năm 1998.",
+  phone: "0236 3888 999",
+  email: null,
+  website: "https://bunbo.example.vn",
+  images: ["/assets/figma/dish-2.png"],
+  businessHours: [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => ({
+    dayOfWeek,
+    openTime: "06:00",
+    closeTime: "21:00",
+  })),
+  menu: null,
+  myReview: null,
+};
+function review(id: number, rating: number, name: string) {
+  return {
+    id,
+    restaurantId: 7,
+    user: { id: id + 10, displayName: name, avatarUrl: null },
+    rating,
+    content: `Đánh giá của ${name}`,
+    images: [],
+    roadmapItemId: null,
+    status: "visible",
+    createdAt: "2026-10-20T03:00:00Z",
+    reply:
+      id === 640
+        ? {
+            content: "Cảm ơn bạn đã ghé quán!",
+            status: "visible",
+            createdAt: "2026-10-21T03:00:00Z",
+            updatedAt: "2026-10-21T03:00:00Z",
+          }
+        : null,
+  };
+}
+const allReviews = [
+  review(640, 5, "Minh Anh"),
+  review(641, 5, "Hoàng Nam"),
+  review(642, 4, "Thu Trang"),
+  review(643, 5, "Quốc Bảo"),
+  review(644, 3, "Lan Chi"),
+  review(645, 5, "Gia Huy"),
+];
+const suggested = [1701, 1702, 1703].map((id, index) => ({
+  ...dishDetail,
+  id,
+  name: ["Bánh canh cá lóc", "Nem lụi", "Chè xoài"][index],
+  price: 30000 + index * 5000,
+  restaurant: {
+    ...dishDetail.restaurant,
+    id: 20 + index,
+    name: `Quán số ${index + 1}`,
+  },
+}));
+
+const places: StubHandler = ({ method, url, body }, send) => {
+  const parsed = new URL(url, "http://stub");
+  const path = parsed.pathname;
+  const add = /^\/api\/v1\/roadmaps\/88\/days\/(\d+)\/items$/.exec(path);
+  if (method === "POST" && add) {
+    addCalls.push({ dayId: add[1], body });
+    send(201, { ...detail.itinerary[0].items[0], id: 1999 });
+    return true;
+  }
+  if (method !== "GET") return false;
+  if (path === "/api/v1/roadmaps/88/suggestions") {
+    placeCalls.push(`RM-06 ${parsed.search.slice(1)}`);
+    send(200, {
+      requestId: "c0ffee00-0000-4000-8000-000000000001",
+      items: suggested,
+      nextCursor: null,
+    });
+    return true;
+  }
+  if (path === "/api/v1/dishes/1602") {
+    placeCalls.push("DISH-02");
+    send(200, dishDetail);
+    return true;
+  }
+  if (path === "/api/v1/restaurants/7") {
+    placeCalls.push("REST-02");
+    send(200, restaurantDetail);
+    return true;
+  }
+  if (path === "/api/v1/restaurants/7/reviews") {
+    placeCalls.push(`REST-04 ${parsed.search.slice(1)}`);
+    const query = parsed.searchParams;
+    const rating = query.get("rating");
+    const page = Number(query.get("page"));
+    const size = Number(query.get("pageSize"));
+    const matching = allReviews.filter(
+      (entry) => !rating || entry.rating === Number(rating),
+    );
+    send(200, {
+      items: matching.slice((page - 1) * size, page * size),
+      page,
+      pageSize: size,
+      totalItems: matching.length,
+      totalPages: Math.ceil(matching.length / size),
+      ratingAvg: 4.5,
+      ratingCount: allReviews.length,
+      ratingBreakdown: { "1": 0, "2": 0, "3": 1, "4": 1, "5": 4 },
+    });
+    return true;
+  }
+  return false;
+};
 
 function item(
   id: number,
@@ -237,7 +382,9 @@ function routeFor(
   return null;
 }
 
-const roadmaps: StubHandler = ({ method, url }, send) => {
+const roadmaps: StubHandler = (request, send) => {
+  if (places(request, send)) return true;
+  const { method, url } = request;
   if (method !== "GET") return false;
   const parsed = new URL(url, "http://stub");
   const path = parsed.pathname;
@@ -289,6 +436,8 @@ test.beforeEach(async ({ context }) => {
   routeCalls = [];
   failRoute = 0;
   failDetail = 0;
+  placeCalls = [];
+  addCalls = [];
   await context.route("**/*", (route) => {
     const host = new URL(route.request().url()).hostname;
     return ["localhost", "127.0.0.1"].includes(host)
@@ -850,6 +999,101 @@ test("an unconfigured map keeps real stop details usable without provider reques
   expect(routeCalls).toEqual(["301"]);
 });
 
+test("the selected stop shows its dish, its restaurant and the restaurant's reviews", async ({
+  page,
+}) => {
+  await open(page);
+  const map = mapPanel(page);
+  await map
+    .getByRole("button", { name: "Xem vị trí Bún bò Huế", exact: true })
+    .click();
+  const card = map.locator(".roadmap-map-card");
+  const cardTab = (name: string) =>
+    card.getByRole("tab", { name, exact: true });
+  // "Món ăn" first: RM-03 at once, DISH-02 adds the description, photos and tags.
+  await expect(cardTab("Món ăn")).toHaveAttribute("aria-selected", "true");
+  await expect(card).toContainText("Có trong lộ trình");
+  await expect(card).toContainText("Nước dùng hầm xương bò");
+  await expect(card.locator(".roadmap-place-tags")).toContainText("Bún");
+  await expect(card.getByRole("button", { name: /^Xem ảnh / })).toHaveCount(2);
+  await expect(
+    card.getByRole("link", { name: "Xem trang món ăn →" }),
+  ).toHaveAttribute("href", "/dishes/1602");
+  expect(placeCalls.filter((call) => !call.startsWith("RM-06"))).toEqual([
+    "DISH-02",
+  ]);
+
+  await cardTab("Quán hàng").click();
+  const restaurant = card.getByRole("tabpanel", { name: "Quán hàng" });
+  await expect(restaurant).toContainText(
+    "12 Lê Duẩn, Phường Hải Châu, Thành phố Đà Nẵng",
+  );
+  await expect(restaurant).toContainText("Đang mở cửa");
+  await expect(restaurant).toContainText("06:00–21:00");
+  await expect(
+    restaurant.getByRole("link", { name: "0236 3888 999" }),
+  ).toHaveAttribute("href", "tel:02363888999");
+  await expect(
+    restaurant.getByRole("link", { name: "Chỉ đường trên Google Maps" }),
+  ).toHaveAttribute(
+    "href",
+    "https://www.google.com/maps/search/?api=1&query=16.067812,108.220116",
+  );
+
+  await cardTab("Đánh giá").click();
+  const reviews = card.getByRole("tabpanel", { name: "Đánh giá" });
+  await expect(reviews).toContainText("6 đánh giá");
+  await expect(reviews.locator(".roadmap-place-review")).toHaveCount(5);
+  await expect(reviews).toContainText("Cảm ơn bạn đã ghé quán!");
+  await reviews.getByRole("button", { name: "Xem thêm đánh giá" }).click();
+  await expect(reviews.locator(".roadmap-place-review")).toHaveCount(6);
+  await reviews.getByRole("button", { name: /^Lọc 5 sao/ }).click();
+  await expect(reviews.locator(".roadmap-place-review")).toHaveCount(4);
+  // Each tab asked once; coming back to a tab keeps its answer.
+  await cardTab("Món ăn").click();
+  await cardTab("Quán hàng").click();
+  expect(placeCalls.filter((call) => !call.startsWith("RM-06"))).toEqual([
+    "DISH-02",
+    "REST-02",
+    "REST-04 sort=newest&page=1&pageSize=5",
+    "REST-04 sort=newest&page=2&pageSize=5",
+    "REST-04 rating=5&sort=newest&page=1&pageSize=5",
+  ]);
+});
+
+test("an open day suggests places and + adds one to the first free meal", async ({
+  page,
+}) => {
+  detail.itinerary[0].items = detail.itinerary[0].items.slice(0, 2);
+  await open(page);
+  const strip = page
+    .locator("#day-1")
+    .getByRole("region", { name: "Địa điểm được đề xuất" });
+  await expect(strip.locator(".roadmap-suggested-card")).toHaveCount(3);
+  expect(placeCalls).toEqual([
+    `RM-06 ${new URLSearchParams({ province: "Thành phố Đà Nẵng", dayId: "301", limit: "10" })}`,
+  ]);
+  // Breakfast and lunch are taken: "+" goes to dinner.
+  await strip
+    .getByRole("button", { name: "Thêm Nem lụi vào bữa tối ngày 1" })
+    .click();
+  await expect
+    .poll(() => addCalls)
+    .toEqual([
+      {
+        dayId: "301",
+        body: {
+          dishId: 1702,
+          mealSlot: "dinner",
+          recoRequestId: "c0ffee00-0000-4000-8000-000000000001",
+        },
+      },
+    ]);
+  await expect(strip.locator(".roadmap-suggested-card")).toHaveCount(2);
+  await strip.getByRole("button", { name: "Địa điểm được đề xuất" }).click();
+  await expect(strip.locator(".roadmap-suggested-card").first()).toBeHidden();
+});
+
 test("a roadmap without dishes explains the empty map instead of leaving a blank panel", async ({
   page,
 }) => {
@@ -1111,8 +1355,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
       .click();
     const card = map.locator(".roadmap-map-card");
     await expect(card).toContainText("Quán Phở bò");
-    // Check the selected dish image's real rendering before returning to the info view.
-    await card.getByRole("tab", { name: "Ảnh món", exact: true }).click();
+    // The "Món ăn" tab opens first and shows the selected dish image.
     const selectedPhoto = card.locator(".roadmap-map-card-photo img");
     await expect(selectedPhoto).toBeVisible();
     await expect
@@ -1123,7 +1366,6 @@ test.describe("offline Mapbox roadmap rendering", () => {
       )
       .toBe(true);
     await expect(selectedPhoto).toHaveCSS("object-fit", "cover");
-    await card.getByRole("tab", { name: "Thông tin", exact: true }).click();
 
     const geometry = [
       [

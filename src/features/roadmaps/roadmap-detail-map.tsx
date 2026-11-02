@@ -3,17 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { Button } from "@/shared/ui";
-import { Icon, Media, Tabs } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/primitives";
 import { mapStyles } from "@/shared/maps/mapbox";
-import { formatRating, mealSlotLabels } from "./roadmap-detail-rules";
-import { vnd } from "./roadmap-list-rules";
+import { RoadmapPlaceCard } from "./roadmap-place-card";
 import {
   groupRoadmapStops,
   roadmapMapCoordinate,
   roadmapMapPoints,
   roadmapMapStops,
   type RoadmapMapGroup,
-  type RoadmapMapStop,
 } from "./roadmap-map-rules";
 import type {
   RoadmapDayDto,
@@ -24,106 +22,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 /** Shown when nothing is located yet: the whole country, like the owner location picker. */
 const vietnamView = { center: [106.2, 16.3] as [number, number], zoom: 4.6 };
-
-const mapCardTabs = [
-  { value: "info", label: "Thông tin" },
-  { value: "rating", label: "Đánh giá" },
-  { value: "photo", label: "Ảnh món" },
-] as const;
-type MapCardTab = (typeof mapCardTabs)[number]["value"];
-
-function SelectedMapCard({
-  stop,
-  coincident,
-  onSelectItem,
-}: {
-  stop: RoadmapMapStop;
-  coincident: readonly RoadmapMapStop[];
-  onSelectItem: (id: number | null) => void;
-}) {
-  const [tab, setTab] = useState<MapCardTab>("info");
-  const { dish } = stop.item;
-  const place = [dish.restaurant.district, dish.restaurant.provinceName]
-    .filter(Boolean)
-    .join(", ");
-  return (
-    <section className="roadmap-map-card" aria-label="Địa điểm đã chọn">
-      <div className="roadmap-map-card-heading">
-        <Tabs
-          label="Thông tin địa điểm"
-          value={tab}
-          items={[...mapCardTabs]}
-          onChange={(value) => {
-            const next = mapCardTabs.find((item) => item.value === value);
-            if (next) setTab(next.value);
-          }}
-        />
-        <Button
-          variant="icon"
-          aria-label="Đóng thông tin địa điểm"
-          onClick={() => onSelectItem(null)}
-        >
-          <Icon name="X" />
-        </Button>
-      </div>
-      <div className="roadmap-map-card-body">
-        <h3>{dish.restaurant.name}</h3>
-        <p className="helper">
-          {stop.dayLabel} · {mealSlotLabels[stop.item.mealSlot]} · Điểm{" "}
-          {stop.number}
-        </p>
-        <div role="tabpanel" aria-label="Thông tin" hidden={tab !== "info"}>
-          <p>
-            {dish.name} · Dự chi {vnd(dish.price)}
-          </p>
-          {place && <p className="helper">{place}</p>}
-          {stop.coordinate ? (
-            <p className="helper">
-              {stop.coordinate.latitude.toFixed(5)},{" "}
-              {stop.coordinate.longitude.toFixed(5)}
-            </p>
-          ) : (
-            <p className="helper">Địa điểm này chưa có tọa độ trên bản đồ.</p>
-          )}
-          <span className="roadmap-map-included">Có trong lộ trình</span>
-        </div>
-        <div role="tabpanel" aria-label="Đánh giá" hidden={tab !== "rating"}>
-          <p className="roadmap-map-card-rating">
-            {dish.restaurant.ratingAvg > 0
-              ? `★ ${formatRating(dish.restaurant.ratingAvg)} sao`
-              : "Chưa có điểm đánh giá."}
-          </p>
-          <p className="helper">Điểm trung bình của nhà hàng.</p>
-        </div>
-        <div role="tabpanel" aria-label="Ảnh món" hidden={tab !== "photo"}>
-          <Media
-            className="roadmap-map-card-photo"
-            src={dish.coverUrl ?? undefined}
-            alt={`Ảnh món ${dish.name}`}
-          />
-          <p className="helper">Ảnh món {dish.name}</p>
-        </div>
-        {coincident.length > 1 && (
-          <div className="roadmap-map-coincident">
-            <p className="helper">
-              {coincident.length} điểm trong lộ trình cùng vị trí
-            </p>
-            {coincident.map((point) => (
-              <button
-                key={point.item.id}
-                type="button"
-                aria-pressed={point.item.id === stop.item.id}
-                onClick={() => onSelectItem(point.item.id)}
-              >
-                {point.dayLabel} · {point.number}. {point.item.dish.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
 
 /** Read-only RM-03 stop map. It never searches places or requests route geometry. */
 export function RoadmapDetailMap({
@@ -286,25 +184,31 @@ export function RoadmapDetailMap({
             current.originSkipped,
           );
           if (!points.length) return;
+          const cardHeight =
+            element.parentElement?.querySelector<HTMLElement>(
+              ".roadmap-map-card",
+            )?.offsetHeight ?? 0;
+          const topPadding = current.selectedItemId === null ? 176 : 208;
+          const bottomPadding = Math.min(
+            current.selectedItemId === null ? 80 : cardHeight + 40,
+            Math.max(0, element.clientHeight - topPadding - 48),
+          );
+          // The card's room is worked into the target camera, never kept as map padding: a large
+          // padding left in the transform stops Mapbox from loading the tiles behind it (grey map).
+          const noPadding = { top: 0, right: 0, bottom: 0, left: 0 };
+          const duration = reducedMotion() ? 0 : 360;
           if (points.length === 1)
             instance.easeTo({
               center: points[0],
               zoom: 14,
-              duration: reducedMotion() ? 0 : 360,
+              offset: [0, (topPadding - bottomPadding) / 2],
+              padding: noPadding,
+              duration,
             });
           else {
             const bounds = new mapboxgl.LngLatBounds(points[0], points[0]);
             for (const point of points.slice(1)) bounds.extend(point);
-            const cardHeight =
-              element.parentElement?.querySelector<HTMLElement>(
-                ".roadmap-map-card",
-              )?.offsetHeight ?? 0;
-            const topPadding = current.selectedItemId === null ? 176 : 208;
-            const bottomPadding = Math.min(
-              current.selectedItemId === null ? 80 : cardHeight + 40,
-              Math.max(0, element.clientHeight - topPadding - 48),
-            );
-            instance.fitBounds(bounds, {
+            const camera = instance.cameraForBounds(bounds, {
               padding: {
                 top: topPadding,
                 right: 84,
@@ -312,8 +216,12 @@ export function RoadmapDetailMap({
                 bottom: bottomPadding,
               },
               maxZoom: 15,
-              retainPadding: false,
-              duration: reducedMotion() ? 0 : 360,
+            });
+            instance.easeTo({
+              // Too little room left for the padding: centre the stops instead.
+              ...(camera ?? { center: bounds.getCenter() }),
+              padding: noPadding,
+              duration,
             });
           }
         };
@@ -573,7 +481,7 @@ export function RoadmapDetailMap({
           <div className="roadmap-map-stop-list">{choices}</div>
         ))}
       {selected && (
-        <SelectedMapCard
+        <RoadmapPlaceCard
           key={selected.item.id}
           stop={selected}
           coincident={coincident}

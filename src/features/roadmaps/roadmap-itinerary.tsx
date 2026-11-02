@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
 import { Icon, Media } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
@@ -21,7 +21,13 @@ import {
   type GpsProblem,
 } from "./roadmap-detail-rules";
 import { RoadmapAddItemDialog } from "./roadmap-add-item-dialog";
-import { mostCommonProvince, nextMealSlot } from "./roadmap-add-item-rules";
+import {
+  mostCommonProvince,
+  nextMealSlot,
+  provinceFromText,
+} from "./roadmap-add-item-rules";
+import { loadProvinceCatalog } from "@/shared/locations/province-service";
+import { SuggestedPlaces } from "./roadmap-suggested-places";
 import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
 import { RoadmapGenerateDialog } from "./roadmap-generate-dialog";
@@ -64,6 +70,9 @@ import type {
 type RouteState =
   | { status: "error"; message: string }
   | { status: "ready"; route: RoadmapRouteDto };
+
+/** How long a day takes to fold away (roadmap-detail.css `.roadmap-day-fold`). */
+const dayFoldMs = 280;
 
 /** How long a success notice stays; a warning stays until the traveler acts again. */
 const successNoticeMs = 5000;
@@ -226,6 +235,7 @@ function DayPanel({
   moving,
   onRate,
   notice,
+  suggestions,
 }: {
   day: RoadmapDayDto;
   overview: RoadmapSummaryDto;
@@ -249,6 +259,8 @@ function DayPanel({
   /** The traveler rates a dish of this day (RM-13). */
   onRate: (item: RoadmapItemDto, value: RatingValue) => Promise<void>;
   notice: DayNotice | null;
+  /** "Địa điểm được đề xuất" for this day, drawn under its dishes. */
+  suggestions?: ReactNode;
 }) {
   const noticeRef = useRef<HTMLDivElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -277,6 +289,17 @@ function DayPanel({
   const maps = googleMapsDayLink(overview, day.items);
   const legs = route?.status === "ready" ? legsByTarget(route.route) : null;
   const bodyId = `day-body-${day.dayNumber}`;
+  // A closed day stays drawn while it folds away, then leaves the page (so its calls stop too).
+  const [drawn, setDrawn] = useState(open);
+  if (open && !drawn) setDrawn(true);
+  useEffect(() => {
+    if (open || !drawn) return;
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    const timer = setTimeout(() => setDrawn(false), reduced ? 0 : dayFoldMs);
+    return () => clearTimeout(timer);
+  }, [open, drawn]);
   return (
     <section
       id={`day-${day.dayNumber}`}
@@ -306,202 +329,205 @@ function DayPanel({
             }`
           : dayDishSummary(day.items)}
       </p>
-      {open && (
-        <div
-          id={bodyId}
-          ref={bodyRef}
-          className="roadmap-day-body stack"
-          aria-busy={moving || undefined}
-          data-dragging={drag ? "true" : undefined}
-        >
-          <p id={`reorder-hint-${day.dayNumber}`} className="sr-only">
-            Kéo biểu tượng ở góc thẻ món để đổi thứ tự, hoặc bấm phím mũi tên
-            lên xuống khi đang chọn biểu tượng đó.
-          </p>
-          <div className="roadmap-day-actions">
-            <Button onClick={() => onAdd()}>+ Thêm món</Button>
-            <Button variant="secondary" onClick={onGenerate}>
-              Gợi ý bằng AI
-            </Button>
-            {maps && (
-              <a
-                className="button button-secondary"
-                href={maps.url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Mở trên Google Maps
-                <span className="sr-only"> (mở tab mới)</span>
-              </a>
+      {drawn && (
+        <div className="roadmap-day-fold" data-open={open} inert={!open}>
+          <div
+            id={bodyId}
+            ref={bodyRef}
+            className="roadmap-day-body stack"
+            aria-busy={moving || undefined}
+            data-dragging={drag ? "true" : undefined}
+          >
+            <p id={`reorder-hint-${day.dayNumber}`} className="sr-only">
+              Kéo biểu tượng ở góc thẻ món để đổi thứ tự, hoặc bấm phím mũi tên
+              lên xuống khi đang chọn biểu tượng đó.
+            </p>
+            <div className="roadmap-day-actions">
+              <Button onClick={() => onAdd()}>+ Thêm món</Button>
+              <Button variant="secondary" onClick={onGenerate}>
+                Gợi ý bằng AI
+              </Button>
+              {maps && (
+                <a
+                  className="button button-secondary"
+                  href={maps.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Mở trên Google Maps
+                  <span className="sr-only"> (mở tab mới)</span>
+                </a>
+              )}
+            </div>
+            {notice && (
+              <div ref={noticeRef} tabIndex={-1} className="roadmap-day-notice">
+                <Alert tone={notice.tone}>{notice.text}</Alert>
+              </div>
+            )}
+            {maps?.truncated && (
+              <p className="helper">
+                Google Maps nhận tối đa {maps.stops} điểm, nên liên kết chỉ gồm{" "}
+                {maps.stops} quán đầu của ngày.
+              </p>
+            )}
+
+            {loading && (
+              <p className="helper" role="status">
+                Đang tính quãng đường…
+              </p>
+            )}
+            {route?.status === "error" && (
+              <div className="stack-sm">
+                <Alert>{route.message}</Alert>
+                <Button variant="secondary" onClick={onRetry}>
+                  Thử lại
+                </Button>
+              </div>
+            )}
+            {route?.status === "ready" && (
+              <div className="stack-sm">
+                {route.route.legs.length > 0 ? (
+                  <p className="roadmap-route-total">
+                    <Icon name="motorcycle" />
+                    <span>
+                      Cả ngày:{" "}
+                      <strong>
+                        {formatDistance(route.route.totalDistanceMeters)} ·{" "}
+                        {formatDuration(route.route.totalDurationSeconds)}
+                      </strong>
+                    </span>
+                    {route.route.isEstimated && (
+                      <Badge tone="warning">Ước tính</Badge>
+                    )}
+                  </p>
+                ) : (
+                  <p className="helper">Chưa đủ điểm để tính quãng đường.</p>
+                )}
+                {route.route.isEstimated && (
+                  <p className="helper">
+                    Quãng đường được ước tính theo đường chim bay vì chưa lấy
+                    được dữ liệu đường đi.
+                  </p>
+                )}
+                {route.route.originSkipped && (
+                  <Alert tone="info">
+                    Điểm xuất phát cách quán đầu tiên hơn 30 km nên chặng đầu
+                    không được tính.
+                  </Alert>
+                )}
+              </div>
+            )}
+
+            {day.items.length ? (
+              groupByMeal(day.items).map((group) => (
+                <div
+                  key={`${group.mealSlot}-${group.items[0].id}`}
+                  className="roadmap-meal"
+                  data-meal={group.mealSlot}
+                >
+                  <div className="roadmap-meal-header">
+                    <h4 className="roadmap-meal-heading">
+                      {mealSlotLabels[group.mealSlot]}
+                    </h4>
+                    <Button
+                      variant="secondary"
+                      aria-label={`Thêm món vào ${mealSlotLabels[group.mealSlot].toLowerCase()}`}
+                      onClick={() => onAdd(group.mealSlot)}
+                    >
+                      + Thêm món
+                    </Button>
+                  </div>
+                  <ol className="roadmap-items">
+                    {group.items.map((item) => {
+                      const leg = legs?.get(item.id);
+                      return (
+                        <li key={item.id} data-item-id={item.id}>
+                          {leg && (
+                            <p className="roadmap-leg">
+                              <span className="roadmap-leg-connector">
+                                <Icon name="connection" />
+                              </span>
+                              <Icon name="motorcycle" />
+                              <span className="roadmap-leg-text">
+                                <span>
+                                  <strong>
+                                    {formatDistance(leg.distanceMeters)}
+                                  </strong>{" "}
+                                  · Khoảng {formatDuration(leg.durationSeconds)}
+                                </span>
+                                <small>
+                                  {legEndpoints(
+                                    leg,
+                                    day.items,
+                                    overview.originLabel,
+                                  )}
+                                </small>
+                              </span>
+                            </p>
+                          )}
+                          <ItemCard
+                            item={item}
+                            order={
+                              day.items.findIndex(
+                                (entry) => entry.id === item.id,
+                              ) + 1
+                            }
+                            selected={selectedItemId === item.id}
+                            onSelect={() => onSelectItem(item.id)}
+                            onRemove={() => onRemove(item)}
+                            dragging={drag?.itemId === item.id}
+                            onRate={(value) => onRate(item, value)}
+                            reorder={{
+                              busy: moving,
+                              hintId: `reorder-hint-${day.dayNumber}`,
+                              grip: gripProps(item.id),
+                              onStep: (direction) => {
+                                const target = stepTarget(
+                                  day.items,
+                                  item.id,
+                                  direction,
+                                );
+                                if (!target) return;
+                                focusGrip.current = item.id;
+                                onMove(item.id, target);
+                              },
+                            }}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </div>
+              ))
+            ) : (
+              <p className="roadmap-empty-day">
+                Ngày này chưa có món nào. Bấm “Thêm món” để chọn món ANGI gợi ý.
+              </p>
+            )}
+            {suggestions}
+            {drag?.indicator && (
+              <div
+                className="roadmap-drop-indicator"
+                aria-hidden
+                style={{
+                  top: drag.indicator.top,
+                  left: drag.indicator.left,
+                  width: drag.indicator.width,
+                }}
+              />
+            )}
+            {day.items.length > 0 && (
+              <p className="roadmap-day-total">
+                Tổng dự chi hôm nay: <strong>{vnd(day.dayCost)}</strong>. Giá
+                tính theo giá hiện tại của từng món.
+              </p>
+            )}
+            {day.note && (
+              <p className="helper">
+                <strong>Ghi chú:</strong> {day.note}
+              </p>
             )}
           </div>
-          {notice && (
-            <div ref={noticeRef} tabIndex={-1} className="roadmap-day-notice">
-              <Alert tone={notice.tone}>{notice.text}</Alert>
-            </div>
-          )}
-          {maps?.truncated && (
-            <p className="helper">
-              Google Maps nhận tối đa {maps.stops} điểm, nên liên kết chỉ gồm{" "}
-              {maps.stops} quán đầu của ngày.
-            </p>
-          )}
-
-          {loading && (
-            <p className="helper" role="status">
-              Đang tính quãng đường…
-            </p>
-          )}
-          {route?.status === "error" && (
-            <div className="stack-sm">
-              <Alert>{route.message}</Alert>
-              <Button variant="secondary" onClick={onRetry}>
-                Thử lại
-              </Button>
-            </div>
-          )}
-          {route?.status === "ready" && (
-            <div className="stack-sm">
-              {route.route.legs.length > 0 ? (
-                <p className="roadmap-route-total">
-                  <Icon name="motorcycle" />
-                  <span>
-                    Cả ngày:{" "}
-                    <strong>
-                      {formatDistance(route.route.totalDistanceMeters)} ·{" "}
-                      {formatDuration(route.route.totalDurationSeconds)}
-                    </strong>
-                  </span>
-                  {route.route.isEstimated && (
-                    <Badge tone="warning">Ước tính</Badge>
-                  )}
-                </p>
-              ) : (
-                <p className="helper">Chưa đủ điểm để tính quãng đường.</p>
-              )}
-              {route.route.isEstimated && (
-                <p className="helper">
-                  Quãng đường được ước tính theo đường chim bay vì chưa lấy được
-                  dữ liệu đường đi.
-                </p>
-              )}
-              {route.route.originSkipped && (
-                <Alert tone="info">
-                  Điểm xuất phát cách quán đầu tiên hơn 30 km nên chặng đầu
-                  không được tính.
-                </Alert>
-              )}
-            </div>
-          )}
-
-          {day.items.length ? (
-            groupByMeal(day.items).map((group) => (
-              <div
-                key={`${group.mealSlot}-${group.items[0].id}`}
-                className="roadmap-meal"
-                data-meal={group.mealSlot}
-              >
-                <div className="roadmap-meal-header">
-                  <h4 className="roadmap-meal-heading">
-                    {mealSlotLabels[group.mealSlot]}
-                  </h4>
-                  <Button
-                    variant="secondary"
-                    aria-label={`Thêm món vào ${mealSlotLabels[group.mealSlot].toLowerCase()}`}
-                    onClick={() => onAdd(group.mealSlot)}
-                  >
-                    + Thêm món
-                  </Button>
-                </div>
-                <ol className="roadmap-items">
-                  {group.items.map((item) => {
-                    const leg = legs?.get(item.id);
-                    return (
-                      <li key={item.id} data-item-id={item.id}>
-                        {leg && (
-                          <p className="roadmap-leg">
-                            <span className="roadmap-leg-connector">
-                              <Icon name="connection" />
-                            </span>
-                            <Icon name="motorcycle" />
-                            <span className="roadmap-leg-text">
-                              <span>
-                                <strong>
-                                  {formatDistance(leg.distanceMeters)}
-                                </strong>{" "}
-                                · Khoảng {formatDuration(leg.durationSeconds)}
-                              </span>
-                              <small>
-                                {legEndpoints(
-                                  leg,
-                                  day.items,
-                                  overview.originLabel,
-                                )}
-                              </small>
-                            </span>
-                          </p>
-                        )}
-                        <ItemCard
-                          item={item}
-                          order={
-                            day.items.findIndex(
-                              (entry) => entry.id === item.id,
-                            ) + 1
-                          }
-                          selected={selectedItemId === item.id}
-                          onSelect={() => onSelectItem(item.id)}
-                          onRemove={() => onRemove(item)}
-                          dragging={drag?.itemId === item.id}
-                          onRate={(value) => onRate(item, value)}
-                          reorder={{
-                            busy: moving,
-                            hintId: `reorder-hint-${day.dayNumber}`,
-                            grip: gripProps(item.id),
-                            onStep: (direction) => {
-                              const target = stepTarget(
-                                day.items,
-                                item.id,
-                                direction,
-                              );
-                              if (!target) return;
-                              focusGrip.current = item.id;
-                              onMove(item.id, target);
-                            },
-                          }}
-                        />
-                      </li>
-                    );
-                  })}
-                </ol>
-              </div>
-            ))
-          ) : (
-            <p className="roadmap-empty-day">
-              Ngày này chưa có món nào. Bấm “Thêm món” để chọn món ANGI gợi ý.
-            </p>
-          )}
-          {drag?.indicator && (
-            <div
-              className="roadmap-drop-indicator"
-              aria-hidden
-              style={{
-                top: drag.indicator.top,
-                left: drag.indicator.left,
-                width: drag.indicator.width,
-              }}
-            />
-          )}
-          {day.items.length > 0 && (
-            <p className="roadmap-day-total">
-              Tổng dự chi hôm nay: <strong>{vnd(day.dayCost)}</strong>. Giá tính
-              theo giá hiện tại của từng món.
-            </p>
-          )}
-          {day.note && (
-            <p className="helper">
-              <strong>Ghi chú:</strong> {day.note}
-            </p>
-          )}
         </div>
       )}
     </section>
@@ -669,6 +695,25 @@ export function RoadmapItinerary({
   /** The roadmap keeps no destination: reuse what the traveler typed, else the dishes' province. */
   const knownProvince = () =>
     recallDestination(roadmapId) || mostCommonProvince(itinerary);
+  // Last resort for the suggestion strips: the province the title names ("Đi chơi Hà Nội").
+  const [titleProvince, setTitleProvince] = useState("");
+  const needsTitleProvince = active && !mostCommonProvince(itinerary);
+  useEffect(() => {
+    if (!needsTitleProvince || recallDestination(roadmapId)) return;
+    let ignore = false;
+    loadProvinceCatalog()
+      .then((catalog) => {
+        if (!ignore)
+          setTitleProvince(provinceFromText(overview.title, catalog));
+      })
+      .catch(() => {
+        // Without the catalog the strip asks the traveler to pick a province in "Thêm món".
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [needsTitleProvince, overview.title, roadmapId]);
+  const suggestionProvince = knownProvince() || titleProvince;
 
   /**
    * Saves a new place for one dish (RM-08, one call per dish whose position changed), then reads
@@ -920,6 +965,22 @@ export function RoadmapItinerary({
             onRate={(item, value) => rateItem(day.dayNumber, item, value)}
             onMove={(itemId, target) =>
               void moveItem(day.dayNumber, itemId, target)
+            }
+            suggestions={
+              active && (
+                <SuggestedPlaces
+                  roadmapId={roadmapId}
+                  day={day}
+                  province={suggestionProvince}
+                  gps={
+                    gpsLatitude === undefined || gpsLongitude === undefined
+                      ? undefined
+                      : { latitude: gpsLatitude, longitude: gpsLongitude }
+                  }
+                  service={service}
+                  onAdded={onItemAdded}
+                />
+              )
             }
             onAdd={(slot) =>
               setAddTarget({
