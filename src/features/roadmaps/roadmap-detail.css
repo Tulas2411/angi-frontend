@@ -192,14 +192,19 @@
   border-right: 1px solid var(--line);
   position: relative;
   z-index: 1;
+  /* Nothing in the notebook may spill over the map column beside it. */
+  overflow-x: clip;
 }
 
 /* Title block: the roadmap's name and its facts on the ground, the cover beside them. */
 .roadmap-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.62fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.62fr);
   gap: var(--space-6);
   align-items: stretch;
+}
+.roadmap-hero > * {
+  min-width: 0;
 }
 .roadmap-hero-text {
   justify-content: center;
@@ -244,12 +249,21 @@
   padding-top: var(--space-1);
 }
 
+/* The cover fills its column and is cropped, whatever the size of the uploaded photo. */
 .roadmap-hero-media {
+  width: 100%;
+  max-width: 100%;
   height: 100%;
   min-height: 200px;
   max-height: 240px;
   aspect-ratio: auto;
   border-radius: var(--radius-md);
+}
+.roadmap-hero-media > img {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 /* Tabs: underlined labels on one rule (Tổng quan, Lịch trình, Ngân sách). */
