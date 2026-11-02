@@ -62,7 +62,7 @@
   --form-width: 880px;
   --auth-width: 480px;
   --gutter: 40px;
-  --header-height: 96px;
+  --header-height: 64px;
 
   /* Typography (families are the homepage's) */
   --font-body: "Be Vietnam Pro", "DM Sans", sans-serif;
@@ -88,7 +88,7 @@
 @media (max-width: 700px) {
   :root {
     --gutter: 20px;
-    --header-height: 72px;
+    --header-height: 56px;
   }
 }
 @media (max-width: 360px) {

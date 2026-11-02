@@ -345,8 +345,8 @@
   position: relative;
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -366,13 +366,13 @@
 }
 /* bell.svg is a 44px artboard with its own padding, so it fills the button. */
 .notification-bell .icon img {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
 }
 .notification-bell-count {
   position: absolute;
-  top: 4px;
-  right: 2px;
+  top: 2px;
+  right: 0;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;

@@ -95,17 +95,8 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
           <Link href="/account" className="menu-item">
             Tài khoản của tôi
           </Link>
-          <Link href="/notifications" className="menu-item">
-            Thông báo
-          </Link>
           {user.role === "TRAVELER" && (
             <>
-              <Link href="/roll" className="menu-item">
-                Hôm nay ăn gì?
-              </Link>
-              <Link href={roadmapRoutes.list} className="menu-item">
-                Lộ trình của tôi
-              </Link>
               <Link href={roadmapRoutes.plan} className="menu-item">
                 Lập lộ trình mới
               </Link>
@@ -117,9 +108,12 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
               </Link>
             </>
           )}
-          <Link href="/" className="menu-item">
-            Trang chủ ANGI
-          </Link>
+          {/* A Traveler's logo already leads home; the other roles' logo opens their workspace. */}
+          {user.role !== "TRAVELER" && (
+            <Link href="/" className="menu-item">
+              Trang chủ ANGI
+            </Link>
+          )}
           <LogoutButton />
         </div>
       </details>
