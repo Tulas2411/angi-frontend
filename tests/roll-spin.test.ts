@@ -33,7 +33,8 @@ describe("roll spin", () => {
     expect(cruiseTravel(1000)).toBeGreaterThan(cruiseSpeed * 0.9);
     expect(cruiseTravel(cruiseDuration)).toBeGreaterThan(
       (cruiseSpeed * cruiseDuration) / 1000 - 500,
-    );    // The reel keeps turning while it waits for the answer.
+    );
+    // The reel keeps turning while it waits for the answer.
     expect(cruiseTravel(cruiseDuration * 3)).toBeGreaterThan(
       cruiseTravel(cruiseDuration),
     );
@@ -87,17 +88,13 @@ describe("roll spin", () => {
   });
 
   it("fills the track with cards for the whole run", () => {
-    const plan = planSpin(
-      geometry,
-      0,
-      4,
-      cruiseTravel(desiredCruise),
-      desiredCruise,
-    );
-    const slots = reelLength(geometry, plan.travel);
+    const run = planSpin(geometry, 0, 4);
+    const slots = reelLength(geometry, run.travel);
     // The reel reaches past the right edge of the track.
-    expect(slots * geometry.step).toBeGreaterThan(travel + geometry.trackWidth);
+    expect(slots * geometry.step).toBeGreaterThan(
+      run.travel + geometry.trackWidth,
+    );
     // The landing slot of a real spin is inside the reel.
-    expect(plan.slot).toBeLessThan(reelLength(geometry, maxTravel()));
+    expect(run.slot).toBeLessThan(reelLength(geometry, maxTravel()));
   });
 });
