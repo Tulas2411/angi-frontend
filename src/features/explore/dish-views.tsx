@@ -157,10 +157,9 @@ function useDescriptionCut(text: string) {
  * Two lines and about seven words of the third, then "…": pressing it shows the whole text in the
  * card. Before the first measure the text is clamped to three lines, so nothing jumps.
  */
-function LongDescription({ dishId, text }: { dishId: number; text: string }) {
+function LongDescription({ id, text }: { id: string; text: string }) {
   const { box, twin, at } = useDescriptionCut(text);
   const [open, setOpen] = useState(false);
-  const id = `dish-description-${dishId}`;
   const cut = !open && typeof at === "number";
   const shown = cut
     ? text.split(/\s+/).filter(Boolean).slice(0, at).join(" ")
@@ -200,14 +199,20 @@ function LongDescription({ dishId, text }: { dishId: number; text: string }) {
   );
 }
 
-function DescriptionText({
-  dishId,
+/**
+ * The description of a list card (dish or restaurant): a placeholder while it loads, a retry when
+ * it failed, `emptyText` when there is none, else the cut text. `id` names the paragraph.
+ */
+export function DescriptionText({
+  id,
   description,
   onRetry,
+  emptyText = "Món này chưa có mô tả.",
 }: {
-  dishId: number;
+  id: string;
   description: DishDescription;
   onRetry: () => void;
+  emptyText?: string;
 }) {
   if (description.status === "loading")
     return (
@@ -225,8 +230,8 @@ function DescriptionText({
       </p>
     );
   if (!description.text)
-    return <p className="dish-description is-muted">Món này chưa có mô tả.</p>;
-  return <LongDescription dishId={dishId} text={description.text} />;
+    return <p className="dish-description is-muted">{emptyText}</p>;
+  return <LongDescription id={id} text={description.text} />;
 }
 
 function DishName({ dish }: { dish: DishCardDto }) {
@@ -261,7 +266,7 @@ export function DishRow({
         </div>
         <DishKinds dish={dish} />
         <DescriptionText
-          dishId={dish.id}
+          id={`dish-description-${dish.id}`}
           description={description}
           onRetry={onRetry}
         />
@@ -298,7 +303,7 @@ export function DishDetailCard({
         </div>
         <DishKinds dish={dish} />
         <DescriptionText
-          dishId={dish.id}
+          id={`dish-description-${dish.id}`}
           description={description}
           onRetry={onRetry}
         />

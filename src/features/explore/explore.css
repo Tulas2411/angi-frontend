@@ -80,6 +80,24 @@
   display: flex;
   justify-content: center;
 }
+/* Restaurant list lazy loading: the marker after the last card, with what is happening there. */
+.explore-lazy {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 1px;
+}
+.explore-lazy-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore-lazy-loading .spinner {
+  display: inline-block;
+}
+.restaurant-score svg {
+  fill: #f4a300;
+}
 
 /* -------------------------------------------------------------- filters */
 .explore-filters {

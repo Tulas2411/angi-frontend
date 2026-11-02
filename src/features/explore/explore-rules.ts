@@ -7,6 +7,7 @@ import type {
   DishForm,
   OperatingStatus,
   ReportReasonCode,
+  RestaurantCardDto,
   RestaurantSort,
   ReviewDto,
   ReviewSort,
@@ -278,9 +279,12 @@ export function activeDishFilterCount(filters: DishFilters) {
   );
 }
 
+/**
+ * Restaurant filters kept in the URL. The list loads page after page as the traveler scrolls, so
+ * no page number is kept (an old `?page=` link starts from the first page).
+ */
 export function restaurantQueryFromParams(params: URLSearchParams) {
   const sort = params.get("sort");
-  const page = Number(params.get("page"));
   const level = params.get("price");
   const rating = params.get("rating");
   return {
@@ -294,14 +298,34 @@ export function restaurantQueryFromParams(params: URLSearchParams) {
       : "",
     openNow: params.get("open") === "1",
     sort: (sort === "newest" ? "newest" : "rating") as RestaurantSort,
-    page: Number.isInteger(page) && page > 1 ? page : 1,
   };
 }
 
 export type RestaurantFilters = ReturnType<typeof restaurantQueryFromParams>;
 
+export const emptyRestaurantFilters: RestaurantFilters = {
+  q: "",
+  province: "",
+  priceLevel: "",
+  minRating: "",
+  openNow: false,
+  sort: "rating",
+};
+
+/** How many filters of the panel are in use (the search text and the order are not counted). */
+export function activeRestaurantFilterCount(filters: RestaurantFilters) {
+  return (
+    (filters.province.trim() ? 1 : 0) +
+    (filters.priceLevel ? 1 : 0) +
+    (filters.minRating ? 1 : 0) +
+    (filters.openNow ? 1 : 0)
+  );
+}
+
+/** REST-01 query for one page (from 1) of the filtered list. */
 export function restaurantApiQuery(
   filters: RestaurantFilters,
+  page = 1,
 ): BrowseRestaurantsQuery {
   return {
     q: filters.q.trim() || undefined,
@@ -310,9 +334,21 @@ export function restaurantApiQuery(
     minRating: filters.minRating ? Number(filters.minRating) : undefined,
     openNow: filters.openNow || undefined,
     sort: filters.sort,
-    page: filters.page,
+    page,
     pageSize: restaurantPageSize,
   };
+}
+
+/**
+ * The list after the next page arrived. A restaurant already shown is not repeated: when the
+ * order moved between two reads (a new rating), the same restaurant can come back on the next page.
+ */
+export function appendRestaurants(
+  shown: readonly RestaurantCardDto[],
+  page: readonly RestaurantCardDto[],
+) {
+  const ids = new Set(shown.map((restaurant) => restaurant.id));
+  return [...shown, ...page.filter((restaurant) => !ids.has(restaurant.id))];
 }
 
 export function restaurantFiltersHref(filters: RestaurantFilters) {
@@ -323,7 +359,6 @@ export function restaurantFiltersHref(filters: RestaurantFilters) {
   if (filters.minRating) params.set("rating", filters.minRating);
   if (filters.openNow) params.set("open", "1");
   if (filters.sort !== "rating") params.set("sort", filters.sort);
-  if (filters.page > 1) params.set("page", String(filters.page));
   const text = params.toString();
   return text ? `/restaurants?${text}` : "/restaurants";
 }

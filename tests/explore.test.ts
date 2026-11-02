@@ -1,12 +1,15 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   activeDishFilterCount,
+  activeRestaurantFilterCount,
+  appendRestaurants,
   businessHoursByDay,
   dishApiQuery,
   dishFiltersHref,
   dishPriceProblem,
   dishQueryFromParams,
   emptyDishFilters,
+  emptyRestaurantFilters,
   googleMapsPlaceHref,
   operatingBadge,
   parseEntityId,
@@ -26,7 +29,10 @@ import {
   exploreService,
   queryString,
 } from "@/features/explore/explore-service";
-import type { ReviewDto } from "@/features/explore/explore-types";
+import type {
+  RestaurantCardDto,
+  ReviewDto,
+} from "@/features/explore/explore-types";
 import { ApiError } from "@/shared/api/error";
 import { publicOperation } from "@/shared/api/public-proxy";
 
@@ -164,14 +170,14 @@ describe("explore filters in the URL", () => {
     const restaurants = restaurantQueryFromParams(
       new URLSearchParams("sort=distance&price=9&rating=2&page=-3"),
     );
-    expect(restaurants).toMatchObject({
+    expect(restaurants).toEqual({
+      ...emptyRestaurantFilters,
       sort: "rating",
       priceLevel: "",
       minRating: "",
-      page: 1,
     });
   });
-  it("reads and writes the restaurant filters and page", () => {
+  it("reads and writes the restaurant filters; the list pages itself, so no page is kept", () => {
     const filters = restaurantQueryFromParams(
       new URLSearchParams("q=bún&price=2&rating=4&open=1&sort=newest&page=3"),
     );
@@ -182,8 +188,8 @@ describe("explore filters in the URL", () => {
       minRating: "4",
       openNow: true,
       sort: "newest",
-      page: 3,
     });
+    // REST-01: page from 1, pageSize 1..100.
     expect(restaurantApiQuery(filters)).toEqual({
       q: "bún",
       province: undefined,
@@ -191,9 +197,13 @@ describe("explore filters in the URL", () => {
       minRating: 4,
       openNow: true,
       sort: "newest",
-      page: 3,
+      page: 1,
       pageSize: 12,
     });
+    expect(restaurantApiQuery(filters, 3)).toMatchObject({ page: 3 });
+    expect(restaurantFiltersHref(filters)).toBe(
+      "/restaurants?q=b%C3%BAn&price=2&rating=4&open=1&sort=newest",
+    );
     expect(
       restaurantQueryFromParams(
         new URLSearchParams(restaurantFiltersHref(filters).split("?")[1]),
@@ -202,6 +212,36 @@ describe("explore filters in the URL", () => {
     expect(
       restaurantFiltersHref(restaurantQueryFromParams(new URLSearchParams(""))),
     ).toBe("/restaurants");
+  });
+  it("counts the panel filters in use, not the search text or the order", () => {
+    expect(activeRestaurantFilterCount(emptyRestaurantFilters)).toBe(0);
+    expect(
+      activeRestaurantFilterCount({
+        ...emptyRestaurantFilters,
+        q: "phở",
+        sort: "newest",
+      }),
+    ).toBe(0);
+    expect(
+      activeRestaurantFilterCount({
+        q: "",
+        province: "Thành phố Hà Nội",
+        priceLevel: "2",
+        minRating: "4.5",
+        openNow: true,
+        sort: "rating",
+      }),
+    ).toBe(4);
+  });
+  it("adds the next page without repeating a restaurant already shown", () => {
+    const card = (id: number) => ({ id }) as RestaurantCardDto;
+    const shown = [card(1), card(2), card(3)];
+    expect(
+      appendRestaurants(shown, [card(3), card(4), card(5)]).map(
+        (restaurant) => restaurant.id,
+      ),
+    ).toEqual([1, 2, 3, 4, 5]);
+    expect(appendRestaurants(shown, [])).toEqual(shown);
   });
 });
 
