@@ -9,6 +9,7 @@ import type {
   OwnerMenuDto,
 } from "../../src/features/owner/menu-types";
 
+import { chooseOption } from "./select-helpers";
 let server: Server,
   menu: OwnerMenuDto,
   details: MenuDetailDto[],
@@ -472,9 +473,10 @@ test("history forwards status/page; reviewed records show feedback and no edit a
   await page.getByRole("tab", { name: "Lịch sử", exact: true }).click();
   await page.getByRole("button", { name: "Trang sau", exact: true }).click();
   await expect(page.getByText("7 bản · Trang 2 / 2")).toBeVisible();
-  await page
-    .getByLabel("Lọc trạng thái", { exact: true })
-    .selectOption("rejected");
+  await chooseOption(
+    page.getByLabel("Lọc trạng thái", { exact: true }),
+    "rejected",
+  );
   await page.getByRole("button", { name: "Xem bản #14", exact: true }).click();
   await expect(
     page.getByText("Kiểm duyệt viên", { exact: true }),

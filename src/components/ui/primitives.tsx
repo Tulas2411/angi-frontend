@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
@@ -12,6 +13,14 @@ import {
 import { Button, Input } from "@/shared/ui";
 import { pageSlice, validateUpload } from "@/features/platform/rules";
 import { searchText } from "@/shared/text/search";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/shadcn/select";
+import { PortalContainerContext } from "@/components/ui/shadcn/portal-container";
 
 export function Icon({
   name,
@@ -242,11 +251,20 @@ export function TextArea({
     </div>
   );
 }
+/** Radix Select forbids an empty item value, so "" (the "any" choice) travels under this key. */
+const emptySelectValue = "__angi-empty__";
+
+/**
+ * A labelled choice list on the shadcn Select (Radix): a rounded trigger and a rounded floating
+ * list. Controlled with `value`/`onChange`, or uncontrolled with `defaultValue` inside a form;
+ * `name` submits the real value (empty included) through a hidden input.
+ */
 export function SelectField({
   label,
   name,
   error,
   value,
+  defaultValue,
   onChange,
   options,
   disabled = false,
@@ -254,32 +272,49 @@ export function SelectField({
   label: string;
   name?: string;
   error?: string;
-  value: string;
-  onChange: (value: string) => void;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
   options: { value: string; label: string }[];
   disabled?: boolean;
 }) {
   const id = useId();
+  const [own, setOwn] = useState(defaultValue ?? options[0]?.value ?? "");
+  const current = value ?? own;
+  const toKey = (option: string) => (option === "" ? emptySelectValue : option);
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      <select
-        className="input"
-        id={id}
-        name={name}
-        aria-invalid={!!error}
-        aria-describedby={error ? `${id}-error` : undefined}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <Select
+        value={toKey(current)}
+        onValueChange={(key) => {
+          const next = key === emptySelectValue ? "" : key;
+          if (value === undefined) setOwn(next);
+          onChange?.(next);
+        }}
         disabled={disabled}
-        suppressHydrationWarning
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          id={id}
+          data-value={current}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={toKey(option.value)}
+              data-value={option.value}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {name && <input type="hidden" name={name} value={current} />}
       {error && (
         <p id={`${id}-error`} className="field-error">
           {error}
@@ -395,6 +430,12 @@ export function Dialog({
 }) {
   const ref = useRef<HTMLDialogElement>(null),
     titleId = useId();
+  // Floating lists and pickers render inside the dialog, which owns the top layer while open.
+  const [element, setElement] = useState<HTMLDialogElement | null>(null);
+  const attach = useCallback((node: HTMLDialogElement | null) => {
+    ref.current = node;
+    setElement(node);
+  }, []);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -407,7 +448,7 @@ export function Dialog({
       if (focusField)
         dialog
           .querySelector<HTMLElement>(
-            ".dialog-content :is(input, textarea, select)",
+            ".dialog-content :is(input:not([type=hidden]), textarea, select, [role=combobox])",
           )
           ?.focus();
     }
@@ -418,27 +459,32 @@ export function Dialog({
     };
   }, [open, focusField]);
   return (
-    <dialog
-      ref={ref}
-      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
-      aria-labelledby={titleId}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
-    >
-      <div className="dialog-heading">
-        <h2 id={titleId}>{title}</h2>
-        <Button variant="icon" onClick={onClose} aria-label="Đóng hộp thoại">
-          <Icon name="X" />
-        </Button>
-      </div>
-      <div className="dialog-content">{children}</div>
-      {footer && <div className="dialog-footer">{footer}</div>}
-    </dialog>
+    <PortalContainerContext.Provider value={element}>
+      <dialog
+        ref={attach}
+        className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
+        aria-labelledby={titleId}
+        onCancel={(e) => {
+          e.preventDefault();
+          // Escape first closes an open list or picker, not the whole dialog.
+          if (ref.current?.querySelector("[data-radix-popper-content-wrapper]"))
+            return;
+          onClose();
+        }}
+        onClick={(e) => {
+          if (e.target === ref.current) onClose();
+        }}
+      >
+        <div className="dialog-heading">
+          <h2 id={titleId}>{title}</h2>
+          <Button variant="icon" onClick={onClose} aria-label="Đóng hộp thoại">
+            <Icon name="X" />
+          </Button>
+        </div>
+        <div className="dialog-content">{children}</div>
+        {footer && <div className="dialog-footer">{footer}</div>}
+      </dialog>
+    </PortalContainerContext.Provider>
   );
 }
 export function ConfirmDialog({

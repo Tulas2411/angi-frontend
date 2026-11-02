@@ -15,6 +15,7 @@ import type {
   UpdateRoadmapItemRequestDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
+import { chooseOption } from "./select-helpers";
 /**
  * F-25: choosing the day and the place of a dish when it is added. RM-06 and RM-07 against a local
  * stub; like the backend, RM-07 gives the item exactly the `sortOrder` it is sent (it never shifts
@@ -323,10 +324,10 @@ test("the dialog offers every day, the meal and the places of that meal", async 
   ]);
   await expect(placeField(page)).toHaveValue("end");
   // A meal with no dish has only one place.
-  await mealField(page).selectOption("dinner");
+  await chooseOption(mealField(page), "dinner");
   await expect(placeField(page).locator("option")).toHaveText(["Cuối bữa"]);
-  await dayField(page).selectOption("302");
-  await mealField(page).selectOption("lunch");
+  await chooseOption(dayField(page), "302");
+  await chooseOption(mealField(page), "lunch");
   await expect(placeField(page).locator("option")).toHaveText(["Cuối bữa"]);
   expect(calls).toEqual([]);
 });
@@ -351,7 +352,7 @@ test("a chosen place makes room with RM-08 first, then adds with that sortOrder"
   page,
 }) => {
   await open(page);
-  await placeField(page).selectOption("after:1502");
+  await chooseOption(placeField(page), "after:1502");
   await addButton(page, "Phở gà").click();
   await expect.poll(() => addCalls.length).toBe(1);
   // The dishes after the place move one step later (the furthest first), then RM-07.
@@ -378,7 +379,7 @@ test("a chosen place makes room with RM-08 first, then adds with that sortOrder"
 
 test("the start of a meal and another day are honoured", async ({ page }) => {
   await open(page);
-  await placeField(page).selectOption("start");
+  await chooseOption(placeField(page), "start");
   await addButton(page, "Bún riêu").click();
   await expect.poll(() => addCalls.length).toBe(1);
   expect(addCalls[0].body.sortOrder).toBe(0);
@@ -392,8 +393,8 @@ test("the start of a meal and another day are honoured", async ({ page }) => {
     .toEqual(["Bún riêu", "Bún chả", "Nem rán", "Chả cá"]);
 
   // Day 2: the dish goes to that day, the day the dialog was opened from is untouched.
-  await dayField(page).selectOption("302");
-  await mealField(page).selectOption("dinner");
+  await chooseOption(dayField(page), "302");
+  await chooseOption(mealField(page), "dinner");
   await addButton(page, "Bánh cuốn", "bữa tối").click();
   await expect.poll(() => addCalls.length).toBe(2);
   expect(addCalls[1]).toEqual({
@@ -411,7 +412,7 @@ test("a failure while making room adds nothing and says so", async ({
 }) => {
   await open(page);
   failPatch = true;
-  await placeField(page).selectOption("start");
+  await chooseOption(placeField(page), "start");
   await addButton(page, "Phở gà").click();
   await expect(
     dialog(page).locator(".roadmap-suggestion").first().getByRole("alert"),

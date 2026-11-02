@@ -30,6 +30,7 @@ import type {
   SanctionType,
 } from "./moderation-users-types";
 
+import { DateTimeField } from "@/components/ui/date-time-fields";
 const PAGE_SIZE = 20;
 
 /** Nhãn tiếng Việt của vai trò người dùng. */
@@ -380,11 +381,10 @@ function SanctionDialog({
         ]}
       />
       {type === "suspend" && (
-        <Field
+        <DateTimeField
           label="Tạm khóa đến (giờ Việt Nam)"
-          type="datetime-local"
           value={until}
-          onChange={(event) => setUntil(event.target.value)}
+          onChange={(value) => setUntil(value)}
           required
         />
       )}

@@ -28,6 +28,7 @@ import {
   type HomeRoadmapValues,
 } from "./home-roadmap-rules";
 
+import { DateField } from "@/components/ui/date-time-fields";
 function subscribeDraft(listener: () => void) {
   window.addEventListener("storage", listener);
   window.addEventListener("pageshow", listener);
@@ -162,11 +163,10 @@ function RoadmapFields({
             helper="Bạn muốn khám phá hương vị ở đâu?"
           />
         </div>
-        <Field
+        <DateField
           label="Ngày bắt đầu"
-          type="date"
           value={values.startDate}
-          onChange={(event) => update("startDate", event.target.value)}
+          onChange={(value) => update("startDate", value)}
           required
           disabled={busy || !allowed}
           error={errors.startDate}

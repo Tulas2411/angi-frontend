@@ -27,6 +27,7 @@ import type {
   RoadmapOriginMode,
 } from "./roadmap-types";
 
+import { DateField } from "@/components/ui/date-time-fields";
 /**
  * Two ways to give a starting point. With neither chosen the roadmap keeps the
  * default `none` origin (province only), so the contract value stays reachable.
@@ -330,14 +331,13 @@ export function RoadmapOverviewForm({
             )}
           </fieldset>
           <div className="grid-2">
-            <Field
+            <DateField
               label="Ngày bắt đầu"
               name="startDate"
-              type="date"
               value={values.startDate}
               helper="Không bắt buộc."
               error={errors.startDate}
-              onChange={(event) => update("startDate", event.target.value)}
+              onChange={(value) => update("startDate", value)}
             />
             <Field
               placeholder="Ví dụ: 3"

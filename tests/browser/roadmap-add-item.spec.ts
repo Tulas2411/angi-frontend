@@ -14,6 +14,7 @@ import type {
   RoadmapItemDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
+import { chooseOption } from "./select-helpers";
 /**
  * F-24: RM-06 and RM-07, F-28: RM-09 against a local stub shaped like the API Design JSON samples.
  */
@@ -467,7 +468,7 @@ test("adding a dish sends RM-07, reloads the roadmap and keeps the dialog for th
   // Choosing the target meal does not reload the list or add a filter.
   await expect(box.locator(".roadmap-suggestion")).toHaveCount(12);
   const callsBefore = suggestionCalls.length;
-  await targetMeal(page).selectOption("lunch");
+  await chooseOption(targetMeal(page), "lunch");
   await expect(box.locator(".roadmap-suggestion")).toHaveCount(12);
   expect(suggestionCalls).toHaveLength(callsBefore);
 
@@ -521,7 +522,7 @@ test("the legs of a day are asked again once a dish is added to it", async ({
   // One dish and a pinned origin: day 1 already has its first leg.
   await expect.poll(() => routeCalls).toEqual(["301"]);
   await page.getByRole("button", { name: "Thêm món vào bữa sáng" }).click();
-  await targetMeal(page).selectOption("lunch");
+  await chooseOption(targetMeal(page), "lunch");
   await addButton(page, "Mì Quảng ếch", "bữa trưa").click();
   await expect(items(page)).toHaveCount(2);
   await dialog(page).getByRole("button", { name: "Xong" }).click();

@@ -7,6 +7,7 @@ import type {
   ResubmitVerificationRequestDto,
 } from "../../src/features/owner/verification-types";
 
+import { chooseOption } from "./select-helpers";
 let server: Server;
 let history: GetVerificationStatusResponseDto;
 let submissions: { id: number; body: ResubmitVerificationRequestDto }[];
@@ -226,9 +227,10 @@ test("needs_more_info prefills the complete dossier; replacing documents sends t
       buffer: Buffer.from("%PDF-1.4 local fixture"),
     });
   await expect(page.getByText(/PDF · .*Đã tải lên/)).toBeVisible();
-  await page
-    .getByLabel("Loại tài liệu · attp.pdf", { exact: true })
-    .selectOption("food_safety_cert");
+  await chooseOption(
+    page.getByLabel("Loại tài liệu · attp.pdf", { exact: true }),
+    "food_safety_cert",
+  );
   await legal(page).fill(" Tên pháp lý mới ");
   await page
     .getByLabel("Ghi chú gửi người duyệt (không bắt buộc)", { exact: true })

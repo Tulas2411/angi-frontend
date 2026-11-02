@@ -31,6 +31,7 @@ import { MapPicker } from "@/components/domain/map-picker";
 import { ProvinceField } from "@/components/domain/province-field";
 import { usePlatform } from "./provider";
 import { effectivePermission } from "./rules";
+import { DateField } from "@/components/ui/date-time-fields";
 export function ComponentGallery() {
   const { data, mutate, notify, busy } = usePlatform(),
     [text, setText] = useState("Hà Nội"),
@@ -119,8 +120,8 @@ export function ComponentGallery() {
             step={1000}
             helper="Đơn vị: đồng"
           />
-          <Field label="Ngày bắt đầu" type="date" defaultValue="2026-09-25" />
-          <Field label="Ngày kết thúc" type="date" defaultValue="2026-10-04" />
+          <DateField label="Ngày bắt đầu" defaultValue="2026-09-25" />
+          <DateField label="Ngày kết thúc" defaultValue="2026-10-04" />
           <ProvinceField label="Điểm đến" value={text} onChange={setText} />
           <SelectField
             label="Lựa chọn"

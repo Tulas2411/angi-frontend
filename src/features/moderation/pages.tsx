@@ -28,6 +28,7 @@ import {
 } from "@/features/platform/rules";
 import type { AppData } from "@/features/platform/contracts";
 
+import { DateTimeField } from "@/components/ui/date-time-fields";
 function usePermission() {
   const { data } = usePlatform(),
     { user } = useWorkspace();
@@ -119,11 +120,10 @@ function DecisionDialog({
           error={error}
         />
         {decision?.untilRequired && (
-          <Field
+          <DateTimeField
             label="Đình chỉ đến (giờ Việt Nam)"
-            type="datetime-local"
             value={until}
-            onChange={(e) => setUntil(e.target.value)}
+            onChange={(value) => setUntil(value)}
             required
           />
         )}
