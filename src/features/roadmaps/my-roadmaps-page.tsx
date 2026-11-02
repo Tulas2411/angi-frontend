@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Alert, Badge, Button, Card } from "@/shared/ui";
+import { Alert, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   EmptyState,
@@ -14,11 +14,10 @@ import { PageHeading } from "@/components/layout/page-heading";
 import { getErrorMessage } from "@/shared/api/error";
 import {
   isOverBudget,
-  roadmapDateRange,
+  roadmapCountdown,
   roadmapItemsLabel,
   roadmapListPageSize,
-  roadmapOriginText,
-  vnd,
+  roadmapShortRange,
 } from "./roadmap-list-rules";
 import { roadmapService, type RoadmapListService } from "./roadmap-service";
 import { roadmapDetailHref, roadmapListHref, roadmapRoutes } from "./routes";
@@ -30,49 +29,57 @@ type State =
   | { status: "error"; message: string }
   | { status: "ready"; data: RoadmapPageDto };
 
-function RoadmapCard({ roadmap }: { roadmap: RoadmapSummaryDto }) {
-  const origin = roadmapOriginText(roadmap);
+const shareIcon = (
+  <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true">
+    <path d="M13 5v4C7 9.5 4.5 13 4 19c2-3.2 4.8-4.6 9-4.6V19l7-7-7-7Z" />
+  </svg>
+);
+
+/**
+ * One roadmap: the cover with how soon the trip starts and a share action, then the title and one
+ * line of who, when and how many dishes. Budget and origin live on the detail page.
+ */
+function RoadmapCard({
+  roadmap,
+  owner,
+}: {
+  roadmap: RoadmapSummaryDto;
+  owner?: string;
+}) {
+  const countdown = roadmapCountdown(roadmap);
+  const over = isOverBudget(roadmap);
   return (
-    <article
-      className="card roadmap-card"
-      aria-labelledby={`roadmap-${roadmap.id}`}
-    >
-      <Media src={roadmap.coverUrl ?? undefined} alt={roadmap.title} />
-      <div className="roadmap-card-body">
-        <div className="stack-sm">
-          <h2 id={`roadmap-${roadmap.id}`}>
-            <Link href={roadmapDetailHref(roadmap.id)}>{roadmap.title}</Link>
-          </h2>
-          <p className="helper">{roadmapDateRange(roadmap)}</p>
-          <p className="roadmap-card-chips">
-            <span>{roadmap.numDays} ngày</span>
-            <span>{roadmapItemsLabel(roadmap.itemCount)}</span>
-            {isOverBudget(roadmap) && (
-              <Badge tone="warning">Vượt ngân sách</Badge>
-            )}
+    <article className="roadmap-card" aria-labelledby={`roadmap-${roadmap.id}`}>
+      <div className="roadmap-card-cover">
+        <Media src={roadmap.coverUrl ?? undefined} alt={roadmap.title} />
+        {(countdown || over) && (
+          <p className="roadmap-card-badges">
+            {countdown && <span>{countdown}</span>}
+            {over && <span className="is-warning">Vượt ngân sách</span>}
           </p>
-        </div>
-        <dl className="detail-list">
-          <div>
-            <dt>Ngân sách</dt>
-            <dd>
-              {roadmap.budgetAmount === null
-                ? "Chưa đặt"
-                : vnd(roadmap.budgetAmount)}
-            </dd>
-          </div>
-          <div>
-            <dt>Chi phí dự kiến</dt>
-            <dd>{vnd(roadmap.totalEstimatedCost)}</dd>
-          </div>
-          {origin && (
-            <div>
-              <dt>Xuất phát</dt>
-              <dd>{origin}</dd>
-            </div>
-          )}
-        </dl>
+        )}
+        <Link
+          className="roadmap-card-share"
+          href={`/guides/new?roadmap=${roadmap.id}`}
+          aria-label={`Chia sẻ lộ trình ${roadmap.title}`}
+        >
+          {shareIcon}
+          <span aria-hidden>Chia sẻ</span>
+        </Link>
       </div>
+      <h2 id={`roadmap-${roadmap.id}`}>
+        <Link href={roadmapDetailHref(roadmap.id)}>{roadmap.title}</Link>
+      </h2>
+      <p className="roadmap-card-meta">
+        {owner && (
+          <span className="roadmap-card-owner" aria-hidden>
+            {owner.trim().charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span>{roadmapShortRange(roadmap)}</span>
+        <span>{roadmap.numDays} ngày</span>
+        <span>{roadmapItemsLabel(roadmap.itemCount)}</span>
+      </p>
     </article>
   );
 }
@@ -80,9 +87,12 @@ function RoadmapCard({ roadmap }: { roadmap: RoadmapSummaryDto }) {
 /** F-20 View My Roadmap: RM-02, one page per URL (`/roadmaps?page=2`). */
 export function MyRoadmapsPage({
   page,
+  owner,
   service = roadmapService,
 }: {
   page: number;
+  /** The traveler's display name, for the initial on each card. */
+  owner?: string;
   service?: RoadmapListService;
 }) {
   const router = useRouter();
@@ -161,7 +171,7 @@ export function MyRoadmapsPage({
       <ul className="roadmap-grid">
         {data.items.map((roadmap) => (
           <li key={roadmap.id}>
-            <RoadmapCard roadmap={roadmap} />
+            <RoadmapCard roadmap={roadmap} owner={owner} />
           </li>
         ))}
       </ul>

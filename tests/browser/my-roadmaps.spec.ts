@@ -9,7 +9,7 @@ import {
 import type { RoadmapSummaryDto } from "../../src/features/roadmaps/roadmap-types";
 
 /** F-20: RM-02 against a local stub that applies the backend paging rules. */
-const pageSize = 9;
+const pageSize = 12;
 let rows: RoadmapSummaryDto[] = [];
 let listCalls: string[] = [];
 let failures = 0;
@@ -124,13 +124,15 @@ test("RM-02 shows the cards of the documented sample", async ({ page }) => {
   await expect(
     card.getByRole("heading", { name: "3 ngày ăn sập Đà Nẵng" }),
   ).toBeVisible();
-  await expect(card).toContainText("10 thg 10, 2026 – 12 thg 10, 2026");
+  // Cover, title and one line of who, when, how long and how many dishes.
+  await expect(card).toContainText("10 – 12 thg 10, 2026");
   await expect(card).toContainText("3 ngày");
   await expect(card).toContainText("9 món");
-  await expect(card).toContainText("1.500.000 VND");
-  await expect(card).toContainText("640.000 VND");
-  await expect(card).toContainText("Khách sạn Sala Đà Nẵng");
   await expect(card).not.toContainText("Vượt ngân sách");
+  // The share action opens the guide editor with this roadmap attached.
+  await expect(
+    card.getByRole("link", { name: "Chia sẻ lộ trình 3 ngày ăn sập Đà Nẵng" }),
+  ).toHaveAttribute("href", `/guides/new?roadmap=${sample.id}`);
   await expect(page.getByText("Bạn có 1 lộ trình")).toBeVisible();
   // One page only: no pager.
   await expect(page.getByRole("button", { name: "Trang sau" })).toHaveCount(0);
@@ -165,7 +167,7 @@ test("a roadmap without dates, items, budget or origin still reads clearly", asy
   const empty = cards(page).filter({ hasText: "Chuyến chưa có kế hoạch" });
   await expect(empty).toContainText("Chưa chọn ngày đi");
   await expect(empty).toContainText("Chưa có món");
-  await expect(empty).toContainText("Chưa đặt");
+  // Budget and origin are on the detail page, not on the card.
   await expect(empty).not.toContainText("Xuất phát");
   await expect(
     cards(page).filter({ hasText: "Chuyến vượt ngân sách" }),
@@ -175,21 +177,21 @@ test("a roadmap without dates, items, budget or origin still reads clearly", asy
 test("pages follow ?page= in the URL, with the last page as the fallback past the end", async ({
   page,
 }) => {
-  rows = many(12);
+  rows = many(15);
   await open(page);
-  await expect(cards(page)).toHaveCount(9);
-  await expect(page.getByText("1–9 trên 12 mục · Trang 1 / 2")).toBeVisible();
+  await expect(cards(page)).toHaveCount(12);
+  await expect(page.getByText("1–12 trên 15 mục · Trang 1 / 2")).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Trang trước" }),
   ).toBeDisabled();
   await page.getByRole("button", { name: "Trang sau" }).click();
   await expect(page).toHaveURL(/\/roadmaps\?page=2$/);
   await expect(cards(page)).toHaveCount(3);
-  await expect(page.getByText("10–12 trên 12 mục · Trang 2 / 2")).toBeVisible();
+  await expect(page.getByText("13–15 trên 15 mục · Trang 2 / 2")).toBeVisible();
   expect(listCalls.at(-1)).toBe(`page=2&pageSize=${pageSize}`);
   await page.getByRole("button", { name: "Trang trước" }).click();
   await expect(page).toHaveURL(/\/roadmaps$/);
-  await expect(cards(page)).toHaveCount(9);
+  await expect(cards(page)).toHaveCount(12);
 
   await page.goto("/roadmaps?page=9");
   await expect(page).toHaveURL(/\/roadmaps\?page=2$/);
@@ -197,7 +199,7 @@ test("pages follow ?page= in the URL, with the last page as the fallback past th
   // A broken value is the first page; the backend never sees an invalid page.
   listCalls = [];
   await page.goto("/roadmaps?page=abc");
-  await expect(cards(page)).toHaveCount(9);
+  await expect(cards(page)).toHaveCount(12);
   expect(listCalls).toEqual([`page=1&pageSize=${pageSize}`]);
 });
 
@@ -254,4 +256,12 @@ test("the list has no horizontal overflow from 320px to 1440px", async ({
       `${width}px`,
     ).toBe(true);
   }
+  // Four roadmaps a row on a wide screen, the fifth starts the next row.
+  const tops = await cards(page).evaluateAll((items) =>
+    items
+      .slice(0, 5)
+      .map((item) => Math.round(item.getBoundingClientRect().top)),
+  );
+  expect(new Set(tops.slice(0, 4)).size).toBe(1);
+  expect(tops[4]).toBeGreaterThan(tops[0]);
 });

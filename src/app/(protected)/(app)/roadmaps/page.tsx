@@ -11,7 +11,9 @@ export default async function Page({
   searchParams: Promise<{ page?: string | string[] }>;
 }) {
   // RM-02 is a Traveler-only operation.
-  await requireUser(["TRAVELER"]);
+  const user = await requireUser(["TRAVELER"]);
   const { page } = await searchParams;
-  return <MyRoadmapsPage page={parseRoadmapPage(page)} />;
+  return (
+    <MyRoadmapsPage page={parseRoadmapPage(page)} owner={user.displayName} />
+  );
 }
