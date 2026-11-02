@@ -1238,35 +1238,6 @@ select.input {
 .menu-item-button:disabled {
   opacity: 0.55;
 }
-.site-footer {
-  width: min(var(--page-width), calc(100% - 2 * var(--gutter)));
-  margin-inline: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-6);
-  padding-block: var(--space-8);
-  border-top: 1px solid var(--line);
-}
-.site-footer > div p {
-  margin-top: var(--space-2);
-  color: var(--muted);
-  font-size: var(--text-sm);
-}
-.site-footer nav {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  font-size: var(--text-sm);
-}
-.site-footer nav a:hover {
-  text-decoration: underline;
-}
-.site-footer > span {
-  color: var(--muted);
-  font-size: var(--text-xs);
-}
 
 /* ----------------------------------------------------------------- dialog */
 .dialog {
