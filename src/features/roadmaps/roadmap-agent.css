@@ -145,11 +145,15 @@
   display: grid;
   gap: var(--space-2);
 }
+/* The composer floats like the homepage cards: no outline, a soft two-layer shadow. */
 .agent-composer {
-  border: 1.5px solid var(--ink);
+  border: 0;
   border-radius: var(--radius-xl);
   padding: var(--space-4) var(--space-5);
-  box-shadow: 5px 6px 0 rgb(34 34 34 / 0.12);
+  background: var(--card);
+  box-shadow:
+    0 2px 6px rgb(34 34 34 / 0.06),
+    0 18px 44px rgb(34 34 34 / 0.12);
 }
 .agent-input-row {
   display: flex;
@@ -179,7 +183,12 @@
   padding: var(--space-3) var(--space-4);
   font: inherit;
   font-size: var(--text-sm);
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
+}
+/* Focus keeps the soft coral ring of every field, without the dark outline. */
+.agent-input-row textarea:hover,
+.agent-input-row textarea:focus {
+  border-color: transparent;
 }
 .agent-input-row .helper {
   font-size: 10px;
