@@ -121,9 +121,14 @@ test.beforeEach(async () => {
 });
 
 const bell = (page: Page) => page.locator(".notification-bell");
+const dropdown = (page: Page) => page.locator(".notification-dropdown");
 const rows = (page: Page) => page.locator(".notification-row");
 const posts = () =>
   calls.filter((call) => call.method === "POST").map((call) => call.body);
+/** The POST is asynchronous; wait for it instead of racing the click. */
+const expectPost = async (body: unknown) => {
+  await expect.poll(() => posts()).toEqual([body]);
+};
 
 test("guests are sent to login; every signed-in role reaches the list from the bell", async ({
   page,
@@ -133,7 +138,15 @@ test("guests are sent to login; every signed-in role reaches the list from the b
   await loginAs(page, "traveler");
   await expect(bell(page)).toHaveAccessibleName("Thông báo, 2 chưa đọc");
   await expect(bell(page).locator(".notification-bell-count")).toHaveText("2");
+  // The bell opens a dropdown; "Xem tất cả" leads to the full list.
   await bell(page).click();
+  await expect(page).not.toHaveURL(/\/notifications$/);
+  await expect(dropdown(page)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Xem tất cả thông báo" })).toHaveAttribute(
+    "href",
+    "/notifications",
+  );
+  await page.getByRole("link", { name: "Xem tất cả thông báo" }).click();
   await expect(page).toHaveURL(/\/notifications$/);
   await expect(
     page.getByRole("heading", { name: "Thông báo", level: 1 }),
@@ -145,9 +158,13 @@ test("guests are sent to login; every signed-in role reaches the list from the b
   await expect(rows(page).nth(2)).not.toHaveAttribute("data-unread");
   // A resolved report only informs: no link.
   await expect(rows(page).nth(2).getByRole("link")).toHaveCount(0);
-  const list = calls.find((call) => call.path === "/api/v1/me/notifications");
+  const list = calls.findLast(
+    (call) =>
+      call.path === "/api/v1/me/notifications" &&
+      call.query.get("pageSize") === "10",
+  );
   expect(list?.query.get("page")).toBe("1");
-  expect(list?.query.get("pageSize")).toBe("20");
+  expect(list?.query.get("pageSize")).toBe("10");
   expect(list?.query.has("isRead")).toBe(false);
 
   await loginAs(page, "owner");
@@ -155,6 +172,28 @@ test("guests are sent to login; every signed-in role reaches the list from the b
   await expect(
     page.getByRole("heading", { name: "Thông báo", level: 1 }),
   ).toBeVisible();
+});
+
+test("the bell dropdown lists the latest news and marks one read", async ({
+  page,
+}) => {
+  await loginAs(page, "traveler");
+  await page.goto("/");
+  await bell(page).click();
+  await expect(dropdown(page)).toBeVisible();
+  const items = dropdown(page).locator(".notification-dropdown-item");
+  await expect(items).toHaveCount(3);
+  await expect(items.first()).toContainText("Có bình luận mới");
+  // The preview asks for a small page.
+  expect(
+    calls.findLast((call) => call.path === "/api/v1/me/notifications")
+      ?.query.get("pageSize"),
+  ).toBe("5");
+
+  await items.first().click();
+  await expectPost({ ids: [503] });
+  await expect(page).toHaveURL(/\/guides\/45$/);
+  await expect(dropdown(page)).toHaveCount(0);
 });
 
 test("one row is marked read on its own and the bell recounts", async ({
@@ -165,7 +204,7 @@ test("one row is marked read on its own and the bell recounts", async ({
   await page
     .getByRole("button", { name: "Đánh dấu đã đọc: Roadmap đã được tạo xong" })
     .click();
-  expect(posts()).toEqual([{ ids: [502] }]);
+  await expectPost({ ids: [502] });
   await expect(rows(page).nth(1)).not.toHaveAttribute("data-unread");
   await expect(page.getByText("1 thông báo chưa đọc")).toBeVisible();
   await expect(bell(page)).toHaveAccessibleName("Thông báo, 1 chưa đọc");
@@ -181,7 +220,7 @@ test("opening a notification marks it read and goes where it points", async ({
     .getByRole("link", { name: "Có bình luận mới" })
     .click();
   await expect(page).toHaveURL(/\/guides\/45$/);
-  expect(posts()).toEqual([{ ids: [503] }]);
+  await expectPost({ ids: [503] });
   await page.goto("/notifications");
   await expect(
     rows(page).nth(1).getByRole("link", { name: "Roadmap đã được tạo xong" }),
@@ -203,7 +242,7 @@ test("the unread tab asks for isRead=false and empties once everything is read",
   ).toBe("false");
 
   await page.getByRole("button", { name: "Đánh dấu tất cả đã đọc" }).click();
-  expect(posts()).toEqual([{ all: true }]);
+  await expectPost({ all: true });
   await expect(
     page.getByText("Đã đánh dấu 2 thông báo là đã đọc."),
   ).toBeVisible();
@@ -246,6 +285,41 @@ test("the old workspace notification pages lead to the shared screen", async ({
   await expect(
     page.getByRole("heading", { name: "Thông báo", level: 1 }),
   ).toBeVisible();
+});
+
+test("the list shows ten notifications a page and paginates", async ({
+  page,
+}) => {
+  notifications = Array.from({ length: 24 }, (_, index) => ({
+    id: 700 - index,
+    type: "BLOG_COMMENTED",
+    title: `Bình luận ${index + 1}`,
+    body: null,
+    data: { blog_id: 45 },
+    readAt: null,
+    createdAt: new Date(Date.now() - index * 3600000).toISOString(),
+  }));
+  await loginAs(page, "traveler");
+  await page.goto("/notifications");
+  await expect(rows(page)).toHaveCount(10);
+  await expect(
+    page.getByRole("button", { name: "Trang trước" }),
+  ).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Trang 2" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Trang 2" }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(rows(page)).toHaveCount(10);
+  await expect(
+    page.getByRole("button", { name: "Trang 2" }),
+  ).toHaveAttribute("aria-current", "page");
+  await expect(
+    page.getByRole("button", { name: "Trang trước" }),
+  ).toBeEnabled();
+  expect(
+    calls.findLast((call) => call.path === "/api/v1/me/notifications")
+      ?.query.get("page"),
+  ).toBe("2");
 });
 
 test("the list fits a phone without sideways scrolling", async ({ page }) => {
