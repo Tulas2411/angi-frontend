@@ -82,7 +82,7 @@ const dishes: DishCardDto[] = [
 const descriptions: Record<number, string> = {
   101: "Nước dùng hầm xương 8 tiếng, sả và mắm ruốc",
   102: "Bánh mì giòn rụm, pate gan nhà làm, chả lụa, dưa leo và rau mùi. ".repeat(
-    5,
+    10,
   ),
   103: "Phở bò tái chín, nước dùng trong.",
   105: "Chả nướng than hoa ăn kèm bún và nước mắm chua ngọt.",
@@ -642,7 +642,7 @@ test.describe("dishes", () => {
     expect(callsTo("GET", "dishes")).toHaveLength(before);
   });
 
-  test("descriptions come from the dish detail, a long one can be read in full", async ({
+  test("descriptions come from the dish detail; a long one ends with “…” that opens it", async ({
     page,
   }) => {
     await page.goto("/dishes");
@@ -650,14 +650,41 @@ test.describe("dishes", () => {
     await expect(dishOf(page, "Cà phê trứng")).toContainText(
       "Món này chưa có mô tả.",
     );
-    const long = dishOf(page, "Bánh mì pate");
-    const more = long.getByRole("button", { name: "Đọc thêm" });
-    await expect(more).toHaveAttribute("aria-expanded", "false");
-    await more.click();
-    await expect(long.getByRole("button", { name: "Thu gọn" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
+    // Every detailed card keeps one height while its text is cut.
+    const heights = await page
+      .locator(".dish-detail")
+      .evaluateAll((items) => items.map((item) => item.clientHeight));
+    expect(new Set(heights).size).toBe(1);
+    // Two lines and a few words of the third, then "…"; the short ones are shown whole.
+    const card = dishOf(page, "Bánh mì pate");
+    const text = card.locator("p.dish-description:not(.dish-description-twin)");
+    const more = card.getByRole("button", { name: "Xem toàn bộ mô tả" });
+    await expect(more).toHaveText("…");
+    const lines = await text.evaluate(
+      (element) =>
+        element.clientHeight / parseFloat(getComputedStyle(element).lineHeight),
     );
+    expect(Math.round(lines)).toBe(3);
+    await expect(
+      dishOf(page, "Bún bò Huế").getByRole("button", {
+        name: "Xem toàn bộ mô tả",
+      }),
+    ).toHaveCount(0);
+    // Pressing "…" opens the whole text inside the card: the card keeps its height, the text
+    // scrolls in the room left and fades out at the bottom.
+    const before = await card.evaluate((element) => element.clientHeight);
+    await more.click();
+    await expect(more).toHaveCount(0);
+    await expect(text).toContainText(descriptions[102].trim());
+    expect(await card.evaluate((element) => element.clientHeight)).toBe(before);
+    const box = await card
+      .locator(".dish-description-wrap")
+      .evaluate((element) => ({
+        scrolls: element.scrollHeight > element.clientHeight,
+        overflow: getComputedStyle(element).overflowY,
+        faded: getComputedStyle(element).maskImage.includes("gradient"),
+      }));
+    expect(box).toEqual({ scrolls: true, overflow: "auto", faded: true });
     await expect(page).toHaveURL(/\/dishes$/);
     // Each dish is read once, also after switching layouts.
     await page

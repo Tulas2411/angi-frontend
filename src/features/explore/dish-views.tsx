@@ -1,5 +1,5 @@
 "use client";
-import { useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/shared/ui";
 import { Media } from "@/components/ui/primitives";
@@ -8,6 +8,7 @@ import { dishFormLabels, locationText, vnd } from "./explore-rules";
 import type { DishCardDto } from "./explore-types";
 import { dishViews, type DishView } from "./dish-view-mode";
 import type { DishDescription } from "./use-dish-descriptions";
+import { cutDescription } from "./description-cut";
 
 const viewIcons: Record<DishView, ReactNode> = {
   list: (
@@ -22,15 +23,10 @@ const viewIcons: Record<DishView, ReactNode> = {
   ),
   detailed: (
     <svg viewBox="0 0 20 20" aria-hidden="true">
-      <rect x="2" y="3" width="4" height="6" rx="1" />
-      <rect x="7" y="4" width="3" height="1.6" rx="0.8" />
-      <rect x="7" y="7" width="2" height="1.6" rx="0.8" />
-      <rect x="11" y="3" width="4" height="6" rx="1" />
-      <rect x="16" y="4" width="2.5" height="1.6" rx="0.8" />
-      <rect x="2" y="11" width="4" height="6" rx="1" />
-      <rect x="7" y="12" width="3" height="1.6" rx="0.8" />
-      <rect x="11" y="11" width="4" height="6" rx="1" />
-      <rect x="16" y="12" width="2.5" height="1.6" rx="0.8" />
+      <rect x="2.5" y="2.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="11" y="2.5" width="6.5" height="6.5" rx="1.5" />
+      <rect x="2.5" y="11" width="6.5" height="6.5" rx="1.5" />
+      <rect x="11" y="11" width="6.5" height="6.5" rx="1.5" />
     </svg>
   ),
   gallery: (
@@ -88,11 +84,13 @@ function DishKinds({ dish }: { dish: DishCardDto }) {
   return (
     <p className="dish-kinds">
       <span className="dish-kind">{dishFormLabels[dish.dishForm]}</span>
-      {dish.tags.map((tag) => (
-        <span key={tag.id} className="dish-tag">
-          {tag.name}
-        </span>
-      ))}
+      {dish.tags
+        .filter((tag) => tag.name !== dishFormLabels[dish.dishForm])
+        .map((tag) => (
+          <span key={tag.id} className="dish-tag">
+            {tag.name}
+          </span>
+        ))}
       {!dish.isAvailable && <Badge tone="warning">Tạm hết món</Badge>}
     </p>
   );
@@ -106,7 +104,12 @@ function DishPlace({ dish }: { dish: DishCardDto }) {
   return (
     <p className="dish-place">
       <strong className="dish-price">{vnd(dish.price)}</strong>
-      <span>
+      <span
+        className="dish-place-name"
+        title={
+          place ? `${dish.restaurant.name} · ${place}` : dish.restaurant.name
+        }
+      >
         {dish.restaurant.name}
         {place && ` · ${place}`}
       </span>
@@ -114,21 +117,98 @@ function DishPlace({ dish }: { dish: DishCardDto }) {
   );
 }
 
-/** Descriptions longer than this get "Đọc thêm"; shorter ones are shown whole. */
-const longDescription = { list: 160, detailed: 240 } as const;
+/**
+ * Where a long text is cut, measured on the real card: a hidden twin of the paragraph is filled
+ * word by word. Measured again when the card changes width. `undefined` until measured.
+ */
+function useDescriptionCut(text: string) {
+  const box = useRef<HTMLParagraphElement>(null);
+  const twin = useRef<HTMLParagraphElement>(null);
+  const [cut, setCut] = useState<{ text: string; at: number | null }>();
+  useLayoutEffect(() => {
+    const paragraph = box.current;
+    const measure = twin.current;
+    if (!paragraph || !measure) return;
+    const words = text.split(/\s+/).filter(Boolean);
+    const run = () => {
+      const lineHeight = parseFloat(getComputedStyle(measure).lineHeight) || 22;
+      measure.style.width = `${paragraph.clientWidth}px`;
+      const fits = (count: number, lines: number, ellipsis: boolean) => {
+        measure.textContent =
+          words.slice(0, count).join(" ") + (ellipsis ? " …" : "");
+        return measure.offsetHeight <= lines * lineHeight + 1;
+      };
+      const at = cutDescription(words.length, fits);
+      measure.textContent = "";
+      setCut((previous) =>
+        previous?.text === text && previous.at === at ? previous : { text, at },
+      );
+    };
+    run();
+    const observer = new ResizeObserver(run);
+    observer.observe(paragraph);
+    return () => observer.disconnect();
+  }, [text]);
+  const measured = cut?.text === text ? cut.at : undefined;
+  return { box, twin, at: measured };
+}
+
+/**
+ * Two lines and about seven words of the third, then "…": pressing it shows the whole text in the
+ * card. Before the first measure the text is clamped to three lines, so nothing jumps.
+ */
+function LongDescription({ dishId, text }: { dishId: number; text: string }) {
+  const { box, twin, at } = useDescriptionCut(text);
+  const [open, setOpen] = useState(false);
+  const id = `dish-description-${dishId}`;
+  const cut = !open && typeof at === "number";
+  const shown = cut
+    ? text.split(/\s+/).filter(Boolean).slice(0, at).join(" ")
+    : text;
+  return (
+    <div className="dish-description-wrap">
+      <p
+        ref={box}
+        id={id}
+        className={`dish-description${at === undefined && !open ? " is-measuring" : ""}`}
+        data-expanded={open || undefined}
+      >
+        {shown}
+        {cut && (
+          <>
+            {" "}
+            <button
+              type="button"
+              className="dish-more"
+              aria-expanded={false}
+              aria-controls={id}
+              aria-label="Xem toàn bộ mô tả"
+              title="Xem toàn bộ mô tả"
+              onClick={() => setOpen(true)}
+            >
+              …
+            </button>
+          </>
+        )}
+      </p>
+      <p
+        ref={twin}
+        className="dish-description dish-description-twin"
+        aria-hidden
+      />
+    </div>
+  );
+}
 
 function DescriptionText({
   dishId,
   description,
-  size,
   onRetry,
 }: {
   dishId: number;
   description: DishDescription;
-  size: keyof typeof longDescription;
   onRetry: () => void;
 }) {
-  const [open, setOpen] = useState(false);
   if (description.status === "loading")
     return (
       <p className="dish-description is-loading" aria-busy="true">
@@ -146,29 +226,7 @@ function DescriptionText({
     );
   if (!description.text)
     return <p className="dish-description is-muted">Món này chưa có mô tả.</p>;
-  const long = description.text.length > longDescription[size];
-  const id = `dish-description-${dishId}`;
-  return (
-    <div className="dish-description-block">
-      <p
-        id={id}
-        className={`dish-description${long && !open ? ` is-clamped-${size}` : ""}`}
-      >
-        {description.text}
-      </p>
-      {long && (
-        <button
-          type="button"
-          className="dish-text-button"
-          aria-expanded={open}
-          aria-controls={id}
-          onClick={() => setOpen((value) => !value)}
-        >
-          {open ? "Thu gọn" : "Đọc thêm"}
-        </button>
-      )}
-    </div>
-  );
+  return <LongDescription dishId={dishId} text={description.text} />;
 }
 
 function DishName({ dish }: { dish: DishCardDto }) {
@@ -205,7 +263,6 @@ export function DishRow({
         <DescriptionText
           dishId={dish.id}
           description={description}
-          size="list"
           onRetry={onRetry}
         />
         <DishPlace dish={dish} />
@@ -243,7 +300,6 @@ export function DishDetailCard({
         <DescriptionText
           dishId={dish.id}
           description={description}
-          size="detailed"
           onRetry={onRetry}
         />
         <DishPlace dish={dish} />
