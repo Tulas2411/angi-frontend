@@ -363,7 +363,7 @@
   width: 17.5px;
   height: 14px;
   transform: rotate(-90deg);
-  transition: transform var(--duration-fast) ease;
+  transition: transform var(--duration) var(--ease-out);
 }
 
 .roadmap-day-toggle[aria-expanded="true"] .roadmap-chevron {
@@ -386,6 +386,45 @@
 .roadmap-day-body {
   position: relative;
   padding-top: var(--space-5);
+}
+
+/*
+ * A day unfolds from 0 to its height and fades in; closing runs the same way back before the
+ * body leaves the page (dayFoldMs). The clip margin keeps focus rings and lifted cards visible.
+ */
+.roadmap-day-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 340ms var(--ease-out),
+    opacity 260ms ease;
+}
+.roadmap-day-fold > .roadmap-day-body {
+  min-height: 0;
+  overflow: clip;
+  overflow-clip-margin: 12px;
+  transform: none;
+  transition: transform 340ms var(--ease-out);
+}
+@starting-style {
+  .roadmap-day-fold {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  .roadmap-day-fold > .roadmap-day-body {
+    transform: translateY(-8px);
+  }
+}
+.roadmap-day-fold[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 280ms var(--ease-out),
+    opacity 200ms ease;
+}
+.roadmap-day-fold[data-open="false"] > .roadmap-day-body {
+  transform: translateY(-8px);
 }
 
 .roadmap-day-actions {
@@ -1369,7 +1408,9 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .roadmap-chevron {
+  .roadmap-chevron,
+  .roadmap-day-fold,
+  .roadmap-day-fold > .roadmap-day-body {
     transition: none;
   }
   .roadmap-map-card {

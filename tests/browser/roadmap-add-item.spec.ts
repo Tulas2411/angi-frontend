@@ -256,8 +256,10 @@ const roadmaps: StubHandler = ({ method, url, body }, send) => {
     return true;
   }
   if (method === "GET" && path === "/api/v1/roadmaps/88/suggestions") {
-    suggestionCalls.push(parsed.search.slice(1));
-    if (failSuggestions > 0) {
+    // The day's "Địa điểm được đề xuất" strip asks for 10; only the dialog's calls are counted.
+    const strip = parsed.searchParams.get("limit") === "10";
+    if (!strip) suggestionCalls.push(parsed.search.slice(1));
+    if (!strip && failSuggestions > 0) {
       failSuggestions -= 1;
       send(503, null, "SERVICE_UNAVAILABLE");
       return true;
