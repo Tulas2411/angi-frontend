@@ -1,7 +1,6 @@
 /* F-21, Figma 24:1383: left day navigation, center notebook, right stop map. */
 
 .app-shell:has(.roadmap-detail-page) {
-  --header-height: 72px;
   --roadmap-sidebar-width: 200px;
 }
 .app-shell:has(.roadmap-detail-page) .site-header-bar {

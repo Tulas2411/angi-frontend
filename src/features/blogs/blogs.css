@@ -644,9 +644,6 @@
 /* The detail page takes the whole screen, like the roadmap detail: the blog on
    the left, the map of the shared roadmap on the right. On a narrow screen the
    map moves above the blog. */
-.app-shell:has(.blog-detail-page) {
-  --header-height: 72px;
-}
 .app-shell:has(.blog-detail-page) .app-main {
   width: 100%;
   max-width: none;

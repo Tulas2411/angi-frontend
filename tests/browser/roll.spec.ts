@@ -173,8 +173,10 @@ test("only a traveler rolls; the account menu and the old demo route lead there"
   await page.goto("/roll");
   await expect(page).toHaveURL(/\/restaurant/);
   await loginAs(page, "traveler");
-  await page.locator("summary[aria-label^='Tài khoản']").click();
-  await page.getByRole("link", { name: "Hôm nay ăn gì?" }).click();
+  await page
+    .getByRole("navigation", { name: "Điều hướng chính" })
+    .getByRole("link", { name: "Hôm nay ăn gì?" })
+    .click();
   await expect(page).toHaveURL(/:3001\/roll$/);
   await expect(
     page.getByRole("heading", { name: "Hôm nay ăn gì?", level: 1 }),
@@ -368,9 +370,9 @@ test("a card opens a real DISH-02 modal with photos and restaurant links, and cl
   await loginAs(page, "traveler");
   await page.goto("/roll");
   // The reel repeats the tab's dishes, so a dish shows more than once.
-  await expect(page.getByRole("button", { name: /^Xem chi tiết/ })).not.toHaveCount(
-    0,
-  );
+  await expect(
+    page.getByRole("button", { name: /^Xem chi tiết/ }),
+  ).not.toHaveCount(0);
   const trigger = page
     .getByRole("button", {
       name: "Xem chi tiết Phở bò tái",
