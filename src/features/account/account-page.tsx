@@ -175,7 +175,7 @@ function AccountEditor({
             image={profile.avatarUrl}
             className="avatar-xl"
           />
-          <div className="stack-sm">
+          <div className="stack-sm account-identity-head">
             <h2>{profile.displayName}</h2>
             <p className="helper">{profile.email}</p>
             <div className="actions">
@@ -191,17 +191,6 @@ function AccountEditor({
             <div>
               <dt>Thành viên từ</dt>
               <dd>{dateLabel(profile.createdAt)}</dd>
-            </div>
-            <div>
-              <dt>Đăng nhập</dt>
-              <dd>
-                {[
-                  profile.hasPassword ? "Email và mật khẩu" : null,
-                  profile.linkedProviders.includes("google") ? "Google" : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ") || "Chưa có phương thức đăng nhập"}
-              </dd>
             </div>
           </dl>
           <Button variant="secondary" onClick={() => setPasswordOpen(true)}>
