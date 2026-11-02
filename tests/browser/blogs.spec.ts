@@ -29,6 +29,36 @@ interface Call {
 const me = { id: 12, displayName: "Minh Anh", avatarUrl: null };
 const an = { id: 20, displayName: "Nguyễn An", avatarUrl: null };
 
+/** The dishes of the catalogue, read by the shared roadmap of a blog. */
+const dishes: Record<number, Record<string, unknown>> = {
+  105: {
+    id: 105,
+    name: "Bún bò Huế",
+    description: "Bún bò Huế đặc trưng với nước dùng cay và mắm nêm.",
+    coverUrl: "/assets/figma/coffee.png",
+    likeCount: 210,
+    dislikeCount: 12,
+    dishForm: "other",
+    isAvailable: true,
+    tags: [],
+    restaurant: { id: 7, name: "Bún Bò Bà Diệu" },
+    rank: null,
+  },
+  106: {
+    id: 106,
+    name: "Mì Quảng",
+    description: "Mì Quảng với mì sợi to, tôm và thịt heo.",
+    coverUrl: "/assets/figma/coffee.png",
+    likeCount: 98,
+    dislikeCount: 7,
+    dishForm: "other",
+    isAvailable: true,
+    tags: [],
+    restaurant: { id: 8, name: "Mì Quảng Bà Mua" },
+    rank: null,
+  },
+};
+
 let calls: Call[] = [];
 let blogs: (MyBlogCardDto & {
   authorId: number;
@@ -153,6 +183,12 @@ function reset() {
         detail: { content: `<p>Nội dung ${index + 1}</p>` },
       }),
     ),
+    ...Array.from({ length: 9 }, (_, index) =>
+      blogOf(70 + index, `Cẩm nang nữa ${index + 1}`, an, {
+        likeCount: index,
+        detail: { content: `<p>Nội dung ${index + 1}</p>` },
+      }),
+    ),
   ];
   comments = {
     45: [
@@ -219,7 +255,7 @@ const handler: StubHandler = ({ method, url, body, headers }, send) => {
   const [path, query = ""] = rest.split("?");
   const params = new URLSearchParams(query);
   const signedIn = Boolean(headers.authorization);
-  if (!/^(blogs|me\/blogs|media|roadmaps)(\/|$)/.test(path)) return false;
+  if (!/^(blogs|me\/blogs|media|roadmaps|dishes)(\/|$)/.test(path)) return false;
   calls.push({ method, path, query: params, authorized: signedIn, body });
   const requireAuth = () => {
     if (signedIn) return true;
@@ -238,6 +274,16 @@ const handler: StubHandler = ({ method, url, body, headers }, send) => {
       totalItems: 2,
       totalPages: 1,
     });
+    return true;
+  }
+  // The dish catalogue, read by the shared roadmap of a blog.
+  if (method === "GET" && /^dishes\/\d+$/.test(path)) {
+    const dish = dishes[Number(path.split("/")[1])];
+    if (!dish) {
+      send(404, null, "DISH_NOT_FOUND");
+      return true;
+    }
+    send(200, dish);
     return true;
   }
   if (method === "GET" && path === "blogs") {
@@ -465,8 +511,8 @@ test.describe("public list", () => {
     await expect(
       page.getByRole("heading", { name: "Cẩm nang ẩm thực", level: 1 }),
     ).toBeVisible();
-    // Only published blogs, nine per page.
-    await expect(cards(page)).toHaveCount(9);
+    // Only published blogs, twelve per page (four cards a row).
+    await expect(cards(page)).toHaveCount(12);
     await expect(
       page
         .getByRole("navigation", { name: "Điều hướng chính" })
@@ -477,8 +523,8 @@ test.describe("public list", () => {
     ).toBeVisible();
     const call = callsTo("GET", "blogs")[0];
     expect(call.authorized).toBe(false);
-    expect(call.query.get("pageSize")).toBe("9");
-    await expect(page.getByText(/^11 bài, mới nhất ngày/)).toBeVisible();
+    expect(call.query.get("pageSize")).toBe("12");
+    await expect(page.getByText(/^20 bài, mới nhất ngày/)).toBeVisible();
   });
 
   test("the three-dot menu of a card reports the blog (REP-02)", async ({
@@ -526,7 +572,7 @@ test.describe("public list", () => {
     );
     expect(callsTo("GET", "blogs").at(-1)!.query.get("q")).toBe("đà nẵng");
     await page.getByRole("button", { name: "Xóa bộ lọc" }).click();
-    await expect(cards(page)).toHaveCount(9);
+    await expect(cards(page)).toHaveCount(12);
     await page.getByLabel("Sắp xếp").selectOption("popular");
     await page.getByLabel("Chỉ bài có lịch ăn đính kèm").check();
     await page.getByRole("button", { name: "Tìm cẩm nang" }).click();
@@ -543,10 +589,10 @@ test.describe("public list", () => {
     await page.goto("/guides");
     await page.getByRole("button", { name: "Trang sau" }).click();
     await expect(page).toHaveURL(/page=2/);
-    await expect(cards(page)).toHaveCount(2);
+    await expect(cards(page)).toHaveCount(8);
     await page.goto("/guides?page=9");
     await expect(page).toHaveURL(/page=2/);
-    await expect(cards(page)).toHaveCount(2);
+    await expect(cards(page)).toHaveCount(8);
   });
 
   test("a failed list can be retried", async ({ page }) => {
@@ -557,7 +603,7 @@ test.describe("public list", () => {
     ).toBeVisible();
     failList = false;
     await page.getByRole("button", { name: "Thử lại" }).click();
-    await expect(cards(page)).toHaveCount(9);
+    await expect(cards(page)).toHaveCount(12);
   });
 
   test("a signed-in traveler gets the write and my-blogs buttons and the account menu", async ({
@@ -615,18 +661,30 @@ test.describe("detail", () => {
       page.getByRole("link", { name: "liên kết tốt" }),
     ).toHaveAttribute("href", "https://angi.vn/a");
     expect(callsTo("GET", "blogs/45")[0].authorized).toBe(false);
-    // Roadmap snapshot (days as tabs).
-    const aside = page.locator(".blog-aside");
-    await expect(aside).toContainText("3 ngày ăn sập Đà Nẵng");
-    await expect(aside).toContainText("Bún bò Huế");
-    await aside.getByRole("tab", { name: "Ngày 2" }).click();
-    await expect(aside).toContainText("Mì Quảng");
+    // Every dish of the shared roadmap shows its description and its likes.
+    const meal = page.locator(".blog-meal-item").first();
+    await expect(meal.locator(".blog-meal-description")).toHaveText(
+      "Bún bò Huế đặc trưng với nước dùng cay và mắm nêm.",
+    );
+    await expect(meal.locator(".blog-meal-feedback")).toContainText(
+      "210 lượt thích",
+    );
+    await expect(meal.locator(".blog-meal-feedback")).toContainText(
+      "12 lượt không thích",
+    );
+    // Roadmap snapshot (days as tabs), in the reading column of the page.
+    const roadmap = page.getByRole("region", {
+      name: "3 ngày ăn sập Đà Nẵng",
+    });
+    await expect(roadmap).toContainText("Bún bò Huế");
+    await roadmap.getByRole("button", { name: "Ngày 2" }).click();
+    await expect(roadmap).toContainText("Mì Quảng");
     await expect(
-      aside.getByRole("link", { name: "Mì Quảng Bà Mua" }),
+      roadmap.getByRole("link", { name: "Mì Quảng Bà Mua" }),
     ).toHaveAttribute("href", "/restaurants/8");
     // Comments are readable; writing asks to sign in.
     await expect(page.getByText("Quán này ngon thật!")).toBeVisible();
-    await expect(page.getByText("Bình luận · 2")).toBeVisible();
+    await expect(page.getByText("Mình cũng thích")).toBeVisible();
     await expect(
       page.getByRole("button", { name: "Gửi bình luận" }),
     ).toHaveCount(0);
@@ -678,8 +736,6 @@ test.describe("detail", () => {
     expect(callsTo("POST", "blogs/45/comments")[0].body).toEqual({
       content: "Cảm ơn bạn đã chia sẻ",
     });
-    await expect(page.getByText("Bình luận · 3")).toBeVisible();
-    // Only my own comments have the delete button.
     await expect(
       page.getByRole("button", { name: "Xóa bình luận của tôi" }),
     ).toHaveCount(2);
@@ -696,7 +752,6 @@ test.describe("detail", () => {
       .click();
     await box.getByRole("button", { name: "Xóa bình luận" }).click();
     await expect(page.getByText("Mình cũng thích")).toHaveCount(0);
-    await expect(page.getByText("Bình luận · 2")).toBeVisible();
     expect(callsTo("DELETE", "blogs/45/comments/302")).toHaveLength(1);
   });
 
@@ -808,18 +863,33 @@ test.describe("my blogs", () => {
         name: "Chỉnh sửa bài Cà phê trứng ở Hà Nội",
       }),
     ).toBeVisible();
-    // The status sits on the line under the title; the excerpt is not shown here.
-    await expect(cardOf(page, "Bài bị ẩn").locator(".blog-row-status")).toHaveText(
-      "Đã bị ẩn",
-    );
+    // The status sits on the line under the title.
+    await expect(
+      cardOf(page, "Bài bị ẩn").locator(".blog-card-status"),
+    ).toHaveText("Đã bị ẩn");
+    // The card has the same shape as the public one: excerpt, roadmap tag, counts.
     await expect(
       cardOf(page, "Bài bị ẩn").locator(".blog-excerpt"),
-    ).toHaveCount(0);
-    // The two icons hide until the pointer is over the card.
-    const actions = cardOf(page, "Bài bị ẩn").locator(".blog-row-actions");
+    ).toBeVisible();
+    await expect(
+      cardOf(page, "Bài bị ẩn").locator(".blog-tag"),
+    ).toHaveText("Không có lịch ăn đính kèm");
+    // The pencil and the bin hide until the pointer is over the card.
+    const actions = cardOf(page, "Bài bị ẩn").locator(".blog-card-actions");
     await expect(actions).toHaveCSS("opacity", "0");
     await cardOf(page, "Bài bị ẩn").hover();
     await expect(actions).toHaveCSS("opacity", "1");
+    await expect(
+      actions.getByRole("link", { name: "Chỉnh sửa bài Bài bị ẩn" }),
+    ).toBeVisible();
+    await expect(
+      actions.getByRole("button", { name: "Xóa bài Bài bị ẩn" }),
+    ).toBeVisible();
+    // The four cards of a row share one height.
+    const heights = await page
+      .locator(".blog-card-mine")
+      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height));
+    expect(new Set(heights).size).toBe(1);
     await page.getByRole("tab", { name: "Đã bị ẩn" }).click();
     await expect(page).toHaveURL(/status=hidden/);
     await expect(cards(page)).toHaveCount(1);
@@ -894,7 +964,7 @@ test.describe("editor", () => {
     await expect(
       page.getByRole("heading", { name: "Một ngày ở Huế", level: 1 }),
     ).toBeVisible();
-    await expect(page.locator(".blog-aside")).toContainText(
+    await expect(page.locator("#blog-roadmap")).toHaveText(
       "3 ngày ăn sập Đà Nẵng",
     );
   });

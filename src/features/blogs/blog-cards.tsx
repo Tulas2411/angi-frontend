@@ -60,7 +60,7 @@ function Byline({ blog }: { blog: BlogCardDto }) {
   return (
     <p className="blog-byline">
       <Avatar name={blog.author.displayName} image={blog.author.avatarUrl} />
-      <span>{blog.author.displayName}</span>
+      <span className="blog-byline-name">{blog.author.displayName}</span>
       <span aria-hidden>·</span>
       <span>{blogDate(blog.publishedAt)}</span>
     </p>
@@ -130,6 +130,18 @@ function CardMenu({
 }
 
 /**
+ * Lịch ăn đính kèm của bài viết: có thì nói là có, không thì nói rõ là không,
+ * để mọi thẻ trong lưới có cùng một số dòng.
+ */
+export function RoadmapTag({ hasRoadmap }: { hasRoadmap: boolean }) {
+  return (
+    <p className={`blog-tag ${hasRoadmap ? "" : "blog-tag-none"}`.trim()}>
+      {hasRoadmap ? "Có lịch ăn đính kèm" : "Không có lịch ăn đính kèm"}
+    </p>
+  );
+}
+
+/**
  * One blog of the public list, laid out like a social feed: the cover on top, the title
  * with its menu, the excerpt, then the author and the counters on the last line.
  */
@@ -161,7 +173,7 @@ export function BlogCard({
           </h2>
         </div>
         <p className="blog-excerpt">{excerptOf(blog)}</p>
-        {blog.hasRoadmap && <p className="blog-tag">Có lịch ăn đính kèm</p>}
+        <RoadmapTag hasRoadmap={blog.hasRoadmap} />
         <div className="blog-card-foot">
           <Byline blog={blog} />
           <Counts blog={blog} />
@@ -188,7 +200,50 @@ export function BlogLead({ blog }: { blog: BlogCardDto }) {
           <Byline blog={blog} />
           <Counts blog={blog} />
         </div>
-        {blog.hasRoadmap && <p className="blog-tag">Có lịch ăn đính kèm</p>}
+        <RoadmapTag hasRoadmap={blog.hasRoadmap} />
+      </div>
+    </article>
+  );
+}
+
+/**
+ * One of my own blogs, in the same shape as the public card: the cover on top, the
+ * title on one line, the excerpt on three, the roadmap tag, then the author and the
+ * counters. The pencil and the bin sit on the cover instead of a three-dot menu.
+ */
+export function MyBlogCard({
+  blog,
+  actions,
+}: {
+  blog: MyBlogCardDto;
+  /** The pencil and the bin of this blog. */
+  actions?: ReactNode;
+}) {
+  return (
+    <article
+      className="blog-card blog-card-mine"
+      aria-labelledby={`blog-${blog.id}`}
+    >
+      <Cover blog={blog} size="card" />
+      {actions && <div className="blog-card-actions">{actions}</div>}
+      <div className="blog-card-body">
+        <div className="blog-card-title">
+          <h2 id={`blog-${blog.id}`}>
+            <Link href={blogHref(blog.id)}>{blog.title}</Link>
+          </h2>
+        </div>
+        <div className="blog-card-status">
+          <StatusPill status={blog.status} />
+        </div>
+        {blog.moderationNote && (
+          <p className="blog-note">Lý do kiểm duyệt: {blog.moderationNote}</p>
+        )}
+        <p className="blog-excerpt">{excerptOf(blog)}</p>
+        <RoadmapTag hasRoadmap={blog.hasRoadmap} />
+        <div className="blog-card-foot">
+          <Byline blog={blog} />
+          <Counts blog={blog} />
+        </div>
       </div>
     </article>
   );

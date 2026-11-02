@@ -19,7 +19,7 @@ import { EyeIcon, HeartIcon } from "./blog-icons";
 import { BlogSkeleton } from "./blog-layout";
 import { BlogMap } from "./blog-map";
 import { BlogPhotos } from "./blog-photos";
-import { BlogRoadmap, useBlogDishCovers, useBlogRoadmapStops } from "./blog-roadmap";
+import { BlogRoadmap, useBlogDishInfo, useBlogRoadmapStops } from "./blog-roadmap";
 import { blogDate, blogError, blogReportError, blogReportReasons } from "./blog-rules";
 import { blogService, type BlogService } from "./blog-service";
 import type { BlogLikeDto } from "./blog-types";
@@ -61,10 +61,16 @@ export function BlogDetailPage({
   const stops = useBlogRoadmapStops(snapshot, (restaurantId) =>
     exploreService.restaurant(restaurantId),
   );
-  // The photos of the dishes come from the dish catalogue.
-  const covers = useBlogDishCovers(snapshot, (dishId) =>
-    exploreService.dish(dishId),
-  );
+  // The photos, the descriptions and the likes of the dishes come from the dish catalogue.
+  const dishes = useBlogDishInfo(snapshot, async (dishId) => {
+    const dish = await exploreService.dish(dishId);
+    return {
+      coverUrl: dish.coverUrl,
+      description: dish.description,
+      likeCount: dish.likeCount,
+      dislikeCount: dish.dislikeCount,
+    };
+  });
 
   if (state.status === "loading")
     return (
@@ -254,7 +260,7 @@ export function BlogDetailPage({
             <BlogRoadmap
               snapshot={snapshot}
               detached={blog.roadmapId === null}
-              covers={covers}
+              dishes={dishes}
             />
           )}
 

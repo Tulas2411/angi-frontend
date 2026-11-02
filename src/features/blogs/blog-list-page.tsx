@@ -17,7 +17,7 @@ import {
   blogDate,
   blogFiltersFromParams,
   blogFiltersHref,
-  blogPageSize,
+  blogListPageSize,
   blogReportError,
   blogReportReasons,
   blogSortOptions,
@@ -112,7 +112,7 @@ export function BlogListPage({
         hasRoadmap: filters.hasRoadmap || undefined,
         sort: filters.sort,
         page: filters.page,
-        pageSize: blogPageSize,
+        pageSize: blogListPageSize,
       }),
     key,
   );

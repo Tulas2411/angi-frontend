@@ -177,12 +177,12 @@
 }
 
 /* ----------------------------------------------- public feed cards (BLOG-01) */
-/* The public list reads like a social feed: cover on top, title with its menu,
-   the excerpt, then the author on the left and the counters on the right. */
+/* The public list is a grid of four cards a row: cover on top, title with its
+   menu, the excerpt, then the author and the counters on the last lines. */
 .blog-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -208,11 +208,11 @@
 }
 .blog-cover-card {
   width: 100%;
-  aspect-ratio: 16 / 10;
+  aspect-ratio: 16 / 9;
   border-radius: 11px 11px 0 0;
 }
 .blog-cover-card.blog-cover-none {
-  font-size: 64px;
+  font-size: 52px;
 }
 .blog-card-body {
   display: flex;
@@ -220,7 +220,7 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  padding: 14px 16px 16px;
+  padding: 12px 14px 14px;
 }
 /* The title and its round menu share the first line. */
 .blog-card-title {
@@ -231,10 +231,16 @@
 }
 .blog-card-title h2 {
   min-width: 0;
-  font-size: 17px;
+  font-size: 15px;
   line-height: 1.35;
   letter-spacing: -0.01em;
   overflow-wrap: anywhere;
+  /* Tiêu đề chỉ hiện một dòng, phần còn lại cắt bằng dấu "…". */
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .blog-card-title h2 a::after {
   content: "";
@@ -249,19 +255,82 @@
   box-shadow: var(--focus-ring);
 }
 .blog-card .blog-excerpt {
+  /* Mô tả hiện tối đa ba dòng, phần còn lại cắt bằng dấu "…". */
   -webkit-line-clamp: 3;
+  line-clamp: 3;
+  font-size: 13px;
+  line-height: 1.5;
+  /* Giữ đúng ba dòng để mọi thẻ xếp cạnh nhau cao bằng nhau. */
+  min-height: calc(1.5em * 3);
 }
 .blog-card .blog-tag {
   align-self: flex-start;
 }
-.blog-card-foot {
+/* Trạng thái bài của tôi nằm ngay dưới tiêu đề. */
+.blog-card-status {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 12px;
+  gap: 6px;
+  min-height: 22px;
+}
+/* Bài không có lịch ăn vẫn giữ đúng một dòng như bài có lịch. */
+.blog-tag-none {
+  background: transparent;
+  color: var(--muted);
+  padding-left: 0;
+  font-weight: 500;
+}
+.blog-card-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   margin-top: auto;
   padding-top: 8px;
   border-top: 1px solid var(--line);
+}
+
+/* Bút và thùng rác nằm trên ảnh bìa, góc phải trên của card. */
+.blog-card-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  /* Chỉ hiện khi rê chuột vào card (hoặc khi card có focus). */
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+.blog-card:hover .blog-card-actions,
+.blog-card:focus-within .blog-card-actions {
+  opacity: 1;
+}
+@media (hover: none) {
+  /* Không có con trỏ thì không có hover, nên hai icon luôn hiện. */
+  .blog-card-actions {
+    opacity: 1;
+  }
+}
+.blog-card-actions .blog-icon-action {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(255 255 255 / 0.5);
+  border-radius: 999px;
+  background: rgb(12 12 14 / 0.5);
+  color: #ffffff;
+  backdrop-filter: blur(6px);
+}
+.blog-card-actions .blog-icon-action:hover {
+  background: rgb(12 12 14 / 0.7);
+  color: #ffffff;
+}
+.blog-card-actions .blog-icon-danger {
+  color: #ffd9d9;
+}
+.blog-card-actions .blog-icon-danger:hover {
+  color: #ffffff;
 }
 
 /* The round three-dot button and the menu it opens. */
@@ -456,7 +525,14 @@
   gap: 6px;
   min-width: 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+}
+/* Tên tác giả dài thì cắt bằng dấu "…" thay vì làm vỡ thẻ. */
+.blog-byline-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .blog-byline .avatar {
   width: 20px;
@@ -1083,6 +1159,35 @@
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
+/* Mô tả của món trong thẻ món ăn. */
+.blog-meal-description {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+/* Lượt thích và không thích của món. */
+.blog-meal-feedback {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin-top: auto;
+  padding-top: var(--space-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.blog-meal-feedback > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.blog-meal-feedback img {
+  width: 16px;
+  height: 16px;
+}
 /* The stop number matches the dish's pin on the map. */
 .blog-meal-order {
   display: inline-grid;
@@ -1400,7 +1505,7 @@
 }
 .blog-skeleton-rows {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 .blog-skeleton-row {
@@ -1410,11 +1515,23 @@
 }
 
 /* ------------------------------------------------------------ responsive */
+@media (max-width: 1180px) {
+  /* Bốn thẻ chật trên màn hình vừa: xuống ba cột. */
+  .blog-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .blog-skeleton-rows {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 @media (max-width: 1000px) {
   .blog-toolbar {
     grid-template-columns: minmax(0, 1fr) 200px;
   }
   .blog-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .blog-skeleton-rows {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .blog-columns {

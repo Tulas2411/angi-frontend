@@ -11,12 +11,12 @@ import {
   Tabs,
 } from "@/components/ui/primitives";
 import { useRemote } from "@/features/explore/use-remote";
-import { BlogRow, blogEditHref } from "./blog-cards";
+import { MyBlogCard, blogEditHref } from "./blog-cards";
 import { PencilIcon, TrashIcon } from "./blog-icons";
 import { BlogHeading, BlogProblem, BlogSkeleton } from "./blog-layout";
 import {
   blogError,
-  blogPageSize,
+  blogMinePageSize,
   blogStatusTabs,
   mineHref,
 } from "./blog-rules";
@@ -47,7 +47,7 @@ export function MyBlogsPage({
       service.mine({
         status: status || undefined,
         page,
-        pageSize: blogPageSize,
+        pageSize: blogMinePageSize,
       }),
     `${status}:${page}:${version}`,
   );
@@ -153,10 +153,10 @@ export function MyBlogsPage({
           Chia sẻ món ngon và trải nghiệm của bạn với cộng đồng.
         </EmptyState>
       ) : (
-        <ul className="blog-rows blog-rows-one">
+        <ul className="blog-cards">
           {data.items.map((blog) => (
             <li key={blog.id}>
-              <BlogRow
+              <MyBlogCard
                 blog={blog}
                 actions={
                   <>

@@ -26,16 +26,19 @@ function groupByMeal(items: RoadmapSnapshotDto["days"][number]["items"]) {
 export function BlogRoadmap({
   snapshot,
   detached,
-  covers,
+  dishes,
 }: {
   snapshot: RoadmapSnapshotDto;
   /** True when the original roadmap was deleted; the snapshot is all that is left. */
   detached: boolean;
-  /** The cover photo of each dish, read from the dish catalogue. */
-  covers: Record<number, string | null>;
+  /** What the dish catalogue knows about each dish: photo, description, likes and dislikes. */
+  dishes: Record<number, BlogDishInfo>;
 }) {
   const [openDays, setOpenDays] = useState<number[]>([1]);
-  const dishes = snapshot.days.reduce((sum, entry) => sum + entry.items.length, 0);
+  const dishCount = snapshot.days.reduce(
+    (sum, entry) => sum + entry.items.length,
+    0,
+  );
   // What each day and each meal costs, taken from the captured prices.
   const byDay = snapshot.days.map((entry) => ({
     dayNumber: entry.dayNumber,
@@ -70,7 +73,7 @@ export function BlogRoadmap({
           </h2>
           <p className="blog-line">
             {snapshot.startDate ? `${dateLabel(snapshot.startDate)} · ` : ""}
-            {snapshot.numDays} ngày · {dishes} món · {vnd(snapshot.totalCost)}
+            {snapshot.numDays} ngày · {dishCount} món · {vnd(snapshot.totalCost)}
           </p>
         </div>
       </header>
@@ -123,39 +126,71 @@ export function BlogRoadmap({
                           </h4>
                         </div>
                         <ol className="blog-meal-items">
-                          {group.items.map((item, index) => (
-                            <li key={`${item.dishId}-${index}`}>
-                              <div className="blog-meal-item">
-                                <div className="blog-meal-text">
-                                  <h5>
-                                    <span className="blog-meal-order" aria-hidden>
-                                      {index + 1}
-                                    </span>
-                                    {item.dishName}
-                                  </h5>
-                                  <p className="blog-meal-price">
-                                    Dự chi {vnd(item.price)}
-                                  </p>
-                                  <p className="helper">
-                                    <Link href={restaurantHref(item.restaurantId)}>
-                                      {item.restaurantName}
-                                    </Link>
-                                    {item.address && ` · ${item.address}`}
-                                  </p>
-                                </div>
-                                {covers[item.dishId] && (
-                                  <div className="blog-meal-media">
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                      src={covers[item.dishId] ?? undefined}
-                                      alt={item.dishName}
-                                      loading="lazy"
-                                    />
+                          {group.items.map((item, index) => {
+                            const dish = dishes[item.dishId];
+                            return (
+                              <li key={`${item.dishId}-${index}`}>
+                                <div className="blog-meal-item">
+                                  <div className="blog-meal-text">
+                                    <h5>
+                                      <span className="blog-meal-order" aria-hidden>
+                                        {index + 1}
+                                      </span>
+                                      {item.dishName}
+                                    </h5>
+                                    {dish?.description && (
+                                      <p className="blog-meal-description">
+                                        {dish.description}
+                                      </p>
+                                    )}
+                                    <p className="blog-meal-price">
+                                      Dự chi {vnd(item.price)}
+                                    </p>
+                                    <p className="helper">
+                                      <Link href={restaurantHref(item.restaurantId)}>
+                                        {item.restaurantName}
+                                      </Link>
+                                      {item.address && ` · ${item.address}`}
+                                    </p>
+                                    {dish && (
+                                      <p className="blog-meal-feedback">
+                                        <span>
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img
+                                            src="/assets/figma/thumb-up.svg"
+                                            alt=""
+                                            aria-hidden
+                                          />
+                                          {dish.likeCount.toLocaleString("vi-VN")}{" "}
+                                          lượt thích
+                                        </span>
+                                        <span>
+                                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                                          <img
+                                            src="/assets/figma/thumb-down.svg"
+                                            alt=""
+                                            aria-hidden
+                                          />
+                                          {dish.dislikeCount.toLocaleString("vi-VN")}{" "}
+                                          lượt không thích
+                                        </span>
+                                      </p>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            </li>
-                          ))}
+                                  {dish?.coverUrl && (
+                                    <div className="blog-meal-media">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img
+                                        src={dish.coverUrl}
+                                        alt={item.dishName}
+                                        loading="lazy"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </li>
+                            );
+                          })}
                         </ol>
                       </div>
                     ))
@@ -291,15 +326,24 @@ export function useBlogRoadmapStops(
   );
 }
 
+/** What the dish catalogue knows about a dish of the shared roadmap. */
+export interface BlogDishInfo {
+  coverUrl: string | null;
+  description: string | null;
+  likeCount: number;
+  dislikeCount: number;
+}
+
 /**
- * The cover photo of each dish of the shared roadmap, read from the dish catalogue.
- * A dish that cannot be read simply has no photo.
+ * The dish information of each dish of the shared roadmap, read from the dish catalogue:
+ * the cover photo, the description and how many likes and dislikes it has. A dish that
+ * cannot be read keeps its empty information.
  */
-export function useBlogDishCovers(
+export function useBlogDishInfo(
   snapshot: RoadmapSnapshotDto | null,
-  fetchDish: (dishId: number) => Promise<{ coverUrl: string | null }>,
+  fetchDish: (dishId: number) => Promise<BlogDishInfo>,
 ) {
-  const [covers, setCovers] = useState<Record<number, string | null>>({});
+  const [dishes, setDishes] = useState<Record<number, BlogDishInfo>>({});
   const ids = useMemo(
     () =>
       [
@@ -324,22 +368,28 @@ export function useBlogDishCovers(
       ids.map(async (dishId) => {
         try {
           const dish = await fetchRef.current(dishId);
-          return { dishId, coverUrl: dish.coverUrl };
+          return { dishId, info: dish };
         } catch {
-          return { dishId, coverUrl: null };
+          return {
+            dishId,
+            info: {
+              coverUrl: null,
+              description: null,
+              likeCount: 0,
+              dislikeCount: 0,
+            },
+          };
         }
       }),
-    ).then((dishes) => {
+    ).then((entries) => {
       if (ignore) return;
-      setCovers(
-        Object.fromEntries(
-          dishes.map((entry) => [entry.dishId, entry.coverUrl]),
-        ),
+      setDishes(
+        Object.fromEntries(entries.map((entry) => [entry.dishId, entry.info])),
       );
     });
     return () => {
       ignore = true;
     };
   }, [ids]);
-  return covers;
+  return dishes;
 }
