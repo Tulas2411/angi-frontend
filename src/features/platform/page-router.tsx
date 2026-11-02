@@ -41,6 +41,11 @@ import {
   ModerationReportsPage,
   ModerationReportDetailPage,
 } from "@/features/moderation/moderation-reports-page";
+import {
+  ModerationUserDetailPage,
+  ModerationUsersLivePage,
+} from "@/features/moderation/moderation-users-live-page";
+import { ModerationCommunityLivePage } from "@/features/moderation/moderation-community-live-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -94,6 +99,19 @@ function ModReportsBase({ base, id }: { base: string; id?: string }) {
     <ModerationReportDetailPage base={base} reportId={reportId} />
   ) : (
     <ModerationReportsPage base={base} />
+  );
+}
+
+/**
+ * MOD-U1..MOD-U4 trong live mode: danh sách (MOD-U1) hoặc hồ sơ chi tiết
+ * (MOD-U2). Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
+ */
+function ModUsersBase({ base, id }: { base: string; id?: string }) {
+  const userId = Number(id);
+  return Number.isInteger(userId) && userId > 0 ? (
+    <ModerationUserDetailPage userId={userId} />
+  ) : (
+    <ModerationUsersLivePage base={base} />
   );
 }
 
@@ -189,6 +207,35 @@ export function PageRouter({
     return (
       <ModReportsBase base={base} id={id} />
     );
+
+  // MOD-U1..MOD-U4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (mode === "live" && (role === "MOD" || role === "ADMIN") && area === "users")
+    return <ModUsersBase base={base} id={id} />;
+
+  // MOD-B1..MOD-B3 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "community"
+  )
+    return <ModerationCommunityLivePage />;
+
+  // ADMIN gặp kiểm duyệt ở /administration/moderation/... — cùng bộ màn hình.
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderation" &&
+    segments[1] === "users"
+  )
+    return <ModUsersBase base={`${base}/moderation`} id={segments[2]} />;
+
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderation" &&
+    segments[1] === "community"
+  )
+    return <ModerationCommunityLivePage />;
 
   if (
     role === "RESTAURANT_OWNER" &&
