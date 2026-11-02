@@ -8,6 +8,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/browser",
   testMatch: [
+    "site-footer.spec.ts",
     "public-home.spec.ts",
     "home-roadmap.spec.ts",
     "auth-flows.spec.ts",

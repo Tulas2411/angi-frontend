@@ -30,6 +30,7 @@ export default function AppShell({
         {children}
       </main>
       <SiteFooter
+        role={user.role}
         tagline="Không gian dành cho thành viên ANGI."
         links={[{ href: "/", label: "Trang chủ ANGI" }]}
       />

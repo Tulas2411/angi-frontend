@@ -54,6 +54,7 @@ export default function PublicShell({
         {children}
       </main>
       <SiteFooter
+        role={user?.role ?? null}
         tagline="Ăn ngon. Đi xa. Nhớ lâu."
         links={[{ href: "/", label: "Trang chủ ANGI" }]}
       />

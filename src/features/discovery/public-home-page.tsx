@@ -328,6 +328,7 @@ export function PublicHomePage({
         </section>
       </main>
       <SiteFooter
+        role={user?.role ?? null}
         links={[
           { href: "#mon-ngon", label: "Khám phá món Việt", anchor: true },
           { href: "/dishes", label: "Tất cả món ăn" },
