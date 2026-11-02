@@ -2,9 +2,18 @@
 
 ## Tình trạng tích hợp
 
-FE đã có giao diện chat và adapter gọi AGENT-01, AGENT-02, AGENT-03, AGENT-04 qua proxy cùng origin. **Checkout `angi-backend` hiện tại chưa có controller/use case Agent**. Chủ dự án đã xác nhận ngày 2026-10-26: làm FE trước, nối đúng endpoint, bổ sung BE sau. Đây là phần tích hợp chờ BE; chưa thể chat với AI thật chỉ bằng checkout hiện tại. Sản phẩm không dùng API giả hoặc câu trả lời mẫu để thay thế lỗi BE.
+FE đã có giao diện chat và adapter gọi AGENT-01, AGENT-02, AGENT-03, AGENT-04 qua proxy cùng origin; backend đã triển khai bốn endpoint này. Sản phẩm không dùng API giả hoặc câu trả lời mẫu để thay thế lỗi BE.
 
-Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm **✦ Trợ lý món ăn** ở sidebar. Khi BE chưa bổ sung endpoint, khung chat vẫn mở đúng bố cục và báo API chưa có; ô soạn thảo giữ nội dung, nút gửi bị khóa đến khi có hội thoại hợp lệ.
+Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm **✦ Trợ lý món ăn** ở sidebar. Nếu endpoint không phản hồi, khung chat vẫn mở đúng bố cục và báo lỗi; ô soạn thảo giữ nội dung, nút gửi bị khóa đến khi có hội thoại hợp lệ.
+
+## Trả lời một lần và điểm trên bản đồ (2026-11-02)
+
+- Mỗi nội dung chỉ hiện ở một nơi. Tin nhắn của trợ lý là vài câu ngắn do BE dựng; danh sách món nằm ở thẻ bản nháp. Câu hỏi đang chờ chỉ nằm trong tin nhắn, cảnh báo đã có trên thẻ không lặp ở panel (`standaloneValidation`).
+- Khi panel mở và có bản nháp `ready`, bản đồ hiện điểm của bản nháp thay cho điểm đã lưu, vì bản nháp đã gồm cả món giữ nguyên. Điểm viền nét đứt là món giữ nguyên, điểm màu coral là món được thêm hoặc thay (`snapshot.changes`). Đóng panel, lưu xong hoặc bản nháp hết hiệu lực thì bản đồ trở lại lộ trình đã lưu.
+- Bộ chọn ngày trên thẻ, danh sách món và điểm trên bản đồ luôn cùng một ngày. Bản nháp mới mở đúng ngày đầu tiên có thay đổi. Chọn món ở thẻ hoặc bấm điểm đều chọn cùng món đó, và món đang chọn được gửi kèm `selectedItemKey` như cũ.
+- Điểm bản nháp được thêm vào bản đồ đang mở: không tạo lại bản đồ, không gọi Directions hay geocoding và không vẽ tuyến. Món thiếu tọa độ vẫn có trong danh sách với ghi chú chưa có tọa độ.
+- Dưới 901px panel che bản đồ, nên thẻ có nút **Xem trên bản đồ**; panel lùi đi và nút **Quay lại trợ lý** đưa về đúng chỗ, giữ focus.
+- Popup lưu nêu số ngày của lịch và có ô **Ngày bắt đầu**, điền sẵn ngày đã biết; để trống thì lưu chưa có ngày. Nhắn trong chat cũng được: backend tự hỏi ngày, và lượt chat đã lưu trả về `commit` để FE hiện thông báo đã lưu và tải lại roadmap như nút lưu.
 
 ## Thiết kế và thao tác
 
@@ -23,7 +32,7 @@ Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm
 | AGENT-01 | `POST /api/v1/agent/conversations`               | Gửi `{ roadmapId }` khi mở lần đầu; giữ status 201. Không tạo hội thoại khi chỉ vào trang roadmap.                                                   |
 | AGENT-02 | `POST /api/v1/agent/conversations/{id}/messages` | Gửi ID số dương duy nhất, `expectedConversationVersion`, nội dung, command và lựa chọn item/ràng buộc khi có. Giữ nguyên status 200 hoặc 202 của BE. |
 | AGENT-03 | `GET /api/v1/agent/conversations/{id}`           | Khôi phục lịch sử/state/proposal, đọc lại sau mỗi lượt; polling khi đang xử lý.                                                                      |
-| AGENT-04 | `POST /api/v1/agent/conversations/{id}/confirm`  | Chỉ gửi ID và version proposal đã được xem và xác nhận qua popup; sau thành công tải lại roadmap bằng RM-03.                                         |
+| AGENT-04 | `POST /api/v1/agent/conversations/{id}/confirm`  | Gửi ID và version proposal đã được xem và xác nhận qua popup, kèm `startDate` khi người dùng chọn ngày; sau thành công tải lại roadmap bằng RM-03.   |
 
 `agent-service.ts` dùng `shared/api/client.ts`; trình duyệt không nhận token BE hoặc khóa AI. `agent-proxy.ts` chỉ cho đúng bốn operation, kiểm tra ID trong đường dẫn; Route Handler kiểm tra Origin và chỉ cho Traveler. Các lệnh Agent có thời gian chờ tối đa 65 giây; các API cũ giữ mặc định 10 giây. Proxy giữ `Retry-After`, validation/error data và status 200/202 thực tế.
 
@@ -34,7 +43,7 @@ Chỉ lưu ID hội thoại trong `sessionStorage`, tách theo ID người dùng
 - Mỗi lượt mới dùng `clientMessageId` dạng số nguyên dương an toàn với JavaScript. Thử lại sau lỗi giữ nguyên ID, nội dung, version và lựa chọn của đúng lượt cũ; việc sửa ô nhập không làm đổi payload đang thử lại.
 - HTTP 202 chỉ chuyển sang GET polling mỗi 2 giây, không POST lại tin. Đóng panel hoặc ẩn tab tạm ngưng polling; mở lại lấy state mới. Dừng tự kiểm tra sau 90 giây hoặc ba lỗi đọc liên tiếp; người dùng có thể bấm Kiểm tra hội thoại. Không tự gửi tin mới khi còn lượt xử lý.
 - `replayed=true` chỉ dùng GET để lấy bản hiện hành, không ghi đè giao diện bằng proposal cũ trong kết quả replay. Xung đột version hiển thị lỗi và tải state mới, không tự gửi lại mutation.
-- Bản xem trước hiển thị item theo ngày/bữa/thứ tự, giá và tên món/quán từ BE, tổng tiền, các thay đổi, lỗi, cảnh báo và số liệu tuyến; phân biệt tuyến ước tính và origin bị bỏ. Không vẽ tuyến hoặc gọi Mapbox thêm để tạo preview.
+- Bản nháp hiển thị item của ngày đang chọn theo bữa/thứ tự, giá và tên món/quán từ BE, tổng tiền, các thay đổi, lỗi, cảnh báo và số liệu tuyến; phân biệt tuyến ước tính và origin bị bỏ. Không vẽ tuyến hoặc gọi thêm API Mapbox nào để tạo preview.
 - Chọn một item gửi `selectedItemKey` cho yêu cầu tiếp theo. Tìm phương án khác dùng `command=alternative`; bỏ nháp/làm mới dùng `discard`/`reset` sau popup xác nhận.
 - Form ràng buộc cho phép xác nhận tỉnh, số ngày, tên, ngân sách và giá mỗi món. Không giới hạn ngân sách phải được chọn rõ trên UI. `confirmedState` giữ nguyên tag, tag loại trừ, origin và phạm vi đang có; không tự nới chúng theo câu trả lời AI.
 - Chỉ cho xác nhận proposal active/ready, còn hạn, không có lỗi chặn hoặc câu hỏi chưa giải quyết. Kiểm tra lại thời hạn ngay tại thao tác xác nhận. Lưu thất bại không có thông báo thành công. Kết quả lưu chưa rõ phải thử lại đúng cặp proposal ID/version; chặn gửi yêu cầu mới trong lúc này.
@@ -84,3 +93,17 @@ Các test Agent bao phủ: tạo hội thoại khi mở; giữ nguyên map; gử
 Sau khi hoàn tất code và các kiểm tra trên, đã **mở lại workbook từ đĩa**, đọc lại toàn bộ các vùng AGENT đã liệt kê, JSON response 202, lỗi/version/expiry và IMP-01 (`Backend API` r45). Hash file người dùng gửi vẫn là `A0842E8F4CCBBB2C4E2F5F22A467BD8409AEFCBB7CC745648ECDB878326121A3`; hợp đồng không thay đổi trong task. Bản backend `.docs` có hash `7E1FC6F276A538CD9A092FC7D52A451AC0ED8E45459D1A39934F1C71C813344C` và vẫn không có AGENT-01..04. Không có implementation BE để nghiệm thu live; trạng thái chờ BE được giữ rõ ràng.
 
 Thay đổi được để unstaged/uncommitted trên nhánh hiện tại `feat/ANGI-138-add-roadmap-item-with-ai`. Không sửa `.env`, không đổi nhánh, commit hoặc push.
+
+### Kiểm tra ngày 2026-11-03: trả lời một lần, điểm trên bản đồ và ngày đi khi lưu
+
+Không gọi AI hay Mapbox thật; test bản đồ dùng token giả và style cục bộ.
+
+| Kiểm tra | Kết quả |
+| -------- | ------- |
+| Vitest toàn bộ | 41 file / 347 test đạt, gồm `tests/agent-map.test.ts`. |
+| TypeScript, ESLint phần thay đổi | Đạt. |
+| `playwright.agent.config.ts` | 27/27 đạt. |
+| `playwright.roadmap-map.config.ts` (`ANGI_TEST_MAPBOX_OFFLINE=1`) | 6 đạt, 1 lỗi: `a local style error…` mong "Chưa tải được bản đồ" trong khi code hiện báo lỗi 401 là "từ chối khóa truy cập"; phần này không đổi trong task. |
+| `roadmap-detail.spec.ts`, `roadmap-add-item.spec.ts` | 37 đạt, 6 bỏ qua (test GL, token rỗng), 3 lỗi ở hộp thoại thêm món và liên kết danh sách lộ trình; các file đó không đổi trong task. |
+
+Đã mở lại `ANGI_API_Design_Ver1.8.xlsx` trong `ANGIBackEnd/.docs` và tìm trên cả 11 sheet: `AgentItem` có `itemKey`, `latitude`, `longitude`; `AgentChange` có `type`, `targetItemKey`, `item`; `AgentTurn` có `reply`, `proposal`. Dòng "Agent output action" ở sheet `Enum` và sheet `Agent Scoped v2` đã được cập nhật cùng thay đổi của BE (`chat`, `out_of_scope`, `suggestedDish`); đây là đầu ra nội bộ của model. Hợp đồng API chỉ thêm `startDate` tùy chọn vào request AGENT-04: ghi ở `Backend API` r122 và `Chi tiết Request-Response` r577 (ghi trong ô mô tả, không chèn hàng mới để giữ số hàng; JSON mẫu r4198-r4201 giữ nguyên vì trường này tùy chọn). Trường `commit` của `AgentTurn` đã có trong DTO của BE. Workbook sau cập nhật có SHA-256 `9237860c8caeac658f7c3f80de434f806490dda6be520b131d6966bc998263af`.

@@ -43,13 +43,13 @@ export function agentError(error: unknown) {
     CONVERSATION_VERSION_CONFLICT:
       "Hội thoại đã thay đổi. Hãy xem nội dung mới trước khi gửi tiếp.",
     ROADMAP_VERSION_CONFLICT:
-      "Lộ trình đã được thay đổi ở nơi khác. Hãy yêu cầu bản xem trước mới; ANGI chưa ghi đè dữ liệu.",
+      "Lộ trình đã được thay đổi ở nơi khác. Hãy yêu cầu bản nháp mới; ANGI chưa ghi đè dữ liệu.",
     PROPOSAL_VERSION_CONFLICT:
-      "Bản xem trước đã thay đổi. Hãy kiểm tra bản mới trước khi xác nhận.",
+      "Bản nháp đã thay đổi. Hãy kiểm tra bản mới trước khi xác nhận.",
     PROPOSAL_NOT_COMMITTABLE:
-      "Bản xem trước không còn đủ điều kiện lưu. Hãy xem lỗi bên dưới và yêu cầu phương án mới.",
+      "Bản nháp không còn đủ điều kiện lưu. Hãy xem lỗi bên dưới và yêu cầu phương án mới.",
     PROPOSAL_EXPIRED:
-      "Bản xem trước đã hết hạn. Hãy yêu cầu một phương án mới.",
+      "Bản nháp đã hết hạn. Hãy yêu cầu một phương án mới.",
     AGENT_UNAVAILABLE:
       "Trợ lý chưa xử lý được yêu cầu. Bạn có thể thử lại; bản nháp trước đó được giữ.",
     HTTP_404: "Backend hiện chưa cung cấp API Trợ lý món ăn.",
@@ -87,6 +87,22 @@ export function validationFromError(error: unknown): AgentValidation | null {
     totalCost: data.totalCost,
     routes: [],
   };
+}
+/** Keeps only the notices the proposal card does not already show, so nothing appears twice. */
+export function standaloneValidation(
+  validation: AgentValidation | null,
+  proposal: AgentProposal | null | undefined,
+): AgentValidation | null {
+  if (!validation || !proposal) return validation;
+  const errors = validation.errors.filter(
+    (text) => !proposal.validation.errors.includes(text),
+  );
+  const warnings = validation.warnings.filter(
+    (text) => !proposal.validation.warnings.includes(text),
+  );
+  return errors.length || warnings.length
+    ? { ...validation, errors, warnings }
+    : null;
 }
 export function proposalItems(proposal: AgentProposal) {
   const order = ["breakfast", "lunch", "dinner", "snack", "late_night"];

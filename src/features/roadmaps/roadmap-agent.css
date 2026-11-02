@@ -211,7 +211,6 @@
 .agent-actions .button {
   font-size: var(--text-sm);
 }
-.agent-question,
 .agent-route-summary {
   background: var(--control);
   border-radius: var(--radius-sm);
@@ -237,9 +236,56 @@
   padding: var(--space-1) var(--space-3);
   font-size: var(--text-xs);
 }
+.agent-proposal-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+.agent-proposal-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.agent-proposal-days button {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-xs);
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  cursor: pointer;
+}
+.agent-proposal-days button[aria-pressed="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--card);
+}
+.agent-proposal-days button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* Above 900px the map stays beside the panel, so there is nothing to reveal. */
+.agent-map-toggle.button {
+  display: none;
+}
+.agent-map-back.button {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  box-shadow: var(--shadow-pop);
+}
 .agent-proposal-items {
   display: grid;
   gap: var(--space-2);
+}
+.agent-proposal-item[data-changed="true"] {
+  border-color: var(--coral);
 }
 .agent-proposal-item {
   display: grid;
@@ -286,6 +332,14 @@
   .roadmap-detail-nav > .roadmap-agent-trigger {
     width: auto;
     align-self: flex-start;
+  }
+  .agent-map-toggle.button {
+    display: inline-flex;
+  }
+  .roadmap-agent-panel[data-map-view="true"] {
+    transform: translateX(-102%);
+    visibility: hidden;
+    pointer-events: none;
   }
 }
 @media (max-width: 480px) {

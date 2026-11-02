@@ -6,6 +6,7 @@ import {
   agentRoadmap,
 } from "../fixtures/agent";
 import type {
+  AgentCommit,
   AgentConfirmRequest,
   AgentConversation,
   AgentMessageRequest,
@@ -34,6 +35,7 @@ let openCalls = 0,
 let openError: string | null = null;
 let getError: string | null = null;
 let failReload = false;
+let chatCommit: AgentCommit | null = null;
 
 const handler: StubHandler = ({ method, url, body }, send) => {
   const path = new URL(url, "http://stub").pathname;
@@ -125,6 +127,7 @@ const handler: StubHandler = ({ method, url, body }, send) => {
       proposal,
       validation: proposal?.validation ?? null,
       replayed: mode === "replay",
+      commit: chatCommit,
     });
     return true;
   }
@@ -184,6 +187,7 @@ test.beforeEach(async ({ page, context }) => {
   openError = null;
   getError = null;
   failReload = false;
+  chatCommit = null;
   await context.route("**/*", (route) => {
     const url = new URL(route.request().url());
     if (!["localhost", "127.0.0.1"].includes(url.hostname))
@@ -276,7 +280,7 @@ test("previews the real response, selects a specific item and saves exactly the 
     .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Lưu bản xem trước vào lộ trình?",
+    name: "Lưu bản nháp vào lộ trình?",
   });
   await expect(dialog).toBeVisible();
   expect(confirmCalls).toHaveLength(0);
@@ -341,15 +345,13 @@ test("a transport retry preserves the numeric message ID, version, content and s
   await open(page);
   await chat(page, "Tìm món ăn nhẹ");
   await expect(
-    panel(page).getByRole("button", { name: "Thử lại đúng tin nhắn" }),
+    panel(page).getByRole("button", { name: "Gửi lại tin nhắn" }),
   ).toBeVisible();
   await panel(page)
     .getByLabel("Yêu cầu với trợ lý món ăn")
     .fill("Nội dung đã sửa nhưng chưa gửi");
   mode = "complete";
-  await panel(page)
-    .getByRole("button", { name: "Thử lại đúng tin nhắn" })
-    .click();
+  await panel(page).getByRole("button", { name: "Gửi lại tin nhắn" }).click();
   await expect.poll(() => getCalls).toBe(1);
   expect(messageCalls).toHaveLength(2);
   expect(messageCalls[1]).toEqual(messageCalls[0]);
@@ -363,10 +365,10 @@ test("a replay loads the current state instead of overwriting it with an old pro
   await open(page);
   await chat(page);
   await expect(
-    panel(page).getByText("Bản xem trước · V2", { exact: true }),
+    panel(page).locator('.agent-proposal[data-version="2"]'),
   ).toBeVisible();
   await expect(
-    panel(page).getByText("Bản xem trước · V1", { exact: true }),
+    panel(page).locator('.agent-proposal[data-version="1"]'),
   ).toHaveCount(0);
 });
 
@@ -395,7 +397,7 @@ test("unknown confirm results retry the same proposal and do not save twice", as
     .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
     .click();
   await page
-    .getByRole("dialog", { name: "Lưu bản xem trước vào lộ trình?" })
+    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
     .getByRole("button", { name: "Xác nhận lưu", exact: true })
     .click();
   await expect(
@@ -426,7 +428,7 @@ test("a rejected confirm shows validation and blocks stale or invalid previews",
     .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
     .click();
   await page
-    .getByRole("dialog", { name: "Lưu bản xem trước vào lộ trình?" })
+    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
     .getByRole("button", { name: "Xác nhận lưu", exact: true })
     .click();
   await expect(
@@ -467,13 +469,16 @@ test("confirms budget edits on a modal and preserves catalog filters and origin"
 }) => {
   await open(page);
   await expect(
-    panel(page).getByRole("button", { name: "Ràng buộc", exact: true }),
+    panel(page).getByRole("button", {
+      name: "Điều kiện chuyến đi",
+      exact: true,
+    }),
   ).toBeEnabled();
   await panel(page)
-    .getByRole("button", { name: "Ràng buộc", exact: true })
+    .getByRole("button", { name: "Điều kiện chuyến đi", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Xác nhận ràng buộc với trợ lý",
+    name: "Xác nhận điều kiện chuyến đi",
   });
   await dialog
     .getByRole("checkbox", {
@@ -612,10 +617,10 @@ test("alternative, discard and reset use the designed commands and require confi
   await expect.poll(() => messageCalls.length).toBe(3);
   expect(messageCalls[2].command).toBe("discard");
   await panel(page)
-    .getByRole("button", { name: "Làm mới", exact: true })
+    .getByRole("button", { name: "Bắt đầu lại", exact: true })
     .click();
   await page
-    .getByRole("dialog", { name: "Làm mới ngữ cảnh trợ lý?" })
+    .getByRole("dialog", { name: "Bắt đầu lại cuộc trò chuyện?" })
     .getByRole("button", { name: "Xác nhận", exact: true })
     .click();
   await expect.poll(() => messageCalls.length).toBe(4);
@@ -637,10 +642,9 @@ test("an expired preview stays visible but cannot be confirmed", async ({
     }),
   ).toBeDisabled();
   await expect(
-    panel(page).getByText(
-      "Bản xem trước đã hết hạn. Hãy yêu cầu phương án mới.",
-      { exact: true },
-    ),
+    panel(page).getByText("Bản nháp đã hết hạn. Hãy yêu cầu phương án mới.", {
+      exact: true,
+    }),
   ).toBeVisible();
   expect(confirmCalls).toHaveLength(0);
 });
@@ -693,7 +697,7 @@ test("a failed RM-03 reload after saving retries only the read and keeps the suc
     .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
     .click();
   await page
-    .getByRole("dialog", { name: "Lưu bản xem trước vào lộ trình?" })
+    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
     .getByRole("button", { name: "Xác nhận lưu", exact: true })
     .click();
   await expect(
@@ -709,4 +713,234 @@ test("a failed RM-03 reload after saving retries only the read and keeps the suc
   ).toHaveCount(0);
   expect(confirmCalls).toHaveLength(1);
   expect(committedWrites).toBe(1);
+});
+
+test("the save dialog names the planned days and sends a chosen start date", async ({
+  page,
+}) => {
+  const proposal = agentProposal();
+  proposal.snapshot.state.startDate = null;
+  proposal.snapshot.state.numDays = 2;
+  conversation = {
+    ...conversation,
+    state: { ...conversation.state, startDate: null, numDays: 2 },
+    currentProposal: proposal,
+  };
+  await open(page);
+  await panel(page)
+    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
+    .click();
+  const dialog = page.getByRole("dialog", {
+    name: "Lưu bản nháp vào lộ trình?",
+  });
+  await expect(dialog).toContainText("Lịch có 2 ngày.");
+  await dialog
+    .getByRole("textbox", { name: "Ngày bắt đầu" })
+    .fill("15/06/2099");
+  await expect(dialog).toContainText("từ 15 thg 6, 2099 đến 16 thg 6, 2099");
+  await dialog
+    .getByRole("button", { name: "Xác nhận lưu", exact: true })
+    .click();
+  await expect.poll(() => confirmCalls.length).toBe(1);
+  expect(confirmCalls[0]).toEqual({
+    proposalId: 91,
+    proposalVersion: 1,
+    startDate: "2099-06-15",
+  });
+});
+
+test("the save dialog may stay empty when the traveler has no date yet", async ({
+  page,
+}) => {
+  const proposal = agentProposal();
+  proposal.snapshot.state.startDate = null;
+  conversation = {
+    ...conversation,
+    state: { ...conversation.state, startDate: null },
+    currentProposal: proposal,
+  };
+  await open(page);
+  await panel(page)
+    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
+    .getByRole("button", { name: "Xác nhận lưu", exact: true })
+    .click();
+  await expect.poll(() => confirmCalls.length).toBe(1);
+  expect(confirmCalls[0]).toEqual({ proposalId: 91, proposalVersion: 1 });
+});
+
+test("a save said in chat reloads the roadmap and shows the saved state", async ({
+  page,
+}) => {
+  conversation = { ...conversation, currentProposal: agentProposal() };
+  chatCommit = {
+    roadmapId: 88,
+    roadmapVersion: 6,
+    committedProposalId: 91,
+    itemIds: { r123: 456 },
+  };
+  await open(page);
+  const loaded = detailCalls;
+  await chat(page, "chốt lịch này");
+  await expect(
+    panel(page).getByText("Đã lưu thay đổi vào lộ trình.", { exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => detailCalls).toBe(loaded + 1);
+  expect(confirmCalls).toHaveLength(0);
+});
+
+/** A two-day preview whose second day holds one replaced dish. */
+function twoDayProposal() {
+  const proposal = agentProposal();
+  const [lunch] = proposal.snapshot.items;
+  const replaced = {
+    ...lunch,
+    itemKey: "r200",
+    dayNumber: 2,
+    dishId: 200,
+    dishName: "Bún chả cá",
+    restaurantName: "Quán Biển",
+    latitude: 16.07,
+    longitude: 108.22,
+  };
+  proposal.snapshot.state.numDays = 2;
+  proposal.snapshot.items.push(replaced);
+  proposal.snapshot.changes = [
+    { type: "replace", targetItemKey: "r200", item: replaced },
+  ];
+  proposal.validation.routes = [];
+  return proposal;
+}
+
+test("a question and a warning appear once, not in the message and again in the panel and card", async ({
+  page,
+}) => {
+  const question = "Bạn muốn đổi món nào?";
+  const proposal = agentProposal();
+  proposal.snapshot.state.pendingQuestion = question;
+  conversation = {
+    ...conversation,
+    state: { ...conversation.state, pendingQuestion: question },
+    currentProposal: proposal,
+    messages: [{ role: "assistant", content: question }],
+  };
+  await open(page);
+  await expect(panel(page).getByText(question)).toHaveCount(1);
+  await expect(
+    panel(page).getByText("Thời gian di chuyển chỉ là ước tính."),
+  ).toHaveCount(1);
+  await expect(panel(page).getByText(/ · V\d/)).toHaveCount(0);
+  await expect(panel(page).getByText(/ngữ cảnh|Ràng buộc/)).toHaveCount(0);
+});
+
+test("a short reply and the card show the plan once", async ({ page }) => {
+  conversation = {
+    ...conversation,
+    currentProposal: agentProposal(),
+    messages: [{ role: "assistant", content: "Xong rồi! Bạn xem nhé." }],
+  };
+  await open(page);
+  await expect(
+    panel(page).getByRole("region", { name: "Bản nháp của trợ lý" }),
+  ).toHaveCount(1);
+  await expect(panel(page).getByText("Mì Quảng")).toHaveCount(1);
+});
+
+test("the map shows the preview while the assistant is open and returns to the saved roadmap after closing or saving", async ({
+  page,
+}) => {
+  const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
+  await expect(map).toHaveAttribute("data-preview", "false");
+  conversation = { ...conversation, currentProposal: twoDayProposal() };
+  await open(page);
+  await expect(map).toHaveAttribute("data-preview", "true");
+  await expect(map).toContainText("Bản nháp · Ngày 2");
+  await expect(map).toContainText("2/2 điểm có tọa độ");
+  await expect(
+    map.getByRole("button", { name: "Xem vị trí Mì Quảng" }),
+  ).toBeVisible();
+
+  await panel(page).getByRole("button", { name: "Đóng trợ lý món ăn" }).click();
+  await expect(map).toHaveAttribute("data-preview", "false");
+  await open(page);
+  await expect(map).toHaveAttribute("data-preview", "true");
+
+  await panel(page)
+    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
+    .click();
+  await page
+    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
+    .getByRole("button", { name: "Xác nhận lưu", exact: true })
+    .click();
+  await expect(
+    panel(page).getByText("Đã lưu thay đổi vào lộ trình.", { exact: true }),
+  ).toBeVisible();
+  await expect(map).toHaveAttribute("data-preview", "false");
+});
+
+test("day chips, the card and the map stay in step, and new dishes are marked", async ({
+  page,
+}) => {
+  conversation = { ...conversation, currentProposal: twoDayProposal() };
+  await open(page);
+  const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
+  // A new preview opens on the day it changed.
+  const dishOnDay2 = panel(page).getByRole("button", {
+    name: /Ngày 2.*Bún chả cá/,
+  });
+  await expect(dishOnDay2).toHaveAttribute("data-changed", "true");
+  await expect(dishOnDay2).toContainText("Món mới");
+  await expect(
+    panel(page).getByRole("button", { name: /Mì Quảng/ }),
+  ).toHaveCount(0);
+
+  await panel(page)
+    .getByRole("button", { name: "Ngày 1", exact: true })
+    .click();
+  await expect(map).toContainText("Bản nháp · Ngày 1");
+  await expect(
+    panel(page).getByRole("button", { name: /Ngày 1.*Mì Quảng/ }),
+  ).toHaveAttribute("data-changed", "false");
+
+  await map.getByRole("button", { name: "Xem vị trí Bún chả cá" }).click();
+  await expect(map).toContainText("Bản nháp · Ngày 2");
+  await expect(dishOnDay2).toHaveAttribute("aria-pressed", "true");
+  const card = map.getByRole("region", { name: "Món trong bản nháp" });
+  await expect(card).toContainText("Quán Biển");
+  await expect(card).toContainText("Món mới trong bản nháp");
+
+  await dishOnDay2.click();
+  await expect(card).toHaveCount(0);
+  await chat(page, "Đổi sang món khác");
+  await expect.poll(() => messageCalls.length).toBe(1);
+  expect(messageCalls[0].selectedItemKey).toBeUndefined();
+});
+
+test("on a phone the panel steps aside to reveal the map and comes back with focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  conversation = { ...conversation, currentProposal: twoDayProposal() };
+  await open(page);
+  const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
+  const toggle = panel(page).getByRole("button", { name: "Xem trên bản đồ" });
+  await toggle.click();
+  await expect(page.locator("#roadmap-agent-panel")).toBeHidden();
+  await expect(map).toBeInViewport();
+  const back = page.getByRole("button", { name: "Quay lại trợ lý" });
+  await expect(back).toBeFocused();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await back.click();
+  await expect(panel(page)).toBeVisible();
+  await expect(toggle).toBeFocused();
+  await expect(back).toHaveCount(0);
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(toggle).toBeHidden();
 });

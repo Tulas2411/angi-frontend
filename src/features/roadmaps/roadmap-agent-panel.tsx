@@ -3,16 +3,20 @@ import Link from "next/link";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Alert, Button } from "@/shared/ui";
 import { ConfirmDialog, TextArea } from "@/components/ui/primitives";
+import { DateField } from "@/components/ui/date-time-fields";
+import { dateLabel } from "@/shared/format";
 import { AgentConstraintsDialog } from "./agent-constraints-dialog";
 import { AgentProposalPreview, AgentValidationNotice } from "./agent-proposal";
 import {
   agentMessageError,
   agentMessageLimit,
   canConfirmProposal,
+  standaloneValidation,
 } from "./agent-rules";
-import { useAgentConversation } from "./use-agent-conversation";
+import type { useAgentConversation } from "./use-agent-conversation";
 import { roadmapDetailHref } from "./routes";
 import { vnd } from "./roadmap-list-rules";
+import { roadmapEndDate } from "./roadmap-rules";
 import type { AgentConfirmRequest } from "./agent-types";
 import "./roadmap-agent.css";
 
@@ -26,35 +30,45 @@ const prompts = [
 export function RoadmapAgentPanel({
   open,
   onClose,
-  roadmapId,
-  userId,
-  onCommitted,
+  agent,
+  selected,
+  onSelect,
+  previewDay,
+  onPreviewDay,
+  mapView,
+  onShowMap,
 }: {
   open: boolean;
   onClose: () => void;
-  roadmapId: number;
-  userId: number;
-  onCommitted: (id: number) => Promise<void>;
+  /** Owned by the roadmap screen, which also draws the current preview on its map. */
+  agent: ReturnType<typeof useAgentConversation>;
+  selected: string;
+  onSelect: (itemKey: string) => void;
+  previewDay: number;
+  onPreviewDay: (day: number) => void;
+  /** On small screens this panel covers the map; true while it steps aside to reveal it. */
+  mapView: boolean;
+  onShowMap: () => void;
 }) {
-  const agent = useAgentConversation({ open, roadmapId, userId, onCommitted });
   const root = useRef<HTMLElement>(null);
   const transcript = useRef<HTMLDivElement>(null);
   const [content, setContent] = useState("");
   const [inputError, setInputError] = useState<string | null>(null);
-  const [selectedKey, setSelectedKey] = useState("");
   const [constraintsOpen, setConstraintsOpen] = useState(false);
   const [decision, setDecision] = useState<"reset" | "discard" | null>(null);
   const [confirmation, setConfirmation] = useState<AgentConfirmRequest | null>(
     null,
   );
+  const [saveDate, setSaveDate] = useState("");
   const [now, setNow] = useState(() => Date.now());
   const { conversation, work } = agent;
   const proposal = conversation?.currentProposal;
-  const selected = proposal?.snapshot.items.some(
-    (item) => item.itemKey === selectedKey,
-  )
-    ? selectedKey
-    : "";
+  const knownStartDate =
+    conversation?.state.startDate ?? proposal?.snapshot.state.startDate ?? "";
+  const plannedDays = proposal?.snapshot.state.numDays ?? 1;
+  const saveEndDate = saveDate
+    ? roadmapEndDate(saveDate, String(plannedDays))
+    : null;
   const blocked =
     !conversation ||
     conversation.status !== "active" ||
@@ -123,9 +137,10 @@ export function RoadmapAgentPanel({
       role="dialog"
       aria-modal="false"
       aria-labelledby="roadmap-agent-title"
-      aria-hidden={!open}
-      inert={!open}
+      aria-hidden={!open || mapView}
+      inert={!open || mapView}
       data-open={open}
+      data-map-view={mapView}
       onKeyDown={(event) => {
         if (
           event.key === "Escape" &&
@@ -231,7 +246,7 @@ export function RoadmapAgentPanel({
                   }}
                   disabled={!!work || !!conversation?.processing}
                 >
-                  Thử lại đúng tin nhắn
+                  Gửi lại tin nhắn
                 </Button>
               )}
               {(!conversation || conversation.status !== "active") && (
@@ -242,7 +257,9 @@ export function RoadmapAgentPanel({
             </div>
           </div>
         )}
-        <AgentValidationNotice validation={agent.validation} />
+        <AgentValidationNotice
+          validation={standaloneValidation(agent.validation, proposal)}
+        />
         {conversation && conversation.status !== "active" && !agent.error && (
           <Alert tone="warning">
             Hội thoại đã đóng hoặc hết hạn; lộ trình đã lưu vẫn được giữ.
@@ -251,19 +268,19 @@ export function RoadmapAgentPanel({
             </Button>
           </Alert>
         )}
-        {conversation?.state.pendingQuestion && (
-          <p className="agent-question">{conversation.state.pendingQuestion}</p>
-        )}
         {proposal && (
           <AgentProposalPreview
             proposal={proposal}
             active={open}
             selectedKey={selected}
-            onSelect={setSelectedKey}
+            onSelect={onSelect}
             disabled={blocked || !!agent.saved}
+            day={previewDay}
+            onDay={onPreviewDay}
+            onShowMap={onShowMap}
             onAlternative={() => {
               void agent.send(
-                "Tìm phương án khác trong phạm vi đang chọn.",
+                "Tìm phương án khác cho phần đang chọn.",
                 "alternative",
                 selected || undefined,
               );
@@ -274,12 +291,13 @@ export function RoadmapAgentPanel({
           <div className="agent-actions">
             <Button
               disabled={!readyToConfirm}
-              onClick={() =>
+              onClick={() => {
+                setSaveDate(knownStartDate);
                 setConfirmation({
                   proposalId: proposal.proposalId,
                   proposalVersion: proposal.version,
-                })
-              }
+                });
+              }}
             >
               Xác nhận lưu vào lộ trình
             </Button>
@@ -292,7 +310,7 @@ export function RoadmapAgentPanel({
             </Button>
             {Date.parse(proposal.expiresAt) <= now && (
               <p className="helper">
-                Bản xem trước đã hết hạn. Hãy yêu cầu phương án mới.
+                Bản nháp đã hết hạn. Hãy yêu cầu phương án mới.
               </p>
             )}
           </div>
@@ -354,14 +372,14 @@ export function RoadmapAgentPanel({
                 disabled={blocked}
                 onClick={() => setConstraintsOpen(true)}
               >
-                Ràng buộc
+                Điều kiện chuyến đi
               </Button>
               <Button
                 variant="tertiary"
                 disabled={blocked}
                 onClick={() => setDecision("reset")}
               >
-                Làm mới
+                Bắt đầu lại
               </Button>
             </div>
           </div>
@@ -374,7 +392,7 @@ export function RoadmapAgentPanel({
             <button
               type="button"
               aria-label="Bỏ chọn món trong chat"
-              onClick={() => setSelectedKey("")}
+              onClick={() => onSelect("")}
               disabled={blocked}
             >
               ×
@@ -413,15 +431,12 @@ export function RoadmapAgentPanel({
               Gửi
             </Button>
           </div>
-          <p className="helper">
-            Bản xem trước chỉ được lưu khi bạn xác nhận. Enter để gửi, Shift +
-            Enter để xuống dòng.
-          </p>
+          <p className="helper">Enter để gửi, Shift + Enter để xuống dòng.</p>
         </form>
       </div>
       <ConfirmDialog
         open={!!confirmation}
-        title="Lưu bản xem trước vào lộ trình?"
+        title="Lưu bản nháp vào lộ trình?"
         label="Xác nhận lưu"
         loading={work === "confirming"}
         onClose={() => {
@@ -439,20 +454,38 @@ export function RoadmapAgentPanel({
             setConfirmation(null);
             return;
           }
-          void agent.confirm(confirmation).finally(() => setConfirmation(null));
+          void agent
+            .confirm({
+              ...confirmation,
+              ...(saveDate && saveDate !== knownStartDate
+                ? { startDate: saveDate }
+                : {}),
+            })
+            .finally(() => setConfirmation(null));
         }}
       >
         <p>
-          Bạn đang xác nhận bản V{confirmation?.proposalVersion}. Những thay đổi
-          trong bản xem trước sẽ được áp dụng vào lộ trình sau khi hệ thống kiểm
-          tra lại.
+          Những thay đổi trong bản nháp sẽ được áp dụng vào lộ trình sau khi hệ
+          thống kiểm tra lại.
+        </p>
+        <DateField
+          label="Ngày bắt đầu"
+          value={saveDate}
+          onChange={setSaveDate}
+          helper="Chưa biết ngày đi thì để trống, bạn có thể chọn sau."
+        />
+        <p className="helper">
+          Lịch có {plannedDays} ngày
+          {saveDate && saveEndDate
+            ? `, từ ${dateLabel(saveDate)} đến ${dateLabel(saveEndDate)}.`
+            : "."}
         </p>
       </ConfirmDialog>
       <ConfirmDialog
         open={decision !== null}
         title={
           decision === "reset"
-            ? "Làm mới ngữ cảnh trợ lý?"
+            ? "Bắt đầu lại cuộc trò chuyện?"
             : "Bỏ bản nháp hiện tại?"
         }
         onClose={() => setDecision(null)}
@@ -460,8 +493,8 @@ export function RoadmapAgentPanel({
           if (decision)
             void agent.send(
               decision === "reset"
-                ? "Làm mới ngữ cảnh hội thoại, giữ lộ trình đã lưu."
-                : "Bỏ bản nháp hiện tại, giữ lộ trình đã lưu.",
+                ? "Bắt đầu lại cuộc trò chuyện, giữ lộ trình đã lưu."
+                : "Bỏ bản nháp này, giữ lộ trình đã lưu.",
               decision,
             );
           setDecision(null);
@@ -470,8 +503,8 @@ export function RoadmapAgentPanel({
         <p>
           Lộ trình đã lưu vẫn được giữ nguyên.{" "}
           {decision === "reset"
-            ? "Trợ lý sẽ bắt đầu lại ngữ cảnh."
-            : "Bản xem trước này sẽ không được áp dụng."}
+            ? "Trợ lý sẽ quên những gì hai bên vừa trao đổi."
+            : "Bản nháp này sẽ không được áp dụng."}
         </p>
       </ConfirmDialog>
       {constraintsOpen && conversation && (
@@ -481,7 +514,7 @@ export function RoadmapAgentPanel({
           onSubmit={(state) => {
             setConstraintsOpen(false);
             void agent.send(
-              "Tôi xác nhận các ràng buộc trong biểu mẫu. Hãy dùng đúng các giá trị này.",
+              "Mình xác nhận điều kiện chuyến đi theo biểu mẫu, bạn dùng đúng các giá trị này nhé.",
               "chat",
               selected || undefined,
               state,

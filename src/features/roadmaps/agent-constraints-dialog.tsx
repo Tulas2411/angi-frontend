@@ -79,7 +79,7 @@ export function AgentConstraintsDialog({
   return (
     <Dialog
       open
-      title="Xác nhận ràng buộc với trợ lý"
+      title="Xác nhận điều kiện chuyến đi"
       onClose={onClose}
       focusField
       footer={

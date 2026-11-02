@@ -8,6 +8,11 @@ import { mapStyles } from "@/shared/maps/mapbox";
 import { formatRating, mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import {
+  agentDishName,
+  type AgentMapPreview,
+  type AgentMapStop,
+} from "./agent-map-rules";
+import {
   groupRoadmapStops,
   roadmapMapCoordinate,
   roadmapMapPoints,
@@ -125,7 +130,100 @@ function SelectedMapCard({
   );
 }
 
-/** Read-only RM-03 stop map. It never searches places or requests route geometry. */
+/** A preview dish on the map. Previews carry no rating or photo, so only their real fields are shown. */
+function PreviewMapCard({
+  stop,
+  coincident,
+  onSelect,
+}: {
+  stop: AgentMapStop;
+  coincident: readonly AgentMapStop[];
+  onSelect: (itemKey: string) => void;
+}) {
+  return (
+    <section className="roadmap-map-card" aria-label="Món trong bản nháp">
+      <div className="roadmap-map-card-heading">
+        <span className="roadmap-map-included">
+          {stop.changed ? "Món mới trong bản nháp" : "Có trong bản nháp"}
+        </span>
+        <Button
+          variant="icon"
+          aria-label="Đóng thông tin món"
+          onClick={() => onSelect("")}
+        >
+          <Icon name="X" />
+        </Button>
+      </div>
+      <div className="roadmap-map-card-body">
+        <h3>{stop.item.restaurantName ?? "Chưa có tên quán"}</h3>
+        <p className="helper">
+          Ngày {stop.dayNumber} · {mealSlotLabels[stop.item.mealSlot]} · Điểm{" "}
+          {stop.number}
+        </p>
+        <p>
+          {agentDishName(stop.item)} · Dự chi {vnd(stop.item.price)}
+        </p>
+        {!stop.coordinate && (
+          <p className="helper">Món này chưa có vị trí trên bản đồ.</p>
+        )}
+        {coincident.length > 1 && (
+          <div className="roadmap-map-coincident">
+            <p className="helper">{coincident.length} món cùng vị trí</p>
+            {coincident.map((point) => (
+              <button
+                key={point.item.itemKey}
+                type="button"
+                aria-pressed={point.item.itemKey === stop.item.itemKey}
+                onClick={() => onSelect(point.item.itemKey)}
+              >
+                Ngày {point.dayNumber} · {point.number}.{" "}
+                {agentDishName(point.item)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Paints one preview pin; a pin holding several dishes shows the selected or active-day one first. */
+function paintPreviewPin(
+  group: RoadmapMapGroup<AgentMapStop>,
+  button: HTMLButtonElement,
+  activeDay: number,
+  selectedKey: string,
+) {
+  const representative =
+    group.stops.find((stop) => stop.item.itemKey === selectedKey) ??
+    group.stops.find((stop) => stop.dayNumber === activeDay) ??
+    group.stops[0];
+  const isSelected = group.stops.some(
+    (stop) => stop.item.itemKey === selectedKey,
+  );
+  button.dataset.tone = String((representative.dayNumber - 1) % 5);
+  button.dataset.active = String(
+    group.stops.some((stop) => stop.dayNumber === activeDay),
+  );
+  button.dataset.selected = String(isSelected);
+  button.dataset.changed = String(group.stops.some((stop) => stop.changed));
+  button.textContent =
+    group.stops.length > 1
+      ? `${representative.number}+${group.stops.length - 1}`
+      : String(representative.number);
+  button.setAttribute(
+    "aria-label",
+    group.stops.length > 1
+      ? `${group.stops.length} món trong bản nháp cùng vị trí: ${group.stops.map((stop) => `${agentDishName(stop.item)}, ngày ${stop.dayNumber}`).join("; ")}`
+      : `Bản nháp, điểm ${representative.number}, ngày ${representative.dayNumber}: ${agentDishName(representative.item)}${representative.changed ? ", món mới" : ""}`,
+  );
+  button.setAttribute("aria-pressed", String(isSelected));
+}
+
+/**
+ * Read-only RM-03 stop map; while the assistant shows a preview it draws that preview's stops instead.
+ * It never searches places or requests route geometry.
+ */
 export function RoadmapDetailMap({
   overview,
   itinerary,
@@ -134,6 +232,7 @@ export function RoadmapDetailMap({
   onSelectItem,
   origin,
   originSkipped = false,
+  preview = null,
 }: {
   overview: RoadmapSummaryDto;
   itinerary: RoadmapDayDto[];
@@ -142,6 +241,7 @@ export function RoadmapDetailMap({
   onSelectItem: (id: number | null) => void;
   origin?: RoadmapRouteDto["origin"];
   originSkipped?: boolean;
+  preview?: AgentMapPreview | null;
 }) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
   const stops = useMemo(() => roadmapMapStops(itinerary), [itinerary]);
@@ -153,8 +253,28 @@ export function RoadmapDetailMap({
         group.stops.some((stop) => stop.item.id === selected.item.id),
       )?.stops ?? [])
     : [];
+  const previewStops = preview?.stops ?? null;
+  const previewDay = preview?.activeDay ?? null;
+  const previewKey = preview?.selectedKey ?? "";
+  const previewGroups = useMemo(
+    () => (previewStops ? groupRoadmapStops(previewStops) : []),
+    [previewStops],
+  );
+  const previewSelected =
+    previewStops?.find((stop) => stop.item.itemKey === previewKey) ?? null;
+  const previewCoincident = previewSelected?.coordinate
+    ? (previewGroups.find((group) =>
+        group.stops.some(
+          (stop) => stop.item.itemKey === previewSelected.item.itemKey,
+        ),
+      )?.stops ?? [])
+    : [];
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
+  const mapbox = useRef<typeof import("mapbox-gl").default | null>(null);
+  const previewPins = useRef<
+    { group: RoadmapMapGroup<AgentMapStop>; button: HTMLButtonElement }[]
+  >([]);
   const refresh = useRef<() => void>(() => {});
   const fit = useRef<() => void>(() => {});
   const latest = useRef({
@@ -166,11 +286,14 @@ export function RoadmapDetailMap({
     onSelectItem,
     origin,
     originSkipped,
+    preview,
   });
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
   );
   const [attempt, setAttempt] = useState(0);
+  // Counts completed map loads, so preview pins are drawn again on a replaced map instance.
+  const [loadedMaps, setLoadedMaps] = useState(0);
   // HTTP status of the provider error, when there is one (401 = the token was refused).
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
 
@@ -184,6 +307,7 @@ export function RoadmapDetailMap({
       onSelectItem,
       origin,
       originSkipped,
+      preview,
     };
   }, [
     overview,
@@ -194,12 +318,68 @@ export function RoadmapDetailMap({
     onSelectItem,
     origin,
     originSkipped,
+    preview,
   ]);
 
   useEffect(() => {
     refresh.current();
     fit.current();
-  }, [groups, activeDay, selectedItemId, origin, originSkipped]);
+  }, [
+    groups,
+    activeDay,
+    selectedItemId,
+    origin,
+    originSkipped,
+    previewStops,
+    previewDay,
+    previewKey,
+  ]);
+
+  // Preview pins join the mounted map instead of recreating it, so a new preview loads no extra map.
+  useEffect(() => {
+    const instance = map.current;
+    const provider = mapbox.current;
+    if (!loadedMaps || !instance || !provider) return;
+    const pins = previewGroups.map((group) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      // Mapbox otherwise assigns role="img", overriding native button semantics.
+      button.setAttribute("role", "button");
+      button.className = "roadmap-map-pin roadmap-map-pin-preview";
+      button.addEventListener("click", () => {
+        const current = latest.current.preview;
+        if (!current) return;
+        const target =
+          group.stops.find(
+            (stop) => stop.item.itemKey === current.selectedKey,
+          ) ??
+          group.stops.find((stop) => stop.dayNumber === current.activeDay) ??
+          group.stops[0];
+        current.onSelect(target.item.itemKey);
+      });
+      const current = latest.current.preview;
+      paintPreviewPin(
+        group,
+        button,
+        current?.activeDay ?? 1,
+        current?.selectedKey ?? "",
+      );
+      const marker = new provider.Marker({ element: button, anchor: "bottom" })
+        .setLngLat([group.coordinate.longitude, group.coordinate.latitude])
+        .addTo(instance);
+      return { group, button, marker };
+    });
+    previewPins.current = pins;
+    fit.current();
+    return () => {
+      previewPins.current = [];
+      for (const pin of pins) pin.marker.remove();
+    };
+  }, [previewGroups, loadedMaps]);
+  useEffect(() => {
+    for (const { group, button } of previewPins.current)
+      paintPreviewPin(group, button, previewDay ?? 1, previewKey);
+  }, [previewDay, previewKey]);
 
   useEffect(() => {
     // The base map is drawn even before any dish has coordinates; pins appear with them.
@@ -232,6 +412,7 @@ export function RoadmapDetailMap({
       try {
         const { default: mapboxgl } = await import("mapbox-gl");
         if (disposed) return;
+        mapbox.current = mapboxgl;
         const current = latest.current;
         const pinned =
           current.overview.originMode === "pinned"
@@ -279,12 +460,17 @@ export function RoadmapDetailMap({
           // before ResizeObserver runs; fit against the current canvas size.
           instance.resize();
           const current = latest.current;
-          const points = roadmapMapPoints(
-            current.stops,
-            current.activeDay,
-            current.origin,
-            current.originSkipped,
-          );
+          const points = current.preview
+            ? roadmapMapPoints(current.preview.stops, current.preview.activeDay)
+            : roadmapMapPoints(
+                current.stops,
+                current.activeDay,
+                current.origin,
+                current.originSkipped,
+              );
+          const hasSelection = current.preview
+            ? current.preview.selectedKey !== ""
+            : current.selectedItemId !== null;
           if (!points.length) return;
           if (points.length === 1)
             instance.easeTo({
@@ -299,9 +485,9 @@ export function RoadmapDetailMap({
               element.parentElement?.querySelector<HTMLElement>(
                 ".roadmap-map-card",
               )?.offsetHeight ?? 0;
-            const topPadding = current.selectedItemId === null ? 176 : 208;
+            const topPadding = hasSelection ? 208 : 176;
             const bottomPadding = Math.min(
-              current.selectedItemId === null ? 80 : cardHeight + 40,
+              hasSelection ? cardHeight + 40 : 80,
               Math.max(0, element.clientHeight - topPadding - 48),
             );
             instance.fitBounds(bounds, {
@@ -322,6 +508,7 @@ export function RoadmapDetailMap({
           if (!instance || disposed) return;
           const current = latest.current;
           for (const { group, button } of markers) {
+            button.hidden = current.preview !== null;
             const representative =
               group.stops.find(
                 (stop) => stop.item.id === current.selectedItemId,
@@ -354,7 +541,7 @@ export function RoadmapDetailMap({
           startMarker?.remove();
           startMarker = null;
           const start =
-            current.origin && !current.originSkipped
+            current.origin && !current.originSkipped && !current.preview
               ? roadmapMapCoordinate(
                   current.origin.latitude,
                   current.origin.longitude,
@@ -409,6 +596,7 @@ export function RoadmapDetailMap({
           refresh.current();
           fit.current();
           setStatus("ready");
+          setLoadedMaps((value) => value + 1);
         });
         instance.on("error", fail);
         observer = new ResizeObserver(() => {
@@ -435,10 +623,17 @@ export function RoadmapDetailMap({
 
   const hasMap = Boolean(token);
   const ready = hasMap && status === "ready";
+  const legendDays = preview
+    ? preview.days
+    : itinerary.map((day) => day.dayNumber);
+  const listedCount = previewStops?.length ?? stops.length;
+  const locatedCount = previewStops
+    ? previewStops.filter((stop) => stop.coordinate !== null).length
+    : stops.filter((stop) => stop.coordinate !== null).length;
   // Why no pin is drawn; the base map itself is shown either way once a token exists.
-  const emptyNote = !stops.length
-    ? "Lộ trình chưa có địa điểm để hiển thị."
-    : !groups.length
+  const emptyNote = !listedCount
+    ? `${previewStops ? "Bản nháp" : "Lộ trình"} chưa có địa điểm để hiển thị.`
+    : !locatedCount
       ? "Chưa có địa điểm đủ tọa độ để hiển thị bản đồ."
       : null;
   const message = !token
@@ -455,6 +650,33 @@ export function RoadmapDetailMap({
         : "Chưa tải được bản đồ. Bạn vẫn có thể xem các điểm trong lộ trình."
       : "Đang tải bản đồ…";
 
+  const previewChoices = previewStops && (
+    <ol className="roadmap-map-stop-choices">
+      {previewStops.map((stop) => (
+        <li key={stop.item.itemKey}>
+          <button
+            className="roadmap-map-stop-choice"
+            type="button"
+            data-tone={(stop.dayNumber - 1) % 5}
+            data-changed={stop.changed}
+            aria-label={`Xem vị trí ${agentDishName(stop.item)}`}
+            aria-pressed={stop.item.itemKey === previewKey}
+            onClick={() => preview?.onSelect(stop.item.itemKey)}
+          >
+            <span>{stop.number}</span>
+            <span>
+              {agentDishName(stop.item)}
+              <small>
+                Ngày {stop.dayNumber}
+                {stop.changed && " · Món mới"}
+                {!stop.coordinate && " · Chưa có tọa độ"}
+              </small>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
   const choices = (
     <ol className="roadmap-map-stop-choices">
       {stops.map((stop) => (
@@ -487,7 +709,8 @@ export function RoadmapDetailMap({
       role="region"
       aria-label="Bản đồ lộ trình"
       data-ready={ready}
-      data-selected={selected !== null}
+      data-preview={preview !== null}
+      data-selected={preview ? previewSelected !== null : selected !== null}
     >
       <div
         ref={container}
@@ -495,10 +718,13 @@ export function RoadmapDetailMap({
         aria-label={`Các địa điểm của ${overview.title}`}
       />
       <div className="roadmap-map-statusbar">
-        <span>Ngày {activeDay}</span>
         <span>
-          {stops.filter((stop) => stop.coordinate !== null).length}/
-          {stops.length} điểm có tọa độ
+          {preview
+            ? `Bản nháp · Ngày ${preview.activeDay}`
+            : `Ngày ${activeDay}`}
+        </span>
+        <span>
+          {locatedCount}/{listedCount} điểm có tọa độ
         </span>
       </div>
       {!ready && (
@@ -523,16 +749,16 @@ export function RoadmapDetailMap({
           {emptyNote}
         </p>
       )}
-      {itinerary.length > 0 && (
+      {legendDays.length > 0 && (
         <div className="roadmap-map-legend" aria-label="Ngày trên bản đồ">
-          {itinerary.map((day) => (
+          {legendDays.map((day) => (
             <span
-              key={day.dayId}
+              key={day}
               className="roadmap-map-legend-day"
-              data-tone={(day.dayNumber - 1) % 5}
-              data-active={day.dayNumber === activeDay}
+              data-tone={(day - 1) % 5}
+              data-active={day === (preview?.activeDay ?? activeDay)}
             >
-              Ngày {day.dayNumber}
+              Ngày {day}
             </span>
           ))}
         </div>
@@ -563,23 +789,37 @@ export function RoadmapDetailMap({
           <Icon name="Minus" />
         </Button>
       </div>
-      {stops.length > 0 &&
+      {listedCount > 0 &&
         (ready ? (
           <details className="roadmap-map-stop-list">
-            <summary>Các điểm trong lộ trình ({stops.length})</summary>
-            {choices}
+            <summary>
+              Các điểm trong {previewStops ? "bản nháp" : "lộ trình"} (
+              {listedCount})
+            </summary>
+            {previewChoices ?? choices}
           </details>
         ) : (
-          <div className="roadmap-map-stop-list">{choices}</div>
+          <div className="roadmap-map-stop-list">
+            {previewChoices ?? choices}
+          </div>
         ))}
-      {selected && (
-        <SelectedMapCard
-          key={selected.item.id}
-          stop={selected}
-          coincident={coincident}
-          onSelectItem={onSelectItem}
-        />
-      )}
+      {preview
+        ? previewSelected && (
+            <PreviewMapCard
+              key={previewSelected.item.itemKey}
+              stop={previewSelected}
+              coincident={previewCoincident}
+              onSelect={preview.onSelect}
+            />
+          )
+        : selected && (
+            <SelectedMapCard
+              key={selected.item.id}
+              stop={selected}
+              coincident={coincident}
+              onSelectItem={onSelectItem}
+            />
+          )}
     </aside>
   );
 }

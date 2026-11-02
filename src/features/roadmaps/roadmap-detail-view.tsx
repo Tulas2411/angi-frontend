@@ -1,9 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Badge } from "@/shared/ui";
 import { Button } from "@/shared/ui";
 import { RoadmapAgentPanel } from "./roadmap-agent-panel";
+import {
+  agentDefaultDay,
+  agentMapDays,
+  agentMapStops,
+} from "./agent-map-rules";
+import { useAgentConversation } from "./use-agent-conversation";
 import { Icon, Media, Tabs } from "@/components/ui/primitives";
 import { dateLabel } from "@/shared/format";
 import { RoadmapBudget } from "./roadmap-budget";
@@ -61,8 +67,10 @@ export function RoadmapDetailView({
 }) {
   const { overview, itinerary, budget } = detail;
   const [agentOpen, setAgentOpen] = useState(false);
+  const [agentMapView, setAgentMapView] = useState(false);
   function closeAgent() {
     setAgentOpen(false);
+    setAgentMapView(false);
     requestAnimationFrame(() =>
       document
         .querySelector<HTMLButtonElement>(".roadmap-agent-trigger")
@@ -97,6 +105,53 @@ export function RoadmapDetailView({
       setAgentRevision((value) => value + 1);
     },
     [detail.overview.id, onItemsGenerated],
+  );
+  const agent = useAgentConversation({
+    open: agentOpen,
+    roadmapId: detail.overview.id,
+    userId,
+    onCommitted: agentCommitted,
+  });
+  const agentProposal = agent.conversation?.currentProposal ?? null;
+  const [previewPick, setPreviewPick] = useState<{
+    proposalId: number;
+    day: number;
+  } | null>(null);
+  const [previewKey, setPreviewKey] = useState("");
+  const previewDay = !agentProposal
+    ? 1
+    : previewPick?.proposalId === agentProposal.proposalId
+      ? previewPick.day
+      : agentDefaultDay(agentProposal);
+  const previewSelected = agentProposal?.snapshot.items.some(
+    (item) => item.itemKey === previewKey,
+  )
+    ? previewKey
+    : "";
+  function pickPreviewDay(day: number) {
+    if (agentProposal)
+      setPreviewPick({ proposalId: agentProposal.proposalId, day });
+    setPreviewKey("");
+  }
+  function selectPreviewItem(itemKey: string) {
+    setPreviewKey(itemKey);
+    const item = agentProposal?.snapshot.items.find(
+      (entry) => entry.itemKey === itemKey,
+    );
+    if (agentProposal && item)
+      setPreviewPick({
+        proposalId: agentProposal.proposalId,
+        day: item.dayNumber,
+      });
+  }
+  // A saved, expired or replaced preview leaves the map to the saved roadmap.
+  const previewOnMap =
+    agentOpen && agentProposal?.status === "ready" && !agent.saved
+      ? agentProposal
+      : null;
+  const previewStops = useMemo(
+    () => (previewOnMap ? agentMapStops(previewOnMap) : null),
+    [previewOnMap],
   );
   const receiveMapRoute = useCallback((route: RoadmapRouteDto | null) => {
     setMapRoute(route);
@@ -361,14 +416,50 @@ export function RoadmapDetailView({
         onSelectItem={selectItem}
         origin={effectiveRoute?.origin ?? null}
         originSkipped={effectiveRoute?.originSkipped ?? false}
+        preview={
+          previewOnMap && previewStops
+            ? {
+                stops: previewStops,
+                days: agentMapDays(previewOnMap),
+                activeDay: previewDay,
+                selectedKey: previewSelected,
+                onSelect: selectPreviewItem,
+              }
+            : null
+        }
       />
       <RoadmapAgentPanel
         open={agentOpen}
         onClose={closeAgent}
-        roadmapId={overview.id}
-        userId={userId}
-        onCommitted={agentCommitted}
+        agent={agent}
+        selected={previewSelected}
+        onSelect={selectPreviewItem}
+        previewDay={previewDay}
+        onPreviewDay={pickPreviewDay}
+        mapView={agentMapView}
+        onShowMap={() => {
+          setAgentMapView(true);
+          requestAnimationFrame(() => {
+            document
+              .querySelector(".roadmap-map-panel")
+              ?.scrollIntoView({ block: "start" });
+            document.querySelector<HTMLElement>(".agent-map-back")?.focus();
+          });
+        }}
       />
+      {agentOpen && agentMapView && (
+        <Button
+          className="agent-map-back"
+          onClick={() => {
+            setAgentMapView(false);
+            requestAnimationFrame(() =>
+              document.querySelector<HTMLElement>(".agent-map-toggle")?.focus(),
+            );
+          }}
+        >
+          Quay lại trợ lý
+        </Button>
+      )}
     </div>
   );
 }

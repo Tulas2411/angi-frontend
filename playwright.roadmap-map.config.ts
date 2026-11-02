@@ -10,7 +10,7 @@ if (!server)
 /** Real GL renderer with a fake token; provider responses are fulfilled by local fixtures. */
 export default defineConfig({
   ...base,
-  testMatch: "roadmap-detail.spec.ts",
+  testMatch: ["roadmap-detail.spec.ts", "roadmap-agent-map.spec.ts"],
   grep: /offline Mapbox/,
   webServer: {
     ...server,

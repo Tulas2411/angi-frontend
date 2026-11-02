@@ -109,10 +109,14 @@ export interface AgentTurn {
   proposal: AgentProposal | null;
   validation: AgentValidation | null;
   replayed: boolean;
+  /** Present when this chat turn saved the proposal. */
+  commit?: AgentCommit | null;
 }
 export interface AgentConfirmRequest {
   proposalId: number;
   proposalVersion: number;
+  /** Chosen in the save dialog; omitted keeps the date the conversation already holds. */
+  startDate?: string;
 }
 export interface AgentCommit {
   roadmapId: number;

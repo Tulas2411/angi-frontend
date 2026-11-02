@@ -1023,6 +1023,24 @@
 .roadmap-map-pin:focus-visible {
   outline-offset: 4px;
 }
+.roadmap-map-pin[hidden] {
+  display: none;
+}
+/* An unsaved preview reads differently from saved stops; its new dishes stand out in coral. */
+.roadmap-map-pin-preview::before {
+  border-style: dashed;
+}
+.roadmap-map-pin-preview[data-changed="true"] {
+  z-index: 2;
+}
+.roadmap-map-pin-preview[data-changed="true"]::before {
+  border-style: solid;
+  background: var(--coral);
+  box-shadow: 0 0 0 3px rgb(255 94 98 / 0.3);
+}
+.roadmap-map-pin-preview[data-selected="true"]::before {
+  box-shadow: 0 0 0 3px var(--ink);
+}
 .roadmap-map-origin {
   display: grid;
   place-items: center;

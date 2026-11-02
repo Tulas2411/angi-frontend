@@ -244,6 +244,11 @@ export function useAgentConversation({
         publish(await service.get(value.conversationId));
         setStale(false);
         setValidation(null);
+        // A save said in chat changes the roadmap just like the save button.
+        if (turn.commit) {
+          setSaved(turn.commit);
+          await reloadRoadmap(turn.commit);
+        }
       }
       return true;
     } catch (caught) {
