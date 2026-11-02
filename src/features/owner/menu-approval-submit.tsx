@@ -163,6 +163,7 @@ export function MenuApprovalSubmit({
             đã sửa · {detail.removedDishes.length} món sẽ bỏ
           </p>
           <TextArea
+            placeholder="Ví dụ: Thêm 3 món mới cho mùa đông"
             label="Ghi chú gửi kiểm duyệt"
             helper="Không bắt buộc, tối đa 1000 ký tự."
             maxLength={1000}

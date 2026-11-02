@@ -98,7 +98,9 @@ function RatingSummary({ reviews }: { reviews: OwnerReviewDto[] }) {
                   style={{ width: `${(item.count / peak) * 100}%` }}
                 />
               </span>
-              <span className="owner-reviews-breakdown-count">{item.count}</span>
+              <span className="owner-reviews-breakdown-count">
+                {item.count}
+              </span>
             </li>
           ))}
         </ul>
@@ -132,14 +134,13 @@ function ReviewItem({
   return (
     <li className="owner-review">
       <div className="owner-review-main">
-        <Avatar
-          name={review.user.displayName}
-          image={review.user.avatarUrl}
-        />
+        <Avatar name={review.user.displayName} image={review.user.avatarUrl} />
         <div className="owner-review-heading">
           <strong>{review.user.displayName}</strong>
           <div className="owner-review-meta">
-            <span>{new Date(review.createdAt).toLocaleDateString("vi-VN")}</span>
+            <span>
+              {new Date(review.createdAt).toLocaleDateString("vi-VN")}
+            </span>
           </div>
         </div>
         <div className="owner-review-rating">
@@ -386,11 +387,7 @@ export function RestaurantReviewsLivePage() {
         ) : (
           <ul className="owner-reviews-list">
             {rows.map((review) => (
-              <ReviewItem
-                key={review.id}
-                review={review}
-                onReply={openReply}
-              />
+              <ReviewItem key={review.id} review={review} onReply={openReply} />
             ))}
           </ul>
         )}
@@ -431,6 +428,7 @@ export function RestaurantReviewsLivePage() {
             thông tin cá nhân và giữ giọng điệu lịch sự.
           </p>
           <TextArea
+            placeholder="Cảm ơn thực khách và phản hồi góp ý…"
             id={REPLY_FIELD_ID}
             label="Phản hồi của nhà hàng"
             value={text}

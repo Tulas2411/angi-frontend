@@ -116,6 +116,7 @@ export function BlogComments({
           noValidate
         >
           <TextArea
+            placeholder="Viết bình luận của bạn…"
             className="textarea-compact"
             label="Bình luận của bạn"
             value={text}

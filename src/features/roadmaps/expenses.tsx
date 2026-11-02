@@ -120,12 +120,14 @@ export function TripExpenses({
             }))}
           />
           <Field
+            placeholder="Ví dụ: Vé xe khách"
             label="Tên khoản chi"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Field
+            placeholder="Ví dụ: 150000"
             label="Số tiền"
             required
             type="number"

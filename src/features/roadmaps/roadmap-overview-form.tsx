@@ -340,6 +340,7 @@ export function RoadmapOverviewForm({
               onChange={(event) => update("startDate", event.target.value)}
             />
             <Field
+              placeholder="Ví dụ: 3"
               label="Số ngày"
               name="numDays"
               type="number"

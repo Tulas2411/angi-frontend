@@ -554,6 +554,7 @@ export function RoadmapGenerateDialog({
           <div className="stack">
             {hasOrigin && (
               <Field
+                placeholder="Ví dụ: 5"
                 label="Bán kính quanh điểm xuất phát (km)"
                 name="radiusKm"
                 type="number"

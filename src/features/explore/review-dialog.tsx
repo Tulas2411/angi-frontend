@@ -142,6 +142,7 @@ export function ReviewDialog({
           )}
         </fieldset>
         <TextArea
+          placeholder="Món ăn, phục vụ, không gian… bạn thấy thế nào?"
           label="Cảm nhận của bạn"
           value={content}
           maxLength={maxReviewLength}

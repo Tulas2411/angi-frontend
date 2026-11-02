@@ -272,6 +272,7 @@ export function RestaurantRegistrationPage() {
             </div>
             <div className="card registration-panel">
               <Field
+                placeholder="Ví dụ: Bún Bò Bà Diệu"
                 label="Tên nhà hàng"
                 name="name"
                 value={values.name}
@@ -283,6 +284,7 @@ export function RestaurantRegistrationPage() {
               />
               <div className="grid-2">
                 <Field
+                  placeholder="Ví dụ: 0236 3812 345"
                   label="Số điện thoại nhà hàng"
                   name="phone"
                   type="tel"
@@ -294,6 +296,7 @@ export function RestaurantRegistrationPage() {
                   onChange={(event) => update("phone", event.target.value)}
                 />
                 <Field
+                  placeholder="lienhe@nhahang.vn"
                   label="Email nhà hàng"
                   name="email"
                   type="email"
@@ -329,6 +332,7 @@ export function RestaurantRegistrationPage() {
                 />
               </div>
               <TextArea
+                placeholder="Món đặc trưng, không gian, điều làm quán khác biệt…"
                 label="Mô tả"
                 name="description"
                 value={values.description}

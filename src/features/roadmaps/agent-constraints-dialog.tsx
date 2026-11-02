@@ -100,6 +100,7 @@ export function AgentConstraintsDialog({
         </p>
         {error && <Alert>{error}</Alert>}
         <Field
+          placeholder="Ví dụ: 3 ngày ăn ngon Hà Nội"
           label="Tên lộ trình"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -112,6 +113,7 @@ export function AgentConstraintsDialog({
           onChange={setProvince}
         />
         <Field
+          placeholder="Ví dụ: 3"
           label="Số ngày"
           type="number"
           min={1}
@@ -121,6 +123,7 @@ export function AgentConstraintsDialog({
           onChange={(e) => setDays(e.target.value)}
         />
         <Field
+          placeholder="Ví dụ: 1500000"
           label="Ngân sách cả chuyến / người (VND)"
           type="number"
           min={0}
@@ -136,6 +139,7 @@ export function AgentConstraintsDialog({
           onChange={setUnrestricted}
         />
         <Field
+          placeholder="Ví dụ: 80000"
           label="Giá tối đa mỗi món (VND)"
           type="number"
           min={0}

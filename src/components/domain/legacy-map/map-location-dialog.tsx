@@ -2,10 +2,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Alert, Button, Input } from "@/shared/ui";
 import { Dialog, Field, Icon } from "@/components/ui/primitives";
-import {
-  MapControls,
-  MapSelectionOverlay,
-} from "./map-overlays";
+import { MapControls, MapSelectionOverlay } from "./map-overlays";
 import {
   filterMapPlaces,
   isMapLocation,
@@ -13,7 +10,11 @@ import {
   searchMapLocations,
   searchMapPlaces,
 } from "@/shared/maps/legacy-mapbox";
-import type { MapLocation, MapRoute, MapStyle } from "@/shared/maps/legacy-mapbox";
+import type {
+  MapLocation,
+  MapRoute,
+  MapStyle,
+} from "@/shared/maps/legacy-mapbox";
 import { InteractiveLocationMap } from "./interactive-location-map";
 import { MapDirectionsPanel } from "../map-directions-panel";
 
@@ -617,6 +618,7 @@ export function MapLocationDialog({
             </div>
             <div className="grid-2">
               <Field
+                placeholder="Ví dụ: 21.028511"
                 label="Vĩ độ"
                 type="number"
                 step="any"
@@ -628,6 +630,7 @@ export function MapLocationDialog({
                 }
               />
               <Field
+                placeholder="Ví dụ: 105.804817"
                 label="Kinh độ"
                 type="number"
                 step="any"

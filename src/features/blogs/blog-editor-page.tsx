@@ -188,6 +188,7 @@ function EditorForm({
             <div className="field">
               <label htmlFor="blog-title">Tiêu đề *</label>
               <Input
+                placeholder="Ví dụ: 3 ngày ăn sập Đà Nẵng"
                 id="blog-title"
                 value={title}
                 maxLength={maxBlogTitle}
@@ -199,6 +200,7 @@ function EditorForm({
               </p>
             </div>
             <TextArea
+              placeholder="Kể về món ăn, quán và trải nghiệm của bạn…"
               label="Nội dung *"
               value={text}
               rows={16}

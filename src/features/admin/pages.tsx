@@ -370,6 +370,7 @@ function ModeratorForm({
       }}
     >
       <Field
+        placeholder="Ví dụ: Nguyễn Văn An"
         label="Tên hiển thị"
         minLength={2}
         maxLength={100}
@@ -378,6 +379,7 @@ function ModeratorForm({
         required
       />
       <Field
+        placeholder="ten@email.com"
         label="Email"
         type="email"
         maxLength={255}
@@ -503,6 +505,7 @@ export function ModeratorDirectory({ id }: { id?: string }) {
         <>
           <div className="grid-2">
             <Field
+              placeholder="Nhập tên hoặc email…"
               label="Tìm theo tên hoặc email"
               type="search"
               value={query}
@@ -823,6 +826,7 @@ export function AuditPage() {
       <Card title="Bộ lọc hoạt động">
         <div className="grid-2">
           <Field
+            placeholder="Ví dụ: mod@angi.vn hoặc #1024"
             label="Người thực hiện hoặc mã đối tượng"
             value={query}
             onChange={(e) => {
@@ -908,11 +912,17 @@ export function AuditPage() {
               {event.actor} · {event.role} · {dateLabel(event.date)}
             </p>
             <Field
+              placeholder="Ví dụ: restaurant #42"
               label="Loại và mã đối tượng"
               value={`${event.entity} · ${event.entityId}`}
               readOnly
             />
-            <Field label="Người liên quan" value={event.related} readOnly />
+            <Field
+              placeholder="Tên hoặc email"
+              label="Người liên quan"
+              value={event.related}
+              readOnly
+            />
             <p>{event.reason}</p>
             <h3>Trước thay đổi</h3>
             <pre className="code-block">
@@ -972,6 +982,7 @@ export function SyncPage() {
         ]}
       />
       <Field
+        placeholder="Ví dụ: DISH_UPSERTED hoặc #42"
         label="Loại sự kiện hoặc mã đối tượng"
         value={query}
         onChange={(e) => {

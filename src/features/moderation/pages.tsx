@@ -110,6 +110,7 @@ function DecisionDialog({
       >
         <p>Đối tượng: {decision?.target}</p>
         <TextArea
+          placeholder="Ghi lại lý do để lưu vết…"
           label="Lý do / ghi chú"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
@@ -404,6 +405,7 @@ export function ModerationUsers({ id }: { id?: string }) {
         <>
           <div className="grid-3">
             <Field
+              placeholder="Nhập tên hoặc email…"
               label="Tìm tên hoặc email"
               value={query}
               onChange={(e) => {
@@ -633,6 +635,7 @@ export function ModerationRestaurants({ id }: { id?: string }) {
       ) : (
         <>
           <Field
+            placeholder="Nhập tên nhà hàng…"
             label="Tìm nhà hàng"
             value={query}
             onChange={(e) => {
@@ -764,16 +767,19 @@ export function SubmissionQueue({
             <>
               <Card title="Thông tin pháp lý">
                 <Field
+                  placeholder="Ví dụ: Công ty TNHH Ẩm thực An"
                   label="Tên pháp lý"
                   value={submission.legalName ?? ""}
                   readOnly
                 />
                 <Field
+                  placeholder="Ví dụ: 0101234567"
                   label="Số giấy phép kinh doanh"
                   value={submission.license ?? ""}
                   readOnly
                 />
                 <Field
+                  placeholder="Ví dụ: 0101234567"
                   label="Mã số thuế"
                   value={submission.taxCode ?? ""}
                   readOnly
@@ -1047,6 +1053,7 @@ export function ReportsPage({ id }: { id?: string }) {
                 ]}
               />
               <TextArea
+                placeholder="Tóm tắt kết luận sau khi xử lý…"
                 label="Ghi chú kết luận"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -1199,6 +1206,7 @@ export function CommunityPage() {
         description="Bài viết và bình luận có thao tác kiểm duyệt riêng. Không sửa lời người viết."
       />
       <Field
+        placeholder="Nhập tiêu đề hoặc tác giả…"
         label="Tìm tiêu đề hoặc tác giả"
         value={query}
         onChange={(e) => setQuery(e.target.value)}

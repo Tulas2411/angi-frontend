@@ -154,6 +154,7 @@ export function ModerationCommunityLivePage() {
       <Card title="Bộ lọc">
         <div className="grid-3">
           <Field
+            placeholder="Nhập tiêu đề hoặc nội dung…"
             label="Tìm tiêu đề hoặc nội dung"
             type="search"
             value={query}
@@ -300,6 +301,7 @@ export function ModerationCommunityLivePage() {
           Bài viết: <strong>{pending?.blog.title}</strong>
         </p>
         <TextArea
+          placeholder="Nêu lý do để tác giả hiểu…"
           label="Lý do"
           value={reason}
           onChange={(event) => {
@@ -391,6 +393,7 @@ function ModerationCommentsDialog({
     >
       {error && <Alert tone="warning">{error}</Alert>}
       <TextArea
+        placeholder="Nêu lý do kiểm duyệt…"
         label="Lý do kiểm duyệt"
         value={reason}
         onChange={(event) => setReason(event.target.value)}

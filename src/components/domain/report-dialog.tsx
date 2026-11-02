@@ -129,6 +129,7 @@ export function ReportDialog<Code extends string>({
           ))}
         </fieldset>
         <TextArea
+          placeholder="Mô tả rõ điều bạn thấy chưa đúng…"
           label="Mô tả chi tiết"
           value={description}
           maxLength={maxReportLength}

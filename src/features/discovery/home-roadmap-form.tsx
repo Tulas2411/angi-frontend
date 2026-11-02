@@ -173,6 +173,7 @@ function RoadmapFields({
           helper="Ngày đầu tiên của chuyến đi."
         />
         <Field
+          placeholder="Ví dụ: 3"
           label="Số ngày"
           type="number"
           inputMode="numeric"
