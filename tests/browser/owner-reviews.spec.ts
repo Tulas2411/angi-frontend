@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 
+import { chooseOption } from "./select-helpers";
 /**
  * Kiểm tra luồng phản hồi đánh giá trong bản minh họa của chủ nhà hàng.
  * Chạy với `npx playwright test tests/owner-reviews.spec.ts --config=playwright.owner.config.ts`
@@ -7,28 +8,28 @@ import { expect, test } from "@playwright/test";
 test("chủ nhà hàng lọc và phản hồi được đánh giá", async ({ page }) => {
   await page.goto("/demo/owner/reviews");
 
-  await expect(page.getByRole("heading", { name: "Lắng nghe thực khách" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Lắng nghe thực khách" }),
+  ).toBeVisible();
   await expect(page.getByText("15 đánh giá")).toBeVisible();
 
   // Lọc theo số sao.
   const starsFilter = page.locator(".owner-reviews-filters select").nth(1);
   const replyFilter = page.locator(".owner-reviews-filters select").first();
 
-  await starsFilter.selectOption("1");
+  await chooseOption(starsFilter, "1");
   await expect(page.getByText("1 đánh giá")).toBeVisible();
   await expect(page.getByText("Phục vụ chậm và thiếu thái độ")).toBeVisible();
 
   // Trở lại toàn bộ và lọc theo trạng thái phản hồi.
-  await starsFilter.selectOption("all");
-  await replyFilter.selectOption("unanswered");
+  await chooseOption(starsFilter, "all");
+  await chooseOption(replyFilter, "unanswered");
   // Đánh giá chưa có phản hồi của Thảo Nguyễn phải xuất hiện, đồng thời các
   // đánh giá đã phản hồi không còn trong danh sách.
   await expect(
     page.getByText("Món ăn bình thường, giá hơi cao so với chất lượng."),
   ).toBeVisible();
-  await expect(
-    page.getByText("Cảm ơn chị Mai Anh đã ghé quán!"),
-  ).toBeHidden();
+  await expect(page.getByText("Cảm ơn chị Mai Anh đã ghé quán!")).toBeHidden();
 
   // Mở hộp thoại soạn phản hồi.
   await page.getByRole("button", { name: "Phản hồi" }).first().click();
@@ -45,7 +46,9 @@ test("chủ nhà hàng lọc và phản hồi được đánh giá", async ({ pa
   // Gửi thành công thì đánh giá chuyển sang đã phản hồi.
   await textarea.fill("Cảm ơn chị, Bếp Nhà đã ghi nhận góp ý của chị.");
   await page.getByRole("button", { name: "Lưu phản hồi" }).click();
-  await expect(page.getByText("Đã gửi phản hồi tới Thảo Nguyễn.")).toBeVisible();
+  await expect(
+    page.getByText("Đã gửi phản hồi tới Thảo Nguyễn."),
+  ).toBeVisible();
 
   // Bộ lọc "chưa phản hồi" loại bỏ chính đánh giá vừa phản hồi.
   await expect(
@@ -53,7 +56,7 @@ test("chủ nhà hàng lọc và phản hồi được đánh giá", async ({ pa
   ).toBeHidden();
 
   // Xem lại toàn bộ thì thấy phản hồi ở trạng thái chờ kiểm duyệt.
-  await replyFilter.selectOption("all");
+  await chooseOption(replyFilter, "all");
   await expect(
     page.getByText("Bếp Nhà đã ghi nhận góp ý của chị."),
   ).toBeVisible();
@@ -66,7 +69,9 @@ test("phân trang 10 đánh giá mỗi trang", async ({ page }) => {
   // 15 đánh giá → trang đầu có 10 mục và 2 trang.
   await expect(page.locator(".owner-review")).toHaveCount(10);
   await expect(page.getByText("Trang 1 / 2")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Trang trước" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Trang trước" }),
+  ).toBeDisabled();
 
   // Sang trang 2 chỉ còn 5 mục còn lại.
   await page.getByRole("button", { name: "Trang sau" }).click();
@@ -86,7 +91,7 @@ test("đổi bộ lọc thì quay về trang đầu", async ({ page }) => {
 
   // Bộ lọc thu hẹp còn 1 kết quả: không được bị kẹt ở trang không có dữ liệu.
   const starsFilter = page.locator(".owner-reviews-filters select").nth(1);
-  await starsFilter.selectOption("1");
+  await chooseOption(starsFilter, "1");
   await expect(page.locator(".owner-review")).toHaveCount(1);
   await expect(page.getByText("Trang 2 / 2")).toBeHidden();
 });
@@ -96,7 +101,10 @@ test("gỡ phản hồi cần xác nhận", async ({ page }) => {
 
   await page.getByRole("button", { name: "Sửa phản hồi" }).first().click();
   await page.getByRole("button", { name: "Gỡ phản hồi" }).click();
-  await page.getByRole("button", { name: "Gỡ phản hồi", exact: true }).last().click();
+  await page
+    .getByRole("button", { name: "Gỡ phản hồi", exact: true })
+    .last()
+    .click();
 
   await expect(page.getByText("Đã gỡ phản hồi")).toBeVisible();
 });

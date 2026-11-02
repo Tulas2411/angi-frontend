@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Alert, Button } from "@/shared/ui";
-import { ConfirmDialog, Dialog, Field } from "@/components/ui/primitives";
+import { ConfirmDialog, Dialog } from "@/components/ui/primitives";
+import { TimeField } from "@/components/ui/date-time-fields";
 import { businessDays, validateBusinessHours } from "./business-hours-rules";
 import type { BusinessHourDto } from "./restaurant-types";
-
 type DaySlot = BusinessHourDto & { id: string };
 
 /** Day edits stay local until applied; only the weekly form calls OWN-04. */
@@ -166,37 +166,33 @@ export function BusinessHoursDayDialog({
             >
               <legend>Khoảng {index + 1}</legend>
               <div className="business-hours-slot-fields">
-                <Field
+                <TimeField
                   label={`Giờ mở · ${day.label} · khoảng ${index + 1}`}
-                  type="time"
-                  step={60}
                   required
                   name={`${slot.id}.openTime`}
                   value={slot.openTime}
                   error={errors[`${slot.id}.openTime`]}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     edited(
                       slots.map((entry) =>
                         entry.id === slot.id
-                          ? { ...entry, openTime: event.target.value }
+                          ? { ...entry, openTime: value }
                           : entry,
                       ),
                     )
                   }
                 />
-                <Field
+                <TimeField
                   label={`Giờ đóng · ${day.label} · khoảng ${index + 1}`}
-                  type="time"
-                  step={60}
                   required
                   name={`${slot.id}.closeTime`}
                   value={slot.closeTime}
                   error={errors[`${slot.id}.closeTime`]}
-                  onChange={(event) =>
+                  onChange={(value) =>
                     edited(
                       slots.map((entry) =>
                         entry.id === slot.id
-                          ? { ...entry, closeTime: event.target.value }
+                          ? { ...entry, closeTime: value }
                           : entry,
                       ),
                     )

@@ -23,6 +23,7 @@ import {
 } from "@/features/platform/rules";
 import type { OverrideValue, Moderator } from "@/features/platform/contracts";
 
+import { DateField } from "@/components/ui/date-time-fields";
 export function AdminDashboard() {
   const { base } = useWorkspace();
   const { data } = usePlatform(),
@@ -117,19 +118,17 @@ export function AdminDashboard() {
             setError("");
           }}
         >
-          <Field
+          <DateField
             label="Từ ngày"
-            type="date"
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={(value) => setStart(value)}
             required
           />
-          <Field
+          <DateField
             label="Đến ngày"
-            type="date"
             value={end}
             min={start}
-            onChange={(e) => setEnd(e.target.value)}
+            onChange={(value) => setEnd(value)}
             required
           />
           <Button type="submit">Áp dụng</Button>

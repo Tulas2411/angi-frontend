@@ -13,6 +13,7 @@ import type {
   MyBlogCardDto,
 } from "../../src/features/blogs/blog-types";
 
+import { chooseOption, expectOption } from "./select-helpers";
 /**
  * Blogs ("Cẩm nang") against a local stub shaped like the API Design samples: BLOG-01..03 for
  * everybody; BLOG-04..11, BLOG-05, REP-02 and MEDIA-01 for a Traveler. The stub plays the backend's
@@ -255,7 +256,8 @@ const handler: StubHandler = ({ method, url, body, headers }, send) => {
   const [path, query = ""] = rest.split("?");
   const params = new URLSearchParams(query);
   const signedIn = Boolean(headers.authorization);
-  if (!/^(blogs|me\/blogs|media|roadmaps|dishes)(\/|$)/.test(path)) return false;
+  if (!/^(blogs|me\/blogs|media|roadmaps|dishes)(\/|$)/.test(path))
+    return false;
   calls.push({ method, path, query: params, authorized: signedIn, body });
   const requireAuth = () => {
     if (signedIn) return true;
@@ -553,7 +555,9 @@ test.describe("public list", () => {
     await page.goto("/guides");
     const card = publicCardOf(page, "Hành trình 3 ngày ăn ở Đà Nẵng");
     await card.getByRole("button", { name: /Tuỳ chọn cho bài/ }).click();
-    await expect(card.getByText("Đăng nhập để báo cáo bài viết này.")).toBeVisible();
+    await expect(
+      card.getByText("Đăng nhập để báo cáo bài viết này."),
+    ).toBeVisible();
     await expect(
       card.getByRole("menuitem", { name: "Báo cáo bài viết" }),
     ).toHaveCount(0);
@@ -573,7 +577,7 @@ test.describe("public list", () => {
     expect(callsTo("GET", "blogs").at(-1)!.query.get("q")).toBe("đà nẵng");
     await page.getByRole("button", { name: "Xóa bộ lọc" }).click();
     await expect(cards(page)).toHaveCount(12);
-    await page.getByLabel("Sắp xếp").selectOption("popular");
+    await chooseOption(page.getByLabel("Sắp xếp"), "popular");
     await page.getByLabel("Chỉ bài có lịch ăn đính kèm").check();
     await page.getByRole("button", { name: "Tìm cẩm nang" }).click();
     await expect(page).toHaveURL(/sort=popular/);
@@ -871,9 +875,9 @@ test.describe("my blogs", () => {
     await expect(
       cardOf(page, "Bài bị ẩn").locator(".blog-excerpt"),
     ).toBeVisible();
-    await expect(
-      cardOf(page, "Bài bị ẩn").locator(".blog-tag"),
-    ).toHaveText("Không có lịch ăn đính kèm");
+    await expect(cardOf(page, "Bài bị ẩn").locator(".blog-tag")).toHaveText(
+      "Không có lịch ăn đính kèm",
+    );
     // The pencil and the bin hide until the pointer is over the card.
     const actions = cardOf(page, "Bài bị ẩn").locator(".blog-card-actions");
     await expect(actions).toHaveCSS("opacity", "0");
@@ -888,7 +892,9 @@ test.describe("my blogs", () => {
     // The four cards of a row share one height.
     const heights = await page
       .locator(".blog-card-mine")
-      .evaluateAll((nodes) => nodes.map((node) => node.getBoundingClientRect().height));
+      .evaluateAll((nodes) =>
+        nodes.map((node) => node.getBoundingClientRect().height),
+      );
     expect(new Set(heights).size).toBe(1);
     await page.getByRole("tab", { name: "Đã bị ẩn" }).click();
     await expect(page).toHaveURL(/status=hidden/);
@@ -948,9 +954,10 @@ test.describe("editor", () => {
       page.getByRole("button", { name: "Bỏ ảnh b.png" }),
     ).toBeVisible();
     expect(String(callsTo("POST", "media")[0].body)).toContain("blog");
-    await page
-      .getByLabel(/Không bắt buộc · chọn một lộ trình/)
-      .selectOption("88");
+    await chooseOption(
+      page.getByLabel(/Không bắt buộc · chọn một lộ trình/),
+      "88",
+    );
     await page.getByRole("button", { name: "Đăng cẩm nang" }).click();
     await expect(page).toHaveURL(/\/guides\/101$/);
     expect(callsTo("POST", "blogs")[0].body).toEqual({
@@ -974,9 +981,10 @@ test.describe("editor", () => {
   }) => {
     await loginAs(page, "traveler");
     await page.goto("/guides/new?roadmap=89");
-    await expect(
+    await expectOption(
       page.getByLabel(/Không bắt buộc · chọn một lộ trình/),
-    ).toHaveValue("89");
+      "89",
+    );
     await page.getByLabel("Tiêu đề").fill("Cuối tuần ở Hà Nội");
     await page.getByLabel("Nội dung").fill("Đi ăn phở");
     await page.getByRole("button", { name: "Đăng cẩm nang" }).click();

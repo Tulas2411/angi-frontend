@@ -10,6 +10,7 @@ import {
   verificationSample,
 } from "../fixtures/restaurant-verification";
 
+import { chooseOption } from "./select-helpers";
 let server: Server;
 let current: OwnerRestaurantDto | null;
 let submissions: SubmitVerificationRequestDto[];
@@ -251,7 +252,7 @@ test("201 submission uses private multipart uploads and exact wire DTO after a m
   ]);
   const type = page.getByLabel("Loại tài liệu · front.jpg", { exact: true });
   await expect(type.locator("option")).toHaveCount(5);
-  await type.selectOption("storefront_photo");
+  await chooseOption(type, "storefront_photo");
   expect(uploads).toHaveLength(2);
   for (const upload of uploads) {
     expect(upload.contentType).toMatch(/^multipart\/form-data; boundary=/);
@@ -335,12 +336,14 @@ test("rejects unsupported files locally, retries partial upload without reupload
     page.getByLabel("Loại tài liệu · second.pdf", { exact: true }),
   ).toBeVisible();
   expect(uploads).toHaveLength(3);
-  await page
-    .getByLabel("Loại tài liệu · first.pdf", { exact: true })
-    .selectOption("other");
-  await page
-    .getByLabel("Loại tài liệu · second.pdf", { exact: true })
-    .selectOption("id_card");
+  await chooseOption(
+    page.getByLabel("Loại tài liệu · first.pdf", { exact: true }),
+    "other",
+  );
+  await chooseOption(
+    page.getByLabel("Loại tài liệu · second.pdf", { exact: true }),
+    "id_card",
+  );
   await submit(page).click();
   await expect(
     page.getByText("Phải có ít nhất một tài liệu loại Giấy phép kinh doanh.", {
@@ -348,9 +351,10 @@ test("rejects unsupported files locally, retries partial upload without reupload
     }),
   ).toBeVisible();
   expect(submissions).toHaveLength(0);
-  await page
-    .getByLabel("Loại tài liệu · first.pdf", { exact: true })
-    .selectOption("business_license");
+  await chooseOption(
+    page.getByLabel("Loại tài liệu · first.pdf", { exact: true }),
+    "business_license",
+  );
   await submit(page).click();
   await confirm(page).click();
   await expect(

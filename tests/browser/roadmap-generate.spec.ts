@@ -13,6 +13,7 @@ import type {
   RoadmapItemDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
+import { chooseOption } from "./select-helpers";
 /**
  * F-26: RM-10 and RM-11 against a local stub shaped like the API Design JSON samples. The stub
  * runs the job the way the backend does: queued, then running, then finished, one step per read.
@@ -466,7 +467,7 @@ test("one day or one meal sends its ids, the constraints and the tags as documen
     .getByRole("button", { name: "Gợi ý bằng AI" })
     .click();
   await box.getByRole("tab", { name: "Một bữa" }).click();
-  await box.getByLabel("Bữa", { exact: true }).selectOption("late_night");
+  await chooseOption(box.getByLabel("Bữa", { exact: true }), "late_night");
   await expect(box.getByText("Các bữa ANGI cần tạo")).toHaveCount(0);
   await submitButton(page).click();
   await expect.poll(() => generateCalls.length).toBe(2);

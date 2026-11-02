@@ -14,6 +14,7 @@ import type {
   RestaurantDetailDto,
 } from "../../src/features/explore/explore-types";
 
+import { chooseOption, expectOption } from "./select-helpers";
 /**
  * Public discovery (dishes and restaurants) against a local stub shaped like the API Design
  * samples: DISH-01/02, REST-01..04, CAT-02 for everybody, REV-01, REP-01 and MEDIA-01 for a
@@ -441,8 +442,8 @@ test.describe("dishes", () => {
     await expect(dishItems(page)).toHaveCount(5);
     await page.getByRole("searchbox", { name: "Tìm món ăn" }).fill("bún");
     await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
-    await page.getByLabel("Loại món").selectOption("dry");
-    await page.getByLabel("Giá đến").selectOption("100000");
+    await chooseOption(page.getByLabel("Loại món"), "dry");
+    await chooseOption(page.getByLabel("Giá đến"), "100000");
     await page.getByRole("button", { name: "Bữa trưa" }).click();
     await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
     await expect(page).toHaveURL(/q=b%C3%BAn|q=bún/);
@@ -600,7 +601,7 @@ test.describe("dishes", () => {
     await toggle.click();
     const hide = page.getByRole("button", { name: "Ẩn bộ lọc" });
     await expect(hide).toHaveAttribute("aria-expanded", "true");
-    await page.getByLabel("Giá từ").selectOption("50000");
+    await chooseOption(page.getByLabel("Giá từ"), "50000");
     await page
       .getByRole("group", { name: "Không ăn (bỏ món có thẻ)" })
       .getByRole("button", { name: "Món nước" })
@@ -608,7 +609,7 @@ test.describe("dishes", () => {
     await hide.click();
     await expect(page.getByLabel("Giá từ")).toBeHidden();
     await page.getByRole("button", { name: /Hiện bộ lọc/ }).click();
-    await expect(page.getByLabel("Giá từ")).toHaveValue("50000");
+    await expectOption(page.getByLabel("Giá từ"), "50000");
     await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
     await expect(page).toHaveURL(/min=50000/);
     await expect(page).toHaveURL(/notag=2/);
@@ -634,8 +635,8 @@ test.describe("dishes", () => {
     await expect(dishItems(page)).toHaveCount(5);
     const before = callsTo("GET", "dishes").length;
     await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
-    await page.getByLabel("Giá từ").selectOption("100000");
-    await page.getByLabel("Giá đến").selectOption("50000");
+    await chooseOption(page.getByLabel("Giá từ"), "100000");
+    await chooseOption(page.getByLabel("Giá đến"), "50000");
     await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
     await expect(page.getByText("Giá từ phải thấp hơn giá đến.")).toBeVisible();
     expect(callsTo("GET", "dishes")).toHaveLength(before);
@@ -720,7 +721,7 @@ test.describe("restaurants", () => {
     await page.getByRole("button", { name: "Trang sau" }).click();
     await expect(page).toHaveURL(/page=2/);
     await expect(cards(page)).toHaveCount(4);
-    await page.getByLabel("Mức giá").selectOption("1");
+    await chooseOption(page.getByLabel("Mức giá"), "1");
     await page.getByLabel("Chỉ quán đang mở cửa").check();
     await page.getByRole("button", { name: "Tìm quán" }).click();
     await expect(page).toHaveURL(/price=1/);

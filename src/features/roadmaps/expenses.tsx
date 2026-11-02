@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/primitives";
 import { usePlatform } from "@/features/platform/provider";
 import { dateLabel, money } from "@/features/platform/rules";
+import { DateField } from "@/components/ui/date-time-fields";
 export function TripExpenses({
   id,
   readOnly,
@@ -136,14 +137,13 @@ export function TripExpenses({
             onChange={(e) => setAmount(e.target.value)}
             helper="VNĐ"
           />
-          <Field
+          <DateField
             label="Ngày chi"
             required
-            type="date"
             min={trip.start}
             max={trip.end}
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(value) => setDate(value)}
           />
           <Alert tone="info">
             Khoản chi minh họa do bạn nhập; không phải thanh toán tại quán.

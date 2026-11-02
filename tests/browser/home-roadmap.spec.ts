@@ -167,7 +167,8 @@ test("a guest draft survives login and creates only after explicit submission as
   await expect(form(page).getByRole("combobox")).toHaveValue(
     "Thành phố Đà Nẵng",
   );
-  await expect(form(page).getByLabel("Ngày bắt đầu")).toHaveValue("2026-11-06");
+  // The day is shown the Vietnamese way; the API still receives 2026-11-06.
+  await expect(form(page).getByLabel("Ngày bắt đầu")).toHaveValue("06/11/2026");
   expect(creates).toEqual([]);
   await form(page).getByRole("button", { name: "Tạo lộ trình ngay" }).click();
   await expect(page).toHaveURL(/\/roadmaps\/88$/);

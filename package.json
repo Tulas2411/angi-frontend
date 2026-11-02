@@ -18,10 +18,13 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
+    "clsx": "2.1.1",
     "iron-session": "^9.0.1",
     "mapbox-gl": "^3.33.0",
     "next": "16.4.2",
+    "radix-ui": "1.6.7",
     "react": "19.3.0",
+    "react-day-picker": "9.14.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1"
   },

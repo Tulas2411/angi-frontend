@@ -8,6 +8,7 @@ import { ownerRestaurantSample } from "../fixtures/owner-restaurant";
 import { HOME_BY_ROLE } from "../../src/features/auth/roles";
 import type { RoleCode } from "../../src/features/auth/types";
 
+import { chooseOption } from "./select-helpers";
 let server: Server;
 let current: OwnerRestaurantDto | null;
 let puts: UpdateOperatingStatusRequestDto[];
@@ -161,7 +162,7 @@ test("GET prefills all statuses; PUT follows the workbook payload only after mod
   await expect(update(page)).toBeDisabled();
   await reason(page).fill("  Nghỉ Tết  ");
   await expect(update(page)).toBeDisabled();
-  await selected(page).selectOption("temporarily_closed");
+  await chooseOption(selected(page), "temporarily_closed");
   await update(page).click();
   await expect(
     page.getByRole("dialog", { name: "Cập nhật trạng thái hoạt động?" }),
@@ -196,7 +197,7 @@ test("GET prefills all statuses; PUT follows the workbook payload only after mod
   await expect(reason(page)).toHaveValue("");
   await page.reload();
   await expect(selected(page)).toHaveValue("temporarily_closed");
-  await selected(page).selectOption("permanently_closed");
+  await chooseOption(selected(page), "permanently_closed");
   await update(page).click();
   await expect(
     page.getByRole("dialog", { name: "Xác nhận đóng cửa vĩnh viễn?" }),
@@ -213,7 +214,7 @@ test("backend validation focuses fields after closing the modal, retains drafts 
   page,
 }) => {
   await openStatus(page);
-  await selected(page).selectOption("temporarily_closed");
+  await chooseOption(selected(page), "temporarily_closed");
   await reason(page).fill("Đang sửa chữa");
   await expect(reason(page)).toHaveAttribute("maxlength", "500");
   nextError = {
@@ -254,7 +255,7 @@ test("pending saves prevent duplicate requests and cancellation restores the lat
   page,
 }) => {
   await openStatus(page);
-  await selected(page).selectOption("temporarily_closed");
+  await chooseOption(selected(page), "temporarily_closed");
   delay = true;
   await update(page).click();
   await confirm(page).click();
@@ -274,7 +275,7 @@ test("pending saves prevent duplicate requests and cancellation restores the lat
   // Dialogs animate out, so wait until the confirmation has fully left the page.
   await expect(page.getByRole("dialog")).toHaveCount(0);
   delay = false;
-  await selected(page).selectOption("permanently_closed");
+  await chooseOption(selected(page), "permanently_closed");
   await reason(page).fill("Chưa lưu");
   await page.getByRole("button", { name: "Hủy thay đổi", exact: true }).click();
   await page
@@ -302,7 +303,7 @@ test("suspended reopening returns 409 without logging out or changing other stat
   };
   await openStatus(page);
   await expect(page.getByText("Bị đình chỉ", { exact: true })).toBeVisible();
-  await selected(page).selectOption("open");
+  await chooseOption(selected(page), "open");
   await reason(page).fill("Mở lại");
   await update(page).click();
   await confirm(page).click();
@@ -313,7 +314,7 @@ test("suspended reopening returns 409 without logging out or changing other stat
   await expect(reason(page)).toHaveValue("Mở lại");
   await expect(selected(page)).toHaveValue("open");
   expect(current.operatingStatus).toBe("temporarily_closed");
-  await selected(page).selectOption("permanently_closed");
+  await chooseOption(selected(page), "permanently_closed");
   await update(page).click();
   await confirm(page).click();
   await expect(
@@ -403,7 +404,7 @@ test("profile/status dirty tab exits require modals before either editor is unmo
   page,
 }) => {
   await openStatus(page);
-  await selected(page).selectOption("temporarily_closed");
+  await chooseOption(selected(page), "temporarily_closed");
   await reason(page).fill("Chưa lưu");
   await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
   await expect(

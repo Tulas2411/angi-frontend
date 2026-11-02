@@ -29,6 +29,7 @@ import type { ItineraryItem } from "@/features/platform/contracts";
 import { TripExpenses } from "./expenses";
 import { ProvinceField } from "@/components/domain/province-field";
 
+import { DateField, TimeField } from "@/components/ui/date-time-fields";
 export function TripList() {
   const { data, mutate } = usePlatform(),
     { base } = useWorkspace(),
@@ -191,19 +192,17 @@ export function NewTripPage() {
             <p className="helper">Chọn thành phố hoặc địa điểm trên bản đồ.</p>
           </div>
           <div className="grid-2">
-            <Field
+            <DateField
               label="Ngày bắt đầu"
-              type="date"
               value={start}
-              onChange={(e) => setStart(e.target.value)}
+              onChange={(value) => setStart(value)}
               required
             />
-            <Field
+            <DateField
               label="Ngày kết thúc"
-              type="date"
               value={end}
               min={start}
-              onChange={(e) => setEnd(e.target.value)}
+              onChange={(value) => setEnd(value)}
               required
             />
           </div>
@@ -576,17 +575,15 @@ export function RoadmapPage({ id }: { id: string }) {
                 defaultValue={trip.name}
                 required
               />
-              <label>
-                Quyền riêng tư
-                <select
-                  className="input"
-                  name="privacy"
-                  defaultValue={trip.privacy ?? "private"}
-                >
-                  <option value="private">Chỉ mình tôi</option>
-                  <option value="public">Công khai</option>
-                </select>
-              </label>
+              <SelectField
+                label="Quyền riêng tư"
+                name="privacy"
+                defaultValue={trip.privacy ?? "private"}
+                options={[
+                  { value: "private", label: "Chỉ mình tôi" },
+                  { value: "public", label: "Công khai" },
+                ]}
+              />
               <Button type="submit">Lưu cài đặt</Button>
             </form>
           </details>
@@ -730,11 +727,10 @@ export function RoadmapPage({ id }: { id: string }) {
               (v) => ({ value: v, label: v }),
             )}
           />
-          <Field
+          <TimeField
             label="Thời gian"
-            type="time"
             value={time}
-            onChange={(e) => setTime(e.target.value)}
+            onChange={(value) => setTime(value)}
             required
           />
           <Button type="submit" loading={busy}>
@@ -844,19 +840,17 @@ export function RoadmapPage({ id }: { id: string }) {
             setError("");
           }}
         >
-          <Field
+          <DateField
             label="Ngày bắt đầu"
-            type="date"
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={(value) => setStart(value)}
             required
           />
-          <Field
+          <DateField
             label="Ngày kết thúc"
-            type="date"
             min={start}
             value={end}
-            onChange={(e) => setEnd(e.target.value)}
+            onChange={(value) => setEnd(value)}
             required
           />
           {error && <Alert>{error}</Alert>}
