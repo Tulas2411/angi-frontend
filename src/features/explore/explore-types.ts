@@ -54,6 +54,8 @@ export interface RestaurantCardDto {
   coverUrl: string | null;
   addressLine: string;
   district: string | null;
+  /** Phường / xã (API Design v1.8: RestaurantCard.ward, addresses are province + ward since 07/2025). */
+  ward?: string | null;
   provinceName: string | null;
   latitude: number | null;
   longitude: number | null;
