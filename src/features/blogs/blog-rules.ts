@@ -2,6 +2,10 @@ import { ApiError, getErrorMessage } from "@/shared/api/error";
 import type { BlogReportReason, BlogSort, BlogStatus } from "./blog-types";
 
 export const blogPageSize = 9;
+/** Bốn thẻ mỗi hàng, ba hàng một trang. */
+export const blogListPageSize = 12;
+/** Trang "bài viết của tôi" cũng là lưới bốn thẻ mỗi hàng. */
+export const blogMinePageSize = 12;
 export const commentPageSize = 10;
 export const maxBlogTitle = 255;
 export const maxBlogImages = 20;

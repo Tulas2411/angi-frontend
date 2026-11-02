@@ -8,9 +8,10 @@ export const metadata: Metadata = { title: "Cẩm nang ẩm thực" };
 
 export default async function Page() {
   const user = await readSessionUser();
+  const traveler = user?.role === "TRAVELER" ? user : null;
   return (
     <Suspense fallback={<Skeleton rows={4} />}>
-      <BlogListPage signedIn={user?.role === "TRAVELER"} />
+      <BlogListPage signedIn={Boolean(traveler)} viewerId={traveler?.id ?? null} />
     </Suspense>
   );
 }

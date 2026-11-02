@@ -26,11 +26,14 @@ export function BlogComments({
   blogId,
   canWrite,
   service,
+  showTitle = true,
 }: {
   blogId: number;
   /** Only a Traveler comments; a guest is asked to sign in. */
   canWrite: boolean;
   service: BlogService;
+  /** False when the page already shows the section heading. */
+  showTitle?: boolean;
 }) {
   const [page, setPage] = useState(1);
   const [version, setVersion] = useState(0);
@@ -98,9 +101,11 @@ export function BlogComments({
   const total = state.status === "ready" ? state.data.totalItems : null;
   return (
     <section className="blog-panel" aria-labelledby="blog-comments-title">
-      <h2 id="blog-comments-title">
-        {total === null ? "Bình luận" : `Bình luận · ${total}`}
-      </h2>
+      {showTitle && (
+        <h2 id="blog-comments-title">
+          {total === null ? "Bình luận" : `Bình luận · ${total}`}
+        </h2>
+      )}
       {canWrite ? (
         <form
           className="stack-sm"
