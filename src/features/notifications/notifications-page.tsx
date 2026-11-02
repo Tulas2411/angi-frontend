@@ -105,7 +105,8 @@ export function NotificationsPage({
     ? Math.max(
         0,
         ready.unreadCount -
-          ready.items.filter((item) => !item.readAt && read.has(item.id)).length,
+          ready.items.filter((item) => !item.readAt && read.has(item.id))
+            .length,
       )
     : null;
   const heading = (
@@ -285,37 +286,16 @@ export function NotificationsPage({
                             {category.label}
                           </span>
                         </div>
-                        {notification.body && <p>{notification.body}</p>}
-                      </div>
-                      <div className="notification-side">
+                        <p className="notification-body">
+                          {notification.body ?? ""}
+                        </p>
                         <time
+                          className="notification-time"
                           dateTime={notification.createdAt}
                           title={fullNotificationTime(notification.createdAt)}
                         >
                           {notificationTime(notification.createdAt)}
                         </time>
-                        {isUnread && (
-                          <button
-                            type="button"
-                            className="notification-read"
-                            disabled={busy}
-                            aria-label={`Đánh dấu đã đọc: ${notification.title}`}
-                            onClick={() => void markRead([notification.id])}
-                          >
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden
-                            >
-                              <path d="M5 12.5l4.5 4.5L19 7.5" />
-                            </svg>
-                            <span>Đã đọc</span>
-                          </button>
-                        )}
                       </div>
                       {isUnread && (
                         <span className="notification-dot" aria-hidden />
@@ -329,7 +309,10 @@ export function NotificationsPage({
         </div>
       )}
       {data.totalPages > 1 && (
-        <nav className="notifications-pagination" aria-label="Phân trang thông báo">
+        <nav
+          className="notifications-pagination"
+          aria-label="Phân trang thông báo"
+        >
           <div className="notifications-pagination-info">
             <span className="notifications-pagination-range">
               {range.first}–{range.last}

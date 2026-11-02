@@ -110,10 +110,10 @@
 .notification-row {
   position: relative;
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
-  gap: var(--space-4);
+  grid-template-columns: 30px minmax(0, 1fr) 10px;
+  gap: var(--space-3);
   align-items: start;
-  padding: var(--space-4) calc(var(--space-5) + 16px) var(--space-4) var(--space-5);
+  padding: 9px var(--space-4);
   border-top: 1px solid var(--line);
   transition: background var(--duration-fast) ease;
 }
@@ -130,15 +130,15 @@
   display: inline-grid;
   place-items: center;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 30px;
+  height: 30px;
   border-radius: var(--radius-pill);
   background: var(--control);
   color: var(--muted);
 }
 .notification-glyph svg {
-  width: 22px;
-  height: 22px;
+  width: 16px;
+  height: 16px;
 }
 .notification-row[data-unread] .notification-glyph {
   background: color-mix(in srgb, var(--coral) 13%, var(--card));
@@ -147,6 +147,11 @@
 
 .notification-text {
   min-width: 0;
+  /* Mọi thẻ thông báo cao bằng nhau: tiêu đề một dòng, nội dung tối đa hai
+     dòng rồi cắt bằng dấu "…". */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .notification-title-line {
   display: flex;
@@ -157,10 +162,16 @@
 .notification-text h3 {
   min-width: 0;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 13.5px;
   font-weight: 500;
-  line-height: 1.45;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+  /* Tiêu đề dài cũng chỉ hiện một dòng để mọi thẻ cao bằng nhau. */
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .notification-row[data-unread] .notification-text h3 {
   font-weight: 700;
@@ -185,21 +196,38 @@
   box-shadow: var(--focus-ring);
 }
 .notification-text p {
-  margin-top: 4px;
+  margin-top: 1px;
   max-width: 62ch;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 12.5px;
+  line-height: 1.4;
   overflow-wrap: anywhere;
 }
+/* Nội dung dài chỉ hiện một dòng rồi cắt bằng dấu "…". */
+.notification-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 1.4em;
+}
+/* Ngày nằm dưới nội dung thông báo. */
+.notification-time {
+  margin-top: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
 .notification-kind {
-  padding: 2px 10px;
+  padding: 1px 7px;
   border-radius: var(--radius-pill);
   background: var(--control);
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  line-height: 1.6;
+  line-height: 1.5;
   white-space: nowrap;
 }
 .notification-row[data-unread] .notification-kind {
@@ -207,68 +235,15 @@
   color: color-mix(in srgb, var(--coral) 72%, var(--ink));
 }
 
-.notification-side {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: flex-start;
-  gap: 10px;
-  /* A fixed width keeps the times of every row on one vertical line. */
-  width: 132px;
-  color: var(--muted);
-  font-size: 13px;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-.notification-read {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 4px 12px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  background: var(--card);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background var(--duration-fast) ease,
-    border-color var(--duration-fast) ease;
-}
-.notification-read svg {
-  width: 13px;
-  height: 13px;
-}
-.notification-read:hover:not(:disabled) {
-  border-color: var(--ink);
-  background: var(--control);
-}
-.notification-read:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-.notification-read:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
-/* The unread marker sits at the far right of the row. */
+/* The unread marker sits at the far right of the row, like a big red dot. */
 .notification-row .notification-dot {
-  position: absolute;
-  top: 50%;
-  right: var(--space-4);
-  translate: 0 -50%;
-  width: 7px;
-  height: 7px;
+  align-self: center;
+  width: 10px;
+  height: 10px;
 }
 
 .notifications-skeleton {
-  height: 76px;
+  height: 50px;
   border-radius: 12px;
   background: var(--control);
 }
@@ -593,30 +568,16 @@
     justify-content: center;
   }
   .notification-row {
-    grid-template-columns: 36px minmax(0, 1fr);
-    gap: var(--space-3);
-    padding: var(--space-4) calc(var(--space-4) + 14px) var(--space-4)
-      var(--space-4);
+    grid-template-columns: 28px minmax(0, 1fr) 10px;
+    gap: var(--space-2);
+    padding: 9px var(--space-3);
   }
   .notification-row .notification-glyph {
-    width: 36px;
-    height: 36px;
+    width: 28px;
+    height: 28px;
   }
   .notification-row .notification-glyph svg {
-    width: 19px;
-    height: 19px;
-  }
-  .notification-side {
-    grid-column: 2;
-    width: auto;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-  }
-  .notification-row .notification-dot {
-    top: var(--space-4);
-    right: var(--space-4);
-    translate: none;
+    width: 15px;
+    height: 15px;
   }
 }
