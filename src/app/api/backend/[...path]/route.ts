@@ -12,7 +12,9 @@ import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
 import {
   isModeratorRole,
+  moderationBlogsOperation,
   moderationReportsOperation,
+  moderationUsersOperation,
 } from "@/shared/api/moderation-proxy";
 import {
   roadmapOperation,
@@ -52,6 +54,8 @@ async function handle(request: Request, context: Context) {
     const menuOperation = ownerMenuOperation(request.method, endpoint);
     const ownerReviews = ownerReviewsOperation(request.method, endpoint);
     const moderation = moderationReportsOperation(request.method, endpoint);
+    const moderationUsers = moderationUsersOperation(request.method, endpoint);
+    const moderationBlogs = moderationBlogsOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     const resubmission =
@@ -65,6 +69,8 @@ async function handle(request: Request, context: Context) {
       !menuOperation &&
       !ownerReviews &&
       !moderation &&
+      !moderationUsers &&
+      !moderationBlogs &&
       !agentOp &&
       !publicOp
     ) {
@@ -81,6 +87,8 @@ async function handle(request: Request, context: Context) {
       menuOperation?.body !== false &&
       ownerReviews?.body !== false &&
       moderation?.body !== false &&
+      moderationUsers?.body !== false &&
+      moderationBlogs?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
@@ -170,6 +178,44 @@ async function handle(request: Request, context: Context) {
           });
         }),
         moderation.status,
+      );
+    }
+    // MOD-U1..MOD-U4 — kiểm duyệt người dùng (Mod và Admin).
+    if (moderationUsers) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được xử lý người dùng.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        moderationUsers.status,
+      );
+    }
+    // MOD-B1..MOD-B3 — kiểm duyệt bài viết và bình luận (Mod và Admin).
+    if (moderationBlogs) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được xử lý nội dung cộng đồng.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        moderationBlogs.status,
       );
     }
     // OWN-19/OWN-20 — chủ nhà hàng đọc và trả lời đánh giá của mình.
