@@ -87,8 +87,14 @@ describe("roll spin", () => {
   });
 
   it("fills the track with cards for the whole run", () => {
-    const travel = 12000;
-    const slots = reelLength(geometry, travel);
+    const plan = planSpin(
+      geometry,
+      0,
+      4,
+      cruiseTravel(desiredCruise),
+      desiredCruise,
+    );
+    const slots = reelLength(geometry, plan.travel);
     // The reel reaches past the right edge of the track.
     expect(slots * geometry.step).toBeGreaterThan(travel + geometry.trackWidth);
     // The landing slot of a real spin is inside the reel.

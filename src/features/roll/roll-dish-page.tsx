@@ -273,8 +273,6 @@ export function RollDishPage({
                     <RollCard
                       key={`${index}-${dish.id}`}
                       dish={dish}
-                      // The reel shows every dish plainly; the answer is only marked once the
-                      // roll has stopped.
                       onOpen={() => showDish(dish)}
                       disabled={state.status === "rolling"}
                       expanded={previewOpen && preview?.id === dish.id}
