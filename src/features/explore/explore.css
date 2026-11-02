@@ -357,10 +357,15 @@
   outline: none;
 }
 .dish-name {
+  display: -webkit-box;
+  flex: 1;
   min-width: 0;
+  overflow: hidden;
   font-size: 20px;
   line-height: 1.25;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .dish-body {
   display: flex;
@@ -370,7 +375,7 @@
 }
 .dish-head {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-1) var(--space-3);
@@ -414,11 +419,6 @@
   background: var(--control);
   color: var(--ink);
 }
-.dish-description-block {
-  display: grid;
-  justify-items: start;
-  gap: 2px;
-}
 .dish-description {
   color: var(--muted);
   font-size: 14px;
@@ -431,18 +431,71 @@
   border-radius: var(--radius-xs);
   background: var(--control);
 }
-.dish-description[class*="is-clamped-"] {
+/* Until the cut is measured, three lines; then the real cut with its "…" button. */
+.dish-description.is-measuring {
   display: -webkit-box;
   overflow: hidden;
   -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
-.dish-description.is-clamped-list {
-  -webkit-line-clamp: 2;
+.dish-description-wrap {
+  position: relative;
+  min-width: 0;
 }
-.dish-description.is-clamped-detailed {
-  -webkit-line-clamp: 4;
+/* The hidden twin the cut is measured on: same type, no height of its own. */
+.dish-description-twin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
-/* Buttons inside an item sit above the link that covers it. */
+/* "…" opens the whole description; it sits above the link that covers the card. */
+.dish-more {
+  position: relative;
+  z-index: 1;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: background var(--duration-fast) ease;
+}
+.dish-more:hover {
+  background: var(--line-strong);
+}
+.dish-more:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/*
+ * An opened description in a detailed card keeps the card's height: it takes the room left above
+ * the price, scrolls inside it, and fades out at the bottom when there is more to read.
+ */
+.dish-detail .dish-description-wrap:has(.dish-description[data-expanded]) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 40px),
+    transparent
+  );
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+}
+.dish-detail
+  .dish-description-wrap:has(
+    .dish-description[data-expanded]
+  )::-webkit-scrollbar {
+  display: none;
+}
+/* The retry button of a failed description sits above the link that covers the item. */
 .dish-text-button {
   position: relative;
   z-index: 1;
@@ -464,15 +517,24 @@
 }
 .dish-place {
   display: flex;
-  flex-wrap: wrap;
-  gap: 2px var(--space-3);
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
   margin-top: auto;
   color: var(--muted);
   font-size: 14px;
 }
 .dish-price {
+  flex: none;
   color: var(--ink);
   font-variant-numeric: tabular-nums;
+}
+.dish-place-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Mode 1: rows across the width with a compact photo. */
@@ -480,7 +542,8 @@
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr);
   gap: var(--space-5);
-  align-items: start;
+  /* The photo sits in the middle of the row, however many lines its text takes. */
+  align-items: center;
   padding: var(--space-4);
 }
 .dish-thumb {
@@ -497,16 +560,24 @@
 .dish-detail {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  height: 300px;
   overflow: hidden;
 }
 .dish-photo {
   height: 100%;
-  min-height: 280px;
   aspect-ratio: auto;
   border-radius: 0;
 }
 .dish-detail .dish-body {
+  overflow: hidden;
   padding: var(--space-5);
+}
+/* One row of tags; the ones that do not fit fade out at the edge. */
+.dish-detail .dish-kinds {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
 }
 .dish-detail .dish-name {
   font-size: 22px;
@@ -601,6 +672,7 @@
   /* A narrow card stacks: the photo above its details. */
   .dish-detail {
     grid-template-columns: minmax(0, 1fr);
+    height: auto;
   }
   .dish-photo {
     min-height: 0;
