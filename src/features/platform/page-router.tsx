@@ -48,6 +48,8 @@ import {
 import { ModerationCommunityLivePage } from "@/features/moderation/moderation-community-live-page";
 import { PermissionsPage } from "@/features/admin/permissions-page";
 import { ModDetailPage, ModsPage } from "@/features/admin/mods-page";
+import { AdminDashboardPage } from "@/features/admin/dashboard-page";
+import { OutboxPage } from "@/features/admin/outbox-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -239,6 +241,12 @@ export function PageRouter({
     /^[1-9]\d{0,9}$/.test(id ?? "")
   )
     return <PermissionsPage initialModId={Number(id)} />;
+
+  // F-63 ADM-D1..ADM-D3 và OPS-01 đã nối API: tổng quan và đồng bộ gợi ý đọc số liệu thật.
+  if (mode === "live" && role === "ADMIN" && !area)
+    return <AdminDashboardPage />;
+  if (mode === "live" && role === "ADMIN" && area === "sync")
+    return <OutboxPage />;
 
   // F-65 ADM-M1..ADM-M4 đã nối API: danh sách, tạo, chi tiết và cập nhật Mod đọc ghi thật.
   if (mode === "live" && role === "ADMIN" && area === "moderators" && !id)
