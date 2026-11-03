@@ -73,3 +73,33 @@ export function RestaurantStatusGrid({
     </div>
   );
 }
+
+/** Compact form of the three states, for headers where the full grid is too heavy. */
+export function RestaurantStatusBadges({
+  restaurant,
+}: {
+  restaurant: Pick<
+    OwnerRestaurantDto,
+    "verificationStatus" | "operatingStatus" | "moderationStatus"
+  >;
+}) {
+  return (
+    <ul className="status-badges" aria-label="Trạng thái nhà hàng">
+      <li title="Xác minh nhà hàng">
+        <Badge tone={verificationTone[restaurant.verificationStatus]}>
+          {verificationLabels[restaurant.verificationStatus]}
+        </Badge>
+      </li>
+      <li title="Hoạt động">
+        <Badge tone={operatingTone[restaurant.operatingStatus]}>
+          {operatingStatusLabels[restaurant.operatingStatus]}
+        </Badge>
+      </li>
+      <li title="Kiểm duyệt">
+        <Badge tone={moderationTone[restaurant.moderationStatus]}>
+          {moderationLabels[restaurant.moderationStatus]}
+        </Badge>
+      </li>
+    </ul>
+  );
+}

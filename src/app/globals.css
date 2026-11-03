@@ -974,11 +974,190 @@ select.input {
   color: var(--ink);
   font-size: 16px;
 }
+/* The cover runs edge to edge at the top, so the card drops its own padding. */
 .overview-profile {
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.overview-cover {
+  position: relative;
+  aspect-ratio: 4 / 1;
+  min-height: 160px;
+  background: var(--control);
+}
+.overview-cover > .media {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.overview-cover-empty {
   display: grid;
-  grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+  place-items: center;
+  height: 100%;
+  background:
+    radial-gradient(
+      circle at 15% 20%,
+      rgb(255 255 255 / 0.55),
+      transparent 45%
+    ),
+    linear-gradient(120deg, var(--control), var(--canvas));
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.overview-cover-action {
+  position: absolute;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: var(--shadow-card);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: background var(--duration-fast) ease;
+}
+.overview-cover-action:hover {
+  background: var(--card);
+}
+/* Both columns share one height: the large photo stretches, the description is clamped. */
+.overview-profile-main {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  align-items: stretch;
+  gap: var(--space-8);
+  padding: var(--space-6);
+}
+.overview-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.overview-gallery-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+.overview-gallery-head h2 {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.overview-gallery-head h2 span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.overview-gallery > .media,
+.overview-gallery-empty {
+  flex: 1;
+  min-height: 240px;
+  aspect-ratio: auto;
+}
+.overview-gallery-thumbs {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.overview-gallery-thumbs button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  cursor: pointer;
+  opacity: 0.7;
+  transition:
+    opacity var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.overview-gallery-thumbs button:hover,
+.overview-gallery-thumbs button[aria-pressed="true"] {
+  opacity: 1;
+}
+.overview-gallery-thumbs button[aria-pressed="true"] {
+  border-color: var(--ink);
+}
+.overview-gallery-thumbs .media {
+  aspect-ratio: 1;
+  border-radius: 0;
+}
+.overview-gallery-empty {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: var(--space-6);
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+.overview-gallery-empty > span {
+  font-size: 28px;
+}
+.overview-profile-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.overview-profile-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.overview-profile-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  color: var(--muted);
+  line-height: 1.65;
+  white-space: pre-line;
+}
+/* Pins the profile action to the bottom, level with the gallery caption. */
+.overview-profile-body > .actions {
+  margin-top: auto;
+}
+.overview-profile-details {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+}
+.overview-profile-details > div {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.overview-profile-details dt {
+  color: var(--muted);
+}
+.overview-profile-details dd {
+  overflow-wrap: anywhere;
+}
+.overview-profile-details a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.status-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* --------------------------------------------- site header, nav, footer */
@@ -1528,8 +1707,25 @@ select.input {
   .account-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .overview-profile {
+  .overview-profile-main {
     grid-template-columns: minmax(0, 1fr);
+  }
+  /* On one column the name and details come right under the cover, the gallery after them. */
+  .overview-gallery {
+    order: 1;
+  }
+  .overview-gallery > .media,
+  .overview-gallery-empty {
+    flex: none;
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+  .overview-profile-description {
+    -webkit-line-clamp: 5;
+  }
+  .overview-cover {
+    aspect-ratio: 5 / 2;
+    min-height: 0;
   }
 }
 @media (max-width: 700px) {
@@ -1562,6 +1758,13 @@ select.input {
   }
   .card {
     padding: var(--space-5);
+  }
+  .card.overview-profile {
+    padding: 0;
+  }
+  .overview-cover-action {
+    right: var(--space-3);
+    bottom: var(--space-3);
   }
   .auth-card {
     padding: var(--space-6);

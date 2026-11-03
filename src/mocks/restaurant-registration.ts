@@ -71,6 +71,7 @@ export function createMockRestaurantRegistrationService(): RestaurantRegistratio
         images: (request.imageMediaIds ?? []).map(
           (id) => media.get(id)?.url ?? "",
         ),
+        imageMediaIds: [...(request.imageMediaIds ?? [])],
         businessHours: request.businessHours ?? [],
         menu: null,
         myReview: null,

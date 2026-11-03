@@ -74,6 +74,8 @@ export interface OwnerRestaurantDto {
   website: string | null;
   ward: string | null;
   images: string[];
+  /** OWN-02: gallery media ids in the order of `images`; edited and sent back as OWN-03 `imageMediaIds`. */
+  imageMediaIds: number[];
   businessHours: BusinessHourDto[];
   menu: unknown | null;
   myReview: unknown | null;

@@ -26,6 +26,7 @@ export const ownerRestaurantSample: OwnerRestaurantDto = {
     "/assets/figma/roadmap-restaurant.png",
     "/assets/figma/restaurant.png",
   ],
+  imageMediaIds: [9011, 9012],
   businessHours: [{ dayOfWeek: 1, openTime: "06:00", closeTime: "13:30" }],
   menu: null,
   myReview: null,

@@ -31,6 +31,7 @@ export function ownerServer(mapboxToken = "") {
 export default defineConfig({
   testDir: "./tests/browser",
   testMatch: [
+    "owner-overview.spec.ts",
     "restaurant-business-hours.spec.ts",
     "restaurant-operating-status.spec.ts",
     "restaurant-verification.spec.ts",

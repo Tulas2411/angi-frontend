@@ -14,7 +14,7 @@ import { menuStatusLabels } from "./menu-rules";
 import { restaurantService } from "./restaurant-service";
 import type { OwnerRestaurantDto } from "./restaurant-types";
 import { ownerProfileHref, ownerRoutes, ownerVerificationHref } from "./routes";
-import { RestaurantStatusGrid } from "./status-labels";
+import { RestaurantStatusBadges } from "./status-labels";
 
 type State =
   | { status: "loading" }
@@ -109,26 +109,75 @@ function Overview({ restaurant }: { restaurant: OwnerRestaurantDto }) {
         description="Trạng thái nhà hàng và các việc cần làm tiếp theo, rõ ràng tại một nơi."
       />
       <Card className="overview-profile">
-        <Media src={restaurant.coverUrl ?? undefined} alt={restaurant.name} />
-        <div className="stack-sm">
-          <h2>{restaurant.name}</h2>
-          <p>
-            {[restaurant.addressLine, location].filter(Boolean).join(" · ")}
-          </p>
-          {restaurant.phone && <p className="helper">{restaurant.phone}</p>}
-          <div className="actions">
-            <ActionLink href={ownerProfileHref()} secondary>
-              Quản lý hồ sơ
-            </ActionLink>
+        <ProfileCover restaurant={restaurant} />
+        <div className="overview-profile-main">
+          <RestaurantGallery restaurant={restaurant} />
+          <div className="overview-profile-body">
+            <div className="overview-profile-intro">
+              <RestaurantStatusBadges restaurant={restaurant} />
+              {restaurant.description ? (
+                <p
+                  className="overview-profile-description"
+                  title={restaurant.description}
+                >
+                  {restaurant.description}
+                </p>
+              ) : (
+                <p className="helper">
+                  Chưa có mô tả. Thêm vài dòng giới thiệu món đặc trưng và không
+                  gian quán trong Quản lý hồ sơ.
+                </p>
+              )}
+            </div>
+            <dl className="overview-profile-details">
+              <div>
+                <dt>Địa chỉ</dt>
+                <dd>
+                  {[restaurant.addressLine, location]
+                    .filter(Boolean)
+                    .join(", ")}
+                </dd>
+              </div>
+              {restaurant.phone && (
+                <div>
+                  <dt>Điện thoại</dt>
+                  <dd>
+                    <a href={`tel:${restaurant.phone}`}>{restaurant.phone}</a>
+                  </dd>
+                </div>
+              )}
+              {restaurant.email && (
+                <div>
+                  <dt>Email</dt>
+                  <dd>
+                    <a href={`mailto:${restaurant.email}`}>
+                      {restaurant.email}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {restaurant.website && (
+                <div>
+                  <dt>Website</dt>
+                  <dd>
+                    <a
+                      href={restaurant.website}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {restaurant.website.replace(/^https?:\/\//, "")}
+                    </a>
+                  </dd>
+                </div>
+              )}
+            </dl>
+            <div className="actions">
+              <ActionLink href={ownerProfileHref()} secondary>
+                Quản lý hồ sơ
+              </ActionLink>
+            </div>
           </div>
         </div>
-      </Card>
-      <Card title="Trạng thái nhà hàng">
-        <RestaurantStatusGrid restaurant={restaurant} />
-        <p className="helper">
-          Xác minh do kiểm duyệt viên quyết định, hoạt động do bạn đặt, kiểm
-          duyệt do kiểm duyệt viên đặt — ba trạng thái độc lập với nhau.
-        </p>
       </Card>
       <NextSteps restaurant={restaurant} />
       <div className="grid-2">
@@ -154,6 +203,73 @@ function Overview({ restaurant }: { restaurant: OwnerRestaurantDto }) {
         />
       </div>
     </div>
+  );
+}
+
+/** Wide banner across the top of the card, like a profile cover on a social page. */
+function ProfileCover({ restaurant }: { restaurant: OwnerRestaurantDto }) {
+  return (
+    <div className="overview-cover">
+      {restaurant.coverUrl ? (
+        <Media src={restaurant.coverUrl} alt={`Ảnh bìa ${restaurant.name}`} />
+      ) : (
+        <div className="overview-cover-empty">
+          <span>Chưa có ảnh bìa</span>
+        </div>
+      )}
+      <Link href={ownerProfileHref("photos")} className="overview-cover-action">
+        {restaurant.coverUrl ? "Đổi ảnh bìa" : "Thêm ảnh bìa"}
+      </Link>
+    </div>
+  );
+}
+
+/** Gallery photos (`images`, in the owner's order): one large view and thumbnails to switch it. */
+function RestaurantGallery({ restaurant }: { restaurant: OwnerRestaurantDto }) {
+  const images = restaurant.images.filter(Boolean);
+  const [selected, setSelected] = useState(0);
+  const active = Math.min(selected, images.length - 1);
+  const current = images[active];
+  return (
+    <section className="overview-gallery" aria-label="Ảnh nhà hàng">
+      {current ? (
+        <>
+          <Media src={current} alt={`${restaurant.name} – ảnh ${active + 1}`} />
+          {images.length > 1 && (
+            <ul className="overview-gallery-thumbs">
+              {images.map((url, index) => (
+                <li key={`${url}-${index}`}>
+                  <button
+                    type="button"
+                    aria-label={`Xem ảnh ${index + 1}`}
+                    aria-pressed={index === active}
+                    onClick={() => setSelected(index)}
+                  >
+                    <Media src={url} alt="" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <div className="overview-gallery-empty">
+          <span aria-hidden>▧</span>
+          <p>
+            Chưa có ảnh nhà hàng. Thêm ảnh món ăn và không gian quán để khách dễ
+            hình dung.
+          </p>
+        </div>
+      )}
+      <div className="overview-gallery-head">
+        <h2>
+          Ảnh nhà hàng{images.length > 0 && <span> · {images.length}</span>}
+        </h2>
+        <Link href={ownerProfileHref("photos")} className="text-link">
+          {images.length ? "Quản lý ảnh" : "Thêm ảnh"}
+        </Link>
+      </div>
+    </section>
   );
 }
 

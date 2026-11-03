@@ -7,7 +7,6 @@ import {
   ConfirmDialog,
   EmptyState,
   Field,
-  Media,
   SelectField,
   Skeleton,
   Tabs,
@@ -32,7 +31,12 @@ import {
   restaurantProfileService,
   type RestaurantProfileService,
 } from "./restaurant-profile-service";
-import { RestaurantImageUpload } from "./restaurant-image-upload";
+import { RestaurantCoverField } from "./restaurant-cover-field";
+import {
+  GALLERY_LIMIT,
+  RestaurantGalleryField,
+  type GalleryPhoto,
+} from "./restaurant-gallery-field";
 import { RestaurantLocationPicker } from "./restaurant-location-picker";
 import {
   fillRestaurantFromPlace,
@@ -44,6 +48,14 @@ import type {
   RestaurantFormValues,
   RestaurantLocation,
 } from "./restaurant-types";
+
+/** Saved gallery from OWN-02: `imageMediaIds` follows the order of `images`. */
+function savedGalleryPhotos(restaurant: OwnerRestaurantDto): GalleryPhoto[] {
+  return restaurant.imageMediaIds.map((id, index) => ({
+    id,
+    url: restaurant.images[index] ?? "",
+  }));
+}
 
 export function RestaurantProfilePage({
   initialTab = "information",
@@ -150,11 +162,9 @@ function RestaurantProfileEditor({
     restaurantLocationFromProfile(restaurant),
   );
   const [cover, setCover] = useState<MediaFileDto[]>([]);
-  const [gallery, setGallery] = useState<MediaFileDto[]>([]);
   const [clearCover, setClearCover] = useState(false);
-  const [galleryMode, setGalleryMode] = useState<
-    "unchanged" | "replace" | "clear"
-  >("unchanged");
+  // null keeps the saved gallery; otherwise the edited list sent as imageMediaIds.
+  const [galleryDraft, setGalleryDraft] = useState<GalleryPhoto[] | null>(null);
   const [coverPending, setCoverPending] = useState(false);
   const [galleryPending, setGalleryPending] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -172,16 +182,19 @@ function RestaurantProfileEditor({
   const active = useRef(true);
   const submitting = useRef(false);
   const blocked = saving || coverPending || galleryPending;
+  const savedGallery = savedGalleryPhotos(restaurant);
+  const galleryChanged =
+    !!galleryDraft &&
+    galleryDraft.map((photo) => photo.id).join() !==
+      savedGallery.map((photo) => photo.id).join();
   const patch = buildProfilePatch(values, location, restaurant, {
     coverMediaId: cover[0]?.id ?? (clearCover ? null : undefined),
     imageMediaIds:
-      galleryMode === "clear"
-        ? []
-        : galleryMode === "replace" && gallery.length
-          ? gallery.map((file) => file.id)
-          : undefined,
+      galleryChanged && galleryDraft
+        ? galleryDraft.map((photo) => photo.id)
+        : undefined,
   });
-  const dirty = Object.keys(patch).length > 0 || galleryMode === "replace";
+  const dirty = Object.keys(patch).length > 0;
   useEffect(() => {
     active.current = true;
     return () => {
@@ -224,9 +237,8 @@ function RestaurantProfileEditor({
     setValues(profileFormFromRestaurant(restaurant));
     setLocation(restaurantLocationFromProfile(restaurant));
     setCover([]);
-    setGallery([]);
     setClearCover(false);
-    setGalleryMode("unchanged");
+    setGalleryDraft(null);
     setErrors({});
     setError("");
     setSuccess("");
@@ -255,8 +267,6 @@ function RestaurantProfileEditor({
     event.preventDefault();
     if (blocked || submitting.current || !dirty) return;
     const invalid = validateProfilePatch(patch);
-    if (galleryMode === "replace" && !gallery.length)
-      invalid.imageMediaIds = "Chọn ít nhất một ảnh để thay thư viện hiện tại.";
     setErrors(invalid);
     setError("");
     setSuccess("");
@@ -275,9 +285,8 @@ function RestaurantProfileEditor({
       setValues(profileFormFromRestaurant(saved));
       setLocation(restaurantLocationFromProfile(saved));
       setCover([]);
-      setGallery([]);
       setClearCover(false);
-      setGalleryMode("unchanged");
+      setGalleryDraft(null);
       setErrors({});
       setFocusRequest(null);
       setSuccess("Đã lưu hồ sơ nhà hàng.");
@@ -453,170 +462,110 @@ function RestaurantProfileEditor({
               </Card>
             ) : (
               <Card title="Hình ảnh nhà hàng" className="stack">
-                {!cover.length && !clearCover && restaurant.coverUrl && (
-                  <div className="stack-sm">
-                    <p>Ảnh bìa hiện tại</p>
-                    <div className="upload-grid">
-                      <Media src={restaurant.coverUrl} alt="Ảnh bìa hiện tại" />
-                    </div>
+                <section
+                  className="photos-section"
+                  aria-labelledby="cover-heading"
+                >
+                  <h3 id="cover-heading">Ảnh bìa</h3>
+                  <RestaurantCoverField
+                    savedUrl={restaurant.coverUrl}
+                    files={cover}
+                    cleared={clearCover}
+                    disabled={blocked}
+                    error={errors.coverMediaId}
+                    service={service}
+                    onPending={setCoverPending}
+                    onChange={(files) => {
+                      setFocusRequest(null);
+                      setCover(files);
+                      setClearCover(false);
+                      setSuccess("");
+                      setErrors((current) => ({
+                        ...current,
+                        coverMediaId: "",
+                      }));
+                    }}
+                    onRemove={() => {
+                      const remove = () => {
+                        setCover([]);
+                        setClearCover(!!restaurant.coverUrl);
+                        setSuccess("");
+                        setErrors((current) => ({
+                          ...current,
+                          coverMediaId: "",
+                        }));
+                      };
+                      // Only the saved cover needs a confirmation; a fresh pick is simply dropped.
+                      if (restaurant.coverUrl && !cover.length)
+                        setConfirmation({
+                          title: "Bỏ ảnh bìa hiện tại?",
+                          description: "Ảnh bìa sẽ được bỏ khi bạn lưu hồ sơ.",
+                          label: "Bỏ ảnh bìa",
+                          action: remove,
+                        });
+                      else remove();
+                    }}
+                    onRestore={() => {
+                      setCover([]);
+                      setClearCover(false);
+                      setErrors((current) => ({
+                        ...current,
+                        coverMediaId: "",
+                      }));
+                    }}
+                  />
+                </section>
+                <section
+                  className="photos-section"
+                  aria-labelledby="gallery-heading"
+                >
+                  <div className="between">
+                    <h3 id="gallery-heading">Thư viện ảnh</h3>
+                    <span className="helper">
+                      {(galleryDraft ?? savedGallery).length} / {GALLERY_LIMIT}
+                    </span>
                   </div>
-                )}
-                {clearCover && (
-                  <Alert tone="warning">
-                    Ảnh bìa sẽ được xóa khi bạn lưu thay đổi.
-                  </Alert>
-                )}
-                <RestaurantImageUpload
-                  label="Ảnh bìa mới"
-                  max={1}
-                  files={cover}
-                  disabled={blocked}
-                  error={errors.coverMediaId}
-                  service={service}
-                  onPending={setCoverPending}
-                  onChange={(files) => {
-                    setFocusRequest(null);
-                    setCover(files);
-                    setClearCover(false);
-                    setSuccess("");
-                    setErrors((current) => ({ ...current, coverMediaId: "" }));
-                  }}
-                />
-                {restaurant.coverUrl && !clearCover && (
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
+                  <p className="helper">
+                    Ảnh đầu tiên hiện lớn ở trang tổng quan. Dùng mũi tên để đổi
+                    thứ tự; thay đổi chỉ được lưu khi bạn bấm Lưu thay đổi.
+                  </p>
+                  <RestaurantGalleryField
+                    photos={galleryDraft ?? savedGallery}
+                    changed={galleryChanged}
+                    disabled={blocked}
+                    error={errors.imageMediaIds}
+                    service={service}
+                    onPending={setGalleryPending}
+                    onChange={(photos) => {
+                      setFocusRequest(null);
+                      setGalleryDraft(photos);
+                      setSuccess("");
+                      setErrors((current) => ({
+                        ...current,
+                        imageMediaIds: "",
+                      }));
+                    }}
+                    onRestore={() => {
+                      setGalleryDraft(null);
+                      setErrors((current) => ({
+                        ...current,
+                        imageMediaIds: "",
+                      }));
+                    }}
+                    onClear={() =>
                       setConfirmation({
-                        title: "Bỏ ảnh bìa hiện tại?",
-                        description: "Ảnh bìa sẽ được bỏ khi bạn lưu hồ sơ.",
-                        label: "Bỏ ảnh bìa",
+                        title: "Xóa toàn bộ thư viện ảnh?",
+                        description:
+                          "Tất cả ảnh trong thư viện sẽ được bỏ khi bạn lưu hồ sơ.",
+                        label: "Xóa toàn bộ ảnh",
                         action: () => {
-                          setCover([]);
-                          setClearCover(true);
+                          setGalleryDraft([]);
                           setSuccess("");
                         },
                       })
                     }
-                  >
-                    Bỏ ảnh bìa hiện tại
-                  </Button>
-                )}
-                {!!restaurant.images.length && (
-                  <>
-                    <h3>Thư viện ảnh hiện tại</h3>
-                    <div className="upload-grid">
-                      {restaurant.images.map((url, index) => (
-                        <Media
-                          key={`${url}-${index}`}
-                          src={url}
-                          alt={`Ảnh nhà hàng ${index + 1}`}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-                {galleryMode === "unchanged" && !!restaurant.images.length ? (
-                  <div className="actions">
-                    <Button
-                      variant="secondary"
-                      onClick={() =>
-                        setConfirmation({
-                          title: "Thay thư viện ảnh?",
-                          description:
-                            "Ảnh bạn chọn sẽ thay toàn bộ thư viện hiện tại sau khi lưu hồ sơ.",
-                          label: "Chọn ảnh thay thế",
-                          action: () => {
-                            setGalleryMode("replace");
-                            setSuccess("");
-                          },
-                        })
-                      }
-                    >
-                      Thay thư viện ảnh
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() =>
-                        setConfirmation({
-                          title: "Xóa toàn bộ thư viện ảnh?",
-                          description:
-                            "Tất cả ảnh trong thư viện hiện tại sẽ được bỏ khi bạn lưu hồ sơ.",
-                          label: "Xóa toàn bộ ảnh",
-                          action: () => {
-                            setGallery([]);
-                            setGalleryMode("clear");
-                            setSuccess("");
-                          },
-                        })
-                      }
-                    >
-                      Xóa toàn bộ ảnh
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    {galleryMode === "clear" ? (
-                      <Alert tone="warning">
-                        Thư viện ảnh sẽ được xóa khi bạn lưu thay đổi.
-                      </Alert>
-                    ) : (
-                      !!restaurant.images.length && (
-                        <Alert tone="info">
-                          Ảnh mới sẽ thay toàn bộ thư viện hiện tại khi lưu.
-                        </Alert>
-                      )
-                    )}
-                    <RestaurantImageUpload
-                      label="Ảnh nhà hàng mới"
-                      max={10}
-                      files={gallery}
-                      disabled={blocked}
-                      error={errors.imageMediaIds}
-                      service={service}
-                      onPending={setGalleryPending}
-                      onChange={(files) => {
-                        setFocusRequest(null);
-                        setGallery(files);
-                        setGalleryMode(
-                          files.length || restaurant.images.length
-                            ? "replace"
-                            : "unchanged",
-                        );
-                        setSuccess("");
-                        setErrors((current) => ({
-                          ...current,
-                          imageMediaIds: "",
-                        }));
-                      }}
-                    />
-                    {!!restaurant.images.length && (
-                      <Button
-                        variant="secondary"
-                        onClick={() => {
-                          const keep = () => {
-                            setGallery([]);
-                            setGalleryMode("unchanged");
-                            setErrors((current) => ({
-                              ...current,
-                              imageMediaIds: "",
-                            }));
-                          };
-                          if (gallery.length)
-                            setConfirmation({
-                              title: "Giữ thư viện hiện tại?",
-                              description:
-                                "Các ảnh mới bạn chọn sẽ được bỏ khỏi bản chỉnh sửa.",
-                              label: "Giữ thư viện hiện tại",
-                              action: keep,
-                            });
-                          else keep();
-                        }}
-                      >
-                        Giữ thư viện hiện tại
-                      </Button>
-                    )}
-                  </>
-                )}
+                  />
+                </section>
               </Card>
             )}
           </fieldset>
@@ -624,12 +573,7 @@ function RestaurantProfileEditor({
             <Button
               type="submit"
               loading={saving}
-              disabled={
-                !dirty ||
-                coverPending ||
-                galleryPending ||
-                (galleryMode === "replace" && !gallery.length)
-              }
+              disabled={!dirty || coverPending || galleryPending}
             >
               Lưu thay đổi
             </Button>
