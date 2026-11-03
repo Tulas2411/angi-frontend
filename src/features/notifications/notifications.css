@@ -364,10 +364,10 @@
   outline: none;
   box-shadow: var(--focus-ring);
 }
-/* bell.svg is a 44px artboard with its own padding, so it fills the button. */
-.notification-bell .icon img {
-  width: 40px;
-  height: 40px;
+/* 24px outline glyph, centered like the header's home and menu icons. */
+.notification-bell > svg {
+  width: 24px;
+  height: 24px;
 }
 .notification-bell-count {
   position: absolute;

@@ -1,9 +1,15 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { api } from "@/shared/api/client";
 import { getErrorMessage } from "@/shared/api/error";
 
-export function LogoutButton() {
+export function LogoutButton({
+  className = "menu-item menu-item-button",
+  icon,
+}: {
+  className?: string;
+  icon?: ReactNode;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function logout() {
@@ -25,11 +31,12 @@ export function LogoutButton() {
         type="button"
         onClick={logout}
         disabled={busy}
-        className="menu-item menu-item-button"
+        className={className}
         // Browser extensions add `fdprocessedid` to <button> before hydration,
         // which causes a hydration mismatch on the account menu.
         suppressHydrationWarning
       >
+        {icon}
         {busy ? "Đang đăng xuất…" : "Đăng xuất"}
       </button>
       {error && (

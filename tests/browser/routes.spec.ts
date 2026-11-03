@@ -111,34 +111,61 @@ test("the signed-in homepage shows the account menu instead of the login link", 
   await expect(page.getByRole("link", { name: /Tham gia ANGI/ })).toHaveCount(
     0,
   );
-  const trigger = header.getByRole("group").locator("summary");
-  await expect(trigger).toHaveAccessibleName(/Tài khoản Minh Anh/);
+  await expect(
+    header.getByRole("link", { name: "Tài khoản Minh Anh", exact: true }),
+  ).toHaveAttribute("href", "/account");
+  await expect(
+    header.getByRole("link", { name: "Trang chủ", exact: true }),
+  ).toHaveAttribute("href", "/");
+  await expect(
+    header.getByRole("button", { name: "Mở menu tài khoản", exact: true }),
+  ).toHaveAttribute("aria-expanded", "false");
 });
 
-test("the account menu opens with the keyboard, closes with Escape and restores focus", async ({
+test("the account drawer opens with the keyboard, closes with Escape or the backdrop and restores focus", async ({
   page,
 }) => {
   await loginAs(page, "traveler");
-  const trigger = page.locator("summary", { hasText: "" }).first();
+  const trigger = page.getByRole("button", {
+    name: "Mở menu tài khoản",
+    exact: true,
+  });
+  const drawer = page.getByRole("dialog", { name: "Menu tài khoản" });
+  const account = drawer.getByRole("link", { name: "Tài khoản của tôi" });
   await trigger.focus();
   await page.keyboard.press("Enter");
-  const account = page
-    .locator("header")
-    .getByRole("link", { name: "Tài khoản của tôi" });
   await expect(account).toBeVisible();
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await expect(
+    drawer.getByRole("link", { name: "Lộ trình của tôi" }),
+  ).toHaveAttribute("href", "/roadmaps");
+  await expect(
+    drawer.getByRole("link", { name: "Khám phá món ăn" }),
+  ).toHaveAttribute("href", "/dishes");
+  await expect(
+    drawer.getByRole("link", { name: "Khám phá quán ăn" }),
+  ).toHaveAttribute("href", "/restaurants");
   await page.keyboard.press("Escape");
-  await expect(account).toBeHidden();
+  await expect(drawer).toBeHidden();
   await expect(trigger).toBeFocused();
+  // A click on the dimmed page beside the drawer closes it.
+  await trigger.click();
+  await expect(drawer).toBeVisible();
+  await page.mouse.click(10, 300);
+  await expect(drawer).toBeHidden();
   await trigger.click();
   await account.click();
   await expect(page).toHaveURL(/\/account$/);
+  await expect(drawer).toBeHidden();
 });
 
 test("logout clears the session and protected pages require login again", async ({
   page,
 }) => {
   await loginAs(page, "traveler");
-  await page.locator("summary").first().click();
+  await page
+    .getByRole("button", { name: "Mở menu tài khoản", exact: true })
+    .click();
   await page.getByRole("button", { name: "Đăng xuất" }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.goto("/account");

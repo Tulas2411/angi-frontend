@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Icon } from "@/components/ui/primitives";
+import { BellIcon } from "@heroicons/react/24/outline";
 import type { RoleCode } from "@/features/auth/types";
 import {
   notificationCategory,
@@ -139,7 +139,7 @@ export function NotificationBell({ role }: { role: RoleCode }) {
         aria-current={path === "/notifications" ? "page" : undefined}
         onClick={toggle}
       >
-        <Icon name="bell" />
+        <BellIcon aria-hidden />
         {count > 0 && (
           <span className="notification-bell-count" aria-hidden>
             {unreadBadge(count)}
@@ -160,7 +160,9 @@ export function NotificationBell({ role }: { role: RoleCode }) {
                 {unreadBadge(count)} chưa đọc
               </span>
             ) : (
-              <span className="notification-dropdown-count">Bạn đã đọc hết</span>
+              <span className="notification-dropdown-count">
+                Bạn đã đọc hết
+              </span>
             )}
           </div>
           <div className="notification-dropdown-body">
@@ -203,7 +205,9 @@ export function NotificationBell({ role }: { role: RoleCode }) {
                             {href ? "" : " · Xem trong danh sách"}
                           </span>
                         </span>
-                        {unread && <span className="notification-dot" aria-hidden />}
+                        {unread && (
+                          <span className="notification-dot" aria-hidden />
+                        )}
                       </button>
                     </li>
                   );

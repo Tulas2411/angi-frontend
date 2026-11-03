@@ -1,122 +1,193 @@
 "use client";
+import "./account-menu.css";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  ArrowRightStartOnRectangleIcon,
+  Bars3Icon,
+  BuildingStorefrontIcon,
+  DocumentTextIcon,
+  FireIcon,
+  GlobeAltIcon,
+  HomeIcon,
+  MapIcon,
+  UserCircleIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import { Avatar } from "@/components/ui/primitives";
 import { LogoutButton } from "@/features/auth/logout-button";
-import { LABEL_BY_ROLE } from "@/features/auth/roles";
+import { HOME_BY_ROLE, LABEL_BY_ROLE } from "@/features/auth/roles";
 import { NotificationBell } from "@/features/notifications/notification-bell";
 import type { AuthUserDto } from "@/features/auth/types";
+import { exploreRoutes } from "@/features/explore/explore-routes";
 import { roadmapRoutes } from "@/features/roadmaps/routes";
 
-/** Signed-in menu (with the notification bell) shared by the homepage and every protected page. */
+/**
+ * Signed-in header actions shared by the homepage and every protected page: a pill to the
+ * account page, the notification bell, a home shortcut and a menu button that opens the
+ * account drawer from the right.
+ */
 export function AccountMenu({ user }: { user: AuthUserDto }) {
+  const home = HOME_BY_ROLE[user.role];
   const path = usePathname();
-  const menu = useRef<HTMLDetailsElement>(null);
-  // Mouse hover opens the menu; leaving closes it after a short grace period
-  // so the pointer can cross the gap between the avatar and the panel.
-  const hoverOpened = useRef(false);
-  const leaveTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  // Close after navigation.
-  useEffect(() => {
-    menu.current?.removeAttribute("open");
-  }, [path]);
-  useEffect(() => () => clearTimeout(leaveTimer.current), []);
-  // Close on outside click, Escape, blur and resize; Escape returns focus to the trigger.
-  useEffect(() => {
-    const element = menu.current;
-    if (!element) return;
-    const close = () => element.removeAttribute("open");
-    const onPointerDown = (event: PointerEvent) => {
-      if (!element.contains(event.target as Node)) close();
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || !element.hasAttribute("open")) return;
-      close();
-      element.querySelector<HTMLElement>("summary")?.focus();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    window.addEventListener("blur", close);
-    window.addEventListener("resize", close);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener("blur", close);
-      window.removeEventListener("resize", close);
-    };
-  }, []);
+  // Open only on the page it was opened from, so any navigation closes the drawer.
+  const [openedAt, setOpenedAt] = useState<string | null>(null);
+  const open = openedAt === path;
   return (
     <>
-      <NotificationBell role={user.role} />
-      <details
-        className="account-menu"
-        ref={menu}
-        onPointerEnter={(event) => {
-          if (event.pointerType !== "mouse") return;
-          clearTimeout(leaveTimer.current);
-          if (!menu.current?.open) hoverOpened.current = true;
-          menu.current?.setAttribute("open", "");
-        }}
-        onPointerLeave={(event) => {
-          if (event.pointerType !== "mouse") return;
-          clearTimeout(leaveTimer.current);
-          leaveTimer.current = setTimeout(() => {
-            hoverOpened.current = false;
-            menu.current?.removeAttribute("open");
-          }, 160);
-        }}
-        onToggle={() => {
-          if (!menu.current?.open) hoverOpened.current = false;
-        }}
+      <Link
+        href="/account"
+        className="account-pill"
+        aria-label={`Tài khoản ${user.displayName}`}
       >
-        <summary
-          aria-label={`Tài khoản ${user.displayName}`}
-          onClick={(event) => {
-            // A mouse click on a hover-opened menu keeps it open instead of
-            // toggling it shut; keyboard activation (detail 0) still toggles.
-            if (event.detail > 0 && hoverOpened.current) event.preventDefault();
-          }}
-        >
+        <Avatar name={user.displayName} image={user.avatarUrl} />
+        <span className="account-pill-name">{user.displayName}</span>
+      </Link>
+      <NotificationBell role={user.role} />
+      <Link
+        href={home}
+        className="header-icon-button header-home"
+        aria-label="Trang chủ"
+      >
+        <HomeIcon aria-hidden />
+      </Link>
+      <button
+        type="button"
+        className="header-icon-button"
+        aria-label="Mở menu tài khoản"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        onClick={() => setOpenedAt(path)}
+      >
+        <Bars3Icon aria-hidden />
+      </button>
+      <AccountDrawer
+        user={user}
+        home={home}
+        open={open}
+        onClose={() => setOpenedAt(null)}
+      />
+    </>
+  );
+}
+
+/** Right-side drawer on a modal `<dialog>`: Escape, the backdrop and links close it. */
+function AccountDrawer({
+  user,
+  home,
+  open,
+  onClose,
+}: {
+  user: AuthUserDto;
+  home: string;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const element = dialog.current;
+    if (!element) return;
+    if (open && !element.open) element.showModal();
+    if (!open && element.open) element.close();
+  }, [open]);
+  return (
+    <dialog
+      ref={dialog}
+      className="account-drawer"
+      aria-label="Menu tài khoản"
+      onClose={onClose}
+      onClick={(event) => {
+        // The dialog box fills the drawer, so a click on the element itself is on the backdrop.
+        if (event.target === event.currentTarget) onClose();
+        else if ((event.target as HTMLElement).closest("a")) onClose();
+      }}
+    >
+      <div className="account-drawer-panel">
+        <div className="account-drawer-top">
+          <button
+            type="button"
+            className="header-icon-button"
+            aria-label="Đóng menu"
+            onClick={onClose}
+          >
+            <XMarkIcon aria-hidden />
+          </button>
+        </div>
+        <div className="account-drawer-identity">
           <Avatar name={user.displayName} image={user.avatarUrl} />
-        </summary>
-        <div
-          className="account-menu-panel"
-          onClick={(event) => {
-            if ((event.target as HTMLElement).closest("a"))
-              menu.current?.removeAttribute("open");
-          }}
-        >
-          <div className="account-menu-identity">
+          <div>
             <strong>{user.displayName}</strong>
             <span className="helper">{user.email}</span>
             <span className="helper">{LABEL_BY_ROLE[user.role]}</span>
           </div>
-          <Link href="/account" className="menu-item">
+        </div>
+        <nav className="account-drawer-nav" aria-label="Tài khoản">
+          <DrawerLink href={home} icon={<HomeIcon />}>
+            Trang chủ
+          </DrawerLink>
+          <DrawerLink href="/account" icon={<UserCircleIcon />}>
             Tài khoản của tôi
-          </Link>
+          </DrawerLink>
+          {/* A Traveler's home is the public homepage; the other roles still reach it from here. */}
+          {home !== "/" && (
+            <DrawerLink href="/" icon={<GlobeAltIcon />}>
+              Trang chủ ANGI
+            </DrawerLink>
+          )}
           {user.role === "TRAVELER" && (
             <>
-              <Link href={roadmapRoutes.plan} className="menu-item">
-                Lập lộ trình mới
-              </Link>
-              <Link href="/guides/mine" className="menu-item">
+              <p className="account-drawer-group">Hành trình của tôi</p>
+              <DrawerLink href={roadmapRoutes.list} icon={<MapIcon />}>
+                Lộ trình của tôi
+              </DrawerLink>
+              <DrawerLink href="/guides/mine" icon={<DocumentTextIcon />}>
                 Bài viết của tôi
-              </Link>
-              <Link href="/guides/new" className="menu-item">
-                Viết cẩm nang
-              </Link>
+              </DrawerLink>
+              <p className="account-drawer-group">Khám phá ẩm thực</p>
+              <DrawerLink href={exploreRoutes.dishes} icon={<FireIcon />}>
+                Khám phá món ăn
+              </DrawerLink>
+              <DrawerLink
+                href={exploreRoutes.restaurants}
+                icon={<BuildingStorefrontIcon />}
+              >
+                Khám phá quán ăn
+              </DrawerLink>
             </>
           )}
-          {/* A Traveler's logo already leads home; the other roles' logo opens their workspace. */}
-          {user.role !== "TRAVELER" && (
-            <Link href="/" className="menu-item">
-              Trang chủ ANGI
-            </Link>
-          )}
-          <LogoutButton />
+        </nav>
+        <div className="account-drawer-footer">
+          <LogoutButton
+            className="account-drawer-logout"
+            icon={<ArrowRightStartOnRectangleIcon aria-hidden />}
+          />
         </div>
-      </details>
-    </>
+      </div>
+    </dialog>
+  );
+}
+
+function DrawerLink({
+  href,
+  icon,
+  children,
+}: {
+  href: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  const path = usePathname();
+  return (
+    <Link
+      href={href}
+      className="account-drawer-link"
+      aria-current={path === href ? "page" : undefined}
+    >
+      <span className="account-drawer-icon" aria-hidden>
+        {icon}
+      </span>
+      {children}
+    </Link>
   );
 }

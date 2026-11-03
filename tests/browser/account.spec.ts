@@ -47,9 +47,9 @@ test("ME-02 sends only the changed fields and displays the returned values", asy
   await expect(name(page)).toHaveValue("Minh Anh Mới");
   await expect(save(page)).toBeDisabled();
   // The header reads the refreshed session snapshot.
-  await expect(page.locator("summary").first()).toHaveAccessibleName(
-    /Minh Anh Mới/,
-  );
+  await expect(
+    page.locator("header").getByRole("link", { name: /^Tài khoản / }),
+  ).toHaveAccessibleName(/Minh Anh Mới/);
 });
 
 test("clearing phone and bio sends explicit nulls", async ({ page }) => {
