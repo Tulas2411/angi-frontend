@@ -1,0 +1,152 @@
+/* Full-size photo viewer over the current page (modal dialog, top layer). */
+.photo-lightbox {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  opacity: 0;
+  transition:
+    opacity 220ms ease,
+    display 220ms allow-discrete,
+    overlay 220ms allow-discrete;
+}
+.photo-lightbox[open] {
+  display: grid;
+  place-items: center;
+  opacity: 1;
+}
+@starting-style {
+  .photo-lightbox[open] {
+    opacity: 0;
+  }
+}
+.photo-lightbox::backdrop {
+  background: rgb(17 17 17 / 0.88);
+  backdrop-filter: blur(4px);
+}
+.photo-lightbox-figure {
+  display: grid;
+  place-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 64px 80px 24px;
+  box-sizing: border-box;
+}
+.photo-lightbox-figure img {
+  max-width: 100%;
+  max-height: calc(100dvh - 140px);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.45);
+  object-fit: contain;
+  animation: photo-lightbox-in 260ms var(--ease-out, ease-out);
+}
+.photo-lightbox-figure figcaption {
+  color: rgb(255 255 255 / 0.8);
+  font-size: 14px;
+  text-align: center;
+}
+@keyframes photo-lightbox-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+/* Close: a round button in the corner, above the side strips. */
+.photo-lightbox-close {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.14);
+  color: #fff;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.photo-lightbox-close:hover {
+  background: rgb(255 255 255 / 0.26);
+}
+
+/* Prev / next: the whole side strip is the button, so a click anywhere above or below the arrow
+   moves on; the strip is a little darker than the backdrop so it reads as clickable. */
+.photo-lightbox-nav {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 72px;
+  padding: 0;
+  border: 0;
+  background: rgb(0 0 0 / 0.28);
+  color: #fff;
+  cursor: pointer;
+  transition: background 160ms ease;
+}
+.photo-lightbox-nav[data-side="prev"] {
+  left: 0;
+}
+.photo-lightbox-nav[data-side="next"] {
+  right: 0;
+}
+.photo-lightbox-nav:hover {
+  background: rgb(0 0 0 / 0.42);
+}
+.photo-lightbox-arrow {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.14);
+  transition: background 160ms ease;
+}
+.photo-lightbox-nav:hover .photo-lightbox-arrow {
+  background: rgb(255 255 255 / 0.26);
+}
+.photo-lightbox-close:focus-visible,
+.photo-lightbox-nav:focus-visible .photo-lightbox-arrow {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+.photo-lightbox-nav:focus-visible {
+  outline: none;
+}
+.photo-lightbox-close svg,
+.photo-lightbox-arrow svg {
+  width: 24px;
+  height: 24px;
+}
+.photo-lightbox-figure {
+  padding-right: 88px;
+  padding-left: 88px;
+}
+@media (max-width: 640px) {
+  .photo-lightbox-nav {
+    width: 52px;
+  }
+  .photo-lightbox-figure {
+    padding: 64px 56px 24px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .photo-lightbox,
+  .photo-lightbox-figure img {
+    transition: none;
+    animation: none;
+  }
+}
