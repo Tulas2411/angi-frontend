@@ -54,6 +54,10 @@ import {
   VerificationQueuePage,
   VerificationReviewPage,
 } from "@/features/moderation/verification-review-page";
+import {
+  MenuQueuePage,
+  MenuReviewPage,
+} from "@/features/moderation/menu-review-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -209,6 +213,14 @@ export function PageRouter({
   // OWN-19/OWN-20 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "reviews")
     return <RestaurantReviewsLivePage />;
+
+  // F-58 MOD-M1..MOD-M4 đã nối API: hàng đợi và duyệt bản thực đơn đọc ghi thật (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "menus")
+    return /^[1-9]d{0,17}$/.test(id ?? "") ? (
+      <MenuReviewPage key={id} submissionId={Number(id)} />
+    ) : (
+      <MenuQueuePage />
+    );
 
   // F-57 MOD-V1..MOD-V3 đã nối API: hàng đợi và duyệt hồ sơ xác minh đọc ghi thật.
   if (mode === "live" && role === "MOD" && area === "verification")

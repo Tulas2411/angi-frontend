@@ -102,3 +102,24 @@ export function moderationVerificationsOperation(
     return { body: true, status: 200 };
   return null;
 }
+
+/**
+ * F-58 Review Pending Menu Submission: MOD-M1 `GET mod/menu-submissions`, MOD-M2
+ * `GET mod/menu-submissions/{submissionId}`, MOD-M3 `POST .../approve` and MOD-M4
+ * `POST .../reject`. The BE controller allows MOD and ADMIN.
+ */
+export function moderationMenusOperation(method: string, endpoint: string) {
+  if (method === "GET" && endpoint === "mod/menu-submissions")
+    return { body: false, status: 200 };
+  if (
+    method === "GET" &&
+    new RegExp(`^mod/menu-submissions/${id}$`).test(endpoint)
+  )
+    return { body: false, status: 200 };
+  if (
+    method === "POST" &&
+    new RegExp(`^mod/menu-submissions/${id}/(approve|reject)$`).test(endpoint)
+  )
+    return { body: true, status: 200 };
+  return null;
+}

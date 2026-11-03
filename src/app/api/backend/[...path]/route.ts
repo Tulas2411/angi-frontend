@@ -20,6 +20,7 @@ import {
   moderationBlogsOperation,
   moderationReportsOperation,
   moderationUsersOperation,
+  moderationMenusOperation,
   moderationVerificationsOperation,
 } from "@/shared/api/moderation-proxy";
 import {
@@ -66,6 +67,7 @@ async function handle(request: Request, context: Context) {
       request.method,
       endpoint,
     );
+    const modMenus = moderationMenusOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     // F-63 ADM-D1..ADM-D3 + OPS-01, F-65 ADM-M1..ADM-M4, F-66 ADM-P1..ADM-P4: the Admin operations.
@@ -87,6 +89,7 @@ async function handle(request: Request, context: Context) {
       !moderationUsers &&
       !moderationBlogs &&
       !modVerifications &&
+      !modMenus &&
       !adminPermissions &&
       !agentOp &&
       !publicOp
@@ -107,6 +110,7 @@ async function handle(request: Request, context: Context) {
       moderationUsers?.body !== false &&
       moderationBlogs?.body !== false &&
       modVerifications?.body !== false &&
+      modMenus?.body !== false &&
       adminPermissions?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
@@ -235,6 +239,25 @@ async function handle(request: Request, context: Context) {
           });
         }),
         modVerifications.status,
+      );
+    }
+    // F-58 MOD-M1..MOD-M4 — duyệt bản thực đơn chờ duyệt (Mod và Admin).
+    if (modMenus) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được duyệt thực đơn.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modMenus.status,
       );
     }
     // MOD-B1..MOD-B3 — kiểm duyệt bài viết và bình luận (Mod và Admin).
