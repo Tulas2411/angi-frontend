@@ -55,6 +55,8 @@ export function RoadmapDetailMap({
   const map = useRef<MapboxMap | null>(null);
   const refresh = useRef<() => void>(() => {});
   const fit = useRef<() => void>(() => {});
+  /** Draws the pins of the current stops again on the same map. */
+  const sync = useRef<() => void>(() => {});
   const latest = useRef({
     overview,
     stops,
@@ -94,6 +96,11 @@ export function RoadmapDetailMap({
     originSkipped,
   ]);
 
+  // New stops (a dish added, removed or moved) redraw the pins; the map itself stays.
+  useEffect(() => {
+    sync.current();
+  }, [groups]);
+
   useEffect(() => {
     refresh.current();
     fit.current();
@@ -107,6 +114,7 @@ export function RoadmapDetailMap({
     let instance: MapboxMap | null = null;
     let observer: ResizeObserver | null = null;
     let startMarker: Marker | null = null;
+    let loaded = false;
     const markers: {
       group: RoadmapMapGroup;
       marker: Marker;
@@ -118,6 +126,9 @@ export function RoadmapDetailMap({
       if (disposed) return;
       const code = (event as { error?: { status?: unknown } } | undefined)
         ?.error?.status;
+      // Once drawn, a passing failure (one tile, one sprite) keeps the map: only a refused key
+      // ends it. Removing a working map would also cost another map load.
+      if (loaded && code !== 401 && code !== 403) return;
       setErrorStatus(typeof code === "number" ? code : null);
       setStatus("error");
       observer?.disconnect();
@@ -283,9 +294,11 @@ export function RoadmapDetailMap({
           }
         };
 
-        instance.on("load", () => {
-          if (!instance || disposed) return;
-          for (const group of groups) {
+        sync.current = () => {
+          if (!instance || disposed || !loaded) return;
+          for (const { marker } of markers) marker.remove();
+          markers.length = 0;
+          for (const group of latest.current.groups) {
             const button = document.createElement("button");
             button.type = "button";
             // Mapbox otherwise assigns role="img", overriding native button semantics.
@@ -315,6 +328,12 @@ export function RoadmapDetailMap({
             markers.push({ group, marker, button });
           }
           refresh.current();
+        };
+
+        instance.on("load", () => {
+          if (!instance || disposed) return;
+          loaded = true;
+          sync.current();
           fit.current();
           setStatus("ready");
         });
@@ -338,8 +357,12 @@ export function RoadmapDetailMap({
       map.current = null;
       refresh.current = () => {};
       fit.current = () => {};
+      sync.current = () => {};
     };
-  }, [token, groups, attempt]);
+    // Created once per token (and per retry): Mapbox shares one telemetry/session sender between
+    // maps, and removing a map while its request is pending makes that sender call a cleared
+    // callback ("this.errorCb is not a function") when the request fails. It is also a new map load.
+  }, [token, attempt]);
 
   const hasMap = Boolean(token);
   const ready = hasMap && status === "ready";
