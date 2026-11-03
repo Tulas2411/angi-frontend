@@ -5,7 +5,6 @@ import {
   Dialog,
   EmptyState,
   Field,
-  Media,
   SelectField,
   Skeleton,
 } from "@/components/ui/primitives";
@@ -22,16 +21,8 @@ import {
   type SuggestionFilters,
 } from "./roadmap-add-item-rules";
 import { rememberDestination } from "./roadmap-destination";
-import {
-  planInsert,
-  positionOptions,
-  resolvePosition,
-  restaurantMapsUrl,
-  type PositionChoice,
-} from "./roadmap-insert-rules";
-import { patchBody } from "./roadmap-reorder-rules";
-import { dayTitle, formatRating, mealSlotLabels } from "./roadmap-detail-rules";
-import { vnd } from "./roadmap-list-rules";
+import { restaurantMapsUrl } from "./roadmap-insert-rules";
+import { dayTitle, mealSlotLabels } from "./roadmap-detail-rules";
 import type { RoadmapItemService } from "./roadmap-service";
 import type {
   DishCardDto,
@@ -40,6 +31,14 @@ import type {
   RoadmapSummaryDto,
 } from "./roadmap-types";
 import { VndField } from "./vnd-field";
+import { useDishView } from "@/features/explore/dish-view-mode";
+import {
+  DishDetailCard,
+  DishRow,
+  DishTile,
+  DishViewSwitcher,
+} from "@/features/explore/dish-views";
+import "@/features/explore/explore.css";
 import "./roadmap-add-item.css";
 
 type ListState =
@@ -78,7 +77,6 @@ function Panel({
   roadmapId,
   overview,
   day,
-  days,
   initialSlot,
   defaultProvince,
   gpsOrigin,
@@ -87,10 +85,8 @@ function Panel({
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
-  /** The day the dialog was opened from. */
+  /** The day the dialog was opened from: every dish picked here goes to it. */
   day: RoadmapDayDto;
-  /** Every day of the roadmap as RM-03 returned it: the dish can go to any of them. */
-  days: RoadmapDayDto[];
   initialSlot: MealSlot;
   defaultProvince: string;
   gpsOrigin?: { latitude: number; longitude: number };
@@ -102,14 +98,9 @@ function Panel({
     q: "",
     maxPrice: "",
   });
-  // Where a picked dish goes (RM-07 needs the day and the meal); none of it filters the list.
-  const [targetDayId, setTargetDayId] = useState(String(day.dayId));
+  // A picked dish goes to the day the dialog was opened from, at the end of the chosen meal
+  // (RM-07 without `sortOrder`); only the meal can be changed, and it does not filter the list.
   const [targetSlot, setTargetSlot] = useState<MealSlot>(initialSlot);
-  const [position, setPosition] = useState<PositionChoice>("end");
-  const targetDay =
-    days.find((entry) => String(entry.dayId) === targetDayId) ?? day;
-  const positions = positionOptions(targetDay.items, targetSlot);
-  const where = resolvePosition(position, positions);
   const latest = useRef({ filters, touchedProvince: false });
   const [errors, setErrors] = useState<Record<string, string>>({});
   // With a known province the first page loads at once, so the dialog never opens empty.
@@ -127,6 +118,9 @@ function Panel({
   const adding = useRef(false);
   const mounted = useRef(true);
   const [first] = useState(() => ({ filters, gpsOrigin }));
+  // The suggestions use the cards of "Khám phá món ăn" in the same three layouts (the choice is
+  // shared with that page), without the description: here a dish is picked by name and price.
+  const [view, setView] = useDishView();
   latest.current.filters = filters;
   useEffect(() => {
     mounted.current = true;
@@ -276,29 +270,19 @@ function Panel({
       void removed;
       return rest;
     });
-    // Some dishes may move before the dish is added: only then is the roadmap read again on failure.
-    let movedOthers = false;
     try {
-      // Make room first (RM-08, the dishes from that place on move one step later), then add the
-      // dish at that place (RM-07 `sortOrder`). At the end of the meal there is nothing to move.
-      const insert = planInsert(targetDay.items, targetSlot, where);
-      for (const patch of insert.patches) {
-        movedOthers = true;
-        await service.updateItem(roadmapId, patch.itemId, patchBody(patch));
-      }
+      // Without `sortOrder` RM-07 puts the dish at the end of its meal: no other dish moves.
       const item = await service.addItem(
         roadmapId,
-        targetDay.dayId,
-        buildAddItemRequest(dish, targetSlot, list.requestId, insert.sortOrder),
+        day.dayId,
+        buildAddItemRequest(dish, targetSlot, list.requestId),
       );
       if (!mounted.current) return;
       const slot = mealSlotLabels[item.mealSlot];
       setAdded((previous) => ({ ...previous, [dish.id]: slot }));
       setAnnouncement(
-        `Đã thêm ${dish.name} vào ${lower(slot)} của ${dayTitle(targetDay)}.`,
+        `Đã thêm ${dish.name} vào cuối ${lower(slot)} của ${dayTitle(day)}.`,
       );
-      // The next dish follows this one when a place was chosen.
-      if (where !== "end") setPosition(`after:${item.id}`);
       try {
         await onAdded();
       } catch {
@@ -310,8 +294,6 @@ function Panel({
       if (failure.unavailable)
         setGone((previous) => ({ ...previous, [dish.id]: true }));
       setFailures((previous) => ({ ...previous, [dish.id]: failure.message }));
-      // Some dishes may already have moved: read the roadmap again so the places on offer are true.
-      if (movedOthers) void onAdded().catch(() => undefined);
     } finally {
       adding.current = false;
       if (mounted.current) setPending(null);
@@ -375,39 +357,16 @@ function Panel({
         </Button>
       </form>
       <fieldset className="roadmap-add-target">
-        <legend>Thêm món đã chọn vào</legend>
-        <SelectField
-          label="Ngày"
-          name="dayId"
-          value={String(targetDay.dayId)}
-          onChange={(value) => {
-            setTargetDayId(value);
-            setPosition("end");
-          }}
-          options={days.map((entry) => ({
-            value: String(entry.dayId),
-            label: dayTitle(entry),
-          }))}
-        />
+        <legend>Thêm món đã chọn vào cuối bữa của {dayTitle(day)}</legend>
         <SelectField
           label="Bữa"
           name="mealSlot"
           value={targetSlot}
-          onChange={(value) => {
-            setTargetSlot(value as MealSlot);
-            setPosition("end");
-          }}
+          onChange={(value) => setTargetSlot(value as MealSlot)}
           options={mealSlots.map((slot) => ({
             value: slot,
             label: mealSlotLabels[slot],
           }))}
-        />
-        <SelectField
-          label="Vị trí"
-          name="position"
-          value={where}
-          onChange={(value) => setPosition(value as PositionChoice)}
-          options={positions}
         />
       </fieldset>
       {note && <p className="helper">{note}</p>}
@@ -445,41 +404,62 @@ function Panel({
       {list.status === "ready" &&
         (list.items.length ? (
           <section className="stack-sm" aria-labelledby="roadmap-add-results">
-            <h3 id="roadmap-add-results" className="roadmap-add-results-title">
-              Món gợi ý tại {list.filters.province.trim()}
-            </h3>
-            <ul className="roadmap-suggestions">
+            <div className="dish-results-bar">
+              <h3
+                id="roadmap-add-results"
+                className="roadmap-add-results-title"
+              >
+                Món gợi ý tại {list.filters.province.trim()}
+              </h3>
+              <DishViewSwitcher view={view} onChange={setView} />
+            </div>
+            <ul className={`dish-items dish-items-${view}`}>
               {list.items.map((dish) => {
                 const done = added[dish.id];
                 const unavailable = gone[dish.id] || !dish.isAvailable;
-                const place = [
-                  dish.restaurant.district,
-                  dish.restaurant.provinceName,
-                ]
-                  .filter(Boolean)
-                  .join(", ");
                 const mapsUrl = restaurantMapsUrl(dish.restaurant);
                 const blocked =
                   Boolean(done) ||
                   unavailable ||
                   (pending !== null && pending !== dish.id);
-                return (
-                  <li key={dish.id} className="roadmap-suggestion">
-                    <Media
-                      className="roadmap-suggestion-media"
-                      src={dish.coverUrl ?? undefined}
-                      alt={dish.name}
-                    />
-                    <div className="roadmap-suggestion-text">
-                      <h4>{dish.name}</h4>
-                      <p className="roadmap-suggestion-price">
-                        {vnd(dish.price)}
+                const addButton = (
+                  <Button
+                    variant={done ? "tertiary" : "secondary"}
+                    loading={pending === dish.id}
+                    aria-disabled={blocked || undefined}
+                    aria-label={
+                      done
+                        ? `${dish.name}: đã thêm vào ${lower(done)}`
+                        : `Thêm ${dish.name} vào ${slotLabel}`
+                    }
+                    onClick={() => {
+                      if (!blocked) void add(dish);
+                    }}
+                  >
+                    {done ? "✓ Đã thêm" : `+ Thêm vào ${slotLabel}`}
+                  </Button>
+                );
+                const problems = (
+                  <>
+                    {unavailable && (
+                      <Badge tone="warning">Món không còn khả dụng</Badge>
+                    )}
+                    {failures[dish.id] && (
+                      <p className="field-error" role="alert">
+                        {failures[dish.id]}
                       </p>
-                      <p className="helper">
-                        {dish.restaurant.name}
-                        {place && ` · ${place}`}
-                        {` · ${formatRating(dish.restaurant.ratingAvg)} sao`}
-                      </p>
+                    )}
+                  </>
+                );
+                const actions =
+                  view === "gallery" ? (
+                    <>
+                      {addButton}
+                      {problems}
+                    </>
+                  ) : (
+                    <>
+                      {addButton}
                       {mapsUrl && (
                         <a
                           className="text-link roadmap-suggestion-map"
@@ -493,37 +473,18 @@ function Panel({
                           </span>
                         </a>
                       )}
-                      {dish.tags.length > 0 && (
-                        <p className="roadmap-suggestion-tags">
-                          {dish.tags.slice(0, 3).map((tag) => (
-                            <span key={tag.id}>{tag.name}</span>
-                          ))}
-                        </p>
-                      )}
-                      {unavailable && (
-                        <Badge tone="warning">Món không còn khả dụng</Badge>
-                      )}
-                      {failures[dish.id] && (
-                        <p className="field-error" role="alert">
-                          {failures[dish.id]}
-                        </p>
-                      )}
-                    </div>
-                    <Button
-                      variant={done ? "tertiary" : "secondary"}
-                      loading={pending === dish.id}
-                      aria-disabled={blocked || undefined}
-                      aria-label={
-                        done
-                          ? `${dish.name}: đã thêm vào ${lower(done)}`
-                          : `Thêm ${dish.name} vào ${slotLabel}`
-                      }
-                      onClick={() => {
-                        if (!blocked) void add(dish);
-                      }}
-                    >
-                      {done ? "✓ Đã thêm" : `+ Thêm vào ${slotLabel}`}
-                    </Button>
+                      {problems}
+                    </>
+                  );
+                return (
+                  <li key={dish.id} className="roadmap-suggestion">
+                    {view === "gallery" ? (
+                      <DishTile dish={dish} actions={actions} newTab />
+                    ) : view === "list" ? (
+                      <DishRow dish={dish} actions={actions} newTab />
+                    ) : (
+                      <DishDetailCard dish={dish} actions={actions} newTab />
+                    )}
                   </li>
                 );
               })}
@@ -570,7 +531,6 @@ export function RoadmapAddItemDialog({
   roadmapId,
   overview,
   day,
-  days,
   initialSlot,
   defaultProvince,
   gpsOrigin,
@@ -580,9 +540,8 @@ export function RoadmapAddItemDialog({
 }: {
   roadmapId: number;
   overview: RoadmapSummaryDto;
-  /** The day the dialog was opened from; the dish can still go to any day of `days`. */
+  /** The day whose "Thêm món" was pressed: the dishes are added to it, at the end of a meal. */
   day: RoadmapDayDto;
-  days: RoadmapDayDto[];
   initialSlot: MealSlot;
   defaultProvince: string;
   gpsOrigin?: { latitude: number; longitude: number };
@@ -607,7 +566,6 @@ export function RoadmapAddItemDialog({
         roadmapId={roadmapId}
         overview={overview}
         day={day}
-        days={days}
         initialSlot={initialSlot}
         defaultProvince={defaultProvince}
         gpsOrigin={gpsOrigin}

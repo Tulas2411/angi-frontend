@@ -1010,12 +1010,20 @@ test("the selected stop shows its dish, its restaurant and the restaurant's revi
   const card = map.locator(".roadmap-map-card");
   const cardTab = (name: string) =>
     card.getByRole("tab", { name, exact: true });
-  // "Món ăn" first: RM-03 at once, DISH-02 adds the description, photos and tags.
+  // Four tabs, "Món ăn" first: RM-03 at once, DISH-02 adds the description and tags.
+  await expect(card.getByRole("tab")).toHaveText([
+    "Món ăn",
+    "Quán hàng",
+    "Đánh giá",
+    "Ảnh",
+  ]);
   await expect(cardTab("Món ăn")).toHaveAttribute("aria-selected", "true");
   await expect(card).toContainText("Có trong lộ trình");
   await expect(card).toContainText("Nước dùng hầm xương bò");
   await expect(card.locator(".roadmap-place-tags")).toContainText("Bún");
-  await expect(card.getByRole("button", { name: /^Xem ảnh / })).toHaveCount(2);
+  // Only the likes are counted now (no dislikes).
+  await expect(card).toContainText("128 lượt thích");
+  await expect(card).not.toContainText("Cảm nhận");
   await expect(
     card.getByRole("link", { name: "Xem trang món ăn →" }),
   ).toHaveAttribute("href", "/dishes/1602");
@@ -1049,6 +1057,14 @@ test("the selected stop shows its dish, its restaurant and the restaurant's revi
   await expect(reviews.locator(".roadmap-place-review")).toHaveCount(6);
   await reviews.getByRole("button", { name: /^Lọc 5 sao/ }).click();
   await expect(reviews.locator(".roadmap-place-review")).toHaveCount(4);
+  // "Ảnh": the dish photos (DISH-02) then the restaurant photos (REST-02), already loaded.
+  await cardTab("Ảnh").click();
+  const photos = card.getByRole("tabpanel", { name: "Ảnh" });
+  await expect(photos.locator(".roadmap-place-photos li")).toHaveCount(3);
+  await expect(photos.getByRole("link").first()).toHaveAttribute(
+    "href",
+    "/assets/figma/dish-0.png",
+  );
   // Each tab asked once; coming back to a tab keeps its answer.
   await cardTab("Món ăn").click();
   await cardTab("Quán hàng").click();

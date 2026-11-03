@@ -1440,6 +1440,8 @@ select.input {
 .dialog[open] {
   display: flex;
   flex-direction: column;
+  /* The dialog itself never scrolls; lists and pickers inside are fixed-position and not clipped. */
+  overflow: hidden;
   opacity: 1;
   transform: none;
 }
@@ -1476,7 +1478,13 @@ select.input {
 .dialog-heading h2 {
   font-size: 26px;
 }
+/*
+ * Only the content scrolls. It is the containing block of its absolutely placed children (the
+ * screen-reader `sr-only` statuses), so they scroll with it instead of stretching the dialog and
+ * giving it a second scrollbar.
+ */
 .dialog-content {
+  position: relative;
   min-height: 0;
   padding: 0 var(--space-8) var(--space-6);
   overflow: auto;

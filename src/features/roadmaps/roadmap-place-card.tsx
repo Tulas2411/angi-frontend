@@ -2,6 +2,17 @@
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
+import {
+  BanknotesIcon,
+  BuildingStorefrontIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  GlobeAltIcon,
+  MapPinIcon,
+  NoSymbolIcon,
+  PhoneIcon,
+} from "@heroicons/react/24/outline";
+import { HeartIcon } from "@heroicons/react/24/solid";
 import { Button } from "@/shared/ui";
 import { Avatar, Icon, Media, Tabs } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
@@ -27,7 +38,7 @@ import type {
   ReviewDto,
   ReviewSort,
 } from "@/features/explore/explore-types";
-import { useRemote } from "@/features/explore/use-remote";
+import { useRemote, type Remote } from "@/features/explore/use-remote";
 import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapMapStop } from "./roadmap-map-rules";
@@ -43,6 +54,7 @@ const placeTabs = [
   { value: "dish", label: "Món ăn" },
   { value: "restaurant", label: "Quán hàng" },
   { value: "reviews", label: "Đánh giá" },
+  { value: "photos", label: "Ảnh" },
 ] as const;
 type PlaceTab = (typeof placeTabs)[number]["value"];
 
@@ -55,25 +67,8 @@ const reviewSortChips: { value: ReviewSort; label: string }[] = [
   { value: "rating_asc", label: "Thấp nhất" },
 ];
 
-const svg = (path: string) => (
-  <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-    <path d={path} />
-  </svg>
-);
-const placeIcons = {
-  pin: svg(
-    "M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z",
-  ),
-  clock: svg(
-    "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6 3.5 2.1-.8 1.3L11 13.3V7h2v5.6Z",
-  ),
-  phone: svg(
-    "M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2Z",
-  ),
-  web: svg(
-    "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm6.9 6h-2.9a15.7 15.7 0 0 0-1.4-3.6A8 8 0 0 1 18.9 8ZM12 4c.8 1.2 1.5 2.5 1.9 4h-3.8c.4-1.5 1.1-2.8 1.9-4ZM4.3 14a8.2 8.2 0 0 1 0-4h3.4a16.5 16.5 0 0 0 0 4H4.3Zm.8 2h2.9c.3 1.3.8 2.5 1.4 3.6A8 8 0 0 1 5.1 16ZM8 8H5.1a8 8 0 0 1 4.3-3.6C8.8 5.5 8.3 6.7 8 8Zm4 12c-.8-1.2-1.5-2.5-1.9-4h3.8c-.4 1.5-1.1 2.8-1.9 4Zm2.3-6H9.7a14.7 14.7 0 0 1 0-4h4.6a14.7 14.7 0 0 1 0 4Zm.3 5.6c.6-1.1 1.1-2.3 1.4-3.6h2.9a8 8 0 0 1-4.3 3.6Zm1.7-5.6a16.5 16.5 0 0 0 0-4h3.4a8.2 8.2 0 0 1 0 4h-3.4Z",
-  ),
-};
+/** Heroicons (outline, 24px) in the rows of the card. */
+const icon = { className: "roadmap-place-icon", "aria-hidden": true } as const;
 
 /** 0 = Sunday … 6 = Saturday, today in Vietnam (BusinessHour.dayOfWeek). */
 function vietnamWeekday(now = new Date()) {
@@ -119,45 +114,6 @@ function LongText({ text }: { text: string }) {
   );
 }
 
-/** One large photo and a strip of the others; a thumbnail becomes the large photo. */
-function Gallery({
-  images,
-  alt,
-  mainClassName = "",
-}: {
-  images: readonly string[];
-  alt: string;
-  mainClassName?: string;
-}) {
-  const [shown, setShown] = useState(0);
-  const current = images[Math.min(shown, images.length - 1)];
-  return (
-    <div className="roadmap-place-gallery">
-      <Media
-        className={`roadmap-place-photo ${mainClassName}`.trim()}
-        src={current}
-        alt={alt}
-      />
-      {images.length > 1 && (
-        <ul aria-label={`Ảnh khác của ${alt}`}>
-          {images.map((url, index) => (
-            <li key={url}>
-              <button
-                type="button"
-                aria-label={`Xem ảnh ${index + 1} / ${images.length}`}
-                aria-pressed={index === shown}
-                onClick={() => setShown(index)}
-              >
-                <Media src={url} alt="" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 function LoadFailed({
   title,
   error,
@@ -190,66 +146,56 @@ function Loading() {
   );
 }
 
-/** DISH-02, with what RM-03 already knows shown at once. */
+/** A photo list without repeats, the cover first. */
+function photosOf(cover: string | null | undefined, images: readonly string[]) {
+  return [
+    ...new Set([cover, ...images].filter((url): url is string => Boolean(url))),
+  ];
+}
+
+/**
+ * Like Wanderlog's "Giới thiệu": the description beside a small photo, then one line per fact
+ * with its icon. DISH-02 adds to what RM-03 already knows, which is shown at once.
+ */
 function DishPanel({
   stop,
-  service,
+  state,
+  onRetry,
 }: {
   stop: RoadmapMapStop;
-  service: PlaceService;
+  state: Remote<DishDetailDto>;
+  onRetry: () => void;
 }) {
   const { dish } = stop.item;
-  const [state, retry] = useRemote<DishDetailDto>(
-    () => service.dish(dish.id),
-    String(dish.id),
-  );
   const detail = state.status === "ready" ? state.data : null;
-  const images = [
-    ...new Set(
-      [detail?.coverUrl ?? dish.coverUrl, ...(detail?.images ?? [])].filter(
-        (url): url is string => Boolean(url),
-      ),
-    ),
-  ];
   const tags = detail?.tags ?? dish.tags;
   const likes = detail?.likeCount ?? dish.likeCount;
-  const dislikes = detail?.dislikeCount ?? dish.dislikeCount;
   const available = detail?.isAvailable ?? dish.isAvailable;
+  const place = [dish.restaurant.district, dish.restaurant.provinceName]
+    .filter(Boolean)
+    .join(", ");
   return (
     <div className="roadmap-place-panel">
-      <div className="roadmap-place-lead">
-        <dl className="roadmap-place-facts">
-          <div>
-            <dt>Giá</dt>
-            <dd>
-              <strong>{vnd(detail?.price ?? dish.price)}</strong>
-            </dd>
-          </div>
-          <div>
-            <dt>Loại món</dt>
-            <dd>{dishFormLabels[detail?.dishForm ?? dish.dishForm]}</dd>
-          </div>
-          <div>
-            <dt>Tình trạng</dt>
-            <dd data-tone={available ? "success" : "warning"}>
-              {available ? "Đang bán" : "Tạm hết"}
-            </dd>
-          </div>
-          <div>
-            <dt>Cảm nhận</dt>
-            <dd>
-              <span aria-label={`${likes} lượt thích`}>👍 {likes}</span>{" "}
-              <span aria-label={`${dislikes} lượt không thích`}>
-                👎 {dislikes}
-              </span>
-            </dd>
-          </div>
-        </dl>
-        <Gallery
-          images={images}
+      <div className="roadmap-place-intro">
+        <Media
+          className="roadmap-place-thumb roadmap-map-card-photo"
+          src={(detail?.coverUrl ?? dish.coverUrl) || undefined}
           alt={`Ảnh món ${dish.name}`}
-          mainClassName="roadmap-map-card-photo"
         />
+        {state.status === "loading" && <Loading />}
+        {state.status === "error" && (
+          <LoadFailed
+            title="Chưa tải được mô tả món."
+            error={state.error}
+            onRetry={onRetry}
+          />
+        )}
+        {detail &&
+          (detail.description ? (
+            <LongText text={detail.description} />
+          ) : (
+            <p className="helper">Quán chưa viết mô tả cho món này.</p>
+          ))}
       </div>
       {tags.length > 0 && (
         <ul className="roadmap-place-tags" aria-label="Thẻ của món">
@@ -258,20 +204,34 @@ function DishPanel({
           ))}
         </ul>
       )}
-      {state.status === "loading" && <Loading />}
-      {state.status === "error" && (
-        <LoadFailed
-          title="Chưa tải được mô tả món."
-          error={state.error}
-          onRetry={retry}
-        />
-      )}
-      {detail &&
-        (detail.description ? (
-          <LongText text={detail.description} />
-        ) : (
-          <p className="helper">Quán chưa viết mô tả cho món này.</p>
-        ))}
+      <ul className="roadmap-place-rows">
+        <li>
+          <BanknotesIcon {...icon} />
+          <span>
+            <strong>{vnd(detail?.price ?? dish.price)}</strong> ·{" "}
+            {dishFormLabels[detail?.dishForm ?? dish.dishForm]}
+          </span>
+        </li>
+        <li>
+          <HeartIcon {...icon} className="roadmap-place-icon is-like" />
+          <span>{likes.toLocaleString("vi-VN")} lượt thích</span>
+        </li>
+        <li data-tone={available ? "success" : "warning"}>
+          {available ? (
+            <CheckCircleIcon {...icon} />
+          ) : (
+            <NoSymbolIcon {...icon} />
+          )}
+          <span>{available ? "Đang bán" : "Tạm hết món"}</span>
+        </li>
+        <li>
+          <BuildingStorefrontIcon {...icon} />
+          <span>
+            {dish.restaurant.name}
+            {place && ` · ${place}`}
+          </span>
+        </li>
+      </ul>
       <Link
         className="roadmap-place-link"
         href={dishHref(dish.id)}
@@ -285,23 +245,19 @@ function DishPanel({
 
 /** REST-02: rating, status, address, hours, contact and photos of the restaurant. */
 function RestaurantPanel({
-  restaurantId,
-  service,
+  state,
+  onRetry,
 }: {
-  restaurantId: number;
-  service: PlaceService;
+  state: Remote<RestaurantDetailDto>;
+  onRetry: () => void;
 }) {
-  const [state, retry] = useRemote<RestaurantDetailDto>(
-    () => service.restaurant(restaurantId),
-    String(restaurantId),
-  );
   if (state.status === "loading") return <Loading />;
   if (state.status === "error")
     return (
       <LoadFailed
         title="Chưa tải được thông tin quán."
         error={state.error}
-        onRetry={retry}
+        onRetry={onRetry}
       />
     );
   const restaurant = state.data;
@@ -323,13 +279,6 @@ function RestaurantPanel({
   );
   const week = businessHoursByDay(restaurant.businessHours);
   const today = week.find((day) => day.day === vietnamWeekday());
-  const images = [
-    ...new Set(
-      [restaurant.coverUrl, ...restaurant.images].filter((url): url is string =>
-        Boolean(url),
-      ),
-    ),
-  ];
   return (
     <div className="roadmap-place-panel">
       <p className="roadmap-place-score">
@@ -347,12 +296,9 @@ function RestaurantPanel({
           {status.text}
         </span>
       </p>
-      {images.length > 0 && (
-        <Gallery images={images} alt={`Ảnh quán ${restaurant.name}`} />
-      )}
       <ul className="roadmap-place-rows">
         <li>
-          {placeIcons.pin}
+          <MapPinIcon {...icon} />
           <span>
             {address}
             {directions && (
@@ -363,7 +309,7 @@ function RestaurantPanel({
           </span>
         </li>
         <li>
-          {placeIcons.clock}
+          <ClockIcon {...icon} />
           <details>
             <summary>
               Hôm nay: <strong>{today?.text ?? "Chưa có giờ mở cửa"}</strong>
@@ -380,7 +326,7 @@ function RestaurantPanel({
         </li>
         {restaurant.phone && (
           <li>
-            {placeIcons.phone}
+            <PhoneIcon {...icon} />
             <a href={`tel:${restaurant.phone.replace(/\s/g, "")}`}>
               {restaurant.phone}
             </a>
@@ -388,7 +334,7 @@ function RestaurantPanel({
         )}
         {restaurant.website && (
           <li>
-            {placeIcons.web}
+            <GlobeAltIcon {...icon} />
             <a href={restaurant.website} target="_blank" rel="noreferrer">
               {restaurant.website.replace(/^https?:\/\//, "")}
             </a>
@@ -627,6 +573,82 @@ function ReviewsPanel({
 }
 
 /**
+ * "Ảnh": every photo of the dish (DISH-02) and of its restaurant (REST-02) in two columns, like
+ * Wanderlog. A photo opens full size in a new tab.
+ */
+function PhotosPanel({
+  dishName,
+  restaurantName,
+  dish,
+  restaurant,
+  onRetryDish,
+  onRetryRestaurant,
+}: {
+  dishName: string;
+  restaurantName: string;
+  dish: Remote<DishDetailDto>;
+  restaurant: Remote<RestaurantDetailDto>;
+  onRetryDish: () => void;
+  onRetryRestaurant: () => void;
+}) {
+  const photos = [
+    ...(dish.status === "ready"
+      ? photosOf(dish.data.coverUrl, dish.data.images).map((url) => ({
+          url,
+          alt: `Ảnh món ${dishName}`,
+        }))
+      : []),
+    ...(restaurant.status === "ready"
+      ? photosOf(restaurant.data.coverUrl, restaurant.data.images).map(
+          (url) => ({ url, alt: `Ảnh quán ${restaurantName}` }),
+        )
+      : []),
+  ].filter(
+    (photo, index, all) =>
+      all.findIndex((other) => other.url === photo.url) === index,
+  );
+  const loading = dish.status === "loading" || restaurant.status === "loading";
+  return (
+    <div className="roadmap-place-panel">
+      {dish.status === "error" && (
+        <LoadFailed
+          title="Chưa tải được ảnh món."
+          error={dish.error}
+          onRetry={onRetryDish}
+        />
+      )}
+      {restaurant.status === "error" && (
+        <LoadFailed
+          title="Chưa tải được ảnh quán."
+          error={restaurant.error}
+          onRetry={onRetryRestaurant}
+        />
+      )}
+      {photos.length > 0 && (
+        <ul className="roadmap-place-photos" aria-label="Ảnh món và ảnh quán">
+          {photos.map((photo, index) => (
+            <li key={photo.url}>
+              <a
+                href={photo.url}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={`${photo.alt} ${index + 1}, mở ảnh lớn ở tab mới`}
+              >
+                <Media src={photo.url} alt={photo.alt} />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {loading && <Loading />}
+      {!loading && photos.length === 0 && (
+        <p className="helper">Món và quán này chưa có ảnh nào.</p>
+      )}
+    </div>
+  );
+}
+
+/**
  * The stop selected on the map: its dish (DISH-02), its restaurant (REST-02) and the restaurant's
  * reviews (REST-04). A tab loads when it is first opened and keeps its answer while the card is open.
  */
@@ -647,13 +669,38 @@ export function RoadmapPlaceCard({
   const place = [dish.restaurant.district, dish.restaurant.provinceName]
     .filter(Boolean)
     .join(", ");
+  // DISH-02 serves "Món ăn" and "Ảnh"; REST-02 "Quán hàng" and "Ảnh", once either is opened.
+  const [dishState, retryDish] = useRemote<DishDetailDto>(
+    () => service.dish(dish.id),
+    String(dish.id),
+  );
+  const wantsRestaurant =
+    visited.includes("restaurant") || visited.includes("photos");
+  const [restaurantState, retryRestaurant] = useRemote<RestaurantDetailDto>(
+    // Not asked before it is needed: the remote waits on a promise that never settles.
+    () =>
+      wantsRestaurant
+        ? service.restaurant(dish.restaurant.id)
+        : new Promise<RestaurantDetailDto>(() => undefined),
+    `${dish.restaurant.id}:${wantsRestaurant}`,
+  );
   const panels: Record<PlaceTab, ReactNode> = {
-    dish: <DishPanel stop={stop} service={service} />,
+    dish: <DishPanel stop={stop} state={dishState} onRetry={retryDish} />,
     restaurant: (
-      <RestaurantPanel restaurantId={dish.restaurant.id} service={service} />
+      <RestaurantPanel state={restaurantState} onRetry={retryRestaurant} />
     ),
     reviews: (
       <ReviewsPanel restaurantId={dish.restaurant.id} service={service} />
+    ),
+    photos: (
+      <PhotosPanel
+        dishName={dish.name}
+        restaurantName={dish.restaurant.name}
+        dish={dishState}
+        restaurant={restaurantState}
+        onRetryDish={retryDish}
+        onRetryRestaurant={retryRestaurant}
+      />
     ),
   };
   return (
@@ -686,7 +733,7 @@ export function RoadmapPlaceCard({
         </Button>
       </div>
       <div className="roadmap-map-card-body">
-        <header className="roadmap-place-head">
+        <header className="roadmap-place-head" hidden={tab === "photos"}>
           <span
             className="roadmap-place-number"
             data-tone={(stop.dayNumber - 1) % 5}

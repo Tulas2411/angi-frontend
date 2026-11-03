@@ -304,35 +304,21 @@ async function open(page: Page) {
   await expect(dialog(page).locator(".roadmap-suggestion")).toHaveCount(3);
 }
 
-test("the dialog offers every day, the meal and the places of that meal", async ({
+test("the dialog adds to the day it was opened from: only the meal can change", async ({
   page,
 }) => {
   await open(page);
-  // Opened from day 1, lunch; the list is not filtered by any of these.
-  await expect(dayField(page)).toHaveValue("301");
+  // Opened from day 1, lunch; there is no day or place to pick, and the list is not filtered.
+  await expect(dayField(page)).toHaveCount(0);
+  await expect(placeField(page)).toHaveCount(0);
   await expect(mealField(page)).toHaveValue("lunch");
-  await expect(dayField(page).locator("option")).toHaveText([
-    "Thứ Bảy, 10 tháng 10",
-    "Chủ Nhật, 11 tháng 10",
-    "Thứ Hai, 12 tháng 10",
-  ]);
-  await expect(placeField(page).locator("option")).toHaveText([
-    "Đầu bữa",
-    "Sau Bún chả",
-    "Sau Nem rán",
-    "Cuối bữa",
-  ]);
-  await expect(placeField(page)).toHaveValue("end");
-  // A meal with no dish has only one place.
-  await chooseOption(mealField(page), "dinner");
-  await expect(placeField(page).locator("option")).toHaveText(["Cuối bữa"]);
-  await chooseOption(dayField(page), "302");
-  await chooseOption(mealField(page), "lunch");
-  await expect(placeField(page).locator("option")).toHaveText(["Cuối bữa"]);
+  await expect(dialog(page)).toContainText(
+    "Thêm món đã chọn vào cuối bữa của Thứ Bảy, 10 tháng 10",
+  );
   expect(calls).toEqual([]);
 });
 
-test("the end of the meal is the default: no sortOrder and nothing moved", async ({
+test("a dish goes to the end of the meal: no sortOrder and nothing moved", async ({
   page,
 }) => {
   await open(page);
@@ -342,83 +328,28 @@ test("the end of the meal is the default: no sortOrder and nothing moved", async
     dayId: 301,
     body: { dishId: 200, mealSlot: "lunch", recoRequestId: requestId },
   });
+  // The next dish follows it, still at the end.
+  await addButton(page, "Bún riêu").click();
+  await expect.poll(() => addCalls.length).toBe(2);
+  expect(addCalls[1].body.sortOrder).toBeUndefined();
   expect(calls.filter((call) => call.startsWith("PATCH"))).toEqual([]);
   await expect
     .poll(async () => names(page))
-    .toEqual(["Bún chả", "Nem rán", "Chả cá", "Phở gà"]);
+    .toEqual(["Bún chả", "Nem rán", "Chả cá", "Phở gà", "Bún riêu"]);
 });
 
-test("a chosen place makes room with RM-08 first, then adds with that sortOrder", async ({
+test("another meal of the same day takes the dish at its end", async ({
   page,
 }) => {
   await open(page);
-  await chooseOption(placeField(page), "after:1502");
-  await addButton(page, "Phở gà").click();
-  await expect.poll(() => addCalls.length).toBe(1);
-  // The dishes after the place move one step later (the furthest first), then RM-07.
-  expect(calls).toEqual([
-    'PATCH 1504 {"sortOrder":3}',
-    'PATCH 1503 {"sortOrder":2}',
-    `POST 301 {"dishId":200,"mealSlot":"lunch","sortOrder":1,"recoRequestId":"${requestId}"}`,
-  ]);
-  await expect
-    .poll(async () => names(page))
-    .toEqual(["Bún chả", "Phở gà", "Nem rán", "Chả cá"]);
-  await expect(
-    dialog(page).getByRole("button", { name: "Phở gà: đã thêm vào bữa trưa" }),
-  ).toBeVisible();
-
-  // The next dish follows the one just added.
-  await expect(placeField(page)).toHaveValue(/^after:/);
-  await addButton(page, "Bún riêu").click();
-  await expect.poll(() => addCalls.length).toBe(2);
-  await expect
-    .poll(async () => names(page))
-    .toEqual(["Bún chả", "Phở gà", "Bún riêu", "Nem rán", "Chả cá"]);
-});
-
-test("the start of a meal and another day are honoured", async ({ page }) => {
-  await open(page);
-  await chooseOption(placeField(page), "start");
-  await addButton(page, "Bún riêu").click();
-  await expect.poll(() => addCalls.length).toBe(1);
-  expect(addCalls[0].body.sortOrder).toBe(0);
-  expect(calls.filter((call) => call.startsWith("PATCH"))).toEqual([
-    'PATCH 1504 {"sortOrder":3}',
-    'PATCH 1503 {"sortOrder":2}',
-    'PATCH 1502 {"sortOrder":1}',
-  ]);
-  await expect
-    .poll(async () => names(page))
-    .toEqual(["Bún riêu", "Bún chả", "Nem rán", "Chả cá"]);
-
-  // Day 2: the dish goes to that day, the day the dialog was opened from is untouched.
-  await chooseOption(dayField(page), "302");
   await chooseOption(mealField(page), "dinner");
   await addButton(page, "Bánh cuốn", "bữa tối").click();
-  await expect.poll(() => addCalls.length).toBe(2);
-  expect(addCalls[1]).toEqual({
-    dayId: 302,
+  await expect.poll(() => addCalls.length).toBe(1);
+  expect(addCalls[0]).toEqual({
+    dayId: 301,
     body: { dishId: 202, mealSlot: "dinner", recoRequestId: requestId },
   });
-  await expect(page.locator("#day-1 .roadmap-item")).toHaveCount(4);
-  await dialog(page).getByRole("button", { name: "Xong" }).click();
-  await page.getByRole("button", { name: "Chủ Nhật, 11 tháng 10" }).click();
-  await expect(page.locator("#day-2 .roadmap-item")).toHaveCount(1);
-});
-
-test("a failure while making room adds nothing and says so", async ({
-  page,
-}) => {
-  await open(page);
-  failPatch = true;
-  await chooseOption(placeField(page), "start");
-  await addButton(page, "Phở gà").click();
-  await expect(
-    dialog(page).locator(".roadmap-suggestion").first().getByRole("alert"),
-  ).toContainText("Hiện chưa kết nối được với hệ thống.");
-  expect(addCalls).toEqual([]);
-  expect(await names(page)).toEqual(["Bún chả", "Nem rán", "Chả cá"]);
+  expect(calls.filter((call) => call.startsWith("PATCH"))).toEqual([]);
 });
 
 test("each suggested place links to Google Maps by its coordinates", async ({
@@ -436,7 +367,7 @@ test("each suggested place links to Google Maps by its coordinates", async ({
   await expect(link).toHaveAttribute("rel", /noopener/);
 });
 
-test("the three selects fit from 320px to 1440px", async ({ page }) => {
+test("the dialog fits from 320px to 1440px", async ({ page }) => {
   await open(page);
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 1000 });

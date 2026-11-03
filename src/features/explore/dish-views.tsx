@@ -235,12 +235,26 @@ export function DescriptionText({
   return <LongDescription id={id} text={description.text} />;
 }
 
-function DishName({ dish }: { dish: MenuDishDto }) {
+/** The dish name, a link to its page; `newTab` keeps a dialog the dish was shown in open. */
+function DishName({ dish, newTab }: { dish: MenuDishDto; newTab?: boolean }) {
   return (
     <h3 id={`dish-${dish.id}`} className="dish-name">
-      <Link href={dishHref(dish.id)}>{dish.name}</Link>
+      <Link
+        href={dishHref(dish.id)}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
+        {dish.name}
+      </Link>
     </h3>
   );
+}
+
+/** What a list using the cards adds to each one (e.g. "Thêm vào bữa" in the roadmap dialog). */
+interface CardExtras {
+  /** Shown under the card's details. */
+  actions?: ReactNode;
+  /** Open the dish page in a new tab. */
+  newTab?: boolean;
 }
 
 /** Mode 1: one dish per row across the width, a small photo on the left. */
@@ -248,11 +262,14 @@ export function DishRow({
   dish,
   description,
   onRetry,
+  actions,
+  newTab,
 }: {
   dish: MenuDishDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+  /** Left out where a list shows no descriptions (the roadmap dialog). */
+  description?: DishDescription;
+  onRetry?: () => void;
+} & CardExtras) {
   return (
     <article className="dish-item dish-row" aria-labelledby={`dish-${dish.id}`}>
       <Media
@@ -262,16 +279,19 @@ export function DishRow({
       />
       <div className="dish-body">
         <div className="dish-head">
-          <DishName dish={dish} />
+          <DishName dish={dish} newTab={newTab} />
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
-        <DescriptionText
-          id={`dish-description-${dish.id}`}
-          description={description}
-          onRetry={onRetry}
-        />
+        {description && (
+          <DescriptionText
+            id={`dish-description-${dish.id}`}
+            description={description}
+            onRetry={onRetry ?? (() => undefined)}
+          />
+        )}
         <DishPlace dish={dish} />
+        {actions && <div className="dish-actions">{actions}</div>}
       </div>
     </article>
   );
@@ -282,11 +302,14 @@ export function DishDetailCard({
   dish,
   description,
   onRetry,
+  actions,
+  newTab,
 }: {
   dish: MenuDishDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+  /** Left out where a list shows no descriptions (the roadmap dialog). */
+  description?: DishDescription;
+  onRetry?: () => void;
+} & CardExtras) {
   return (
     <article
       className="dish-item dish-detail"
@@ -299,23 +322,30 @@ export function DishDetailCard({
       />
       <div className="dish-body">
         <div className="dish-head">
-          <DishName dish={dish} />
+          <DishName dish={dish} newTab={newTab} />
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
-        <DescriptionText
-          id={`dish-description-${dish.id}`}
-          description={description}
-          onRetry={onRetry}
-        />
+        {description && (
+          <DescriptionText
+            id={`dish-description-${dish.id}`}
+            description={description}
+            onRetry={onRetry ?? (() => undefined)}
+          />
+        )}
         <DishPlace dish={dish} />
+        {actions && <div className="dish-actions">{actions}</div>}
       </div>
     </article>
   );
 }
 
 /** Mode 3: only the photo, with the name on it. */
-export function DishTile({ dish }: { dish: MenuDishDto }) {
+export function DishTile({
+  dish,
+  actions,
+  newTab,
+}: { dish: MenuDishDto } & CardExtras) {
   return (
     <article
       className="dish-item dish-tile"
@@ -326,7 +356,10 @@ export function DishTile({ dish }: { dish: MenuDishDto }) {
         src={dish.coverUrl ?? undefined}
         alt=""
       />
-      <DishName dish={dish} />
+      <DishName dish={dish} newTab={newTab} />
+      {actions && (
+        <div className="dish-actions dish-tile-actions">{actions}</div>
+      )}
     </article>
   );
 }
