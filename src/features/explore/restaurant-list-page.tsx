@@ -125,64 +125,69 @@ function RestaurantSearch({
         </button>
       </div>
 
-      <div id={panelId} className="dish-filter-panel" hidden={!open}>
-        <div className="dish-filter-grid">
-          <ProvinceField
-            label="Tỉnh / thành phố"
-            type="search"
-            value={draft.province}
-            showCatalogStatus={false}
-            autoComplete="off"
-            helper="Để trống để tìm ở mọi nơi."
-            onChange={(value) => set({ province: value })}
-          />
-          <SelectField
-            label="Mức giá"
-            value={draft.priceLevel}
-            options={priceLevelOptions}
-            onChange={(value) => set({ priceLevel: value })}
-          />
-          <SelectField
-            label="Đánh giá"
-            value={draft.minRating}
-            options={ratingFilterOptions}
-            onChange={(value) => set({ minRating: value })}
-          />
-          <SelectField
-            label="Sắp xếp"
-            value={draft.sort}
-            options={restaurantSortOptions}
-            onChange={(value) => set({ sort: value as RestaurantSort })}
-          />
-        </div>
-        <div className="dish-filter-groups">
-          <Choice
-            label="Chỉ quán đang mở cửa"
-            checked={draft.openNow}
-            onChange={(checked) => set({ openNow: checked })}
-          />
-        </div>
-        <div className="dish-filter-actions">
-          <p className="helper" aria-live="polite">
-            {changed
-              ? "Có thay đổi chưa áp dụng."
-              : "Kết quả gồm các quán đã được ANGI xác minh."}
-          </p>
-          <div className="actions">
-            <Button
-              variant="tertiary"
-              disabled={
-                sameFilters(draft, emptyRestaurantFilters) &&
-                sameFilters(applied, emptyRestaurantFilters)
-              }
-              onClick={() => {
-                setDraft(emptyRestaurantFilters);
-                onApply(emptyRestaurantFilters);
-              }}
-            >
-              Đặt lại bộ lọc
-            </Button>
-            <Button type="submit">Áp dụng bộ lọc</Button>
+      {/* Slides down when shown and back up when hidden; `hidden` applies once it has slid up. */}
+      <div className="dish-filter-collapse" hidden={!open}>
+        <div>
+          <div id={panelId} className="dish-filter-panel">
+            <div className="dish-filter-grid">
+              <ProvinceField
+                label="Tỉnh / thành phố"
+                type="search"
+                value={draft.province}
+                showCatalogStatus={false}
+                autoComplete="off"
+                helper="Để trống để tìm ở mọi nơi."
+                onChange={(value) => set({ province: value })}
+              />
+              <SelectField
+                label="Mức giá"
+                value={draft.priceLevel}
+                options={priceLevelOptions}
+                onChange={(value) => set({ priceLevel: value })}
+              />
+              <SelectField
+                label="Đánh giá"
+                value={draft.minRating}
+                options={ratingFilterOptions}
+                onChange={(value) => set({ minRating: value })}
+              />
+              <SelectField
+                label="Sắp xếp"
+                value={draft.sort}
+                options={restaurantSortOptions}
+                onChange={(value) => set({ sort: value as RestaurantSort })}
+              />
+            </div>
+            <div className="dish-filter-groups">
+              <Choice
+                label="Chỉ quán đang mở cửa"
+                checked={draft.openNow}
+                onChange={(checked) => set({ openNow: checked })}
+              />
+            </div>
+            <div className="dish-filter-actions">
+              <p className="helper" aria-live="polite">
+                {changed
+                  ? "Có thay đổi chưa áp dụng."
+                  : "Kết quả gồm các quán đã được ANGI xác minh."}
+              </p>
+              <div className="actions">
+                <Button
+                  variant="tertiary"
+                  disabled={
+                    sameFilters(draft, emptyRestaurantFilters) &&
+                    sameFilters(applied, emptyRestaurantFilters)
+                  }
+                  onClick={() => {
+                    setDraft(emptyRestaurantFilters);
+                    onApply(emptyRestaurantFilters);
+                  }}
+                >
+                  Đặt lại bộ lọc
+                </Button>
+                <Button type="submit">Áp dụng bộ lọc</Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

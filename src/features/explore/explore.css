@@ -95,8 +95,88 @@
 .explore-lazy-loading .spinner {
   display: inline-block;
 }
-.restaurant-score svg {
+/*
+ * A restaurant's score: a tag hung in the card's top-right corner. In a row or a detailed card it
+ * sits in the name's row and steps over the body's padding (`--body-pad-*`), so the name gives
+ * way to it; on a gallery photo it is placed in the tile's corner. Chrome does not clip a
+ * backdrop-filter to a parent's rounded overflow, so the tag rounds its own corner to the card's
+ * inner radius and casts its shadow only downwards. Clicks pass through to the link over the card.
+ */
+.rating-badge {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  margin: calc(-1 * var(--body-pad-top, 0px))
+    calc(-1 * var(--body-pad-right, 0px)) 0 0;
+  padding: 6px 10px 6px 12px;
+  border-radius: 0 calc(var(--radius-md) - 1px) 0 var(--radius-md);
+  background: rgb(255 255 255 / 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 10px -6px rgb(34 34 34 / 0.25);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.rating-badge svg {
+  width: 14px;
+  height: 14px;
   fill: #f4a300;
+}
+.rating-badge-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.rating-badge.is-new {
+  color: var(--muted);
+}
+/* A gallery tile has no body: the tag sits in its corner, which has no border and a smaller radius. */
+.dish-tile .rating-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  margin: 0;
+  border-radius: 0 var(--radius-sm) 0 var(--radius-md);
+}
+/*
+ * A card name (dish or restaurant): one line in a card body, three on a gallery photo. A longer
+ * name fades out at the end of its last line; the mask is on the text, so it works on the card and
+ * on the photo.
+ */
+.dish-name.card-name {
+  display: block;
+  flex: none;
+  -webkit-line-clamp: unset;
+}
+.card-name-text {
+  display: block;
+  overflow: hidden;
+}
+.card-name[data-lines="1"] .card-name-text {
+  white-space: nowrap;
+}
+.card-name[data-lines="3"] .card-name-text {
+  max-height: 3lh;
+}
+.card-name-text[data-overflowing] {
+  -webkit-mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 1lh) no-repeat,
+    linear-gradient(to right, #000 60%, transparent) bottom / 100% 1lh no-repeat;
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 1lh) no-repeat,
+    linear-gradient(to right, #000 60%, transparent) bottom / 100% 1lh no-repeat;
+}
+/* Beside the likes or the score, the name takes the room they leave. */
+.dish-head .dish-name.card-name {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* -------------------------------------------------------------- filters */
@@ -238,8 +318,55 @@
   border-radius: var(--radius-lg);
   background: var(--card);
 }
-.dish-filter-panel[hidden] {
+/*
+ * The filter panel slides down when shown and back up when hidden: its rows go from 0fr to 1fr
+ * while it fades in, and `hidden` (display: none) takes effect only once it has slid up, so a
+ * closed panel stays out of the tab order. Browsers without discrete transitions open and close
+ * it at once.
+ */
+.dish-filter-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--duration) var(--ease-out),
+    margin-top var(--duration) var(--ease-out),
+    opacity var(--duration) ease,
+    display var(--duration) allow-discrete;
+}
+/*
+ * Closing leaves quickly and accelerating. The form's gap above the panel folds away during the
+ * slide (negative margin), so nothing below jumps when `display: none` removes the panel.
+ */
+.dish-filter-collapse[hidden] {
   display: none;
+  grid-template-rows: 0fr;
+  margin-top: calc(-1 * var(--space-4));
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duration-exit) var(--ease-exit),
+    margin-top var(--duration-exit) var(--ease-exit),
+    opacity var(--duration-exit) var(--ease-exit),
+    display var(--duration-exit) allow-discrete;
+}
+@starting-style {
+  .dish-filter-collapse:not([hidden]) {
+    grid-template-rows: 0fr;
+    margin-top: calc(-1 * var(--space-4));
+    opacity: 0;
+  }
+}
+/* The inner box can shrink to nothing; the panel keeps its padding and border inside it. */
+.dish-filter-collapse > div {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dish-filter-collapse,
+  .dish-filter-collapse[hidden] {
+    transition: none;
+  }
 }
 .dish-filter-grid {
   display: grid;
@@ -449,69 +576,37 @@
   border-radius: var(--radius-xs);
   background: var(--control);
 }
-/* Until the cut is measured, three lines; then the real cut with its "…" button. */
-.dish-description.is-measuring {
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-}
+/*
+ * The whole description in a box three lines high (the room left above the price in a detailed
+ * card). Longer text scrolls inside it and fades out at the bottom until its end; only then does
+ * the box sit above the link that covers the item, so the wheel and touch reach it.
+ */
 .dish-description-wrap {
   position: relative;
   min-width: 0;
-}
-/* The hidden twin the cut is measured on: same type, no height of its own. */
-.dish-description-twin {
-  position: absolute;
-  top: 0;
-  left: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-/* "…" opens the whole description; it sits above the link that covers the card. */
-.dish-more {
-  position: relative;
-  z-index: 1;
-  padding: 0 6px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--control);
-  color: var(--ink);
-  font: inherit;
-  font-weight: 700;
-  line-height: 1.3;
-  cursor: pointer;
-  transition: background var(--duration-fast) ease;
-}
-.dish-more:hover {
-  background: var(--line-strong);
-}
-.dish-more:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-/*
- * An opened description in a detailed card keeps the card's height: it takes the room left above
- * the price, scrolls inside it, and fades out at the bottom when there is more to read.
- */
-.dish-detail .dish-description-wrap:has(.dish-description[data-expanded]) {
-  flex: 1 1 0;
-  min-height: 0;
+  max-height: calc(3 * 1.6 * 14px);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
+}
+.dish-description-wrap::-webkit-scrollbar {
+  display: none;
+}
+.dish-description-wrap[data-overflowing] {
+  z-index: 1;
+}
+.dish-description-wrap[data-faded] {
   -webkit-mask-image: linear-gradient(
     to bottom,
-    #000 calc(100% - 40px),
+    #000 calc(100% - 28px),
     transparent
   );
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 40px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
 }
-.dish-detail
-  .dish-description-wrap:has(
-    .dish-description[data-expanded]
-  )::-webkit-scrollbar {
-  display: none;
+.dish-detail .dish-description-wrap {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
 }
 /* The retry button of a failed description sits above the link that covers the item. */
 .dish-text-button {
@@ -556,18 +651,33 @@
 }
 
 /* Mode 1: rows across the width with a compact photo. */
+/*
+ * Every row has the same height. A row that carries actions (the roadmap dialog) grows to hold
+ * them instead, as a detailed card does.
+ */
 .dish-row {
   display: grid;
-  grid-template-columns: 112px minmax(0, 1fr);
-  gap: var(--space-5);
-  /* The photo sits in the middle of the row, however many lines its text takes. */
-  align-items: center;
-  padding: var(--space-4);
+  grid-template-columns: 200px minmax(0, 1fr);
+  /* The photo fills the left of the row edge to edge, as in a detailed card. */
+  align-items: stretch;
+  height: 180px;
+  overflow: hidden;
+}
+.dish-row:has(.dish-actions) {
+  height: auto;
+}
+.dish-row .dish-body {
+  --body-pad-top: var(--space-4);
+  --body-pad-right: var(--space-5);
+  height: 100%;
+  overflow: hidden;
+  padding: var(--body-pad-top) var(--body-pad-right);
 }
 .dish-thumb {
-  width: 112px;
-  aspect-ratio: 1;
-  border-radius: var(--radius-sm);
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
 }
 
 /* Mode 2: two cards a row, a large photo beside the details. */
@@ -587,8 +697,24 @@
   border-radius: 0;
 }
 .dish-detail .dish-body {
+  --body-pad-top: var(--space-5);
+  --body-pad-right: var(--space-5);
   overflow: hidden;
-  padding: var(--space-5);
+  padding: var(--body-pad-top) var(--body-pad-right);
+}
+/*
+ * The card has a fixed height: every part keeps its own height and the fixed gaps, and only the
+ * description box gives way (it scrolls and fades), so a long text never squeezes the name, the
+ * score or the tags.
+ */
+.dish-detail .dish-body > *,
+.dish-row .dish-body > * {
+  flex-shrink: 0;
+}
+.dish-detail .dish-body > .dish-description-wrap,
+.dish-row .dish-body > .dish-description-wrap {
+  flex-shrink: 1;
+  min-height: 0;
 }
 /* One row of tags; the ones that do not fit fade out at the edge. */
 .dish-detail .dish-kinds {
@@ -676,6 +802,10 @@
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+.dish-tile .dish-name.card-name {
+  display: block;
+  -webkit-line-clamp: unset;
+}
 @media (prefers-reduced-motion: no-preference) {
   .dish-tile-photo img {
     transition: transform 600ms var(--ease-out);
@@ -716,12 +846,14 @@
     grid-template-columns: minmax(0, 1fr);
   }
   .dish-row {
-    grid-template-columns: 80px minmax(0, 1fr);
-    gap: var(--space-3);
-    padding: var(--space-3);
+    grid-template-columns: 120px minmax(0, 1fr);
   }
-  .dish-thumb {
-    width: 80px;
+  .dish-row .dish-body {
+    --body-pad-top: var(--space-3);
+    --body-pad-right: var(--space-3);
+  }
+  .dish-row .rating-badge-count {
+    display: none;
   }
   .dish-name {
     font-size: 18px;
@@ -736,7 +868,16 @@
     aspect-ratio: 16 / 10;
   }
   .dish-detail .dish-body {
-    padding: var(--space-4);
+    --body-pad-top: var(--space-4);
+    --body-pad-right: var(--space-4);
+  }
+  /* Stacked, the card's top-right corner is on the photo: the tag hangs there instead. */
+  .dish-detail .rating-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    margin: 0;
   }
 }
 
