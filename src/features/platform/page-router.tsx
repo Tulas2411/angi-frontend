@@ -50,6 +50,10 @@ import { PermissionsPage } from "@/features/admin/permissions-page";
 import { ModDetailPage, ModsPage } from "@/features/admin/mods-page";
 import { AdminDashboardPage } from "@/features/admin/dashboard-page";
 import { OutboxPage } from "@/features/admin/outbox-page";
+import {
+  VerificationQueuePage,
+  VerificationReviewPage,
+} from "@/features/moderation/verification-review-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -205,6 +209,14 @@ export function PageRouter({
   // OWN-19/OWN-20 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "reviews")
     return <RestaurantReviewsLivePage />;
+
+  // F-57 MOD-V1..MOD-V3 đã nối API: hàng đợi và duyệt hồ sơ xác minh đọc ghi thật.
+  if (mode === "live" && role === "MOD" && area === "verification")
+    return /^[1-9]d{0,17}$/.test(id ?? "") ? (
+      <VerificationReviewPage key={id} verificationId={Number(id)} />
+    ) : (
+      <VerificationQueuePage />
+    );
 
   // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
   if (
