@@ -52,6 +52,7 @@ import type {
   DashboardSummaryDto,
   DashboardTopType,
 } from "./dashboard-types";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./dashboard.css";
 
 const topTabs: { value: DashboardTopType; label: string }[] = [
@@ -86,7 +87,7 @@ function Segmented<T extends string | number>({
   disabled?: (value: T) => boolean;
 }) {
   return (
-    <div className="dash-segmented" role="group" aria-label={label}>
+    <SlidingSegment className="dash-segmented" role="group" aria-label={label}>
       {options.map((option) => (
         <button
           key={String(option.value)}
@@ -98,7 +99,7 @@ function Segmented<T extends string | number>({
           {option.label}
         </button>
       ))}
-    </div>
+    </SlidingSegment>
   );
 }
 

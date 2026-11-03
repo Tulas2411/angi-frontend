@@ -49,6 +49,7 @@ import type {
   VerificationDecision,
   VerificationQueueStatus,
 } from "./verification-review-types";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./verification-review.css";
 
 const pageSize = 20;
@@ -90,7 +91,11 @@ export function VerificationQueuePage({
         description="Xem hồ sơ chủ quán gửi lên, đối chiếu giấy tờ và duyệt, yêu cầu bổ sung hoặc từ chối. Hồ sơ gửi sớm nhất ở trên cùng."
       />
       <div className="vr-toolbar">
-        <div className="vr-tabs" role="group" aria-label="Trạng thái hồ sơ">
+        <SlidingSegment
+          className="vr-tabs"
+          role="group"
+          aria-label="Trạng thái hồ sơ"
+        >
           {queueTabs.map((tab) => (
             <button
               key={tab.value}
@@ -104,7 +109,7 @@ export function VerificationQueuePage({
               {tab.label}
             </button>
           ))}
-        </div>
+        </SlidingSegment>
         <div className="vr-province">
           <ProvinceField
             label="Tỉnh / thành phố"

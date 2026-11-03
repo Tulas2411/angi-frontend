@@ -68,6 +68,7 @@ import type {
   RestaurantModerationStatus,
   RestaurantVerificationStatus,
 } from "./restaurant-moderation-types";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./verification-review.css";
 import "./menu-review.css";
 import "./restaurant-moderation.css";
@@ -136,7 +137,7 @@ export function RestaurantModerationListPage({
         description="Tìm quán bị báo cáo hoặc có thông tin sai, xem hồ sơ, thực đơn và lịch sử, rồi ẩn, đình chỉ hoặc hiển thị lại."
       />
       <div className="vr-toolbar">
-        <div
+        <SlidingSegment
           className="vr-tabs"
           role="group"
           aria-label="Trạng thái kiểm duyệt"
@@ -154,7 +155,7 @@ export function RestaurantModerationListPage({
               {tab.label}
             </button>
           ))}
-        </div>
+        </SlidingSegment>
         <Choice
           label="Chỉ quán có báo cáo chờ xử lý"
           checked={reported}
@@ -752,7 +753,11 @@ export function RestaurantModerationDetailPage({
 
       <div className="vr-layout">
         <div className="vr-main">
-          <div className="vr-tabs" role="group" aria-label="Nội dung nhà hàng">
+          <SlidingSegment
+            className="vr-tabs"
+            role="group"
+            aria-label="Nội dung nhà hàng"
+          >
             {tabs.map((option) => (
               <button
                 key={option.value}
@@ -763,7 +768,7 @@ export function RestaurantModerationDetailPage({
                 {option.label}
               </button>
             ))}
-          </div>
+          </SlidingSegment>
 
           {tab === "profile" && (
             <>

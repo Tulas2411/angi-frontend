@@ -45,6 +45,7 @@ import type {
   PermissionDto,
   PermissionOverrideDto,
 } from "./permission-types";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./permissions.css";
 
 type PermissionTab = "role" | "mods";
@@ -299,7 +300,11 @@ export function OverrideControl({
   onChange: (value: OverrideChoice) => void;
 }) {
   return (
-    <div className="permission-segmented" role="radiogroup" aria-label={label}>
+    <SlidingSegment
+      className="permission-segmented"
+      role="radiogroup"
+      aria-label={label}
+    >
       {(["inherit", "allow", "deny"] as const).map((choice) => (
         <label key={choice} data-choice={choice}>
           <input
@@ -312,7 +317,7 @@ export function OverrideControl({
           <span>{choiceLabels[choice]}</span>
         </label>
       ))}
-    </div>
+    </SlidingSegment>
   );
 }
 

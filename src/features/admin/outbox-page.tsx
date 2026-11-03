@@ -18,6 +18,7 @@ import {
 } from "./dashboard-rules";
 import { dashboardService, type DashboardService } from "./dashboard-service";
 import type { OutboxQuery } from "./dashboard-types";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./dashboard.css";
 
 const statusChoices: {
@@ -65,7 +66,11 @@ export function OutboxPage({
         description="Các sự kiện ANGI gửi sang dịch vụ gợi ý món. Sự kiện gửi xong không còn ở đây; sự kiện thất bại cần được kiểm tra."
       />
       <div className="dash-outbox-filters">
-        <div className="dash-segmented" role="group" aria-label="Trạng thái">
+        <SlidingSegment
+          className="dash-segmented"
+          role="group"
+          aria-label="Trạng thái"
+        >
           {statusChoices.map((choice) => (
             <button
               key={choice.value}
@@ -79,7 +84,7 @@ export function OutboxPage({
               {choice.label}
             </button>
           ))}
-        </div>
+        </SlidingSegment>
         <SelectField
           label="Loại sự kiện"
           value={eventType}
