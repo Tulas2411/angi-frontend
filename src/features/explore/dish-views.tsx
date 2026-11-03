@@ -5,7 +5,7 @@ import { Badge } from "@/shared/ui";
 import { Media } from "@/components/ui/primitives";
 import { dishHref } from "./explore-routes";
 import { dishFormLabels, locationText, vnd } from "./explore-rules";
-import type { DishCardDto } from "./explore-types";
+import type { MenuDishDto } from "./explore-types";
 import { dishViews, type DishView } from "./dish-view-mode";
 import type { DishDescription } from "./use-dish-descriptions";
 import { cutDescription } from "./description-cut";
@@ -80,7 +80,7 @@ function LikeCount({ count }: { count: number }) {
 }
 
 /** Dish form first, then its tags: the type line under the name. */
-function DishKinds({ dish }: { dish: DishCardDto }) {
+function DishKinds({ dish }: { dish: MenuDishDto }) {
   return (
     <p className="dish-kinds">
       <span className="dish-kind">{dishFormLabels[dish.dishForm]}</span>
@@ -96,23 +96,24 @@ function DishKinds({ dish }: { dish: DishCardDto }) {
   );
 }
 
-function DishPlace({ dish }: { dish: DishCardDto }) {
-  const place = locationText(
-    dish.restaurant.district,
-    dish.restaurant.provinceName,
-  );
+/** The price, then the restaurant; a restaurant's own menu has no restaurant to name. */
+function DishPlace({ dish }: { dish: MenuDishDto }) {
+  const { restaurant } = dish;
+  const place = restaurant
+    ? locationText(restaurant.district, restaurant.provinceName)
+    : "";
   return (
     <p className="dish-place">
       <strong className="dish-price">{vnd(dish.price)}</strong>
-      <span
-        className="dish-place-name"
-        title={
-          place ? `${dish.restaurant.name} · ${place}` : dish.restaurant.name
-        }
-      >
-        {dish.restaurant.name}
-        {place && ` · ${place}`}
-      </span>
+      {restaurant && (
+        <span
+          className="dish-place-name"
+          title={place ? `${restaurant.name} · ${place}` : restaurant.name}
+        >
+          {restaurant.name}
+          {place && ` · ${place}`}
+        </span>
+      )}
     </p>
   );
 }
@@ -234,7 +235,7 @@ export function DescriptionText({
   return <LongDescription id={id} text={description.text} />;
 }
 
-function DishName({ dish }: { dish: DishCardDto }) {
+function DishName({ dish }: { dish: MenuDishDto }) {
   return (
     <h3 id={`dish-${dish.id}`} className="dish-name">
       <Link href={dishHref(dish.id)}>{dish.name}</Link>
@@ -248,7 +249,7 @@ export function DishRow({
   description,
   onRetry,
 }: {
-  dish: DishCardDto;
+  dish: MenuDishDto;
   description: DishDescription;
   onRetry: () => void;
 }) {
@@ -282,7 +283,7 @@ export function DishDetailCard({
   description,
   onRetry,
 }: {
-  dish: DishCardDto;
+  dish: MenuDishDto;
   description: DishDescription;
   onRetry: () => void;
 }) {
@@ -314,7 +315,7 @@ export function DishDetailCard({
 }
 
 /** Mode 3: only the photo, with the name on it. */
-export function DishTile({ dish }: { dish: DishCardDto }) {
+export function DishTile({ dish }: { dish: MenuDishDto }) {
   return (
     <article
       className="dish-item dish-tile"

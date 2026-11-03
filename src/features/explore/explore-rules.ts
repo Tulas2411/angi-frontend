@@ -142,6 +142,34 @@ const weekdayNames = [
   "Thứ bảy",
 ];
 
+/** Today in Vietnam as `BusinessHour.dayOfWeek` (0 = Sunday … 6 = Saturday). */
+export function vietnamWeekday(now = new Date()) {
+  const name = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    weekday: "short",
+  }).format(now);
+  return ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(name);
+}
+
+/**
+ * Today's state for the opening hours card: a closed restaurant or a day off is red, open hours
+ * not running now amber, open right now green.
+ */
+export function todayOpening(
+  status: OperatingStatus,
+  isOpenNow: boolean,
+  hasHoursToday: boolean,
+): { tone: "success" | "warning" | "error"; text: string } {
+  if (status === "permanently_closed")
+    return { tone: "error", text: "Đã đóng cửa" };
+  if (status === "temporarily_closed")
+    return { tone: "error", text: "Tạm đóng cửa" };
+  if (!hasHoursToday) return { tone: "error", text: "Hôm nay nghỉ" };
+  return isOpenNow
+    ? { tone: "success", text: "Đang mở cửa" }
+    : { tone: "warning", text: "Ngoài giờ mở cửa" };
+}
+
 /** Monday first; a day without a slot is "Đóng cửa", several slots are joined with " · ". */
 export function businessHoursByDay(hours: BusinessHourDto[]) {
   return weekdayOrder.map((day) => {

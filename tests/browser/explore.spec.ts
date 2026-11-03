@@ -774,9 +774,28 @@ test.describe("restaurants", () => {
       page.getByRole("heading", { name: "Bún Bò Bà Diệu", level: 1 }),
     ).toBeVisible();
     await expect(page.getByText("Quán bún bò gia truyền 30 năm")).toBeVisible();
+    // The tabs come first and "Thông tin" opens by default.
+    await expect(page.getByRole("tab", { name: "Thông tin" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(
+      page.getByRole("heading", { name: "Liên hệ & vị trí" }),
+    ).toBeVisible();
     // Menu tab (REST-03): the dishes that belong to restaurant 7.
-    await expect(cards(page)).toHaveCount(3);
-    await expect(cardOf(page, "Bún bò Huế")).toBeVisible();
+    await page.getByRole("tab", { name: "Thực đơn" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Bún Bò Bà Diệu", level: 1 }),
+    ).toBeVisible();
+    // Same layouts as the dish list (default "Lưới chi tiết"); the restaurant is not named again.
+    const menu = page.getByRole("region", { name: "Thực đơn của quán" });
+    await expect(menu.locator(".dish-item")).toHaveCount(3);
+    await expect(
+      menu.getByRole("heading", { name: "Bún bò Huế", level: 3 }),
+    ).toBeVisible();
+    await expect(menu.locator(".dish-place-name")).toHaveCount(0);
+    await menu.getByRole("button", { name: "Thư viện ảnh" }).click();
+    await expect(menu.locator(".dish-tile")).toHaveCount(3);
     // Reviews tab (REST-04).
     await page.getByRole("tab", { name: "Đánh giá" }).click();
     await expect(page.locator(".explore-review")).toHaveCount(3);

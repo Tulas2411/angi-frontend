@@ -23,6 +23,8 @@ import {
   restaurantQueryFromParams,
   reviewError,
   reviewProblems,
+  todayOpening,
+  vietnamWeekday,
   visibleReply,
 } from "@/features/explore/explore-rules";
 import {
@@ -49,6 +51,29 @@ describe("explore display rules", () => {
     expect(operatingBadge("permanently_closed", false).text).toBe(
       "Đã đóng cửa",
     );
+  });
+  it("colours today: red when closed or a day off, amber outside hours, green when open", () => {
+    expect(todayOpening("open", true, true)).toEqual({
+      tone: "success",
+      text: "Đang mở cửa",
+    });
+    expect(todayOpening("open", false, true)).toEqual({
+      tone: "warning",
+      text: "Ngoài giờ mở cửa",
+    });
+    expect(todayOpening("open", false, false)).toEqual({
+      tone: "error",
+      text: "Hôm nay nghỉ",
+    });
+    expect(todayOpening("temporarily_closed", true, true).tone).toBe("error");
+    expect(todayOpening("permanently_closed", false, true).text).toBe(
+      "Đã đóng cửa",
+    );
+  });
+  it("marks today by the Vietnam calendar, not the browser time zone", () => {
+    // 2026-11-02 18:00 UTC is already Tuesday 01:00 in Vietnam.
+    expect(vietnamWeekday(new Date("2026-11-02T18:00:00Z"))).toBe(2);
+    expect(vietnamWeekday(new Date("2026-11-01T03:00:00Z"))).toBe(0);
   });
   it("lists the opening hours from Monday, several slots in one day", () => {
     const days = businessHoursByDay([
