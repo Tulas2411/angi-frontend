@@ -24,16 +24,19 @@
   transform: translateX(-102%);
   visibility: hidden;
   pointer-events: none;
+  /* Closing slides out shorter and accelerating, then hides; opening glides in (below). */
   transition:
-    transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
-    visibility 0s 380ms;
+    transform 250ms var(--ease-exit),
+    visibility 0s 250ms;
   font-family: "DM Sans", var(--font-body);
 }
 .roadmap-agent-panel[data-open="true"] {
   transform: translateX(0);
   visibility: visible;
   pointer-events: auto;
-  transition-delay: 0s;
+  transition:
+    transform 380ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
 }
 .agent-header {
   display: flex;

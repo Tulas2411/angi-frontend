@@ -147,6 +147,16 @@ test("the account drawer opens with the keyboard, closes with Escape or the back
   ).toHaveAttribute("href", "/restaurants");
   await page.keyboard.press("Escape");
   await expect(drawer).toBeHidden();
+  // It leaves on the short accelerating exit, not the entrance curve that hangs before the end.
+  expect(
+    await page.locator(".account-drawer").evaluate((element) => {
+      const style = getComputedStyle(element);
+      return [style.transitionDuration, style.transitionTimingFunction];
+    }),
+  ).toEqual([
+    "0.16s, 0.16s, 0.16s",
+    expect.stringContaining("cubic-bezier(0.55, 0.055, 0.675, 0.19)"),
+  ]);
   await expect(trigger).toBeFocused();
   // A click on the dimmed page beside the drawer closes it.
   await trigger.click();

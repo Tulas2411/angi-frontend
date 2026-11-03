@@ -10,7 +10,7 @@ Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm
 
 Đã đọc trực tiếp Figma frame [ANGI / Roadmap / 18 Trợ lý AI (`137:712`)](https://www.figma.com/design/lxEl7PJc0LdQ8j47KlUPkO/ANGI?node-id=137-712), đặc biệt panel `140:1230`: nền trắng, header ANGI / Trợ lý ăn uống, nút Đóng, nhắc kiểm tra nội dung AI, ba gợi ý đầu cuộc trò chuyện và khung nhập ở dưới cùng. Giữ font DM Sans/Fraunces và token hiện có của màn roadmap.
 
-- Panel trượt từ trái sang phải trong 380 ms, phủ sidebar và sổ tay; bản đồ bên phải vẫn được giữ nguyên component và sử dụng được. Đóng panel trượt ngược lại. Màn dưới 901px dùng panel toàn chiều rộng. `prefers-reduced-motion` tắt chuyển động.
+- Panel trượt từ trái sang phải trong 380 ms, phủ sidebar và sổ tay; bản đồ bên phải vẫn được giữ nguyên component và sử dụng được. Đóng panel trượt ngược lại, ngắn hơn và tăng tốc (250 ms, `--ease-exit`) để không lơ lửng ở cuối. Màn dưới 901px dùng panel toàn chiều rộng. `prefers-reduced-motion` tắt chuyển động.
 - Đây là panel không chặn bản đồ. Nội dung phía sau panel không nhận focus; khi mở, focus vào ô nhập; Escape hoặc Đóng trả focus về nút sidebar. Popup xác nhận dùng `ConfirmDialog`, biểu mẫu ràng buộc dùng `Dialog`; không dùng browser alert/confirm/prompt.
 - Ba gợi ý chỉ điền vào ô soạn thảo để người dùng xem lại, không tự gọi AI. Địa danh ở lời chào lấy từ `conversation.state.province`, thiếu thì không tự đoán tỉnh.
 - Enter gửi, Shift + Enter xuống dòng, không gửi giữa phiên gõ IME. Nội dung bắt buộc có chữ và dài tối đa 4.000 ký tự. Tin nhắn hiển thị bằng văn bản, không chèn HTML từ AI.

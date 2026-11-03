@@ -389,8 +389,9 @@
 }
 
 /*
- * A day unfolds from 0 to its height and fades in; closing runs the same way back before the
- * body leaves the page (dayFoldMs). The clip margin keeps focus rings and lifted cards visible.
+ * A day unfolds from 0 to its height and fades in (340ms, --ease-out). Closing is shorter and
+ * accelerating (220ms, --ease-exit) so it does not hang nearly shut, and the body leaves the page
+ * right after (dayFoldMs). The clip margin keeps focus rings and lifted cards visible.
  */
 .roadmap-day-fold {
   display: grid;
@@ -420,11 +421,12 @@
   grid-template-rows: 0fr;
   opacity: 0;
   transition:
-    grid-template-rows 280ms var(--ease-out),
-    opacity 200ms ease;
+    grid-template-rows 220ms var(--ease-exit),
+    opacity 220ms var(--ease-exit);
 }
 .roadmap-day-fold[data-open="false"] > .roadmap-day-body {
   transform: translateY(-8px);
+  transition: transform 220ms var(--ease-exit);
 }
 
 .roadmap-day-actions {
