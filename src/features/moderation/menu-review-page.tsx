@@ -47,6 +47,7 @@ import type {
   ModMenuItemDiffDto,
   ModRestaurantMiniDto,
 } from "./menu-review-types";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./verification-review.css";
 import "./menu-review.css";
 
@@ -76,7 +77,7 @@ export function MenuQueuePage({
         description="Xem bản thực đơn chủ quán gửi lên, so với thực đơn đang bán, rồi duyệt hoặc từ chối."
       />
       <div className="vr-toolbar">
-        <div
+        <SlidingSegment
           className="vr-tabs"
           role="group"
           aria-label="Trạng thái bản thực đơn"
@@ -94,7 +95,7 @@ export function MenuQueuePage({
               {tab.label}
             </button>
           ))}
-        </div>
+        </SlidingSegment>
       </div>
       {list.status === "loading" && <Skeleton rows={4} />}
       {list.status === "error" && (
@@ -457,7 +458,7 @@ export function MenuReviewPage({
             </div>
           )}
           <Card title="So với thực đơn đang bán">
-            <div
+            <SlidingSegment
               className="vr-tabs mr-filter"
               role="group"
               aria-label="Lọc theo thay đổi"
@@ -472,7 +473,7 @@ export function MenuReviewPage({
                   {option.label}
                 </button>
               ))}
-            </div>
+            </SlidingSegment>
             {shownItems.length === 0 &&
             !(showRemoved && item.removedDishes.length) ? (
               <p className="helper">Không có món nào trong mục này.</p>

@@ -62,6 +62,7 @@ import {
   resolveRequest,
   type ResolveForm,
 } from "./report-handling-rules";
+import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./verification-review.css";
 import "./report-handling.css";
 
@@ -127,7 +128,11 @@ export function ReportQueuePage({
         description="Nhận báo cáo để Mod khác không xử lý trùng, đọc bằng chứng và thông tin đối tượng, rồi kết luận."
       />
       <div className="vr-toolbar rh-toolbar">
-        <div className="vr-tabs" role="group" aria-label="Loại đối tượng">
+        <SlidingSegment
+          className="vr-tabs"
+          role="group"
+          aria-label="Loại đối tượng"
+        >
           {reportTargetTabs.map((tab) => (
             <button
               key={tab.value}
@@ -141,8 +146,12 @@ export function ReportQueuePage({
               {tab.label}
             </button>
           ))}
-        </div>
-        <div className="vr-tabs" role="group" aria-label="Trạng thái báo cáo">
+        </SlidingSegment>
+        <SlidingSegment
+          className="vr-tabs"
+          role="group"
+          aria-label="Trạng thái báo cáo"
+        >
           {reportStatusTabs.map((tab) => (
             <button
               key={tab.value || "all"}
@@ -156,7 +165,7 @@ export function ReportQueuePage({
               {tab.label}
             </button>
           ))}
-        </div>
+        </SlidingSegment>
         <div className="rh-reason">
           <SelectField
             label="Lý do"
