@@ -47,6 +47,7 @@ import {
 } from "@/features/moderation/moderation-users-live-page";
 import { ModerationCommunityLivePage } from "@/features/moderation/moderation-community-live-page";
 import { PermissionsPage } from "@/features/admin/permissions-page";
+import { ModDetailPage, ModsPage } from "@/features/admin/mods-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -238,6 +239,18 @@ export function PageRouter({
     /^[1-9]\d{0,9}$/.test(id ?? "")
   )
     return <PermissionsPage initialModId={Number(id)} />;
+
+  // F-65 ADM-M1..ADM-M4 đã nối API: danh sách, tạo, chi tiết và cập nhật Mod đọc ghi thật.
+  if (mode === "live" && role === "ADMIN" && area === "moderators" && !id)
+    return <ModsPage />;
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderators" &&
+    !operation &&
+    /^[1-9]d{0,9}$/.test(id ?? "")
+  )
+    return <ModDetailPage key={id} userId={Number(id)} />;
 
   // ADMIN gặp kiểm duyệt ở /administration/moderation/... — cùng bộ màn hình.
   if (

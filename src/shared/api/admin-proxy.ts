@@ -26,3 +26,17 @@ export function adminPermissionsOperation(method: string, endpoint: string) {
     return { body: true, status: 200 };
   return null;
 }
+
+/**
+ * F-65 Manage Mod: ADM-M2 `POST admin/mods` (201 Created), ADM-M3 `GET admin/mods/{userId}` and
+ * ADM-M4 `PATCH admin/mods/{userId}`. ADM-M1 (the list) is allowed above with the permissions.
+ */
+export function adminModsOperation(method: string, endpoint: string) {
+  if (method === "POST" && endpoint === "admin/mods")
+    return { body: true, status: 201 };
+  if (method === "GET" && new RegExp(`^admin/mods/${userId}$`).test(endpoint))
+    return { body: false, status: 200 };
+  if (method === "PATCH" && new RegExp(`^admin/mods/${userId}$`).test(endpoint))
+    return { body: true, status: 200 };
+  return null;
+}
