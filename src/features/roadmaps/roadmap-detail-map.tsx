@@ -250,6 +250,24 @@ export function RoadmapDetailMap({
     agentPopupOpen,
   ]);
 
+  // The place card grows once its details load: fit again, or it would cover the lowest pins.
+  const hasCard = preview ? previewKey !== "" : selectedItemId !== null;
+  useEffect(() => {
+    const card = container.current?.parentElement?.querySelector(
+      ".roadmap-map-card",
+    );
+    if (!hasCard || !card) return;
+    let height = card.getBoundingClientRect().height;
+    const observer = new ResizeObserver(() => {
+      const next = card.getBoundingClientRect().height;
+      if (next === height) return;
+      height = next;
+      fit.current();
+    });
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [hasCard, selectedItemId, previewKey]);
+
   // Preview pins join the mounted map instead of recreating it, so a new preview loads no extra map.
   useEffect(() => {
     const instance = map.current;
