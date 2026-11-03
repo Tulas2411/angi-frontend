@@ -5,7 +5,7 @@ import { Badge } from "@/shared/ui";
 import { Media } from "@/components/ui/primitives";
 import { dishHref } from "./explore-routes";
 import { dishFormLabels, locationText, vnd } from "./explore-rules";
-import type { DishCardDto } from "./explore-types";
+import type { MenuDishDto } from "./explore-types";
 import { dishViews, type DishView } from "./dish-view-mode";
 import type { DishDescription } from "./use-dish-descriptions";
 import { cutDescription } from "./description-cut";
@@ -80,7 +80,7 @@ function LikeCount({ count }: { count: number }) {
 }
 
 /** Dish form first, then its tags: the type line under the name. */
-function DishKinds({ dish }: { dish: DishCardDto }) {
+function DishKinds({ dish }: { dish: MenuDishDto }) {
   return (
     <p className="dish-kinds">
       <span className="dish-kind">{dishFormLabels[dish.dishForm]}</span>
@@ -96,23 +96,24 @@ function DishKinds({ dish }: { dish: DishCardDto }) {
   );
 }
 
-function DishPlace({ dish }: { dish: DishCardDto }) {
-  const place = locationText(
-    dish.restaurant.district,
-    dish.restaurant.provinceName,
-  );
+/** The price, then the restaurant; a restaurant's own menu has no restaurant to name. */
+function DishPlace({ dish }: { dish: MenuDishDto }) {
+  const { restaurant } = dish;
+  const place = restaurant
+    ? locationText(restaurant.district, restaurant.provinceName)
+    : "";
   return (
     <p className="dish-place">
       <strong className="dish-price">{vnd(dish.price)}</strong>
-      <span
-        className="dish-place-name"
-        title={
-          place ? `${dish.restaurant.name} · ${place}` : dish.restaurant.name
-        }
-      >
-        {dish.restaurant.name}
-        {place && ` · ${place}`}
-      </span>
+      {restaurant && (
+        <span
+          className="dish-place-name"
+          title={place ? `${restaurant.name} · ${place}` : restaurant.name}
+        >
+          {restaurant.name}
+          {place && ` · ${place}`}
+        </span>
+      )}
     </p>
   );
 }
@@ -157,10 +158,9 @@ function useDescriptionCut(text: string) {
  * Two lines and about seven words of the third, then "…": pressing it shows the whole text in the
  * card. Before the first measure the text is clamped to three lines, so nothing jumps.
  */
-function LongDescription({ dishId, text }: { dishId: number; text: string }) {
+function LongDescription({ id, text }: { id: string; text: string }) {
   const { box, twin, at } = useDescriptionCut(text);
   const [open, setOpen] = useState(false);
-  const id = `dish-description-${dishId}`;
   const cut = !open && typeof at === "number";
   const shown = cut
     ? text.split(/\s+/).filter(Boolean).slice(0, at).join(" ")
@@ -200,14 +200,20 @@ function LongDescription({ dishId, text }: { dishId: number; text: string }) {
   );
 }
 
-function DescriptionText({
-  dishId,
+/**
+ * The description of a list card (dish or restaurant): a placeholder while it loads, a retry when
+ * it failed, `emptyText` when there is none, else the cut text. `id` names the paragraph.
+ */
+export function DescriptionText({
+  id,
   description,
   onRetry,
+  emptyText = "Món này chưa có mô tả.",
 }: {
-  dishId: number;
+  id: string;
   description: DishDescription;
   onRetry: () => void;
+  emptyText?: string;
 }) {
   if (description.status === "loading")
     return (
@@ -225,16 +231,30 @@ function DescriptionText({
       </p>
     );
   if (!description.text)
-    return <p className="dish-description is-muted">Món này chưa có mô tả.</p>;
-  return <LongDescription dishId={dishId} text={description.text} />;
+    return <p className="dish-description is-muted">{emptyText}</p>;
+  return <LongDescription id={id} text={description.text} />;
 }
 
-function DishName({ dish }: { dish: DishCardDto }) {
+/** The dish name, a link to its page; `newTab` keeps a dialog the dish was shown in open. */
+function DishName({ dish, newTab }: { dish: MenuDishDto; newTab?: boolean }) {
   return (
     <h3 id={`dish-${dish.id}`} className="dish-name">
-      <Link href={dishHref(dish.id)}>{dish.name}</Link>
+      <Link
+        href={dishHref(dish.id)}
+        {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+      >
+        {dish.name}
+      </Link>
     </h3>
   );
+}
+
+/** What a list using the cards adds to each one (e.g. "Thêm vào bữa" in the roadmap dialog). */
+interface CardExtras {
+  /** Shown under the card's details. */
+  actions?: ReactNode;
+  /** Open the dish page in a new tab. */
+  newTab?: boolean;
 }
 
 /** Mode 1: one dish per row across the width, a small photo on the left. */
@@ -242,11 +262,14 @@ export function DishRow({
   dish,
   description,
   onRetry,
+  actions,
+  newTab,
 }: {
-  dish: DishCardDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+  dish: MenuDishDto;
+  /** Left out where a list shows no descriptions (the roadmap dialog). */
+  description?: DishDescription;
+  onRetry?: () => void;
+} & CardExtras) {
   return (
     <article className="dish-item dish-row" aria-labelledby={`dish-${dish.id}`}>
       <Media
@@ -256,16 +279,19 @@ export function DishRow({
       />
       <div className="dish-body">
         <div className="dish-head">
-          <DishName dish={dish} />
+          <DishName dish={dish} newTab={newTab} />
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
-        <DescriptionText
-          dishId={dish.id}
-          description={description}
-          onRetry={onRetry}
-        />
+        {description && (
+          <DescriptionText
+            id={`dish-description-${dish.id}`}
+            description={description}
+            onRetry={onRetry ?? (() => undefined)}
+          />
+        )}
         <DishPlace dish={dish} />
+        {actions && <div className="dish-actions">{actions}</div>}
       </div>
     </article>
   );
@@ -276,11 +302,14 @@ export function DishDetailCard({
   dish,
   description,
   onRetry,
+  actions,
+  newTab,
 }: {
-  dish: DishCardDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+  dish: MenuDishDto;
+  /** Left out where a list shows no descriptions (the roadmap dialog). */
+  description?: DishDescription;
+  onRetry?: () => void;
+} & CardExtras) {
   return (
     <article
       className="dish-item dish-detail"
@@ -293,23 +322,30 @@ export function DishDetailCard({
       />
       <div className="dish-body">
         <div className="dish-head">
-          <DishName dish={dish} />
+          <DishName dish={dish} newTab={newTab} />
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
-        <DescriptionText
-          dishId={dish.id}
-          description={description}
-          onRetry={onRetry}
-        />
+        {description && (
+          <DescriptionText
+            id={`dish-description-${dish.id}`}
+            description={description}
+            onRetry={onRetry ?? (() => undefined)}
+          />
+        )}
         <DishPlace dish={dish} />
+        {actions && <div className="dish-actions">{actions}</div>}
       </div>
     </article>
   );
 }
 
 /** Mode 3: only the photo, with the name on it. */
-export function DishTile({ dish }: { dish: DishCardDto }) {
+export function DishTile({
+  dish,
+  actions,
+  newTab,
+}: { dish: MenuDishDto } & CardExtras) {
   return (
     <article
       className="dish-item dish-tile"
@@ -320,7 +356,10 @@ export function DishTile({ dish }: { dish: DishCardDto }) {
         src={dish.coverUrl ?? undefined}
         alt=""
       />
-      <DishName dish={dish} />
+      <DishName dish={dish} newTab={newTab} />
+      {actions && (
+        <div className="dish-actions dish-tile-actions">{actions}</div>
+      )}
     </article>
   );
 }

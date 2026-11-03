@@ -313,7 +313,7 @@ describe("roadmap proxy allowlist", () => {
   });
   it("rejects other methods, ids and paths", () => {
     for (const [method, path] of [
-      ["DELETE", "roadmaps/88"],
+      ["PUT", "roadmaps/88"],
       ["POST", "roadmaps/88"],
       ["POST", "roadmaps/88/days/301/route"],
       ["GET", "roadmaps/abc"],

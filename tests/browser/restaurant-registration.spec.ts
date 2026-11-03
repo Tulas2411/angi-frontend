@@ -35,6 +35,7 @@ function response(request: RegisterRestaurantRequestDto): OwnerRestaurantDto {
     website: request.website ?? null,
     coverUrl: null,
     images: [],
+    imageMediaIds: [],
     businessHours: [],
     priceLevel: request.priceLevel ?? null,
     verificationStatus: "unverified",

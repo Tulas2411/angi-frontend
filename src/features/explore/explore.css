@@ -80,6 +80,24 @@
   display: flex;
   justify-content: center;
 }
+/* Restaurant list lazy loading: the marker after the last card, with what is happening there. */
+.explore-lazy {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 1px;
+}
+.explore-lazy-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore-lazy-loading .spinner {
+  display: inline-block;
+}
+.restaurant-score svg {
+  fill: #f4a300;
+}
 
 /* -------------------------------------------------------------- filters */
 .explore-filters {
@@ -583,6 +601,45 @@
   font-size: 22px;
 }
 
+/* Actions a list adds under a card (the roadmap dialog's "+ Thêm vào bữa…"). */
+.dish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+.dish-actions .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+/* A card with actions grows to hold them instead of cutting them off. */
+.dish-detail:has(.dish-actions) {
+  height: auto;
+  min-height: 300px;
+}
+.dish-detail:has(.dish-actions) .dish-photo {
+  height: auto;
+  min-height: 100%;
+}
+/* On a photo tile the actions sit at the top, over the photo. */
+.dish-tile-actions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  left: var(--space-2);
+  justify-content: flex-end;
+  margin: 0;
+  padding: 0;
+}
+.dish-tile-actions .button {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+  box-shadow: var(--shadow-card);
+}
+
 /* Mode 3: photos only, the name on the photo. */
 .dish-items-gallery {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -762,6 +819,82 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-6);
   align-items: start;
+}
+/* The name above the menu and review tabs (the hero lives in "Thông tin"). */
+.explore-tab-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+}
+.explore-tab-title h1 {
+  font-size: clamp(26px, 3vw, 36px);
+  overflow-wrap: anywhere;
+}
+/* Today's state in the colours of the status badges: green open, amber outside hours, red closed. */
+.explore-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--tone-line, var(--line));
+  border-radius: var(--radius-md);
+  background: var(--tone-bg, var(--control));
+  color: var(--tone-ink, var(--ink));
+  font-size: 14px;
+}
+.explore-today-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+.explore-today-state > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px var(--tone-line, var(--line));
+}
+[data-tone="success"].explore-today,
+.explore-hours > div[data-tone="success"] {
+  --tone-bg: var(--success-bg);
+  --tone-ink: var(--success-ink);
+  --tone-line: var(--success-line);
+}
+[data-tone="warning"].explore-today,
+.explore-hours > div[data-tone="warning"] {
+  --tone-bg: var(--warning-bg);
+  --tone-ink: var(--warning-ink);
+  --tone-line: var(--warning-line);
+}
+[data-tone="error"].explore-today,
+.explore-hours > div[data-tone="error"] {
+  --tone-bg: var(--error-bg);
+  --tone-ink: var(--error-ink);
+  --tone-line: var(--error-line);
+}
+.explore-hours > div[data-today] {
+  align-items: center;
+  margin-inline: calc(-1 * var(--space-3));
+  padding: var(--space-3);
+  border-top-color: transparent;
+  border-radius: var(--radius-xs);
+  background: var(--tone-bg, var(--canvas));
+  box-shadow: inset 3px 0 0 var(--tone-ink, var(--ink));
+  font-weight: 600;
+}
+.explore-hours > div[data-today] dt,
+.explore-hours > div[data-today] dd {
+  color: var(--tone-ink, var(--ink));
+}
+/* The row after today keeps no line against the highlighted one. */
+.explore-hours > div[data-today] + div {
+  border-top-color: transparent;
 }
 
 /* -------------------------------------------------------------- reviews */

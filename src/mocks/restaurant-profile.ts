@@ -38,6 +38,7 @@ export function ownerProfileFromDemo(
     website: restaurant.website || null,
     ward: restaurant.ward || null,
     images: [...(restaurant.photos ?? [])],
+    imageMediaIds: (restaurant.photos ?? []).map((_, index) => 8001 + index),
     businessHours:
       restaurant.businessHours?.map((hour) => ({ ...hour })) ??
       hours.flatMap((hour, index) =>
@@ -88,7 +89,12 @@ export function createMockRestaurantProfileService(
       const errors = validateProfilePatch(patch);
       if (patch.coverMediaId != null && !media.has(patch.coverMediaId))
         errors.coverMediaId = "Ảnh bìa không thuộc tài khoản của bạn.";
-      if (patch.imageMediaIds?.some((id) => !media.has(id)))
+      // Saved gallery photos were uploaded by this owner too, so they may be sent back.
+      if (
+        patch.imageMediaIds?.some(
+          (id) => !media.has(id) && !current?.imageMediaIds.includes(id),
+        )
+      )
         errors.imageMediaIds =
           "Một hoặc nhiều ảnh không thuộc tài khoản của bạn.";
       if (Object.keys(errors).length) {
@@ -130,8 +136,18 @@ export function createMockRestaurantProfileService(
           patch.coverMediaId === null
             ? null
             : (media.get(patch.coverMediaId)?.url ?? null);
-      if (patch.imageMediaIds !== undefined)
-        next.images = patch.imageMediaIds.map((id) => media.get(id)?.url ?? "");
+      if (patch.imageMediaIds !== undefined) {
+        const saved = new Map(
+          current.imageMediaIds.map((id, index) => [
+            id,
+            current?.images[index],
+          ]),
+        );
+        next.images = patch.imageMediaIds.map(
+          (id) => media.get(id)?.url ?? saved.get(id) ?? "",
+        );
+        next.imageMediaIds = [...patch.imageMediaIds];
+      }
       if (JSON.stringify(next) !== JSON.stringify(current))
         next.updatedAt = new Date().toISOString();
       current = next;

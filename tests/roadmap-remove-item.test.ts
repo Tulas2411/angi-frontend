@@ -18,7 +18,6 @@ describe("RM-09 proxy rule", () => {
     // Other methods, other depths and malformed ids never reach the backend.
     expect(roadmapOperation("GET", "roadmaps/88/items/1502")).toBe(false);
     expect(roadmapOperation("PUT", "roadmaps/88/items/1502")).toBe(false);
-    expect(roadmapOperation("DELETE", "roadmaps/88")).toBe(false);
     expect(roadmapOperation("DELETE", "roadmaps/88/items")).toBe(false);
     expect(roadmapOperation("DELETE", "roadmaps/88/items/0")).toBe(false);
     expect(roadmapOperation("DELETE", "roadmaps/88/items/1502/feedback")).toBe(

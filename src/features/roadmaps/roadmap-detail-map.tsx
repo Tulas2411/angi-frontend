@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
 import { Button } from "@/shared/ui";
-import { Icon, Media, Tabs } from "@/components/ui/primitives";
+import { Icon } from "@/components/ui/primitives";
 import { mapStyles } from "@/shared/maps/mapbox";
-import { formatRating, mealSlotLabels } from "./roadmap-detail-rules";
+import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
+import { RoadmapPlaceCard } from "./roadmap-place-card";
 import {
   agentDishName,
   type AgentMapPreview,
@@ -19,7 +20,6 @@ import {
   roadmapMapPoints,
   roadmapMapStops,
   type RoadmapMapGroup,
-  type RoadmapMapStop,
 } from "./roadmap-map-rules";
 import type {
   RoadmapDayDto,
@@ -30,106 +30,6 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 /** Shown when nothing is located yet: the whole country, like the owner location picker. */
 const vietnamView = { center: [106.2, 16.3] as [number, number], zoom: 4.6 };
-
-const mapCardTabs = [
-  { value: "info", label: "Thông tin" },
-  { value: "rating", label: "Đánh giá" },
-  { value: "photo", label: "Ảnh món" },
-] as const;
-type MapCardTab = (typeof mapCardTabs)[number]["value"];
-
-function SelectedMapCard({
-  stop,
-  coincident,
-  onSelectItem,
-}: {
-  stop: RoadmapMapStop;
-  coincident: readonly RoadmapMapStop[];
-  onSelectItem: (id: number | null) => void;
-}) {
-  const [tab, setTab] = useState<MapCardTab>("info");
-  const { dish } = stop.item;
-  const place = [dish.restaurant.district, dish.restaurant.provinceName]
-    .filter(Boolean)
-    .join(", ");
-  return (
-    <section className="roadmap-map-card" aria-label="Địa điểm đã chọn">
-      <div className="roadmap-map-card-heading">
-        <Tabs
-          label="Thông tin địa điểm"
-          value={tab}
-          items={[...mapCardTabs]}
-          onChange={(value) => {
-            const next = mapCardTabs.find((item) => item.value === value);
-            if (next) setTab(next.value);
-          }}
-        />
-        <Button
-          variant="icon"
-          aria-label="Đóng thông tin địa điểm"
-          onClick={() => onSelectItem(null)}
-        >
-          <Icon name="X" />
-        </Button>
-      </div>
-      <div className="roadmap-map-card-body">
-        <h3>{dish.restaurant.name}</h3>
-        <p className="helper">
-          {stop.dayLabel} · {mealSlotLabels[stop.item.mealSlot]} · Điểm{" "}
-          {stop.number}
-        </p>
-        <div role="tabpanel" aria-label="Thông tin" hidden={tab !== "info"}>
-          <p>
-            {dish.name} · Dự chi {vnd(dish.price)}
-          </p>
-          {place && <p className="helper">{place}</p>}
-          {stop.coordinate ? (
-            <p className="helper">
-              {stop.coordinate.latitude.toFixed(5)},{" "}
-              {stop.coordinate.longitude.toFixed(5)}
-            </p>
-          ) : (
-            <p className="helper">Địa điểm này chưa có tọa độ trên bản đồ.</p>
-          )}
-          <span className="roadmap-map-included">Có trong lộ trình</span>
-        </div>
-        <div role="tabpanel" aria-label="Đánh giá" hidden={tab !== "rating"}>
-          <p className="roadmap-map-card-rating">
-            {dish.restaurant.ratingAvg > 0
-              ? `★ ${formatRating(dish.restaurant.ratingAvg)} sao`
-              : "Chưa có điểm đánh giá."}
-          </p>
-          <p className="helper">Điểm trung bình của nhà hàng.</p>
-        </div>
-        <div role="tabpanel" aria-label="Ảnh món" hidden={tab !== "photo"}>
-          <Media
-            className="roadmap-map-card-photo"
-            src={dish.coverUrl ?? undefined}
-            alt={`Ảnh món ${dish.name}`}
-          />
-          <p className="helper">Ảnh món {dish.name}</p>
-        </div>
-        {coincident.length > 1 && (
-          <div className="roadmap-map-coincident">
-            <p className="helper">
-              {coincident.length} điểm trong lộ trình cùng vị trí
-            </p>
-            {coincident.map((point) => (
-              <button
-                key={point.item.id}
-                type="button"
-                aria-pressed={point.item.id === stop.item.id}
-                onClick={() => onSelectItem(point.item.id)}
-              >
-                {point.dayLabel} · {point.number}. {point.item.dish.name}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
 
 /** A preview dish on the map. Previews carry no rating or photo, so only their real fields are shown. */
 function PreviewMapCard({
@@ -284,6 +184,8 @@ export function RoadmapDetailMap({
   >([]);
   const refresh = useRef<() => void>(() => {});
   const fit = useRef<() => void>(() => {});
+  /** Draws the pins of the current stops again on the same map. */
+  const sync = useRef<() => void>(() => {});
   const latest = useRef({
     overview,
     stops,
@@ -327,6 +229,11 @@ export function RoadmapDetailMap({
     originSkipped,
     preview,
   ]);
+
+  // New stops (a dish added, removed or moved) redraw the pins; the map itself stays.
+  useEffect(() => {
+    sync.current();
+  }, [groups]);
 
   useEffect(() => {
     refresh.current();
@@ -397,6 +304,7 @@ export function RoadmapDetailMap({
     let instance: MapboxMap | null = null;
     let observer: ResizeObserver | null = null;
     let startMarker: Marker | null = null;
+    let loaded = false;
     const markers: {
       group: RoadmapMapGroup;
       marker: Marker;
@@ -408,6 +316,9 @@ export function RoadmapDetailMap({
       if (disposed) return;
       const code = (event as { error?: { status?: unknown } } | undefined)
         ?.error?.status;
+      // Once drawn, a passing failure (one tile, one sprite) keeps the map: only a refused key
+      // ends it. Removing a working map would also cost another map load.
+      if (loaded && code !== 401 && code !== 403) return;
       setErrorStatus(typeof code === "number" ? code : null);
       setStatus("error");
       observer?.disconnect();
@@ -480,29 +391,35 @@ export function RoadmapDetailMap({
             ? current.preview.selectedKey !== ""
             : current.selectedItemId !== null;
           if (!points.length) return;
+          const cardHeight =
+            element.parentElement?.querySelector<HTMLElement>(
+              ".roadmap-map-card",
+            )?.offsetHeight ?? 0;
+          const popupHeight =
+            document.querySelector<HTMLElement>(
+              '.roadmap-agent-panel[data-open="true"][data-mode="popup"]',
+            )?.offsetHeight ?? 0;
+          const topPadding = hasSelection ? 208 : 176;
+          const bottomPadding = Math.min(
+            Math.max(hasSelection ? cardHeight + 40 : 80, popupHeight + 32),
+            Math.max(0, element.clientHeight - topPadding - 48),
+          );
+          // The card's room is worked into the target camera, never kept as map padding: a large
+          // padding left in the transform stops Mapbox from loading the tiles behind it (grey map).
+          const noPadding = { top: 0, right: 0, bottom: 0, left: 0 };
+          const duration = reducedMotion() ? 0 : 360;
           if (points.length === 1)
             instance.easeTo({
               center: points[0],
               zoom: 14,
-              duration: reducedMotion() ? 0 : 360,
+              offset: [0, (topPadding - bottomPadding) / 2],
+              padding: noPadding,
+              duration,
             });
           else {
             const bounds = new mapboxgl.LngLatBounds(points[0], points[0]);
             for (const point of points.slice(1)) bounds.extend(point);
-            const cardHeight =
-              element.parentElement?.querySelector<HTMLElement>(
-                ".roadmap-map-card",
-              )?.offsetHeight ?? 0;
-            const popupHeight =
-              document.querySelector<HTMLElement>(
-                '.roadmap-agent-panel[data-open="true"][data-mode="popup"]',
-              )?.offsetHeight ?? 0;
-            const topPadding = hasSelection ? 208 : 176;
-            const bottomPadding = Math.min(
-              Math.max(hasSelection ? cardHeight + 40 : 80, popupHeight + 32),
-              Math.max(0, element.clientHeight - topPadding - 48),
-            );
-            instance.fitBounds(bounds, {
+            const camera = instance.cameraForBounds(bounds, {
               padding: {
                 top: topPadding,
                 right: 84,
@@ -510,8 +427,12 @@ export function RoadmapDetailMap({
                 bottom: bottomPadding,
               },
               maxZoom: 15,
-              retainPadding: false,
-              duration: reducedMotion() ? 0 : 360,
+            });
+            instance.easeTo({
+              // Too little room left for the padding: centre the stops instead.
+              ...(camera ?? { center: bounds.getCenter() }),
+              padding: noPadding,
+              duration,
             });
           }
         };
@@ -576,9 +497,11 @@ export function RoadmapDetailMap({
           }
         };
 
-        instance.on("load", () => {
-          if (!instance || disposed) return;
-          for (const group of groups) {
+        sync.current = () => {
+          if (!instance || disposed || !loaded) return;
+          for (const { marker } of markers) marker.remove();
+          markers.length = 0;
+          for (const group of latest.current.groups) {
             const button = document.createElement("button");
             button.type = "button";
             // Mapbox otherwise assigns role="img", overriding native button semantics.
@@ -608,6 +531,12 @@ export function RoadmapDetailMap({
             markers.push({ group, marker, button });
           }
           refresh.current();
+        };
+
+        instance.on("load", () => {
+          if (!instance || disposed) return;
+          loaded = true;
+          sync.current();
           fit.current();
           setStatus("ready");
           setLoadedMaps((value) => value + 1);
@@ -632,8 +561,12 @@ export function RoadmapDetailMap({
       map.current = null;
       refresh.current = () => {};
       fit.current = () => {};
+      sync.current = () => {};
     };
-  }, [token, groups, attempt]);
+    // Created once per token (and per retry): Mapbox shares one telemetry/session sender between
+    // maps, and removing a map while its request is pending makes that sender call a cleared
+    // callback ("this.errorCb is not a function") when the request fails. It is also a new map load.
+  }, [token, attempt]);
 
   const hasMap = Boolean(token);
   const ready = hasMap && status === "ready";
@@ -837,7 +770,7 @@ export function RoadmapDetailMap({
             />
           )
         : selected && (
-            <SelectedMapCard
+            <RoadmapPlaceCard
               key={selected.item.id}
               stop={selected}
               coincident={coincident}
