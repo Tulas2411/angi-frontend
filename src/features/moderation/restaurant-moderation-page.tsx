@@ -42,7 +42,7 @@ import {
 import {
   reportReasonLabels,
   reportStatusLabels,
-} from "./moderation-reports-page";
+} from "./report-handling-rules";
 import { conclusionActions, reportStatusTone } from "./moderation-service";
 import type { ReportDto, ResolutionAction } from "./moderation-types";
 import {
