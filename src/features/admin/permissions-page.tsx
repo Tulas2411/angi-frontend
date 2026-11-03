@@ -203,7 +203,7 @@ function RoleDefaultsPanel({
                   return (
                     <li
                       key={item.code}
-                      className="permission-row"
+                      className="acl-row"
                       data-changed={checked !== saved.includes(item.code)}
                       data-locked={locked || undefined}
                     >
@@ -467,7 +467,7 @@ function ModEditor({
                 return (
                   <li
                     key={item.code}
-                    className="permission-row is-mod"
+                    className="acl-row is-mod"
                     data-changed={choice !== overrideChoice(before, item.code)}
                     data-locked={locked || undefined}
                   >
@@ -475,42 +475,44 @@ function ModEditor({
                       <strong>{item.description}</strong>
                       <code>{item.code}</code>
                     </div>
-                    <span
-                      className="permission-default"
-                      data-on={isDefault}
-                      title="Quyền mặc định của role MOD"
-                    >
-                      {isDefault ? (
-                        <CheckIcon aria-hidden />
-                      ) : (
-                        <MinusIcon aria-hidden />
-                      )}
-                      {isDefault ? "Mặc định có" : "Mặc định không"}
-                    </span>
-                    {locked ? (
-                      <span className="permission-lock">
-                        <LockClosedIcon aria-hidden /> Chỉ quản trị viên
+                    <div className="acl-controls">
+                      <span
+                        className="permission-default"
+                        data-on={isDefault}
+                        title="Quyền mặc định của role MOD"
+                      >
+                        {isDefault ? (
+                          <CheckIcon aria-hidden />
+                        ) : (
+                          <MinusIcon aria-hidden />
+                        )}
+                        {isDefault ? "Mặc định có" : "Mặc định không"}
                       </span>
-                    ) : (
-                      <OverrideControl
-                        name={`${name}-${item.code}`}
-                        label={`${item.description}: ghi đè cho ${mod.displayName}`}
-                        value={choice}
-                        onChange={(next) => {
-                          setDone("");
-                          setDraft((current) =>
-                            withOverride(current, item.code, next),
-                          );
-                        }}
-                      />
-                    )}
-                    <span
-                      className="permission-effective"
-                      data-on={on}
-                      aria-label={on ? "Được dùng" : "Không được dùng"}
-                    >
-                      {on ? "Được dùng" : "Không"}
-                    </span>
+                      {locked ? (
+                        <span className="permission-lock">
+                          <LockClosedIcon aria-hidden /> Chỉ quản trị viên
+                        </span>
+                      ) : (
+                        <OverrideControl
+                          name={`${name}-${item.code}`}
+                          label={`${item.description}: ghi đè cho ${mod.displayName}`}
+                          value={choice}
+                          onChange={(next) => {
+                            setDone("");
+                            setDraft((current) =>
+                              withOverride(current, item.code, next),
+                            );
+                          }}
+                        />
+                      )}
+                      <span
+                        className="permission-effective"
+                        data-on={on}
+                        aria-label={on ? "Được dùng" : "Không được dùng"}
+                      >
+                        {on ? "Được dùng" : "Không"}
+                      </span>
+                    </div>
                   </li>
                 );
               })}
