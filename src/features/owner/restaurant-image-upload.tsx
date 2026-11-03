@@ -8,26 +8,24 @@ import { validateRestaurantImage } from "./registration-rules";
 import type { RestaurantRegistrationService } from "./restaurant-service";
 import type { MediaFileDto } from "./restaurant-types";
 
-export function RestaurantImageUpload({
-  label,
-  files,
-  max,
-  disabled,
-  error,
-  onChange,
-  onPending,
-  service,
-}: {
-  label: string;
+type UploadOptions = {
   files: MediaFileDto[];
   max: number;
   disabled: boolean;
-  error?: string;
   onChange: (files: MediaFileDto[]) => void;
   onPending: (pending: boolean) => void;
   service: Pick<RestaurantRegistrationService, "upload">;
-}) {
-  const id = useId();
+};
+
+/** Validation, one-by-one upload and retry, shared by the image grid and the cover banner. */
+export function useRestaurantImageUpload({
+  files,
+  max,
+  disabled,
+  onChange,
+  onPending,
+  service,
+}: UploadOptions) {
   const [problem, setProblem] = useState("");
   const [pending, setPending] = useState(false);
   const [retryFiles, setRetryFiles] = useState<File[]>([]);
@@ -79,6 +77,22 @@ export function RestaurantImageUpload({
       onPending(false);
     }
   }
+  function dismiss() {
+    setRetryFiles([]);
+    setProblem("");
+  }
+  return { upload, pending, problem, retryFiles, dismiss };
+}
+
+export function RestaurantImageUpload({
+  label,
+  error,
+  ...options
+}: UploadOptions & { label: string; error?: string }) {
+  const { files, max, disabled, onChange } = options;
+  const id = useId();
+  const { upload, pending, problem, retryFiles, dismiss } =
+    useRestaurantImageUpload(options);
   return (
     <div className="upload-field registration-image-upload">
       <div className="between">
@@ -100,8 +114,7 @@ export function RestaurantImageUpload({
               aria-label={`Bỏ ${label.toLocaleLowerCase("vi")} ${file.id}`}
               onClick={() => {
                 onChange(files.filter((item) => item.id !== file.id));
-                setRetryFiles([]);
-                setProblem("");
+                dismiss();
               }}
             >
               ×

@@ -46,3 +46,108 @@
 .registration-image-upload .upload-tile .button-icon:focus-visible {
   opacity: 1;
 }
+
+/* Profile photos tab: the cover and the gallery are separate sections. */
+.photos-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.photos-section + .photos-section {
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--line);
+}
+.photos-section h3 {
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 600;
+}
+.gallery-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.gallery-field-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.gallery-field-tile {
+  position: relative;
+  min-width: 0;
+}
+/* Move and remove controls sit on the photo, in reading order. */
+.gallery-field-tools {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  display: flex;
+  gap: 4px;
+}
+.gallery-field-tools .button-icon {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+  background: rgb(255 255 255 / 0.92);
+  font-size: 15px;
+  line-height: 1;
+}
+.gallery-field-tools .button-icon:disabled {
+  opacity: 0.4;
+}
+.photos-current-flag,
+.cover-field-flag {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 0.92);
+  color: var(--ink);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+/* Same 4:1 ratio as the overview banner, so the owner sees the real crop. */
+.cover-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.cover-field-frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 1;
+  min-height: 120px;
+  border-radius: var(--radius-md);
+  background: var(--control);
+}
+.cover-field-frame > .media {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.cover-field-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.cover-field-pick {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.cover-field-pick:focus-within {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.cover-field-pick.is-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

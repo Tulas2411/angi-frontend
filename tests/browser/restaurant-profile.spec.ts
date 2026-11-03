@@ -93,10 +93,12 @@ test.beforeAll(async () => {
             coverMediaId === null
               ? null
               : "/assets/figma/roadmap-restaurant.png";
-        if (imageMediaIds !== undefined)
+        if (imageMediaIds !== undefined) {
           current.images = imageMediaIds.map(
             () => "/assets/figma/roadmap-restaurant.png",
           );
+          current.imageMediaIds = [...imageMediaIds];
+        }
         send(200, current);
       }
     } else if (request.url === "/api/v1/media" && request.method === "POST") {
@@ -293,13 +295,14 @@ test("saving disables duplicate submission and cancellation restores the latest 
   expect(patches).toHaveLength(1);
 });
 
-test("cover removal and full gallery replacement use explicit null and numeric uploaded IDs", async ({
+test("cover removal and photo-by-photo gallery edits send explicit null and the edited imageMediaIds", async ({
   page,
 }) => {
   await openProfile(page);
   await page.getByRole("tab", { name: "Hình ảnh", exact: true }).click();
   await page
-    .getByRole("button", { name: "Bỏ ảnh bìa hiện tại", exact: true })
+    .locator(".cover-field")
+    .getByRole("button", { name: "Bỏ ảnh bìa", exact: true })
     .click();
   await page
     .getByRole("dialog")
@@ -311,25 +314,42 @@ test("cover removal and full gallery replacement use explicit null and numeric u
     page.getByText("Đã lưu hồ sơ nhà hàng.", { exact: true }),
   ).toBeVisible();
   expect(patches[0]).toEqual({ coverMediaId: null });
+  // Photo-by-photo edits: drop the first saved photo, add one and move it first.
+  const gallery = page.locator(".gallery-field");
+  const photos = gallery.getByRole("img", { name: /^Ảnh nhà hàng \d+$/ });
+  await expect(photos).toHaveCount(2);
+  await expect(page.getByText("2 / 10", { exact: true })).toBeVisible();
+  await gallery.getByRole("button", { name: "Bỏ ảnh 1", exact: true }).click();
+  await expect(photos).toHaveCount(1);
   await page
-    .getByRole("button", { name: "Thay thư viện ảnh", exact: true })
+    .getByLabel("Thêm ảnh nhà hàng", { exact: true })
+    .setInputFiles({ name: "new.png", mimeType: "image/png", buffer: png });
+  await expect(photos).toHaveCount(2);
+  await gallery
+    .getByRole("button", { name: "Đưa ảnh 2 lên trước", exact: true })
     .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Chọn ảnh thay thế", exact: true })
+  await expect(
+    gallery.getByRole("button", { name: "Đưa ảnh 1 lên trước", exact: true }),
+  ).toBeDisabled();
+  // Restoring brings back the saved order and leaves nothing to save.
+  await gallery
+    .getByRole("button", { name: "Khôi phục thư viện đã lưu", exact: true })
     .click();
   await expect(save(page)).toBeDisabled();
+  await gallery.getByRole("button", { name: "Bỏ ảnh 1", exact: true }).click();
   await page
-    .getByLabel("Ảnh nhà hàng mới", { exact: true })
+    .getByLabel("Thêm ảnh nhà hàng", { exact: true })
     .setInputFiles({ name: "new.png", mimeType: "image/png", buffer: png });
-  await expect(
-    page.getByRole("button", { name: /Bỏ ảnh nhà hàng mới/ }),
-  ).toBeEnabled();
+  await gallery
+    .getByRole("button", { name: "Đưa ảnh 2 lên trước", exact: true })
+    .click();
+  expect(patches).toHaveLength(1);
   await save(page).click();
   await expect(
     page.getByText("Đã lưu hồ sơ nhà hàng.", { exact: true }),
   ).toBeVisible();
-  expect(patches[1]).toEqual({ imageMediaIds: [9001] });
+  expect(patches[1]).toEqual({ imageMediaIds: [9002, 9012] });
+  await expect(page.getByText("2 / 10", { exact: true })).toBeVisible();
   await page
     .getByRole("button", { name: "Xóa toàn bộ ảnh", exact: true })
     .click();
@@ -342,6 +362,44 @@ test("cover removal and full gallery replacement use explicit null and numeric u
     page.getByText("Đã lưu hồ sơ nhà hàng.", { exact: true }),
   ).toBeVisible();
   expect(patches[2]).toEqual({ imageMediaIds: [] });
+});
+
+test("the cover is one 4:1 slot: pick, restore the saved cover, then save the new upload", async ({
+  page,
+}) => {
+  await openProfile(page);
+  await page.getByRole("tab", { name: "Hình ảnh", exact: true }).click();
+  const field = page.locator(".cover-field");
+  const frame = field.locator(".cover-field-frame");
+  const box = await frame.boundingBox();
+  expect(Math.abs(box!.width / box!.height - 4)).toBeLessThan(0.05);
+  await expect(field.getByRole("img", { name: "Ảnh bìa" })).toBeVisible();
+  await expect(page.getByText("Ảnh đầu", { exact: true })).toBeVisible();
+  await field
+    .getByLabel("Đổi ảnh bìa", { exact: true })
+    .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: png });
+  await expect(field.getByText("Chưa lưu", { exact: true })).toBeVisible();
+  await field
+    .getByRole("button", { name: "Khôi phục ảnh bìa đã lưu", exact: true })
+    .click();
+  await expect(field.getByText("Chưa lưu", { exact: true })).toHaveCount(0);
+  await expect(save(page)).toBeDisabled();
+  await field
+    .getByLabel("Đổi ảnh bìa", { exact: true })
+    .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: png });
+  // Dropping a fresh pick needs no confirmation and leaves no cover.
+  await field.getByRole("button", { name: "Bỏ ảnh bìa", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(field.getByText("Ảnh bìa sẽ được bỏ khi lưu")).toBeVisible();
+  await field
+    .getByLabel("Thêm ảnh bìa", { exact: true })
+    .setInputFiles({ name: "cover.png", mimeType: "image/png", buffer: png });
+  await save(page).click();
+  await expect(
+    page.getByText("Đã lưu hồ sơ nhà hàng.", { exact: true }),
+  ).toBeVisible();
+  expect(patches).toEqual([{ coverMediaId: 9003 }]);
+  await expect(field.getByText("Chưa lưu", { exact: true })).toHaveCount(0);
 });
 
 test("live load errors offer retry without fixtures; missing owners can go to registration", async ({
