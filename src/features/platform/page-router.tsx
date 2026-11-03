@@ -58,6 +58,10 @@ import {
   MenuQueuePage,
   MenuReviewPage,
 } from "@/features/moderation/menu-review-page";
+import {
+  RestaurantModerationDetailPage,
+  RestaurantModerationListPage,
+} from "@/features/moderation/restaurant-moderation-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -216,15 +220,23 @@ export function PageRouter({
 
   // F-58 MOD-M1..MOD-M4 đã nối API: hàng đợi và duyệt bản thực đơn đọc ghi thật (Mod và Admin).
   if (mode === "live" && role === "MOD" && area === "menus")
-    return /^[1-9]d{0,17}$/.test(id ?? "") ? (
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
       <MenuReviewPage key={id} submissionId={Number(id)} />
     ) : (
       <MenuQueuePage />
     );
 
+  // F-56 MOD-R1..MOD-R4 đã nối API: danh sách và chi tiết kiểm duyệt nhà hàng đọc ghi thật (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "restaurants")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <RestaurantModerationDetailPage key={id} restaurantId={Number(id)} />
+    ) : (
+      <RestaurantModerationListPage />
+    );
+
   // F-57 MOD-V1..MOD-V3 đã nối API: hàng đợi và duyệt hồ sơ xác minh đọc ghi thật.
   if (mode === "live" && role === "MOD" && area === "verification")
-    return /^[1-9]d{0,17}$/.test(id ?? "") ? (
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
       <VerificationReviewPage key={id} verificationId={Number(id)} />
     ) : (
       <VerificationQueuePage />
@@ -280,7 +292,7 @@ export function PageRouter({
     role === "ADMIN" &&
     area === "moderators" &&
     !operation &&
-    /^[1-9]d{0,9}$/.test(id ?? "")
+    /^[1-9]\d{0,9}$/.test(id ?? "")
   )
     return <ModDetailPage key={id} userId={Number(id)} />;
 

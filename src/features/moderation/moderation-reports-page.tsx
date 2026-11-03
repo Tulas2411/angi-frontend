@@ -33,7 +33,7 @@ import type {
 const PAGE_SIZE = 20;
 
 /** Nhãn tiếng Việt của trạng thái báo cáo. */
-const statusLabels: Record<ReportStatus, string> = {
+export const reportStatusLabels: Record<ReportStatus, string> = {
   pending: "Chưa nhận",
   in_review: "Đang xử lý",
   resolved: "Đã giải quyết",
@@ -41,7 +41,7 @@ const statusLabels: Record<ReportStatus, string> = {
 };
 
 /** Nhãn tiếng Việt của lý do báo cáo. */
-const reasonLabels: Record<string, string> = {
+export const reportReasonLabels: Record<string, string> = {
   wrong_info: "Sai thông tin",
   closed: "Đã đóng cửa",
   spam: "Spam",
@@ -203,7 +203,7 @@ export function ModerationReportsPage({ base }: { base: string }) {
               },
               {
                 label: "Lý do",
-                render: (row) => reasonLabels[row.reasonCode] ?? row.reasonCode,
+                render: (row) => reportReasonLabels[row.reasonCode] ?? row.reasonCode,
               },
               {
                 label: "Người báo cáo",
@@ -213,7 +213,7 @@ export function ModerationReportsPage({ base }: { base: string }) {
                 label: "Trạng thái",
                 render: (row) => (
                   <Badge tone={reportStatusTone(row.status)}>
-                    {statusLabels[row.status]}
+                    {reportStatusLabels[row.status]}
                   </Badge>
                 ),
               },
@@ -433,12 +433,12 @@ export function ModerationReportDetailPage({
         </p>
         <p>
           <strong>
-            {reasonLabels[report.reasonCode] ?? report.reasonCode}
+            {reportReasonLabels[report.reasonCode] ?? report.reasonCode}
           </strong>
         </p>
         {report.description && <p>{report.description}</p>}
         <Badge tone={reportStatusTone(report.status)}>
-          {statusLabels[report.status]}
+          {reportStatusLabels[report.status]}
           {report.handledBy ? ` · ${report.handledBy.displayName}` : ""}
         </Badge>
         {canClaim && (
@@ -544,11 +544,11 @@ export function ModerationReportDetailPage({
               },
               {
                 label: "Lý do",
-                render: (row) => reasonLabels[row.reasonCode] ?? row.reasonCode,
+                render: (row) => reportReasonLabels[row.reasonCode] ?? row.reasonCode,
               },
               {
                 label: "Trạng thái",
-                render: (row) => statusLabels[row.status],
+                render: (row) => reportStatusLabels[row.status],
               },
               {
                 label: "Mở",
