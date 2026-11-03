@@ -62,14 +62,16 @@ const roadmaps: StubHandler = ({ method, url }, send) => {
   }
   if (method !== "GET" || !url.startsWith("/api/v1/roadmaps?")) return false;
   listCalls.push(url.slice("/api/v1/roadmaps?".length));
-  if (failures > 0) {
+  const query = new URL(url, "http://stub").searchParams;
+  const page = Number(query.get("page"));
+  const size = Number(query.get("pageSize"));
+  // Failures are for the list page; the prefetched /roadmaps/start check (pageSize=1) is
+  // answered normally, whenever it happens to run.
+  if (failures > 0 && size !== 1) {
     failures -= 1;
     send(503, null, "SERVICE_UNAVAILABLE");
     return true;
   }
-  const query = new URL(url, "http://stub").searchParams;
-  const page = Number(query.get("page"));
-  const size = Number(query.get("pageSize"));
   // GetMyRoadmapsRequestDtoValidator: page >= 1, pageSize 1..100.
   if (!Number.isInteger(page) || page < 1 || !(size >= 1 && size <= 100)) {
     send(400, null, "VALIDATION_FAILED", {

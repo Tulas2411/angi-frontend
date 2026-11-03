@@ -381,6 +381,19 @@ test.beforeEach(async ({ page }) => {
 const callsTo = (method: string, path: string) =>
   calls.filter((entry) => entry.method === method && entry.path === path);
 const cards = (page: Page) => page.locator(".explore-card");
+/** Heights of the list rows on the page. */
+const rowHeights = (page: Page) =>
+  page
+    .locator(".dish-row")
+    .evaluateAll((rows) => rows.map((row) => row.clientHeight));
+/** Classes of the parts of an item body cut short by the item's height (the description excepted). */
+const squeezedParts = (item: ReturnType<Page["locator"]>) =>
+  item.locator(".dish-body").evaluate((body) =>
+    [...body.querySelectorAll(":scope > *, :scope > .dish-head > *")]
+      .filter((part) => !part.classList.contains("dish-description-wrap"))
+      .filter((part) => part.scrollHeight > part.clientHeight + 1)
+      .map((part) => part.className),
+  );
 const cardOf = (page: Page, name: string) =>
   cards(page).filter({
     has: page.getByRole("heading", { name, exact: true, level: 3 }),
@@ -628,6 +641,79 @@ test.describe("dishes", () => {
     await expect(dishItems(page)).toHaveCount(1);
   });
 
+  test("the filter panel slides down when shown and back up when hidden", async ({
+    page,
+  }) => {
+    /**
+     * Presses the toggle and records, on each frame for half a second, the panel's height and the
+     * top of the list under the form.
+     */
+    const slide = (label: string) =>
+      page.evaluate(async (text) => {
+        const toggle = [...document.querySelectorAll("button")].find((button) =>
+          button.textContent?.includes(text),
+        )!;
+        const box = document.querySelector(".dish-filter-collapse")!;
+        const list = document.querySelector(".dish-items")!;
+        toggle.click();
+        const frames: { height: number; top: number }[] = [];
+        const start = performance.now();
+        while (performance.now() - start < 500) {
+          await new Promise(requestAnimationFrame);
+          frames.push({
+            height: Math.round(box.getBoundingClientRect().height),
+            top: Math.round(list.getBoundingClientRect().top),
+          });
+        }
+        return frames;
+      }, label);
+    // The dish and the restaurant lists share the panel and its motion.
+    for (const path of ["/dishes", "/restaurants"]) {
+      await page.goto(path);
+      await expect(dishItems(page).first()).toBeVisible();
+      const listTopClosed = await page
+        .locator(".dish-items")
+        .evaluate((list) => Math.round(list.getBoundingClientRect().top));
+      const down = (await slide("Hiện bộ lọc")).map((frame) => frame.height);
+      const full = down.at(-1)!;
+      expect(full).toBeGreaterThan(100);
+      // Several frames in between: it grows, it does not appear at once.
+      expect(
+        down.filter((height) => height > 0 && height < full).length,
+      ).toBeGreaterThan(2);
+      expect(down).toEqual([...down].sort((a, b) => a - b));
+      await expect(page.locator(".dish-filter-panel")).toBeVisible();
+      const upFrames = await slide("Ẩn bộ lọc");
+      const up = upFrames.map((frame) => frame.height);
+      // Closing is short and accelerating, so it does not hang nearly shut before it goes.
+      expect(
+        await page.locator(".dish-filter-collapse").evaluate((element) => {
+          const style = getComputedStyle(element);
+          return [style.transitionDuration, style.transitionTimingFunction];
+        }),
+      ).toEqual([
+        "0.16s, 0.16s, 0.16s, 0.16s",
+        expect.stringContaining("cubic-bezier(0.55, 0.055, 0.675, 0.19)"),
+      ]);
+      // The form's gap above the panel folds away with it (a negative margin of the same size),
+      // so the list below does not jump when `display: none` removes the panel.
+      const [margin, gap] = await page
+        .locator(".dish-filter-collapse")
+        .evaluate((element) => [
+          getComputedStyle(element).marginTop,
+          getComputedStyle(element.parentElement!).rowGap,
+        ]);
+      expect(margin).toBe(`-${gap}`);
+      expect(upFrames.at(-1)!.top).toBe(listTopClosed);
+      expect(
+        up.filter((height) => height > 0 && height < full).length,
+      ).toBeGreaterThan(2);
+      expect(up).toEqual([...up].sort((a, b) => b - a));
+      expect(up.at(-1)).toBe(0);
+      await expect(page.locator(".dish-filter-panel")).toBeHidden();
+    }
+  });
+
   test("a price range that cannot match is refused before searching", async ({
     page,
   }) => {
@@ -642,7 +728,7 @@ test.describe("dishes", () => {
     expect(callsTo("GET", "dishes")).toHaveLength(before);
   });
 
-  test("descriptions come from the dish detail; a long one ends with “…” that opens it", async ({
+  test("descriptions come from the dish detail; a long one scrolls in its box and fades out", async ({
     page,
   }) => {
     await page.goto("/dishes");
@@ -650,52 +736,184 @@ test.describe("dishes", () => {
     await expect(dishOf(page, "Cà phê trứng")).toContainText(
       "Món này chưa có mô tả.",
     );
-    // Every detailed card keeps one height while its text is cut.
+    // Every detailed card keeps one height, whatever the length of its text.
     const heights = await page
       .locator(".dish-detail")
       .evaluateAll((items) => items.map((item) => item.clientHeight));
     expect(new Set(heights).size).toBe(1);
-    // Two lines and a few words of the third, then "…"; the short ones are shown whole.
+    // The whole text is there, without a "…" button; the box scrolls and fades at the bottom.
     const card = dishOf(page, "Bánh mì pate");
-    const text = card.locator("p.dish-description:not(.dish-description-twin)");
-    const more = card.getByRole("button", { name: "Xem toàn bộ mô tả" });
-    await expect(more).toHaveText("…");
-    const lines = await text.evaluate(
-      (element) =>
-        element.clientHeight / parseFloat(getComputedStyle(element).lineHeight),
+    const box = card.locator(".dish-description-wrap");
+    await expect(card.locator("p.dish-description")).toHaveText(
+      descriptions[102].trim(),
     );
-    expect(Math.round(lines)).toBe(3);
     await expect(
-      dishOf(page, "Bún bò Huế").getByRole("button", {
-        name: "Xem toàn bộ mô tả",
-      }),
+      page.getByRole("button", { name: "Xem toàn bộ mô tả" }),
     ).toHaveCount(0);
-    // Pressing "…" opens the whole text inside the card: the card keeps its height, the text
-    // scrolls in the room left and fades out at the bottom.
-    const before = await card.evaluate((element) => element.clientHeight);
-    await more.click();
-    await expect(more).toHaveCount(0);
-    await expect(text).toContainText(descriptions[102].trim());
-    expect(await card.evaluate((element) => element.clientHeight)).toBe(before);
-    const box = await card
-      .locator(".dish-description-wrap")
-      .evaluate((element) => ({
+    await expect(box).toHaveAttribute("data-faded", "true");
+    expect(
+      await box.evaluate((element) => ({
         scrolls: element.scrollHeight > element.clientHeight,
         overflow: getComputedStyle(element).overflowY,
         faded: getComputedStyle(element).maskImage.includes("gradient"),
-      }));
-    expect(box).toEqual({ scrolls: true, overflow: "auto", faded: true });
+      })),
+    ).toEqual({ scrolls: true, overflow: "auto", faded: true });
+    // Only the description gives way: the name, the tags and the price keep their full height.
+    const squeezed = await card.locator(".dish-body").evaluate((body) =>
+      [...body.children]
+        .filter((child) => !child.classList.contains("dish-description-wrap"))
+        .filter((child) => child.scrollHeight > child.clientHeight + 1)
+        .map((child) => child.className),
+    );
+    expect(squeezed).toEqual([]);
+    // Read to the end: the fade goes, and the card did not move or navigate.
+    const before = await card.evaluate((element) => element.clientHeight);
+    await box.hover();
+    await page.mouse.wheel(0, 2000);
+    await expect(box).not.toHaveAttribute("data-faded");
+    expect(await card.evaluate((element) => element.clientHeight)).toBe(before);
     await expect(page).toHaveURL(/\/dishes$/);
-    // Each dish is read once, also after switching layouts.
+    // A short text fits: no fade, and its box is not raised above the card link.
+    const short = dishOf(page, "Bún bò Huế").locator(".dish-description-wrap");
+    await expect(short).not.toHaveAttribute("data-overflowing");
+    await expect(short).not.toHaveAttribute("data-faded");
+    // In the list layout the box is three lines high.
     await page
       .getByRole("group", { name: "Kiểu hiển thị" })
       .getByRole("button", { name: "Danh sách" })
       .click();
     await expect(page.locator(".dish-row")).toHaveCount(5);
+    // In a row the box holds at most three lines (less when the row's fixed height leaves less
+    // room); the rest scrolls and fades.
+    const listBox = await dishOf(page, "Bánh mì pate")
+      .locator(".dish-description-wrap")
+      .evaluate((element) => ({
+        lines:
+          element.clientHeight /
+          parseFloat(
+            getComputedStyle(element.firstElementChild as Element).lineHeight,
+          ),
+        scrolls: element.scrollHeight > element.clientHeight,
+        faded: element.hasAttribute("data-faded"),
+      }));
+    expect(listBox.lines).toBeGreaterThanOrEqual(1.5);
+    expect(listBox.lines).toBeLessThanOrEqual(3.01);
+    expect(listBox).toMatchObject({ scrolls: true, faded: true });
+    // Every row has the same height, whatever the length of its text.
+    expect(new Set(await rowHeights(page)).size).toBe(1);
+    expect(await squeezedParts(dishOf(page, "Bánh mì pate"))).toEqual([]);
+    // Each dish is read once, also after switching layouts.
     const reads = calls.filter(
       (call) => call.method === "GET" && /^dishes\/\d+$/.test(call.path),
     );
     expect(reads).toHaveLength(5);
+  });
+
+  test("a dish card shows the likes at the right of the name, then the type line; a long name fades out", async ({
+    page,
+  }) => {
+    const first = dishes[0];
+    const original = first.name;
+    first.name =
+      "Bún bò Huế giò heo chả cua nước dùng hầm xương tám tiếng sả và mắm ruốc gia truyền ba đời của bà Diệu ở ngõ nhỏ phố cổ Hà Nội từ năm một nghìn chín trăm";
+    try {
+      await page.goto("/dishes");
+      const card = dishItems(page).filter({
+        has: page.getByRole("heading", { name: first.name, level: 3 }),
+      });
+      await expect(card).toHaveCount(1);
+      // In a detailed card the likes sit on the name's line, at its right end, above the type line.
+      const besideName = async (item: typeof card) => {
+        const head = item.locator(".dish-head");
+        const [nameBox, likesBox, headBox] = await Promise.all([
+          head.locator(".card-name").boundingBox(),
+          head.locator(".dish-likes").boundingBox(),
+          head.boundingBox(),
+        ]);
+        expect(likesBox!.x).toBeGreaterThan(nameBox!.x + nameBox!.width - 1);
+        expect(likesBox!.y).toBeLessThan(nameBox!.y + nameBox!.height);
+        expect(
+          Math.abs(likesBox!.x + likesBox!.width - headBox!.x - headBox!.width),
+        ).toBeLessThan(1);
+      };
+      await besideName(card);
+      const order = await card
+        .locator(".dish-body")
+        .evaluate((body) =>
+          [...body.children].map((child) =>
+            child.classList.contains("dish-head")
+              ? "head"
+              : child.classList.contains("dish-kinds")
+                ? "kinds"
+                : "other",
+          ),
+        );
+      expect(order.slice(0, 2)).toEqual(["head", "kinds"]);
+      // A long name keeps to one line and fades instead of ending in "…".
+      const lineCount = (locator: typeof card) =>
+        locator.evaluate(
+          (element) =>
+            element.clientHeight /
+            parseFloat(getComputedStyle(element).lineHeight),
+        );
+      const masked = (locator: typeof card) =>
+        locator.evaluate((element) =>
+          getComputedStyle(element).maskImage.includes("gradient"),
+        );
+      const name = card.locator(".card-name-text");
+      await expect(name).toHaveAttribute("data-overflowing", "true");
+      expect(Math.round(await lineCount(name))).toBe(1);
+      expect(await masked(name)).toBe(true);
+      await expect(
+        dishOf(page, "Bánh mì pate").locator(".card-name-text"),
+      ).not.toHaveAttribute("data-overflowing");
+      expect(await squeezedParts(card)).toEqual([]);
+      // In the list too the likes sit on the name's line; the photo fills the row's left edge and
+      // every row has the same height.
+      await page
+        .getByRole("group", { name: "Kiểu hiển thị" })
+        .getByRole("button", { name: "Danh sách" })
+        .click();
+      const row = page.locator(".dish-row").filter({
+        has: page.getByRole("heading", { name: first.name, level: 3 }),
+      });
+      await besideName(row);
+      await expect(row.locator(".card-name-text")).toHaveAttribute(
+        "data-overflowing",
+        "true",
+      );
+      expect(new Set(await rowHeights(page)).size).toBe(1);
+      expect(await squeezedParts(row)).toEqual([]);
+      const photo = await row.evaluate((item) => {
+        const box = item.getBoundingClientRect();
+        const thumb = item
+          .querySelector(".dish-thumb")!
+          .getBoundingClientRect();
+        return {
+          left: Math.round(thumb.left - box.left - item.clientLeft),
+          top: Math.round(thumb.top - box.top - item.clientTop),
+          height: Math.round(thumb.height - item.clientHeight),
+          width: Math.round(thumb.width),
+        };
+      });
+      expect(photo).toEqual({ left: 0, top: 0, height: 0, width: 200 });
+      // On a gallery photo the name may take three lines, then fades the same way.
+      await page
+        .getByRole("group", { name: "Kiểu hiển thị" })
+        .getByRole("button", { name: "Thư viện ảnh" })
+        .click();
+      const tileName = page
+        .locator(".dish-tile")
+        .filter({
+          has: page.getByRole("heading", { name: first.name, level: 3 }),
+        })
+        .locator(".card-name-text");
+      await expect(tileName).toHaveAttribute("data-overflowing", "true");
+      expect(Math.round(await lineCount(tileName))).toBe(3);
+      expect(await masked(tileName)).toBe(true);
+    } finally {
+      first.name = original;
+    }
   });
 
   for (const [width, label] of [
@@ -764,6 +982,208 @@ test.describe("restaurants", () => {
     await page.goto("/restaurants?page=9");
     await expect(page).toHaveURL(/page=2/);
     await expect(cards(page)).toHaveCount(4);
+  });
+
+  test("a card hangs its score in its top-right corner beside the name, then the type line; a long name fades out", async ({
+    page,
+  }) => {
+    const first = restaurants[0];
+    const unrated = restaurants[1];
+    const original = first.name;
+    first.name =
+      "Nhà hàng Lẩu Tôm Sen Đào Phố Cửa Bắc Ba Đình Hà Nội Gia Truyền Ba Đời Từ Năm Một Nghìn Chín Trăm";
+    unrated.ratingCount = 0;
+    /** The badge's offset from the card's top-left corner, inside the border. */
+    const badgeCorner = (item: ReturnType<Page["locator"]>) =>
+      item.evaluate((element) => {
+        const box = element.getBoundingClientRect();
+        const tag = element.querySelector(".rating-badge")!;
+        const badge = tag.getBoundingClientRect();
+        // The tag rounds its own corner to the card's inner radius, so nothing shows past it.
+        const inner =
+          parseFloat(getComputedStyle(element).borderTopRightRadius) -
+          element.clientLeft;
+        return {
+          right: Math.round(box.right - element.clientLeft - badge.right),
+          top: Math.round(badge.top - box.top - element.clientTop),
+          corner: Math.round(
+            parseFloat(getComputedStyle(tag).borderTopRightRadius) - inner,
+          ),
+        };
+      });
+    try {
+      await page.goto("/restaurants");
+      const card = page.locator(".dish-item").filter({
+        has: page.getByRole("heading", { name: first.name, level: 3 }),
+      });
+      await expect(card).toHaveCount(1);
+      // The score is a tag hung in the card's top-right corner; it lets clicks through to the card.
+      const badge = card.locator(".rating-badge");
+      await expect(badge).toHaveText(/4,6\s*\(213\)/);
+      await expect(badge).toContainText("4,6 trên 5 sao, 213 đánh giá");
+      expect(await badgeCorner(card)).toEqual({ right: 0, top: 0, corner: 0 });
+      expect(
+        await badge.evaluate(
+          (element) => getComputedStyle(element).pointerEvents,
+        ),
+      ).toBe("none");
+      // A restaurant without reviews is marked new.
+      await expect(
+        page
+          .locator(".dish-item")
+          .filter({
+            has: page.getByRole("heading", { name: unrated.name, level: 3 }),
+          })
+          .locator(".rating-badge"),
+      ).toHaveText(/✦\s*Mới/);
+      // The tag shares the name's row, so a long name stops before it; the type line follows.
+      const head = card.locator(".dish-head");
+      await expect(head.locator(".card-name")).toHaveCount(1);
+      await expect(head.locator(".rating-badge")).toHaveCount(1);
+      const [nameBox, badgeBox] = await Promise.all([
+        head.locator(".card-name").boundingBox(),
+        badge.boundingBox(),
+      ]);
+      expect(nameBox!.x + nameBox!.width).toBeLessThanOrEqual(badgeBox!.x);
+      const order = await card
+        .locator(".dish-body")
+        .evaluate((body) =>
+          [...body.children].map((child) =>
+            child.classList.contains("dish-head")
+              ? "head"
+              : child.classList.contains("dish-kinds")
+                ? "kinds"
+                : "other",
+          ),
+        );
+      expect(order.slice(0, 2)).toEqual(["head", "kinds"]);
+      // In a card a long name keeps to one line and fades instead of ending in "…".
+      const lineCount = (locator: typeof card) =>
+        locator.evaluate(
+          (element) =>
+            element.clientHeight /
+            parseFloat(getComputedStyle(element).lineHeight),
+        );
+      const masked = (locator: typeof card) =>
+        locator.evaluate((element) =>
+          getComputedStyle(element).maskImage.includes("gradient"),
+        );
+      const name = card.locator(".card-name-text");
+      await expect(name).toHaveAttribute("data-overflowing", "true");
+      expect(Math.round(await lineCount(name))).toBe(1);
+      expect(await masked(name)).toBe(true);
+      // A short name is shown whole, without the fade.
+      await expect(
+        page
+          .locator(".dish-item")
+          .filter({
+            has: page.getByRole("heading", { name: "Phở Gia Truyền" }),
+          })
+          .locator(".card-name-text"),
+      ).not.toHaveAttribute("data-overflowing");
+      // In the list too the score hangs in the card's top-right corner, and every row has the same height.
+      await page
+        .getByRole("group", { name: "Kiểu hiển thị" })
+        .getByRole("button", { name: "Danh sách" })
+        .click();
+      const row = page.locator(".dish-row").filter({
+        has: page.getByRole("heading", { name: first.name, level: 3 }),
+      });
+      expect(await badgeCorner(row)).toEqual({ right: 0, top: 0, corner: 0 });
+      await expect(row.locator(".card-name-text")).toHaveAttribute(
+        "data-overflowing",
+        "true",
+      );
+      expect(new Set(await rowHeights(page)).size).toBe(1);
+      expect(await squeezedParts(row)).toEqual([]);
+      // Its photo fills the left of the row edge to edge, as in a detailed card.
+      const photo = await row.evaluate((item) => {
+        const box = item.getBoundingClientRect();
+        const thumb = item
+          .querySelector(".dish-thumb")!
+          .getBoundingClientRect();
+        return {
+          left: Math.round(thumb.left - box.left - item.clientLeft),
+          top: Math.round(thumb.top - box.top - item.clientTop),
+          height: Math.round(thumb.height - item.clientHeight),
+          width: Math.round(thumb.width),
+        };
+      });
+      expect(photo).toEqual({ left: 0, top: 0, height: 0, width: 200 });
+      // On a gallery photo the name may take three lines, then fades the same way.
+      await page
+        .getByRole("group", { name: "Kiểu hiển thị" })
+        .getByRole("button", { name: "Thư viện ảnh" })
+        .click();
+      const tile = page.locator(".dish-tile").filter({
+        has: page.getByRole("heading", { name: first.name, level: 3 }),
+      });
+      const tileName = tile.locator(".card-name-text");
+      await expect(tileName).toHaveAttribute("data-overflowing", "true");
+      expect(Math.round(await lineCount(tileName))).toBe(3);
+      expect(await masked(tileName)).toBe(true);
+      // The gallery shows the score as well, in the tile's top-right corner.
+      await expect(tile.locator(".rating-badge")).toHaveText(/4,6/);
+      expect(await badgeCorner(tile)).toEqual({ right: 0, top: 0, corner: 0 });
+      // On a phone a detailed card stacks; the tag hangs in its top-right corner, on the photo.
+      await page.setViewportSize({ width: 390, height: 900 });
+      await page
+        .getByRole("group", { name: "Kiểu hiển thị" })
+        .getByRole("button", { name: "Lưới chi tiết" })
+        .click();
+      expect(await badgeCorner(card)).toEqual({ right: 0, top: 0, corner: 0 });
+    } finally {
+      first.name = original;
+      unrated.ratingCount = 213;
+    }
+  });
+
+  test("the menu wheel's dish card flies back to its plate while the backdrop fades, then closes at once", async ({
+    page,
+  }) => {
+    await page.goto("/restaurants/7");
+    await page.getByRole("tab", { name: "Thực đơn" }).click();
+    const plate = page.getByRole("button", { name: /^Xem chi tiết / });
+    await plate.click();
+    const dialog = page.locator(".menu-dish-dialog");
+    await expect(dialog).toBeVisible();
+    // Let the opening morph finish before closing.
+    await expect
+      .poll(() => dialog.evaluate((element) => element.getAnimations().length))
+      .toBe(0);
+    const frames = await dialog.evaluate(async (element) => {
+      const dialog = element as HTMLDialogElement;
+      dialog
+        .querySelector<HTMLButtonElement>(
+          'button[aria-label="Đóng hộp thoại"]',
+        )!
+        .click();
+      const seen: { open: boolean; backdrop: number }[] = [];
+      const start = performance.now();
+      while (performance.now() - start < 900) {
+        await new Promise(requestAnimationFrame);
+        seen.push({
+          open: dialog.open,
+          backdrop: Number(getComputedStyle(dialog, "::backdrop").opacity),
+        });
+      }
+      return seen;
+    });
+    const lastOpen = frames.filter((frame) => frame.open).at(-1)!;
+    // When the card lands on its plate the backdrop is already gone: nothing is left to fade.
+    expect(lastOpen.backdrop).toBeLessThan(0.1);
+    expect(frames.at(-1)!.open).toBe(false);
+    await expect(dialog).toBeHidden();
+    // Opened again, the card has its full backdrop back.
+    await plate.click();
+    await expect(dialog).toBeVisible();
+    await expect
+      .poll(() =>
+        dialog.evaluate((element) =>
+          Number(getComputedStyle(element, "::backdrop").opacity),
+        ),
+      )
+      .toBe(1);
   });
 
   test("the detail shows the menu, reviews with their breakdown and the information", async ({

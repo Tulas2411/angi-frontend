@@ -1352,11 +1352,12 @@
   opacity: 0;
   transform: translateY(18px) scale(0.97);
   will-change: transform, opacity;
+  /* Closing: accelerating, and removed as soon as it has faded (not 200ms later). */
   transition:
-    opacity 240ms ease,
-    transform 280ms cubic-bezier(0.4, 0, 0.2, 1),
-    display 560ms allow-discrete,
-    overlay 560ms allow-discrete;
+    opacity 360ms var(--ease-exit),
+    transform 360ms var(--ease-exit),
+    display 360ms allow-discrete,
+    overlay 360ms allow-discrete;
 }
 .home-page .home-food-dialog[open] {
   opacity: 1;
@@ -1373,12 +1374,16 @@
   background: rgb(34 34 34 / 0.48);
   backdrop-filter: blur(6px);
   transition:
-    opacity 360ms ease,
-    display 560ms allow-discrete,
-    overlay 560ms allow-discrete;
+    opacity 360ms var(--ease-exit),
+    display 360ms allow-discrete,
+    overlay 360ms allow-discrete;
 }
 .home-page .home-food-dialog[open]::backdrop {
   opacity: 1;
+  transition:
+    opacity 360ms ease,
+    display 560ms allow-discrete,
+    overlay 560ms allow-discrete;
 }
 .home-food-dialog .dialog-heading,
 .home-food-dialog .home-dish-detail > *,

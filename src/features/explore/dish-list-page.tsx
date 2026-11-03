@@ -178,82 +178,87 @@ function DishSearch({
         </button>
       </div>
 
-      <div id={panelId} className="dish-filter-panel" hidden={!open}>
-        <div className="dish-filter-grid">
-          <ProvinceField
-            label="Tỉnh / thành phố"
-            type="search"
-            value={draft.province}
-            showCatalogStatus={false}
-            autoComplete="off"
-            helper="Để trống để tìm ở mọi nơi."
-            onChange={(value) => set({ province: value })}
-          />
-          <SelectField
-            label="Loại món"
-            value={draft.form}
-            options={dishFormOptions}
-            onChange={(value) => set({ form: value as "" | DishForm })}
-          />
-          <SelectField
-            label="Giá từ"
-            value={draft.minPrice}
-            options={dishMinPriceOptions}
-            onChange={(value) => set({ minPrice: value })}
-          />
-          <SelectField
-            label="Giá đến"
-            value={draft.maxPrice}
-            options={dishPriceOptions}
-            onChange={(value) => set({ maxPrice: value })}
-          />
-        </div>
-        <div className="dish-filter-groups">
-          <TagChips
-            legend="Bữa ăn"
-            tags={byType("meal_time")}
-            ids={draft.tagIds}
-            onChange={(tagIds) => set({ tagIds })}
-          />
-          <TagChips
-            legend="Phân loại"
-            tags={byType("category")}
-            ids={draft.tagIds}
-            onChange={(tagIds) => set({ tagIds })}
-          />
-          <TagChips
-            legend="Chế độ ăn"
-            tags={byType("dietary")}
-            ids={draft.tagIds}
-            onChange={(tagIds) => set({ tagIds })}
-          />
-          <TagChips
-            legend="Không ăn (bỏ món có thẻ)"
-            tags={[...byType("dietary"), ...byType("category")]}
-            ids={draft.excludeTagIds}
-            onChange={(excludeTagIds) => set({ excludeTagIds })}
-          />
-        </div>
-        {problem && <Alert>{problem}</Alert>}
-        <div className="dish-filter-actions">
-          <p className="helper" aria-live="polite">
-            {changed
-              ? "Có thay đổi chưa áp dụng."
-              : "Trong một nhóm thẻ, món chỉ cần khớp một thẻ; giữa các nhóm phải khớp đủ."}
-          </p>
-          <div className="actions">
-            <Button
-              variant="tertiary"
-              disabled={sameFilters(draft, emptyDishFilters) && count === 0}
-              onClick={() => {
-                setDraft(emptyDishFilters);
-                setProblem("");
-                onApply(emptyDishFilters);
-              }}
-            >
-              Đặt lại bộ lọc
-            </Button>
-            <Button type="submit">Áp dụng bộ lọc</Button>
+      {/* Slides down when shown and back up when hidden; `hidden` applies once it has slid up. */}
+      <div className="dish-filter-collapse" hidden={!open}>
+        <div>
+          <div id={panelId} className="dish-filter-panel">
+            <div className="dish-filter-grid">
+              <ProvinceField
+                label="Tỉnh / thành phố"
+                type="search"
+                value={draft.province}
+                showCatalogStatus={false}
+                autoComplete="off"
+                helper="Để trống để tìm ở mọi nơi."
+                onChange={(value) => set({ province: value })}
+              />
+              <SelectField
+                label="Loại món"
+                value={draft.form}
+                options={dishFormOptions}
+                onChange={(value) => set({ form: value as "" | DishForm })}
+              />
+              <SelectField
+                label="Giá từ"
+                value={draft.minPrice}
+                options={dishMinPriceOptions}
+                onChange={(value) => set({ minPrice: value })}
+              />
+              <SelectField
+                label="Giá đến"
+                value={draft.maxPrice}
+                options={dishPriceOptions}
+                onChange={(value) => set({ maxPrice: value })}
+              />
+            </div>
+            <div className="dish-filter-groups">
+              <TagChips
+                legend="Bữa ăn"
+                tags={byType("meal_time")}
+                ids={draft.tagIds}
+                onChange={(tagIds) => set({ tagIds })}
+              />
+              <TagChips
+                legend="Phân loại"
+                tags={byType("category")}
+                ids={draft.tagIds}
+                onChange={(tagIds) => set({ tagIds })}
+              />
+              <TagChips
+                legend="Chế độ ăn"
+                tags={byType("dietary")}
+                ids={draft.tagIds}
+                onChange={(tagIds) => set({ tagIds })}
+              />
+              <TagChips
+                legend="Không ăn (bỏ món có thẻ)"
+                tags={[...byType("dietary"), ...byType("category")]}
+                ids={draft.excludeTagIds}
+                onChange={(excludeTagIds) => set({ excludeTagIds })}
+              />
+            </div>
+            {problem && <Alert>{problem}</Alert>}
+            <div className="dish-filter-actions">
+              <p className="helper" aria-live="polite">
+                {changed
+                  ? "Có thay đổi chưa áp dụng."
+                  : "Trong một nhóm thẻ, món chỉ cần khớp một thẻ; giữa các nhóm phải khớp đủ."}
+              </p>
+              <div className="actions">
+                <Button
+                  variant="tertiary"
+                  disabled={sameFilters(draft, emptyDishFilters) && count === 0}
+                  onClick={() => {
+                    setDraft(emptyDishFilters);
+                    setProblem("");
+                    onApply(emptyDishFilters);
+                  }}
+                >
+                  Đặt lại bộ lọc
+                </Button>
+                <Button type="submit">Áp dụng bộ lọc</Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

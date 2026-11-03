@@ -652,7 +652,28 @@ test("days fold and unfold, RM-14 is asked once per open day and skipped for emp
   ).toBeVisible();
   expect(routeCalls).toEqual(["301", "303"]);
 
-  await page.getByRole("button", day1).click();
+  // The closing day folds on the short accelerating exit, so it does not hang nearly shut. The
+  // style is read on the frame after the click, before the folded body leaves the page.
+  const folding = await page
+    .getByRole("button", day1)
+    .evaluate(async (button: HTMLElement) => {
+      button.click();
+      await new Promise(requestAnimationFrame);
+      const fold = document.getElementById(
+        button.getAttribute("aria-controls")!,
+      )!.parentElement!;
+      const style = getComputedStyle(fold);
+      return [
+        fold.dataset.open,
+        style.transitionDuration,
+        style.transitionTimingFunction,
+      ];
+    });
+  expect(folding).toEqual([
+    "false",
+    "0.22s, 0.22s",
+    expect.stringContaining("cubic-bezier(0.55, 0.055, 0.675, 0.19)"),
+  ]);
   await expect(page.getByRole("button", day1)).toHaveAttribute(
     "aria-expanded",
     "false",

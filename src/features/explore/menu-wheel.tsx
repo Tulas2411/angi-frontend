@@ -285,7 +285,10 @@ export function MenuWheel({
   const dialogElement = () =>
     document.querySelector<HTMLElement>(".menu-dish-dialog");
   useEffect(() => {
-    if (!detail || reducedMotion()) return;
+    if (!detail) return;
+    // A card closed by the morph keeps its faded backdrop class until it opens again.
+    dialogElement()?.classList.remove("is-closing");
+    if (reducedMotion()) return;
     const card = dialogElement();
     const source = plate.current?.getBoundingClientRect();
     if (!card || !source) return;
@@ -341,6 +344,8 @@ export function MenuWheel({
     }
     if (morphing.current) return;
     morphing.current = true;
+    // The backdrop fades while the card flies back, so nothing is left to fade once it lands.
+    card.classList.add("is-closing");
     const target = card.getBoundingClientRect();
     const dx =
       source.left + source.width / 2 - (target.left + target.width / 2);

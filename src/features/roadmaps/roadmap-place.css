@@ -458,7 +458,11 @@
   margin: 0;
   font-size: 13px;
 }
-/* The strip folds by animating its row from 0fr to 1fr, the cards fading in with it. */
+/*
+ * The strip folds by animating its row from 0fr to 1fr, the cards fading in with it. It opens on
+ * --ease-out (320ms) and closes shorter and accelerating (210ms, --ease-exit), so it does not hang
+ * nearly shut before it is hidden.
+ */
 .roadmap-suggested-fold {
   display: grid;
   grid-template-rows: 1fr;
@@ -481,12 +485,13 @@
   opacity: 0;
   visibility: hidden;
   transition:
-    grid-template-rows 280ms var(--ease-out),
-    opacity 200ms ease,
-    visibility 0s 280ms;
+    grid-template-rows 210ms var(--ease-exit),
+    opacity 210ms var(--ease-exit),
+    visibility 0s 210ms;
 }
 .roadmap-suggested-fold[data-open="false"] > div > * {
   transform: translateY(-8px);
+  transition: transform 210ms var(--ease-exit);
 }
 /* Arrows sit beside the cards, never on them, and never spill into the map column. */
 .roadmap-suggested-scroller {

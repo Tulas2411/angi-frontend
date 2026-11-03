@@ -72,7 +72,8 @@ type RouteState =
   | { status: "ready"; route: RoadmapRouteDto };
 
 /** How long a day takes to fold away (roadmap-detail.css `.roadmap-day-fold`). */
-const dayFoldMs = 280;
+/** Matches the closing fold in roadmap-detail.css (220ms); the body is removed right after. */
+const dayFoldMs = 220;
 
 /** How long a success notice stays; a warning stays until the traveler acts again. */
 const successNoticeMs = 5000;

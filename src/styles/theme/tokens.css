@@ -74,10 +74,17 @@
   --leading-body: 1.6;
   --tracking-heading: -0.025em;
 
-  /* Motion */
+  /*
+   * Motion. Things arrive on --ease-out over --duration and leave on --ease-exit over
+   * --duration-exit (about two thirds of the entrance). An exit on --ease-out does most of its
+   * travel at once and then crawls, so the element hangs nearly gone before it disappears.
+   * `display`/`overlay` switch after the exit's own duration, never later.
+   */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.55, 0.055, 0.675, 0.19);
   --duration-fast: 160ms;
   --duration: 240ms;
+  --duration-exit: 160ms;
   --duration-slow: 480ms;
 }
 @media (max-width: 1100px) {

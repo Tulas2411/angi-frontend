@@ -71,13 +71,18 @@
   color: var(--ink);
   box-shadow: var(--shadow-pop);
   translate: 100% 0;
+  /* Closing slides out quickly and accelerating; opening glides in on --ease-out. */
+  transition:
+    translate var(--duration-exit) var(--ease-exit),
+    overlay var(--duration-exit) allow-discrete,
+    display var(--duration-exit) allow-discrete;
+}
+.account-drawer[open] {
+  translate: 0 0;
   transition:
     translate var(--duration) var(--ease-out),
     overlay var(--duration) allow-discrete,
     display var(--duration) allow-discrete;
-}
-.account-drawer[open] {
-  translate: 0 0;
 }
 @starting-style {
   .account-drawer[open] {
@@ -87,12 +92,16 @@
 .account-drawer::backdrop {
   background: rgb(23 20 18 / 0);
   transition:
-    background var(--duration) ease,
-    overlay var(--duration) allow-discrete,
-    display var(--duration) allow-discrete;
+    background var(--duration-exit) var(--ease-exit),
+    overlay var(--duration-exit) allow-discrete,
+    display var(--duration-exit) allow-discrete;
 }
 .account-drawer[open]::backdrop {
   background: rgb(23 20 18 / 0.28);
+  transition:
+    background var(--duration) ease,
+    overlay var(--duration) allow-discrete,
+    display var(--duration) allow-discrete;
 }
 @starting-style {
   .account-drawer[open]::backdrop {
@@ -101,7 +110,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .account-drawer,
-  .account-drawer::backdrop {
+  .account-drawer[open],
+  .account-drawer::backdrop,
+  .account-drawer[open]::backdrop {
     transition: none;
   }
 }

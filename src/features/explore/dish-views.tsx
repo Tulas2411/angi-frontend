@@ -8,7 +8,6 @@ import { dishFormLabels, locationText, vnd } from "./explore-rules";
 import type { MenuDishDto } from "./explore-types";
 import { dishViews, type DishView } from "./dish-view-mode";
 import type { DishDescription } from "./use-dish-descriptions";
-import { cutDescription } from "./description-cut";
 
 const viewIcons: Record<DishView, ReactNode> = {
   list: (
@@ -119,83 +118,46 @@ function DishPlace({ dish }: { dish: MenuDishDto }) {
 }
 
 /**
- * Where a long text is cut, measured on the real card: a hidden twin of the paragraph is filled
- * word by word. Measured again when the card changes width. `undefined` until measured.
- */
-function useDescriptionCut(text: string) {
-  const box = useRef<HTMLParagraphElement>(null);
-  const twin = useRef<HTMLParagraphElement>(null);
-  const [cut, setCut] = useState<{ text: string; at: number | null }>();
-  useLayoutEffect(() => {
-    const paragraph = box.current;
-    const measure = twin.current;
-    if (!paragraph || !measure) return;
-    const words = text.split(/\s+/).filter(Boolean);
-    const run = () => {
-      const lineHeight = parseFloat(getComputedStyle(measure).lineHeight) || 22;
-      measure.style.width = `${paragraph.clientWidth}px`;
-      const fits = (count: number, lines: number, ellipsis: boolean) => {
-        measure.textContent =
-          words.slice(0, count).join(" ") + (ellipsis ? " …" : "");
-        return measure.offsetHeight <= lines * lineHeight + 1;
-      };
-      const at = cutDescription(words.length, fits);
-      measure.textContent = "";
-      setCut((previous) =>
-        previous?.text === text && previous.at === at ? previous : { text, at },
-      );
-    };
-    run();
-    const observer = new ResizeObserver(run);
-    observer.observe(paragraph);
-    return () => observer.disconnect();
-  }, [text]);
-  const measured = cut?.text === text ? cut.at : undefined;
-  return { box, twin, at: measured };
-}
-
-/**
- * Two lines and about seven words of the third, then "…": pressing it shows the whole text in the
- * card. Before the first measure the text is clamped to three lines, so nothing jumps.
+ * The whole description in a box of fixed height: three lines in a row or a restaurant card, the
+ * room left above the price in a detailed card. Longer text scrolls inside the box and fades out
+ * at the bottom until its end is reached.
  */
 function LongDescription({ id, text }: { id: string; text: string }) {
-  const { box, twin, at } = useDescriptionCut(text);
-  const [open, setOpen] = useState(false);
-  const cut = !open && typeof at === "number";
-  const shown = cut
-    ? text.split(/\s+/).filter(Boolean).slice(0, at).join(" ")
-    : text;
+  const box = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState({ overflowing: false, atEnd: true });
+  useLayoutEffect(() => {
+    const element = box.current;
+    if (!element) return;
+    const update = () => {
+      const overflowing = element.scrollHeight > element.clientHeight + 1;
+      const atEnd =
+        element.scrollTop + element.clientHeight >= element.scrollHeight - 1;
+      setFit((previous) =>
+        previous.overflowing === overflowing && previous.atEnd === atEnd
+          ? previous
+          : { overflowing, atEnd },
+      );
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    if (element.firstElementChild) observer.observe(element.firstElementChild);
+    element.addEventListener("scroll", update, { passive: true });
+    return () => {
+      observer.disconnect();
+      element.removeEventListener("scroll", update);
+    };
+  }, [text]);
   return (
-    <div className="dish-description-wrap">
-      <p
-        ref={box}
-        id={id}
-        className={`dish-description${at === undefined && !open ? " is-measuring" : ""}`}
-        data-expanded={open || undefined}
-      >
-        {shown}
-        {cut && (
-          <>
-            {" "}
-            <button
-              type="button"
-              className="dish-more"
-              aria-expanded={false}
-              aria-controls={id}
-              aria-label="Xem toàn bộ mô tả"
-              title="Xem toàn bộ mô tả"
-              onClick={() => setOpen(true)}
-            >
-              …
-            </button>
-          </>
-        )}
+    <div
+      ref={box}
+      className="dish-description-wrap"
+      data-overflowing={fit.overflowing || undefined}
+      data-faded={(fit.overflowing && !fit.atEnd) || undefined}
+    >
+      <p id={id} className="dish-description">
+        {text}
       </p>
-      <p
-        ref={twin}
-        className="dish-description dish-description-twin"
-        aria-hidden
-      />
     </div>
   );
 }
@@ -235,17 +197,80 @@ export function DescriptionText({
   return <LongDescription id={id} text={description.text} />;
 }
 
-/** The dish name, a link to its page; `newTab` keeps a dialog the dish was shown in open. */
-function DishName({ dish, newTab }: { dish: MenuDishDto; newTab?: boolean }) {
+/**
+ * A card's name, a link to its page, at most `lines` lines: one in a card body, three on a
+ * gallery photo. A longer name fades out at the end of its last line instead of ending in "…".
+ * The fade masks the text, not the heading, so it works on the card and on the photo and leaves
+ * the link over the card whole. `newTab` keeps a dialog the card was shown in open.
+ */
+export function CardName({
+  id,
+  href,
+  name,
+  lines,
+  newTab,
+}: {
+  id: string;
+  href: string;
+  name: string;
+  lines: 1 | 3;
+  newTab?: boolean;
+}) {
+  const text = useRef<HTMLSpanElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  useLayoutEffect(() => {
+    const element = text.current;
+    if (!element) return;
+    const update = () =>
+      setOverflowing(
+        element.scrollHeight > element.clientHeight + 1 ||
+          element.scrollWidth > element.clientWidth + 1,
+      );
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [name]);
   return (
-    <h3 id={`dish-${dish.id}`} className="dish-name">
+    <h3
+      id={id}
+      className="dish-name card-name"
+      data-lines={lines}
+      title={overflowing ? name : undefined}
+    >
       <Link
-        href={dishHref(dish.id)}
+        href={href}
         {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
-        {dish.name}
+        <span
+          ref={text}
+          className="card-name-text"
+          data-overflowing={overflowing || undefined}
+        >
+          {name}
+        </span>
       </Link>
     </h3>
+  );
+}
+
+function DishName({
+  dish,
+  lines,
+  newTab,
+}: {
+  dish: MenuDishDto;
+  lines: 1 | 3;
+  newTab?: boolean;
+}) {
+  return (
+    <CardName
+      id={`dish-${dish.id}`}
+      href={dishHref(dish.id)}
+      name={dish.name}
+      lines={lines}
+      newTab={newTab}
+    />
   );
 }
 
@@ -257,7 +282,7 @@ interface CardExtras {
   newTab?: boolean;
 }
 
-/** Mode 1: one dish per row across the width, a small photo on the left. */
+/** Mode 1: one dish per row across the width, the photo filling its left edge. */
 export function DishRow({
   dish,
   description,
@@ -279,7 +304,7 @@ export function DishRow({
       />
       <div className="dish-body">
         <div className="dish-head">
-          <DishName dish={dish} newTab={newTab} />
+          <DishName dish={dish} lines={1} newTab={newTab} />
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
@@ -322,7 +347,7 @@ export function DishDetailCard({
       />
       <div className="dish-body">
         <div className="dish-head">
-          <DishName dish={dish} newTab={newTab} />
+          <DishName dish={dish} lines={1} newTab={newTab} />
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
@@ -356,7 +381,7 @@ export function DishTile({
         src={dish.coverUrl ?? undefined}
         alt=""
       />
-      <DishName dish={dish} newTab={newTab} />
+      <DishName dish={dish} lines={3} newTab={newTab} />
       {actions && (
         <div className="dish-actions dish-tile-actions">{actions}</div>
       )}
