@@ -1,10 +1,12 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { TrashIcon } from "@heroicons/react/24/outline";
 import { Alert, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
+  ConfirmDialog,
   EmptyState,
   Media,
   Pagination,
@@ -13,7 +15,9 @@ import {
 import { PageHeading } from "@/components/layout/page-heading";
 import { getErrorMessage } from "@/shared/api/error";
 import {
+  deleteRoadmapError,
   isOverBudget,
+  pageAfterDelete,
   roadmapCountdown,
   roadmapItemsLabel,
   roadmapListPageSize,
@@ -42,9 +46,12 @@ const shareIcon = (
 function RoadmapCard({
   roadmap,
   owner,
+  onDelete,
 }: {
   roadmap: RoadmapSummaryDto;
   owner?: string;
+  /** Asks to delete this roadmap (the page confirms, then calls RM-05). */
+  onDelete: () => void;
 }) {
   const countdown = roadmapCountdown(roadmap);
   const over = isOverBudget(roadmap);
@@ -58,14 +65,26 @@ function RoadmapCard({
             {over && <span className="is-warning">Vượt ngân sách</span>}
           </p>
         )}
-        <Link
-          className="roadmap-card-share"
-          href={`/guides/new?roadmap=${roadmap.id}`}
-          aria-label={`Chia sẻ lộ trình ${roadmap.title}`}
-        >
-          {shareIcon}
-          <span aria-hidden>Chia sẻ</span>
-        </Link>
+        <div className="roadmap-card-actions">
+          <Link
+            className="roadmap-card-share"
+            href={`/guides/new?roadmap=${roadmap.id}`}
+            aria-label={`Chia sẻ lộ trình ${roadmap.title}`}
+          >
+            {shareIcon}
+            <span aria-hidden>Chia sẻ</span>
+          </Link>
+          <button
+            type="button"
+            className="roadmap-card-delete"
+            aria-label={`Xóa lộ trình ${roadmap.title}`}
+            title="Xóa lộ trình"
+            aria-haspopup="dialog"
+            onClick={onDelete}
+          >
+            <TrashIcon aria-hidden />
+          </button>
+        </div>
       </div>
       <h2 id={`roadmap-${roadmap.id}`}>
         <Link href={roadmapDetailHref(roadmap.id)}>{roadmap.title}</Link>
@@ -98,6 +117,16 @@ export function MyRoadmapsPage({
   const router = useRouter();
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
+  /** The roadmap whose deletion is being confirmed. */
+  const [target, setTarget] = useState<RoadmapSummaryDto | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteProblem, setDeleteProblem] = useState("");
+  const [notice, setNotice] = useState<{
+    tone: "success" | "info";
+    text: string;
+  } | null>(null);
+  // One RM-05 at a time: a second press while it runs must not send it again.
+  const busy = useRef(false);
   useEffect(() => {
     let ignore = false;
     service
@@ -117,6 +146,71 @@ export function MyRoadmapsPage({
       ignore = true;
     };
   }, [page, attempt, service, router]);
+
+  /**
+   * RM-05, then the list is read again (RM-02): the previous page when the last card of a page went.
+   * ROADMAP_NOT_FOUND means it is already gone, which is told and treated like a deletion.
+   */
+  async function confirmDelete() {
+    if (!target || busy.current || state.status !== "ready") return;
+    busy.current = true;
+    setDeleting(true);
+    setDeleteProblem("");
+    let text = `Đã xóa lộ trình “${target.title}”.`;
+    let tone: "success" | "info" = "success";
+    try {
+      await service.remove(target.id);
+    } catch (caught) {
+      const failure = deleteRoadmapError(caught);
+      if (!failure.gone) {
+        setDeleteProblem(failure.message);
+        setDeleting(false);
+        busy.current = false;
+        return;
+      }
+      text = failure.message;
+      tone = "info";
+    }
+    setDeleting(false);
+    busy.current = false;
+    setTarget(null);
+    setNotice({ tone, text });
+    const next = pageAfterDelete(page, state.data.items.length);
+    if (next !== page) router.push(roadmapListHref(next));
+    else setAttempt((value) => value + 1);
+  }
+
+  const confirm = (
+    <ConfirmDialog
+      open={target !== null}
+      title="Xóa lộ trình?"
+      danger
+      label="Xóa lộ trình"
+      cancelLabel="Giữ lại"
+      loading={deleting}
+      onClose={() => {
+        if (deleting) return;
+        setTarget(null);
+        setDeleteProblem("");
+      }}
+      onConfirm={() => void confirmDelete()}
+    >
+      <div className="stack-sm">
+        <p>
+          “{target?.title}” sẽ bị xóa khỏi danh sách lộ trình của bạn. Các bài
+          cẩm nang đã chia sẻ từ lộ trình này vẫn được giữ nguyên.
+        </p>
+        {deleteProblem && (
+          <Alert>Chưa xóa được lộ trình. {deleteProblem}</Alert>
+        )}
+      </div>
+    </ConfirmDialog>
+  );
+  const noticeLine = notice && (
+    <Alert tone={notice.tone}>
+      <span role="status">{notice.text}</span>
+    </Alert>
+  );
 
   const planLink = (
     <ActionLink href={roadmapRoutes.plan}>Lập lộ trình mới</ActionLink>
@@ -159,6 +253,7 @@ export function MyRoadmapsPage({
     return (
       <div className="stack">
         {heading()}
+        {noticeLine}
         <EmptyState title="Bạn chưa có lộ trình nào" action={planLink}>
           Lập lộ trình đầu tiên để sắp xếp các bữa ăn theo từng ngày của chuyến
           đi.
@@ -168,13 +263,23 @@ export function MyRoadmapsPage({
   return (
     <div className="stack">
       {heading(`Bạn có ${data.totalItems} lộ trình, mới nhất trước.`)}
+      {noticeLine}
       <ul className="roadmap-grid">
         {data.items.map((roadmap) => (
           <li key={roadmap.id}>
-            <RoadmapCard roadmap={roadmap} owner={owner} />
+            <RoadmapCard
+              roadmap={roadmap}
+              owner={owner}
+              onDelete={() => {
+                setNotice(null);
+                setDeleteProblem("");
+                setTarget(roadmap);
+              }}
+            />
           </li>
         ))}
       </ul>
+      {confirm}
       {data.totalPages > 1 && (
         <Pagination
           total={data.totalItems}

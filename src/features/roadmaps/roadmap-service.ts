@@ -32,6 +32,8 @@ export interface RoadmapPlanService {
 export interface RoadmapListService {
   /** RM-02: one page of the caller's roadmaps, newest first. `page` starts at 1. */
   list: (page: number, pageSize: number) => Promise<RoadmapPageDto>;
+  /** RM-05: 200 OK with `data: null`; the roadmap is soft-deleted, shared blogs keep their snapshot. */
+  remove: (roadmapId: number) => Promise<void>;
 }
 
 export interface RoadmapDetailService {
@@ -106,6 +108,9 @@ export const roadmapService: RoadmapPlanService &
     api.patch<RoadmapDetailDto>(`roadmaps/${roadmapId}`, request),
   list: (page, pageSize) =>
     api.get<RoadmapPageDto>(`roadmaps?page=${page}&pageSize=${pageSize}`),
+  remove: async (roadmapId) => {
+    await api.delete<null>(`roadmaps/${roadmapId}`);
+  },
   get: (roadmapId) => api.get<RoadmapDetailDto>(`roadmaps/${roadmapId}`),
   dayRoute: (roadmapId, dayId, gpsOrigin) => {
     const query = gpsOrigin
@@ -140,8 +145,6 @@ export const roadmapService: RoadmapPlanService &
       request,
     ),
   generationJob: (roadmapId, jobId) =>
-    api.get<GenerationJobDto>(
-      `roadmaps/${roadmapId}/generation-jobs/${jobId}`,
-    ),
+    api.get<GenerationJobDto>(`roadmaps/${roadmapId}/generation-jobs/${jobId}`),
   tags: () => api.get<RoadmapTagDto[]>("tags"),
 };

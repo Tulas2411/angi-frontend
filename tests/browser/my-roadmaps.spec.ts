@@ -13,6 +13,8 @@ const pageSize = 12;
 let rows: RoadmapSummaryDto[] = [];
 let listCalls: string[] = [];
 let failures = 0;
+let deleteCalls: number[] = [];
+let failDelete: { status: number; errorCode: string } | null = null;
 
 // RM-02 JSON sample (API Design v1.8, sheet "JSON mẫu", r866–r894).
 const sample: RoadmapSummaryDto = {
@@ -43,6 +45,21 @@ function many(count: number): RoadmapSummaryDto[] {
 }
 
 const roadmaps: StubHandler = ({ method, url }, send) => {
+  // RM-05: soft delete, 200 OK with data null; ROADMAP_NOT_FOUND when it is not there.
+  const remove = /^\/api\/v1\/roadmaps\/(\d+)$/.exec(url);
+  if (method === "DELETE" && remove) {
+    const roadmapId = Number(remove[1]);
+    deleteCalls.push(roadmapId);
+    if (failDelete) {
+      send(failDelete.status, null, failDelete.errorCode);
+      return true;
+    }
+    const before = rows.length;
+    rows = rows.filter((row) => row.id !== roadmapId);
+    if (rows.length === before) send(404, null, "ROADMAP_NOT_FOUND");
+    else send(200, null);
+    return true;
+  }
   if (method !== "GET" || !url.startsWith("/api/v1/roadmaps?")) return false;
   listCalls.push(url.slice("/api/v1/roadmaps?".length));
   if (failures > 0) {
@@ -82,6 +99,8 @@ test.beforeEach(() => {
   rows = [];
   listCalls = [];
   failures = 0;
+  deleteCalls = [];
+  failDelete = null;
 });
 
 const cards = (page: Page) => page.locator(".roadmap-card");
@@ -264,4 +283,57 @@ test("the list has no horizontal overflow from 320px to 1440px", async ({
   );
   expect(new Set(tops.slice(0, 4)).size).toBe(1);
   expect(tops[4]).toBeGreaterThan(tops[0]);
+});
+
+test("the trash button asks first, then RM-05 deletes the roadmap and the list is read again", async ({
+  page,
+}) => {
+  rows = many(3);
+  await open(page);
+  const card = cards(page).filter({ hasText: "Lộ trình số 2" });
+  await card
+    .getByRole("button", { name: "Xóa lộ trình Lộ trình số 2" })
+    .click();
+  const confirm = page.getByRole("dialog", { name: "Xóa lộ trình?" });
+  await expect(confirm).toContainText("“Lộ trình số 2”");
+  // Keeping it sends nothing.
+  await confirm.getByRole("button", { name: "Giữ lại" }).click();
+  await expect(confirm).toBeHidden();
+  expect(deleteCalls).toEqual([]);
+
+  await card
+    .getByRole("button", { name: "Xóa lộ trình Lộ trình số 2" })
+    .click();
+  await confirm.getByRole("button", { name: "Xóa lộ trình" }).click();
+  await expect(confirm).toBeHidden();
+  expect(deleteCalls).toEqual([999]);
+  await expect(
+    page.getByText("Đã xóa lộ trình “Lộ trình số 2”."),
+  ).toBeVisible();
+  await expect(cards(page)).toHaveCount(2);
+  await expect(page.getByText("Bạn có 2 lộ trình")).toBeVisible();
+});
+
+test("a failed delete keeps the dialog and the card; one already gone is told", async ({
+  page,
+}) => {
+  rows = many(2);
+  await open(page);
+  failDelete = { status: 503, errorCode: "SERVICE_UNAVAILABLE" };
+  await page
+    .getByRole("button", { name: "Xóa lộ trình Lộ trình số 1" })
+    .click();
+  const confirm = page.getByRole("dialog", { name: "Xóa lộ trình?" });
+  await confirm.getByRole("button", { name: "Xóa lộ trình" }).click();
+  await expect(confirm).toContainText("Chưa xóa được lộ trình.");
+  await expect(cards(page)).toHaveCount(2);
+
+  failDelete = { status: 404, errorCode: "ROADMAP_NOT_FOUND" };
+  await confirm.getByRole("button", { name: "Xóa lộ trình" }).click();
+  await expect(confirm).toBeHidden();
+  await expect(
+    page.getByText(
+      "Lộ trình này không còn nữa (có thể đã được xóa ở nơi khác).",
+    ),
+  ).toBeVisible();
 });
