@@ -452,7 +452,8 @@ test("a meal's button opens the dialog on that meal with the province already fi
     "30.000 VND",
   );
   await expect(box.locator(".roadmap-suggestion").first()).toContainText(
-    "Quán số 1 · Quận Hải Châu, Thành phố Đà Nẵng · 4,6 sao",
+    // The card of "Khám phá món ăn": price, then the restaurant and its place.
+    "Quán số 1 · Quận Hải Châu, Thành phố Đà Nẵng",
   );
   await expect(box.locator(".roadmap-suggestion").first()).toContainText(
     "Bữa trưa",

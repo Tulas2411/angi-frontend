@@ -601,6 +601,45 @@
   font-size: 22px;
 }
 
+/* Actions a list adds under a card (the roadmap dialog's "+ Thêm vào bữa…"). */
+.dish-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+.dish-actions .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+/* A card with actions grows to hold them instead of cutting them off. */
+.dish-detail:has(.dish-actions) {
+  height: auto;
+  min-height: 300px;
+}
+.dish-detail:has(.dish-actions) .dish-photo {
+  height: auto;
+  min-height: 100%;
+}
+/* On a photo tile the actions sit at the top, over the photo. */
+.dish-tile-actions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  left: var(--space-2);
+  justify-content: flex-end;
+  margin: 0;
+  padding: 0;
+}
+.dish-tile-actions .button {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+  box-shadow: var(--shadow-card);
+}
+
 /* Mode 3: photos only, the name on the photo. */
 .dish-items-gallery {
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
