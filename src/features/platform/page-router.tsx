@@ -38,9 +38,9 @@ import { RestaurantOperatingStatusPage } from "@/features/owner/restaurant-opera
 import { RestaurantReviewsPage } from "@/features/owner/restaurant-reviews-page";
 import { RestaurantReviewsLivePage } from "@/features/owner/restaurant-reviews-live-page";
 import {
-  ModerationReportsPage,
-  ModerationReportDetailPage,
-} from "@/features/moderation/moderation-reports-page";
+  ReportHandlingPage,
+  ReportQueuePage,
+} from "@/features/moderation/report-handling-page";
 import {
   ModerationUserDetailPage,
   ModerationUsersLivePage,
@@ -106,15 +106,18 @@ export function UnavailablePage() {
   );
 }
 /**
- * Báo cáo vi phạm trong live mode: danh sách (MOD-RP1) hoặc chi tiết (MOD-RP2).
- * Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
+ * F-59 báo cáo vi phạm trong live mode: hàng đợi (MOD-RP1, MOD-RP3) hoặc xử lý một báo cáo
+ * (MOD-RP2..MOD-RP4). Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
  */
 function ModReportsBase({ base, id }: { base: string; id?: string }) {
-  const reportId = Number(id);
-  return Number.isInteger(reportId) && reportId > 0 ? (
-    <ModerationReportDetailPage base={base} reportId={reportId} />
-  ) : (
-    <ModerationReportsPage base={base} />
+  return (
+    <WorkspaceScope base={base}>
+      {/^[1-9]\d{0,17}$/.test(id ?? "") ? (
+        <ReportHandlingPage key={id} reportId={Number(id)} />
+      ) : (
+        <ReportQueuePage />
+      )}
+    </WorkspaceScope>
   );
 }
 
