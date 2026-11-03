@@ -1,13 +1,20 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { Alert, Button } from "@/shared/ui";
-import { mealSlotLabels } from "./roadmap-detail-rules";
-import { vnd } from "./roadmap-list-rules";
-import { proposalItems } from "./agent-rules";
+import { Icon } from "@/components/ui/primitives";
 import {
-  agentChangedItemKeys,
+  formatDistance,
+  formatDuration,
+  mealSlotLabels,
+} from "./roadmap-detail-rules";
+import { vnd } from "./roadmap-list-rules";
+import { roadmapDayTone } from "./roadmap-map-rules";
+import {
+  agentDayLegs,
   agentDishName,
   agentMapDays,
+  agentMapStops,
+  type AgentLeg,
 } from "./agent-map-rules";
 import { agentService } from "./agent-service";
 import type { AgentProposal, AgentValidation } from "./agent-types";
@@ -51,36 +58,63 @@ const statuses: Record<AgentProposal["status"], string> = {
   expired: "Đã hết hạn",
 };
 
+function LegRow({ leg }: { leg: AgentLeg }) {
+  return (
+    <p className="agent-leg">
+      <Icon name="motorcycle" />
+      {leg.fromOrigin && "Từ điểm xuất phát: "}
+      <strong>{formatDistance(leg.distanceMeters)}</strong>
+      {" · "}
+      {leg.isEstimated && "Khoảng "}
+      {formatDuration(leg.durationSeconds)}
+    </p>
+  );
+}
+
 export function AgentProposalPreview({
   proposal,
   active,
   selectedKey,
-  onSelect,
-  disabled,
   day,
   onDay,
   onShowMap,
-  onAlternative,
+  children,
 }: {
   proposal: AgentProposal;
   active: boolean;
+  /** The dish whose pin is chosen on the map. */
   selectedKey: string;
-  onSelect: (key: string) => void;
-  disabled: boolean;
   /** Day shown here and on the map; both always follow the same day. */
   day: number;
   onDay: (day: number) => void;
   /** Reveals the map on screens where this panel covers it. */
   onShowMap: () => void;
-  onAlternative: () => void;
+  /** What the traveler can do next, at the end of the card. */
+  children?: ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
   const reported = useRef(new Set<string>());
   const days = agentMapDays(proposal);
-  const changed = agentChangedItemKeys(proposal);
-  const items = proposalItems(proposal).filter(
-    (item) => item.dayNumber === day,
+  const stops = agentMapStops(proposal).filter(
+    (stop) => stop.dayNumber === day,
   );
+  // Stops arrive in meal order, so each meal is one consecutive run.
+  const meals = stops.reduce<(typeof stops)[]>((groups, stop) => {
+    const last = groups.at(-1);
+    if (last?.[0].item.mealSlot === stop.item.mealSlot) last.push(stop);
+    else groups.push([stop]);
+    return groups;
+  }, []);
+  const route = proposal.validation.routes.find(
+    (entry) => entry.dayNumber === day,
+  );
+  const legs = agentDayLegs(proposal, day);
+  const note = (dishId: number) =>
+    proposal.snapshot.dishNotes?.find((entry) => entry.dishId === dishId);
+  const daySummary = proposal.snapshot.daySummaries?.find(
+    (entry) => entry.dayNumber === day,
+  )?.summary;
+  const { budgetAmount, budgetUnrestricted } = proposal.snapshot.state;
   useEffect(() => {
     if (!active || !root.current) return;
     const timers = new Map<Element, ReturnType<typeof setTimeout>>();
@@ -151,134 +185,130 @@ export function AgentProposalPreview({
       aria-label="Bản nháp của trợ lý"
       data-version={proposal.version}
     >
-      <div className="between">
-        <div>
-          <p className="eyebrow">Bản nháp</p>
-          <h3>{proposal.snapshot.state.title}</h3>
-        </div>
-        <span className="agent-proposal-status">
+      <div className="agent-proposal-head">
+        <h3>{proposal.snapshot.state.title}</h3>
+        <span className="agent-proposal-status" data-status={proposal.status}>
           {statuses[proposal.status]}
         </span>
       </div>
-      <p className="helper">
-        {proposal.operation === "update"
-          ? "Cập nhật lộ trình hiện tại"
-          : "Tạo lộ trình mới"}{" "}
-        · Chưa lưu cho đến khi bạn xác nhận.
-      </p>
-      <p>
-        <strong>Tổng dự chi: {vnd(proposal.validation.totalCost)}</strong>
+      <p className="agent-proposal-total">
+        <span className="helper">Tổng dự chi</span>
+        <strong>{vnd(proposal.validation.totalCost)}</strong>
+        {budgetAmount !== null && !budgetUnrestricted && (
+          <span className="helper">Ngân sách {vnd(budgetAmount)}</span>
+        )}
       </p>
       <AgentValidationNotice validation={proposal.validation} />
-      <div className="agent-proposal-bar">
-        {days.length > 1 && (
-          <div
-            className="agent-proposal-days"
-            role="group"
-            aria-label="Chọn ngày trong bản nháp"
-          >
-            {days.map((value) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={value === day}
-                onClick={() => onDay(value)}
-              >
-                Ngày {value}
-              </button>
+      {days.length > 1 && (
+        <div
+          className="agent-proposal-days"
+          role="group"
+          aria-label="Chọn ngày trong bản nháp"
+        >
+          {days.map((value) => (
+            <button
+              key={value}
+              type="button"
+              data-tone={roadmapDayTone(value)}
+              aria-pressed={value === day}
+              onClick={() => onDay(value)}
+            >
+              Ngày {value}
+            </button>
+          ))}
+        </div>
+      )}
+      <Button
+        variant="secondary"
+        className="agent-map-toggle"
+        onClick={onShowMap}
+      >
+        Xem trên bản đồ
+      </Button>
+      <div className="agent-day" data-tone={roadmapDayTone(day)}>
+        <h4 className="agent-day-title">Ngày {day}</h4>
+        {stops.length > 0 && (
+          <p className="helper">
+            {stops.length} món ·{" "}
+            {vnd(stops.reduce((sum, stop) => sum + stop.item.price, 0))}
+          </p>
+        )}
+        {route?.originSkipped && (
+          <p className="helper">
+            Bỏ chặng từ điểm xuất phát do cách quán đầu quá 30 km.
+          </p>
+        )}
+        {stops.length > 0 ? (
+          <div className="agent-proposal-items" ref={root}>
+            {meals.map((group) => (
+              <div className="agent-meal" key={group[0].item.itemKey}>
+                {legs.get(group[0].item.itemKey) && (
+                  <LegRow leg={legs.get(group[0].item.itemKey)!} />
+                )}
+                <h5 className="roadmap-meal-heading">
+                  {mealSlotLabels[group[0].item.mealSlot]}
+                </h5>
+                <ol className="roadmap-items">
+                  {group.map(({ item, number, coordinate, changed }, index) => (
+                    <li key={item.itemKey}>
+                      {index > 0 && legs.get(item.itemKey) && (
+                        <LegRow leg={legs.get(item.itemKey)!} />
+                      )}
+                      <div
+                        className="agent-proposal-item"
+                        data-selected={selectedKey === item.itemKey}
+                        data-request-id={item.requestId || undefined}
+                        data-dish-id={item.dishId}
+                        data-item-key={item.itemKey}
+                        data-changed={changed}
+                      >
+                        <span className="agent-proposal-item-name">
+                          <span className="roadmap-item-order" aria-hidden>
+                            {number}
+                          </span>
+                          <strong>{agentDishName(item)}</strong>
+                          {changed && (
+                            <span className="agent-proposal-new">Món mới</span>
+                          )}
+                        </span>
+                        <span className="roadmap-item-price">
+                          Dự chi {vnd(item.price)}
+                        </span>
+                        <span className="helper">
+                          {item.restaurantName ?? "Chưa có tên quán"}
+                        </span>
+                        {!coordinate && (
+                          <span className="helper">
+                            Chưa có vị trí trên bản đồ
+                          </span>
+                        )}
+                        {note(item.dishId)?.intro && (
+                          <span className="agent-proposal-intro">
+                            {note(item.dishId)?.intro}
+                          </span>
+                        )}
+                        {note(item.dishId)?.reason && (
+                          <span className="agent-proposal-reason">
+                            {note(item.dishId)?.reason}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
             ))}
           </div>
-        )}
-        <Button
-          variant="secondary"
-          className="agent-map-toggle"
-          onClick={onShowMap}
-        >
-          Xem trên bản đồ
-        </Button>
-      </div>
-      <div className="agent-proposal-items" ref={root}>
-        {items.map((item) => (
-          <button
-            type="button"
-            key={item.itemKey}
-            className="agent-proposal-item"
-            aria-pressed={selectedKey === item.itemKey}
-            disabled={disabled}
-            onClick={() =>
-              onSelect(selectedKey === item.itemKey ? "" : item.itemKey)
-            }
-            data-request-id={item.requestId || undefined}
-            data-dish-id={item.dishId}
-            data-item-key={item.itemKey}
-            data-changed={changed.has(item.itemKey)}
-          >
-            <span className="helper">
-              Ngày {item.dayNumber} · {mealSlotLabels[item.mealSlot]}
-              {changed.has(item.itemKey) && " · Món mới"}
-            </span>
-            <strong>{agentDishName(item)}</strong>
-            <span>{item.restaurantName ?? "Chưa có tên quán"}</span>
-            <span>{vnd(item.price)}</span>
-            {selectedKey === item.itemKey && (
-              <span className="helper">Đang chọn để trao đổi với trợ lý</span>
-            )}
-          </button>
-        ))}
-        {items.length === 0 && (
-          <p>
+        ) : (
+          <p className="helper">
             {proposal.snapshot.items.length === 0
               ? "Không còn món trong bản nháp này."
               : "Ngày này chưa có món."}
           </p>
         )}
+        {daySummary && <p className="agent-day-summary">{daySummary}</p>}
       </div>
-      {proposal.snapshot.changes && proposal.snapshot.changes.length > 0 && (
-        <p className="helper">
-          Thay đổi:{" "}
-          {proposal.snapshot.changes
-            .map(
-              (change) =>
-                ({
-                  add: "thêm",
-                  replace: "thay món",
-                  remove: "xóa",
-                  move: "chuyển bữa",
-                })[change.type],
-            )
-            .join(", ")}
-          .
-        </p>
-      )}
-      {proposal.validation.routes
-        .filter((route) => route.dayNumber === day)
-        .map((route) => (
-          <div key={route.dayNumber} className="agent-route-summary">
-            <p>
-              Ngày {route.dayNumber}:{" "}
-              {(route.totalDistanceMeters / 1000).toLocaleString("vi-VN", {
-                maximumFractionDigits: 2,
-              })}{" "}
-              km · {Math.ceil(route.totalDurationSeconds / 60)} phút{" "}
-              {route.isEstimated && <strong>· Ước tính</strong>}
-            </p>
-            {route.originSkipped && (
-              <p className="helper">
-                Bỏ chặng từ điểm xuất phát do cách quán đầu quá 30 km.
-              </p>
-            )}
-          </div>
-        ))}
-      <Button
-        variant="secondary"
-        onClick={onAlternative}
-        disabled={
-          disabled ||
-          (proposal.status !== "ready" && proposal.status !== "invalid")
-        }
-      >
-        Tìm phương án khác{selectedKey ? " cho món đã chọn" : ""}
-      </Button>
+      {children}
     </section>
   );
 }

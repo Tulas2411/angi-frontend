@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
   agentChangedItemKeys,
+  agentDayLegs,
   agentDefaultDay,
   agentDishName,
   agentMapDays,
   agentMapStops,
 } from "@/features/roadmaps/agent-map-rules";
 import { standaloneValidation } from "@/features/roadmaps/agent-rules";
-import { groupRoadmapStops } from "@/features/roadmaps/roadmap-map-rules";
+import {
+  groupRoadmapStops,
+  roadmapDayTone,
+} from "@/features/roadmaps/roadmap-map-rules";
+import { roadmapLimits } from "@/features/roadmaps/roadmap-rules";
 import type { AgentItem, AgentProposal } from "@/features/roadmaps/agent-types";
 import { agentProposal, agentState } from "./fixtures/agent";
 
@@ -52,6 +57,59 @@ function preview(
 }
 
 describe("agent preview map rules", () => {
+  it("gives every day of the longest roadmap its own color", () => {
+    const days = Array.from(
+      { length: roadmapLimits.maxDays },
+      (_, index) => index + 1,
+    );
+    expect(new Set(days.map(roadmapDayTone)).size).toBe(roadmapLimits.maxDays);
+    expect(roadmapDayTone(1)).toBe(0);
+  });
+
+  it("gives each located dish the trip that arrives at it", () => {
+    const leg = (distanceMeters: number) => ({
+      distanceMeters,
+      durationSeconds: 60,
+    });
+    const withRoute = (
+      legs: { distanceMeters: number; durationSeconds: number }[],
+    ) => {
+      const proposal = preview([
+        item("a", 1, "breakfast"),
+        item("b", 1, "lunch", { latitude: null }),
+        item("c", 1, "dinner"),
+      ]);
+      proposal.validation.routes = [
+        {
+          dayNumber: 1,
+          isEstimated: false,
+          originSkipped: false,
+          legs,
+          totalDistanceMeters: 0,
+          totalDurationSeconds: 0,
+        },
+      ];
+      return proposal;
+    };
+    // Between located stops; the dish without coordinates is on no leg.
+    const between = agentDayLegs(withRoute([leg(500)]), 1);
+    expect([...between.keys()]).toEqual(["c"]);
+    expect(between.get("c")).toMatchObject({
+      distanceMeters: 500,
+      fromOrigin: false,
+    });
+    // One more leg means the day starts from the traveler's origin.
+    const fromOrigin = agentDayLegs(withRoute([leg(900), leg(500)]), 1);
+    expect(fromOrigin.get("a")).toMatchObject({
+      distanceMeters: 900,
+      fromOrigin: true,
+    });
+    expect(fromOrigin.get("c")?.distanceMeters).toBe(500);
+    // A count that matches neither is not guessed at, and other days have no legs.
+    expect(agentDayLegs(withRoute([leg(1), leg(2), leg(3)]), 1).size).toBe(0);
+    expect(agentDayLegs(withRoute([leg(500)]), 2).size).toBe(0);
+  });
+
   it("numbers stops per day in meal order, keeping items without coordinates", () => {
     const stops = agentMapStops(
       preview([

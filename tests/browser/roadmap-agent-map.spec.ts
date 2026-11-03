@@ -124,10 +124,10 @@ test.describe("offline Mapbox assistant preview", () => {
     await page.screenshot({
       path: "artifacts/roadmap-agent/preview-pins-1440.png",
     });
-    const panel = page.getByRole("dialog", { name: "ANGI Trợ lý ăn uống" });
+    const panel = page.getByRole("dialog", { name: "Trợ lý món ăn" });
     await expect(
-      panel.getByRole("button", { name: /Bún chả cá 1/ }),
-    ).toHaveAttribute("aria-pressed", "true");
+      panel.locator(".agent-proposal-item", { hasText: "Bún chả cá 1" }),
+    ).toHaveAttribute("data-selected", "true");
 
     // A later preview replaces the pins in place.
     await panel.getByLabel("Yêu cầu với trợ lý món ăn").fill("Đổi bữa tối");
@@ -141,5 +141,81 @@ test.describe("offline Mapbox assistant preview", () => {
     await panel.getByRole("button", { name: "Đóng trợ lý món ăn" }).click();
     await expect(pins).toHaveCount(0);
     expect(styleLoads).toBe(loaded);
+  });
+
+  test("colors preview pins by day, and a new dish keeps its day's color", async ({
+    page,
+  }) => {
+    stub.reset();
+    const proposal = preview();
+    const [first, second] = proposal.snapshot.items;
+    const added = (itemKey: string, dayNumber: number, offset: number) => ({
+      ...first,
+      itemKey,
+      dayNumber,
+      dishId: 300 + dayNumber,
+      dishName: `Món ngày ${dayNumber}`,
+      restaurantName: `Quán ngày ${dayNumber}`,
+      latitude: 16.05 + offset,
+      longitude: 108.2 + offset,
+    });
+    const dayTwo = added("day-2", 2, 0.03);
+    const dayThree = added("day-3", 3, 0.05);
+    proposal.snapshot.state.numDays = 3;
+    proposal.snapshot.items.push(dayTwo, dayThree);
+    proposal.snapshot.changes = [
+      { type: "add", targetItemKey: second.itemKey, item: second },
+      { type: "add", targetItemKey: dayTwo.itemKey, item: dayTwo },
+      { type: "add", targetItemKey: dayThree.itemKey, item: dayThree },
+    ];
+    conversation = agentConversation({ currentProposal: proposal });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await stubMapboxRendering(page);
+    await loginAs(page, "traveler");
+    await page.goto("/roadmaps/88");
+    const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
+    await expect(map).toHaveAttribute("data-ready", "true");
+    await page
+      .getByRole("button", { name: "✦ Trợ lý món ăn", exact: true })
+      .click();
+    const pins = map.locator(".roadmap-map-pin-preview");
+    await expect(pins).toHaveCount(4);
+
+    const fill = (name: RegExp) =>
+      map
+        .getByRole("button", { name })
+        .evaluate((pin) => getComputedStyle(pin, "::before").backgroundColor);
+    const dayOne = await fill(/ngày 1: Bún chả cá 1, món mới$/);
+    expect(await fill(/ngày 1: Mì Quảng$/)).toBe(dayOne);
+    const colors = [
+      dayOne,
+      await fill(/ngày 2: Món ngày 2, món mới$/),
+      await fill(/ngày 3: Món ngày 3, món mới$/),
+    ];
+    expect(new Set(colors).size).toBe(3);
+    await page.screenshot({
+      path: "artifacts/roadmap-agent/preview-day-colors-1440.png",
+    });
+
+    const panel = page.getByRole("dialog", { name: "Trợ lý món ăn" });
+    await panel.getByRole("button", { name: "Ngày 3", exact: true }).click();
+    await expect(
+      panel.getByRole("button", { name: "Ngày 3", exact: true }),
+    ).toHaveCSS("background-color", colors[2]);
+    expect(
+      await panel
+        .locator(".agent-day-title")
+        .evaluate(
+          (title) => getComputedStyle(title, "::before").backgroundColor,
+        ),
+    ).toBe(colors[2]);
+    await page.screenshot({
+      path: "artifacts/roadmap-agent/preview-day-colors-day3-1440.png",
+    });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await panel.screenshot({
+      path: "artifacts/roadmap-agent/preview-card-390.png",
+    });
   });
 });

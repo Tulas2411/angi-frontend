@@ -119,6 +119,8 @@ async function handle(request: Request, context: Context) {
           body,
           token: auth.accessToken,
           timeoutMs: agentOp.timeoutMs,
+          // Stopping a reply in the browser reaches the backend, which then cancels the turn.
+          signal: request.signal,
           onSuccess: (code) => {
             status = code;
           },

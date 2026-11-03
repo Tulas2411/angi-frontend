@@ -14,6 +14,7 @@ import {
 } from "./agent-map-rules";
 import {
   groupRoadmapStops,
+  roadmapDayTone,
   roadmapMapCoordinate,
   roadmapMapPoints,
   roadmapMapStops,
@@ -201,7 +202,7 @@ function paintPreviewPin(
   const isSelected = group.stops.some(
     (stop) => stop.item.itemKey === selectedKey,
   );
-  button.dataset.tone = String((representative.dayNumber - 1) % 5);
+  button.dataset.tone = String(roadmapDayTone(representative.dayNumber));
   button.dataset.active = String(
     group.stops.some((stop) => stop.dayNumber === activeDay),
   );
@@ -233,6 +234,8 @@ export function RoadmapDetailMap({
   origin,
   originSkipped = false,
   preview = null,
+  agentPopupOpen = false,
+  onOpenAgent,
 }: {
   overview: RoadmapSummaryDto;
   itinerary: RoadmapDayDto[];
@@ -242,6 +245,10 @@ export function RoadmapDetailMap({
   origin?: RoadmapRouteDto["origin"];
   originSkipped?: boolean;
   preview?: AgentMapPreview | null;
+  /** The assistant's popup sits over the map's lower part, so stops are fitted above it. */
+  agentPopupOpen?: boolean;
+  /** Omitted while the assistant is open. */
+  onOpenAgent?: () => void;
 }) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
   const stops = useMemo(() => roadmapMapStops(itinerary), [itinerary]);
@@ -333,6 +340,7 @@ export function RoadmapDetailMap({
     previewStops,
     previewDay,
     previewKey,
+    agentPopupOpen,
   ]);
 
   // Preview pins join the mounted map instead of recreating it, so a new preview loads no extra map.
@@ -485,9 +493,13 @@ export function RoadmapDetailMap({
               element.parentElement?.querySelector<HTMLElement>(
                 ".roadmap-map-card",
               )?.offsetHeight ?? 0;
+            const popupHeight =
+              document.querySelector<HTMLElement>(
+                '.roadmap-agent-panel[data-open="true"][data-mode="popup"]',
+              )?.offsetHeight ?? 0;
             const topPadding = hasSelection ? 208 : 176;
             const bottomPadding = Math.min(
-              hasSelection ? cardHeight + 40 : 80,
+              Math.max(hasSelection ? cardHeight + 40 : 80, popupHeight + 32),
               Math.max(0, element.clientHeight - topPadding - 48),
             );
             instance.fitBounds(bounds, {
@@ -517,7 +529,9 @@ export function RoadmapDetailMap({
                 (stop) => stop.dayNumber === current.activeDay,
               ) ??
               group.stops[0];
-            button.dataset.tone = String((representative.dayNumber - 1) % 5);
+            button.dataset.tone = String(
+              roadmapDayTone(representative.dayNumber),
+            );
             button.dataset.active = String(
               group.stops.some((stop) => stop.dayNumber === current.activeDay),
             );
@@ -657,7 +671,7 @@ export function RoadmapDetailMap({
           <button
             className="roadmap-map-stop-choice"
             type="button"
-            data-tone={(stop.dayNumber - 1) % 5}
+            data-tone={roadmapDayTone(stop.dayNumber)}
             data-changed={stop.changed}
             aria-label={`Xem vị trí ${agentDishName(stop.item)}`}
             aria-pressed={stop.item.itemKey === previewKey}
@@ -684,7 +698,7 @@ export function RoadmapDetailMap({
           <button
             className="roadmap-map-stop-choice"
             type="button"
-            data-tone={(stop.dayNumber - 1) % 5}
+            data-tone={roadmapDayTone(stop.dayNumber)}
             aria-label={`Xem vị trí ${stop.item.dish.name}`}
             aria-pressed={stop.item.id === selectedItemId}
             onClick={() => onSelectItem(stop.item.id)}
@@ -755,7 +769,7 @@ export function RoadmapDetailMap({
             <span
               key={day}
               className="roadmap-map-legend-day"
-              data-tone={(day - 1) % 5}
+              data-tone={roadmapDayTone(day)}
               data-active={day === (preview?.activeDay ?? activeDay)}
             >
               Ngày {day}
@@ -803,6 +817,16 @@ export function RoadmapDetailMap({
             {previewChoices ?? choices}
           </div>
         ))}
+      {onOpenAgent && (
+        <Button
+          className="roadmap-map-fab"
+          aria-label="Mở trợ lý món ăn"
+          title="Trợ lý món ăn"
+          onClick={onOpenAgent}
+        >
+          ✦
+        </Button>
+      )}
       {preview
         ? previewSelected && (
             <PreviewMapCard

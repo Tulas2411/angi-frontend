@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { Badge } from "@/shared/ui";
 import { Button } from "@/shared/ui";
 import { RoadmapAgentPanel } from "./roadmap-agent-panel";
@@ -33,6 +33,13 @@ import type { RoadmapScreenService } from "./roadmap-service";
 import { roadmapDetailHref, roadmapRoutes } from "./routes";
 import type { RoadmapDetailDto, RoadmapRouteDto } from "./roadmap-types";
 
+const compactViewport = "(max-width: 900px)";
+function subscribeCompactViewport(listener: () => void) {
+  const query = window.matchMedia(compactViewport);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+
 /**
  * Loaded roadmap: hero card, the three RoadmapDetail tabs and the day list of the sidebar
  * (Figma "ANGI / Roadmap"). The tab and the last opened day live in the URL.
@@ -48,6 +55,8 @@ export function RoadmapDetailView({
   onItemsMoved,
   onItemRated,
   userId,
+  userName,
+  userAvatar,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
@@ -64,16 +73,29 @@ export function RoadmapDetailView({
   /** Reloads the roadmap after a dish was rated; rejects when the reload fails. */
   onItemRated: () => Promise<void>;
   userId: number;
+  userName: string;
+  userAvatar: string | null;
 }) {
   const { overview, itinerary, budget } = detail;
   const [agentOpen, setAgentOpen] = useState(false);
   const [agentMapView, setAgentMapView] = useState(false);
+  // The sidebar button opens the full panel and the map's bubble opens the popup.
+  const [agentPopup, setAgentPopup] = useState(false);
+  // Matches the 900px layout switch in roadmap-agent.css, where the map stacks and the panel fills the screen.
+  const agentCompact = useSyncExternalStore(
+    subscribeCompactViewport,
+    () => window.matchMedia(compactViewport).matches,
+    () => false,
+  );
+  const agentMode = agentPopup && !agentCompact ? "popup" : "expanded";
   function closeAgent() {
     setAgentOpen(false);
     setAgentMapView(false);
+    const opener =
+      agentMode === "popup" ? ".roadmap-map-fab" : ".roadmap-agent-trigger";
     requestAnimationFrame(() =>
       document
-        .querySelector<HTMLButtonElement>(".roadmap-agent-trigger")
+        .querySelector<HTMLButtonElement>(opener)
         ?.focus({ preventScroll: true }),
     );
   }
@@ -236,13 +258,18 @@ export function RoadmapDetailView({
   );
   return (
     <div className="roadmap-detail">
-      <aside className="roadmap-detail-nav" inert={agentOpen}>
+      <aside
+        className="roadmap-detail-nav"
+        inert={agentOpen && agentMode === "expanded"}
+      >
         <Button
-          variant="secondary"
           className="roadmap-agent-trigger"
           aria-expanded={agentOpen}
           aria-controls="roadmap-agent-panel"
-          onClick={() => setAgentOpen(true)}
+          onClick={() => {
+            setAgentPopup(false);
+            setAgentOpen(true);
+          }}
         >
           ✦ Trợ lý món ăn
         </Button>
@@ -292,7 +319,10 @@ export function RoadmapDetailView({
         </nav>
       </aside>
 
-      <div className="roadmap-detail-main stack" inert={agentOpen}>
+      <div
+        className="roadmap-detail-main stack"
+        inert={agentOpen && agentMode === "expanded"}
+      >
         <div className="roadmap-back-mobile">{back}</div>
         <section className="roadmap-hero" aria-labelledby="roadmap-title">
           <div className="roadmap-hero-text stack-sm">
@@ -427,9 +457,24 @@ export function RoadmapDetailView({
               }
             : null
         }
+        agentPopupOpen={agentOpen && agentMode === "popup"}
+        onOpenAgent={
+          agentOpen
+            ? undefined
+            : () => {
+                setAgentPopup(true);
+                setAgentOpen(true);
+              }
+        }
       />
       <RoadmapAgentPanel
         open={agentOpen}
+        mode={agentMode}
+        compact={agentCompact}
+        onToggleMode={() => setAgentPopup((value) => !value)}
+        roadmapTitle={overview.title}
+        userName={userName}
+        userAvatar={userAvatar}
         onClose={closeAgent}
         agent={agent}
         selected={previewSelected}

@@ -27,6 +27,8 @@ export default async function Page({
       <RoadmapDetailPage
         roadmapId={roadmapId}
         userId={user.id}
+        userName={user.displayName}
+        userAvatar={user.avatarUrl}
         initialDay={parseDayParam(day)}
         initialTab={parseTabParam(tab)}
       />

@@ -22,6 +22,13 @@ export interface AgentMapPreview {
   onSelect: (itemKey: string) => void;
 }
 
+export interface AgentLeg {
+  distanceMeters: number;
+  durationSeconds: number;
+  isEstimated: boolean;
+  fromOrigin: boolean;
+}
+
 export const agentDishName = (item: AgentItem) =>
   item.dishName ?? "Món chưa có tên";
 
@@ -34,6 +41,33 @@ export function agentChangedItemKeys(proposal: AgentProposal) {
     if (key) keys.add(key);
   }
   return keys;
+}
+
+/**
+ * The trip that arrives at each dish of a day, keyed by item. The backend routes only located stops, in order,
+ * with one extra first leg when it starts from the traveler's origin. Anything else is not guessed at.
+ */
+export function agentDayLegs(proposal: AgentProposal, day: number) {
+  const legs = new Map<string, AgentLeg>();
+  const route = proposal.validation.routes.find(
+    (entry) => entry.dayNumber === day,
+  );
+  if (!route) return legs;
+  const located = agentMapStops(proposal).filter(
+    (stop) => stop.dayNumber === day && stop.coordinate,
+  );
+  const fromOrigin = route.legs.length === located.length;
+  if (!fromOrigin && route.legs.length !== located.length - 1) return legs;
+  located.forEach((stop, index) => {
+    const leg = route.legs[fromOrigin ? index : index - 1];
+    if (leg)
+      legs.set(stop.item.itemKey, {
+        ...leg,
+        isEstimated: route.isEstimated,
+        fromOrigin: fromOrigin && index === 0,
+      });
+  });
+  return legs;
 }
 
 /** Stop numbers restart each day and follow the preview's order, including items without coordinates. */

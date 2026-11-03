@@ -11,8 +11,8 @@ export const agentService = {
   open: (roadmapId: number) =>
     api.post<AgentConversation>("agent/conversations", { roadmapId }),
   get: (id: number) => api.get<AgentConversation>(`agent/conversations/${id}`),
-  message: (id: number, body: AgentMessageRequest) =>
-    api.post<AgentTurn>(`agent/conversations/${id}/messages`, body),
+  message: (id: number, body: AgentMessageRequest, signal?: AbortSignal) =>
+    api.post<AgentTurn>(`agent/conversations/${id}/messages`, body, signal),
   confirm: (id: number, body: AgentConfirmRequest) =>
     api.post<AgentCommit>(`agent/conversations/${id}/confirm`, body),
   impressions: (requestId: string, dishIds: number[]) =>

@@ -21,9 +21,16 @@ import {
 
 let stub: AccountStub;
 let conversation: AgentConversation;
-let mode: "complete" | "processing" | "unavailable" | "replay" | "conflict" =
-  "complete";
-let confirmMode: "ok" | "unknown" | "conflict" = "ok";
+let mode:
+  | "complete"
+  | "processing"
+  | "unavailable"
+  | "transport"
+  | "replay"
+  | "conflict"
+  | "hold" = "complete";
+let abortedMessages = 0;
+let replyText = "Mình đề xuất món Mì Quảng.";
 let messageCalls: AgentMessageRequest[] = [];
 let confirmCalls: AgentConfirmRequest[] = [];
 let impressions: { requestId: string; dishIds: number[] }[] = [];
@@ -37,7 +44,7 @@ let getError: string | null = null;
 let failReload = false;
 let chatCommit: AgentCommit | null = null;
 
-const handler: StubHandler = ({ method, url, body }, send) => {
+const handler: StubHandler = ({ method, url, body, onAbort }, send) => {
   const path = new URL(url, "http://stub").pathname;
   if (method === "GET" && path === "/api/v1/roadmaps/88") {
     detailCalls++;
@@ -83,6 +90,14 @@ const handler: StubHandler = ({ method, url, body }, send) => {
   if (path === "/api/v1/agent/conversations/7/messages" && method === "POST") {
     const request = body as AgentMessageRequest;
     messageCalls.push(structuredClone(request));
+    if (mode === "hold") {
+      onAbort(() => abortedMessages++);
+      return true;
+    }
+    if (mode === "transport") {
+      send(502, null, "SERVICE_UNAVAILABLE");
+      return true;
+    }
     if (mode === "unavailable") {
       send(503, null, "AGENT_UNAVAILABLE");
       return true;
@@ -117,12 +132,13 @@ const handler: StubHandler = ({ method, url, body }, send) => {
       messages: [
         ...conversation.messages,
         { role: "user", content: request.content },
-        { role: "assistant", content: "Mình đề xuất món Mì Quảng." },
+        { role: "assistant", content: replyText },
       ],
     };
+    if (chatCommit) committedWrites++;
     send(200, {
       status: "completed",
-      reply: "Mình đề xuất món Mì Quảng.",
+      reply: replyText,
       conversationVersion: mode === "replay" ? 1 : conversation.version,
       proposal,
       validation: proposal?.validation ?? null,
@@ -132,36 +148,9 @@ const handler: StubHandler = ({ method, url, body }, send) => {
     return true;
   }
   if (path === "/api/v1/agent/conversations/7/confirm" && method === "POST") {
+    // The panel saves through chat; a call here fails the assertions on confirmCalls.
     confirmCalls.push(structuredClone(body as AgentConfirmRequest));
-    if (confirmMode === "conflict") {
-      conversation.currentProposal = agentProposal({
-        status: "invalid",
-        validation: {
-          errors: ["Giá món đã thay đổi."],
-          warnings: [],
-          routes: [],
-          totalCost: 60000,
-        },
-      });
-      send(
-        409,
-        conversation.currentProposal.validation,
-        "PROPOSAL_NOT_COMMITTABLE",
-      );
-      return true;
-    }
-    if (!committedWrites) committedWrites++;
-    conversation.currentProposal = agentProposal({ status: "committed" });
-    if (confirmMode === "unknown") {
-      send(503, null, "SERVICE_UNAVAILABLE");
-      return true;
-    }
-    send(200, {
-      roadmapId: 88,
-      roadmapVersion: 6,
-      committedProposalId: 91,
-      itemIds: { r123: 456 },
-    });
+    send(404, null, "ROUTE_NOT_FOUND");
     return true;
   }
   return false;
@@ -175,7 +164,8 @@ test.beforeEach(async ({ page, context }) => {
   stub.reset();
   conversation = agentConversation();
   mode = "complete";
-  confirmMode = "ok";
+  abortedMessages = 0;
+  replyText = "Mình đề xuất món Mì Quảng.";
   messageCalls = [];
   confirmCalls = [];
   impressions = [];
@@ -206,7 +196,15 @@ test.beforeEach(async ({ page, context }) => {
   );
 });
 const panel = (page: Page) =>
-  page.getByRole("dialog", { name: "ANGI Trợ lý ăn uống" });
+  page.getByRole("dialog", { name: "Trợ lý món ăn" });
+const dish = (page: Page, itemKey: string) =>
+  panel(page).locator(`[data-item-key="${itemKey}"]`);
+const committed: AgentCommit = {
+  roadmapId: 88,
+  roadmapVersion: 6,
+  committedProposalId: 91,
+  itemIds: { r123: 456 },
+};
 async function open(page: Page) {
   await page
     .getByRole("button", { name: "✦ Trợ lý món ăn", exact: true })
@@ -218,7 +216,7 @@ async function chat(page: Page, text = "Gợi ý món ăn ở Đà Nẵng") {
   await panel(page).getByRole("button", { name: "Gửi", exact: true }).click();
 }
 
-test("opens lazily, slides over the notebook, keeps the map and restores focus with Escape", async ({
+test("the sidebar button opens the full panel beside the map, lazily, and Escape restores focus", async ({
   page,
 }) => {
   expect(openCalls).toBe(0);
@@ -233,16 +231,17 @@ test("opens lazily, slides over the notebook, keeps the map and restores focus w
   await open(page);
   expect((await result).status()).toBe(201);
   await expect(
-    panel(page).getByRole("heading", {
-      name: "Bạn muốn khám phá món gì ở Đà Nẵng?",
-    }),
+    panel(page).getByRole("heading", { name: "Chưa biết ăn gì? Thử hỏi:" }),
   ).toBeVisible();
   expect(await map.boundingBox()).toEqual(before);
+  // It covers everything left of the map, site header and sidebar included.
   await expect
-    .poll(async () => Math.abs((await panel(page).boundingBox())!.x))
-    .toBeLessThan(1);
+    .poll(async () => {
+      const box = (await panel(page).boundingBox())!;
+      return [box.x, box.y, box.height];
+    })
+    .toEqual([0, 0, 1000]);
   const frame = await panel(page).boundingBox();
-  expect(frame!.x).toBe(0);
   expect(Math.abs(frame!.width - before!.x)).toBeLessThan(2);
   await page.keyboard.press("Escape");
   await expect(panel(page)).toHaveCount(0);
@@ -254,45 +253,37 @@ test("opens lazily, slides over the notebook, keeps the map and restores focus w
   expect(openCalls).toBe(1);
 });
 
-test("previews the real response, selects a specific item and saves exactly the confirmed proposal", async ({
+test("a draft is read in the panel and changed and saved only by chatting", async ({
   page,
 }) => {
   await open(page);
   await chat(page);
-  await expect(
-    panel(page).getByRole("button", { name: /Ngày 1.*Mì Quảng/ }),
-  ).toBeVisible();
+  await expect(dish(page, "r123")).toContainText("Mì Quảng");
   await expect(
     panel(page)
       .getByText("Thời gian di chuyển chỉ là ước tính.", { exact: true })
       .first(),
   ).toBeVisible();
+  // The draft offers no actions of its own, and its dishes are not controls.
+  for (const name of ["Thêm vào lộ trình", "Đổi món khác", "Bỏ bản nháp"])
+    await expect(panel(page).getByRole("button", { name })).toHaveCount(0);
+  await expect(dish(page, "r123").getByRole("button")).toHaveCount(0);
+  await expect(dish(page, "r123")).not.toHaveRole("button");
+  await expect(panel(page)).toContainText("lưu lịch này");
   expect(detailCalls).toBe(1);
-  expect(confirmCalls).toHaveLength(0);
-  await panel(page)
-    .getByRole("button", { name: /Ngày 1.*Mì Quảng/ })
-    .click();
+
   await chat(page, "Đổi sang món khác");
   await expect.poll(() => messageCalls.length).toBe(2);
-  expect(messageCalls[1].selectedItemKey).toBe("r123");
+  expect(messageCalls[1].selectedItemKey).toBeUndefined();
   expect(messageCalls[1].expectedConversationVersion).toBe(3);
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog", {
-    name: "Lưu bản nháp vào lộ trình?",
-  });
-  await expect(dialog).toBeVisible();
-  expect(confirmCalls).toHaveLength(0);
-  await dialog
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
+
+  chatCommit = committed;
+  await chat(page, "lưu lịch này");
   await expect(
     panel(page).getByText("Đã lưu thay đổi vào lộ trình.", { exact: true }),
   ).toBeVisible();
-  expect(confirmCalls).toEqual([{ proposalId: 91, proposalVersion: 1 }]);
-  expect(committedWrites).toBe(1);
   await expect.poll(() => detailCalls).toBe(2);
+  expect(confirmCalls).toHaveLength(0);
 });
 
 test("202 processing is preserved, polls GET and never repeats the message POST", async ({
@@ -303,8 +294,9 @@ test("202 processing is preserved, polls GET and never repeats the message POST"
   const result = page.waitForResponse((r) => r.url().endsWith("/messages"));
   await chat(page);
   expect((await result).status()).toBe(202);
+  // The request has ended, so nothing is left that a stop button could cancel.
   await expect(
-    panel(page).getByRole("button", { name: "Gửi", exact: true }),
+    panel(page).getByRole("button", { name: "Đang xử lý", exact: true }),
   ).toBeDisabled();
   await expect(
     panel(page).getByText("Đây là lịch trình đã hoàn tất.", { exact: true }),
@@ -328,34 +320,193 @@ test("closing during processing resumes with GET and leaves the composer usable 
     currentProposal: agentProposal(),
   };
   await open(page);
+  await expect(dish(page, "r123")).toBeVisible();
+  await panel(page).getByLabel("Yêu cầu với trợ lý món ăn").fill("Câu tiếp");
   await expect(
-    panel(page).getByRole("button", {
-      name: "Xác nhận lưu vào lộ trình",
-      exact: true,
-    }),
+    panel(page).getByRole("button", { name: "Gửi", exact: true }),
   ).toBeEnabled();
   expect(messageCalls).toHaveLength(1);
   expect(openCalls).toBe(1);
 });
 
-test("a transport retry preserves the numeric message ID, version, content and selected options", async ({
+test("an unknown outcome replays the same message under the current version", async ({
   page,
 }) => {
-  mode = "unavailable";
+  mode = "transport";
   await open(page);
   await chat(page, "Tìm món ăn nhẹ");
+  const retry = panel(page).getByRole("button", { name: "Thử lại" });
+  await expect(retry).toBeVisible();
   await expect(
-    panel(page).getByRole("button", { name: "Gửi lại tin nhắn" }),
+    panel(page).getByText("Tìm món ăn nhẹ", { exact: true }),
   ).toBeVisible();
   await panel(page)
     .getByLabel("Yêu cầu với trợ lý món ăn")
     .fill("Nội dung đã sửa nhưng chưa gửi");
   mode = "complete";
-  await panel(page).getByRole("button", { name: "Gửi lại tin nhắn" }).click();
-  await expect.poll(() => getCalls).toBe(1);
-  expect(messageCalls).toHaveLength(2);
+  await retry.click();
+  await expect.poll(() => messageCalls.length).toBe(2);
   expect(messageCalls[1]).toEqual(messageCalls[0]);
   expect(Number.isSafeInteger(messageCalls[0].clientMessageId)).toBe(true);
+});
+
+test("the composer empties on send and a failure needs no extra step", async ({
+  page,
+}) => {
+  mode = "unavailable";
+  await open(page);
+  const input = panel(page).getByLabel("Yêu cầu với trợ lý món ăn");
+  await input.fill("huong dan toi");
+  await input.press("Enter");
+  await expect(input).toHaveValue("huong dan toi");
+  await expect(panel(page).getByRole("alert")).toBeVisible();
+  await expect(
+    panel(page).getByRole("button", { name: "Thử lại" }),
+  ).toHaveCount(0);
+  await expect(
+    panel(page).getByRole("button", { name: "Kiểm tra hội thoại" }),
+  ).toHaveCount(0);
+  mode = "complete";
+  await panel(page).getByRole("button", { name: "Gửi", exact: true }).click();
+  await expect(input).toHaveValue("");
+  await expect(panel(page).getByRole("alert")).toHaveCount(0);
+  expect(messageCalls).toHaveLength(2);
+  expect(messageCalls[1].clientMessageId).not.toBe(
+    messageCalls[0].clientMessageId,
+  );
+});
+
+test("planning questions offer one-tap answers chosen by the backend stage", async ({
+  page,
+}) => {
+  await page.context().grantPermissions(["geolocation"]);
+  await page
+    .context()
+    .setGeolocation({ latitude: 21.0278, longitude: 105.8342 });
+  conversation = {
+    ...conversation,
+    state: { ...conversation.state, province: null, planningIntake: "details" },
+  };
+  await open(page);
+  await panel(page)
+    .getByRole("button", { name: "Dùng vị trí hiện tại" })
+    .click();
+  await expect.poll(() => messageCalls.length).toBe(1);
+  expect(messageCalls[0].confirmedState).toMatchObject({
+    originMode: "gps",
+    originLatitude: 21.0278,
+    originLongitude: 105.8342,
+    radiusKm: null,
+  });
+});
+
+test("asking for somewhere nearby shares the position at any point in the conversation", async ({
+  page,
+}) => {
+  await page.context().grantPermissions(["geolocation"]);
+  await page
+    .context()
+    .setGeolocation({ latitude: 21.0278, longitude: 105.8342 });
+  // The place is already known, so no one-tap location answer is on offer.
+  conversation = { ...conversation, currentProposal: agentProposal() };
+  await open(page);
+  await expect(
+    panel(page).getByRole("button", { name: "Dùng vị trí hiện tại" }),
+  ).toHaveCount(0);
+  await chat(page, "tìm quán gần tôi");
+  await expect.poll(() => messageCalls.length).toBe(1);
+  expect(messageCalls[0].confirmedState).toMatchObject({
+    originMode: "gps",
+    originLatitude: 21.0278,
+    radiusKm: 10,
+  });
+});
+
+test("a refused position says why and spends no message the model could not answer", async ({
+  page,
+}) => {
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "geolocation", {
+      value: {
+        getCurrentPosition: (
+          _: unknown,
+          fail: (error: { code: number }) => void,
+        ) => fail({ code: 2 }),
+      },
+    });
+  });
+  await open(page);
+  const input = panel(page).getByLabel("Yêu cầu với trợ lý món ăn");
+  await input.fill("tìm quán gần tôi");
+  await panel(page).getByRole("button", { name: "Gửi", exact: true }).click();
+  await expect(panel(page)).toContainText("dịch vụ vị trí");
+  await expect(input).toHaveValue("tìm quán gần tôi");
+  expect(messageCalls).toHaveLength(0);
+});
+
+test("a dish shows why it was suggested and the day ends with its conclusion", async ({
+  page,
+}) => {
+  const proposal = agentProposal();
+  proposal.snapshot.dishNotes = [
+    {
+      dishId: 105,
+      intro: "Sợi mì vàng ăn cùng nước dùng sánh.",
+      reason: "Hợp bữa trưa nhẹ mà vẫn no.",
+    },
+  ];
+  proposal.snapshot.daySummaries = [
+    { dayNumber: 1, summary: "Một ngày nhẹ nhàng, đậm vị miền Trung." },
+  ];
+  conversation = { ...conversation, currentProposal: proposal };
+  await open(page);
+  await expect(dish(page, "r123")).toContainText(
+    "Sợi mì vàng ăn cùng nước dùng sánh.",
+  );
+  await expect(dish(page, "r123")).toContainText("Hợp bữa trưa nhẹ mà vẫn no.");
+  await expect(panel(page).locator(".agent-day-summary")).toHaveText(
+    "Một ngày nhẹ nhàng, đậm vị miền Trung.",
+  );
+});
+
+test("a draft with no wording from the backend still shows its dishes", async ({
+  page,
+}) => {
+  conversation = { ...conversation, currentProposal: agentProposal() };
+  await open(page);
+  await expect(dish(page, "r123")).toContainText("Mì Quảng");
+  await expect(panel(page).locator(".agent-proposal-intro")).toHaveCount(0);
+  await expect(panel(page).locator(".agent-day-summary")).toHaveCount(0);
+});
+
+test("the distance is shown between dishes rather than as a day total", async ({
+  page,
+}) => {
+  const proposal = agentProposal();
+  const [first] = proposal.snapshot.items;
+  proposal.snapshot.items.push({
+    ...first,
+    itemKey: "r200",
+    mealSlot: "dinner",
+    dishName: "Bún chả cá",
+    latitude: 16.07,
+    longitude: 108.22,
+  });
+  proposal.validation.routes = [
+    {
+      dayNumber: 1,
+      isEstimated: false,
+      originSkipped: false,
+      legs: [{ distanceMeters: 2500, durationSeconds: 600 }],
+      totalDistanceMeters: 2500,
+      totalDurationSeconds: 600,
+    },
+  ];
+  conversation = { ...conversation, currentProposal: proposal };
+  await open(page);
+  await expect(panel(page).locator(".agent-leg")).toHaveCount(1);
+  await expect(panel(page).locator(".agent-leg")).toContainText("2,5 km");
+  await expect(panel(page)).not.toContainText("Cả ngày");
 });
 
 test("a replay loads the current state instead of overwriting it with an old proposal", async ({
@@ -378,69 +529,15 @@ test("a conversation conflict refreshes the authoritative version without automa
   mode = "conflict";
   await open(page);
   await chat(page);
-  await expect(panel(page).getByText(/Hội thoại đã thay đổi/)).toBeVisible();
+  await expect(
+    panel(page).getByText(/Hội thoại vừa được cập nhật/),
+  ).toBeVisible();
   await expect.poll(() => getCalls).toBe(1);
   expect(messageCalls).toHaveLength(1);
   mode = "complete";
   await chat(page, "Tôi đã xem lại, hãy tiếp tục");
   await expect.poll(() => messageCalls.length).toBe(2);
   expect(messageCalls[1].expectedConversationVersion).toBe(9);
-});
-
-test("unknown confirm results retry the same proposal and do not save twice", async ({
-  page,
-}) => {
-  await open(page);
-  await chat(page);
-  confirmMode = "unknown";
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
-  await expect(
-    panel(page).getByRole("button", { name: "Kiểm tra lại lần lưu" }),
-  ).toBeVisible();
-  await expect(
-    panel(page).getByRole("button", { name: "Gửi", exact: true }),
-  ).toBeDisabled();
-  confirmMode = "ok";
-  await panel(page)
-    .getByRole("button", { name: "Kiểm tra lại lần lưu" })
-    .click();
-  await expect(
-    panel(page).getByText("Đã lưu thay đổi vào lộ trình.", { exact: true }),
-  ).toBeVisible();
-  expect(confirmCalls).toHaveLength(2);
-  expect(confirmCalls[1]).toEqual(confirmCalls[0]);
-  expect(committedWrites).toBe(1);
-});
-
-test("a rejected confirm shows validation and blocks stale or invalid previews", async ({
-  page,
-}) => {
-  await open(page);
-  await chat(page);
-  confirmMode = "conflict";
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
-  await expect(
-    panel(page).getByText("Giá món đã thay đổi.", { exact: true }).first(),
-  ).toBeVisible();
-  await expect(
-    panel(page).getByRole("button", {
-      name: "Xác nhận lưu vào lộ trình",
-      exact: true,
-    }),
-  ).toBeDisabled();
-  expect(committedWrites).toBe(0);
 });
 
 test("reopens the saved conversation reference after page reload and recovers from expiry explicitly", async ({
@@ -518,12 +615,8 @@ test("only visible recommended items generate grouped impressions and null reque
     ],
   };
   await open(page);
-  await expect(
-    panel(page).getByRole("button", { name: /Ngày 1.*Mì Quảng/ }),
-  ).toBeVisible();
-  await panel(page)
-    .getByRole("button", { name: /Ngày 1.*Mì Quảng/ })
-    .scrollIntoViewIfNeeded();
+  await expect(dish(page, "r123")).toBeVisible();
+  await dish(page, "r123").scrollIntoViewIfNeeded();
   await expect.poll(() => impressions.length, { timeout: 10000 }).toBe(1);
   expect(impressions[0]).toMatchObject({
     requestId: "c701d061-7199-4ebb-884c-f410e3e71706",
@@ -551,6 +644,165 @@ test("missing backend APIs show an explicit error rather than fabricated replies
   expect(messageCalls).toHaveLength(0);
 });
 
+test("the map's bubble opens the small popup, which stays small until the traveler expands it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const bubble = page.getByRole("button", { name: "Mở trợ lý món ăn" });
+  await bubble.click();
+  await expect(panel(page)).toHaveAttribute("data-mode", "popup");
+  await expect(bubble).toHaveCount(0);
+  // Anchored to the lower right corner, with the page behind it still usable.
+  await expect
+    .poll(async () => {
+      const box = (await panel(page).boundingBox())!;
+      return [box.x + box.width, box.y + box.height, box.width, box.height];
+    })
+    .toEqual([1424, 984, 480, 560]);
+  await expect(page.locator(".roadmap-detail-main")).not.toHaveAttribute(
+    "inert",
+  );
+  await page.screenshot({
+    path: "artifacts/roadmap-agent/assistant-popup-1440.png",
+  });
+
+  // A suggestion is sent as a message, and a new draft does not change the size.
+  await panel(page)
+    .getByRole("button", { name: prompts[0], exact: true })
+    .click();
+  await expect.poll(() => messageCalls.length).toBe(1);
+  expect(messageCalls[0]).toMatchObject({
+    content: prompts[0],
+    command: "chat",
+  });
+  await expect(dish(page, "r123")).toBeVisible();
+  await expect(panel(page)).toHaveAttribute("data-mode", "popup");
+
+  await panel(page).getByRole("button", { name: "Mở rộng trợ lý" }).click();
+  await expect(panel(page)).toHaveAttribute("data-mode", "expanded");
+  await panel(page).getByRole("button", { name: "Thu về cửa sổ nhỏ" }).click();
+  await expect(panel(page)).toHaveAttribute("data-mode", "popup");
+  await page.keyboard.press("Escape");
+  await expect(bubble).toBeFocused();
+});
+
+test("the stop button cancels the running turn all the way to the backend", async ({
+  page,
+}) => {
+  mode = "hold";
+  await open(page);
+  const send = panel(page).getByRole("button", { name: "Gửi", exact: true });
+  const input = panel(page).getByLabel("Yêu cầu với trợ lý món ăn");
+  await expect(send).toHaveAttribute("data-state", "empty");
+  await input.fill("Gợi ý món ăn ở Đà Nẵng");
+  await expect(send).toHaveAttribute("data-state", "ready");
+  await send.click();
+
+  const stop = panel(page).getByRole("button", { name: "Dừng trả lời" });
+  await expect(stop).toBeEnabled();
+  await expect(
+    panel(page).getByRole("status").getByText("Trợ lý đang trả lời"),
+  ).toBeVisible();
+  // The avatar's label stays in the middle of its circle.
+  const offCenter = await panel(page)
+    .locator(".agent-mark")
+    .first()
+    .evaluate((element) => {
+      const circle = element.getBoundingClientRect();
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const label = range.getBoundingClientRect();
+      return Math.abs(
+        circle.left + circle.width / 2 - (label.left + label.width / 2),
+      );
+    });
+  expect(offCenter).toBeLessThan(1.5);
+  await panel(page).screenshot({
+    path: "artifacts/roadmap-agent/assistant-thinking.png",
+  });
+  await expect.poll(() => messageCalls.length).toBe(1);
+  // The composer is a round button and stays round.
+  const box = (await stop.boundingBox())!;
+  expect(box.width).toBe(box.height);
+
+  await stop.click();
+  // The proxy hangs up on the backend, which is what makes it cancel the turn.
+  await expect.poll(() => abortedMessages).toBe(1);
+  await expect(input).toHaveValue("Gợi ý món ăn ở Đà Nẵng");
+  await expect(send).toHaveAttribute("data-state", "ready");
+  await expect(panel(page).getByRole("alert")).toHaveCount(0);
+  await expect(panel(page).locator(".agent-message-user")).toHaveCount(0);
+
+  // Sending again is a new message.
+  mode = "complete";
+  await send.click();
+  await expect.poll(() => messageCalls.length).toBe(2);
+  expect(messageCalls[1].clientMessageId).not.toBe(
+    messageCalls[0].clientMessageId,
+  );
+});
+
+test("a new reply appears word by word and the stop button shows the rest at once", async ({
+  page,
+}) => {
+  // Long enough that the reveal is still running when the button is pressed.
+  replyText = `${"Đây là một câu trả lời khá dài. ".repeat(80)}Hết rồi.`;
+  await open(page);
+  await chat(page);
+  const reply = panel(page).locator(".agent-message-assistant").first();
+  await expect(reply).toContainText("Đây là một câu trả lời");
+  await expect(reply).not.toContainText("Hết rồi.");
+  await panel(page).getByRole("button", { name: "Dừng trả lời" }).click();
+  await expect(reply).toContainText("Hết rồi.");
+  await expect(
+    panel(page).getByRole("button", { name: "Gửi", exact: true }),
+  ).toBeVisible();
+  await expect(dish(page, "r123")).toBeVisible();
+  // Stopping a reply that already exists asks nothing more of the backend.
+  expect(messageCalls).toHaveLength(1);
+});
+
+test("a reply loaded from history appears at once", async ({ page }) => {
+  conversation = {
+    ...conversation,
+    messages: [{ role: "assistant", content: "Mình đề xuất món Mì Quảng." }],
+  };
+  await open(page);
+  await expect(panel(page).locator(".agent-message-assistant")).toContainText(
+    "Mình đề xuất món Mì Quảng.",
+  );
+  await expect(
+    panel(page).getByRole("button", { name: "Dừng trả lời" }),
+  ).toHaveCount(0);
+});
+
+test("a reply renders lists without HTML and its dish name selects the pin", async ({
+  page,
+}) => {
+  conversation = {
+    ...conversation,
+    currentProposal: agentProposal(),
+    messages: [
+      { role: "user", content: "Gợi ý cho mình" },
+      {
+        role: "assistant",
+        content:
+          "Có vài lựa chọn **hợp với bạn**:\n- Mì Quảng khoảng 50.000\n- <img src=x onerror=alert(1)>",
+      },
+    ],
+  };
+  await open(page);
+  const reply = panel(page).locator(".agent-message-assistant");
+  await expect(reply.locator("strong")).toHaveText("hợp với bạn");
+  await expect(reply.locator("li")).toHaveCount(2);
+  await expect(reply.locator("img:not(.agent-mark img)")).toHaveCount(0);
+  await expect(reply.locator("li").nth(1)).toHaveText(
+    "<img src=x onerror=alert(1)>",
+  );
+  await reply.getByRole("button", { name: "Mì Quảng", exact: true }).click();
+  await expect(dish(page, "r123")).toHaveAttribute("data-selected", "true");
+});
+
 test("desktop and mobile match the panel layout without horizontal overflow and honor reduced motion", async ({
   page,
 }) => {
@@ -561,16 +813,19 @@ test("desktop and mobile match the panel layout without horizontal overflow and 
   ).toBeEnabled();
   for (const width of [1713, 1440, 768, 390, 320]) {
     await page.setViewportSize({ width, height: 930 });
+    // The opening transition moves it vertically, so wait until it has settled at the top.
     await expect
-      .poll(async () => Math.abs((await panel(page).boundingBox())!.x))
-      .toBeLessThan(1);
+      .poll(async () => {
+        const box = (await panel(page).boundingBox())!;
+        return [box.x, box.y, box.height];
+      })
+      .toEqual([0, 0, 930]);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
     const box = (await panel(page).boundingBox())!;
-    expect(box.height).toBe(930);
     if (width <= 900) expect(box.width).toBe(width);
     await panel(page).screenshot({
       path: `artifacts/roadmap-agent/assistant-${width}.png`,
@@ -588,47 +843,7 @@ test("desktop and mobile match the panel layout without horizontal overflow and 
   ).toBe("0s");
 });
 
-test("alternative, discard and reset use the designed commands and require confirmation for discarding", async ({
-  page,
-}) => {
-  await open(page);
-  await chat(page);
-  await panel(page)
-    .getByRole("button", { name: /Ngày 1.*Mì Quảng/ })
-    .click();
-  await panel(page)
-    .getByRole("button", {
-      name: "Tìm phương án khác cho món đã chọn",
-      exact: true,
-    })
-    .click();
-  await expect.poll(() => messageCalls.length).toBe(2);
-  expect(messageCalls[1]).toMatchObject({
-    command: "alternative",
-    selectedItemKey: "r123",
-  });
-  await panel(page)
-    .getByRole("button", { name: "Bỏ bản nháp", exact: true })
-    .click();
-  const discard = page.getByRole("dialog", { name: "Bỏ bản nháp hiện tại?" });
-  await expect(discard).toBeVisible();
-  expect(messageCalls).toHaveLength(2);
-  await discard.getByRole("button", { name: "Xác nhận", exact: true }).click();
-  await expect.poll(() => messageCalls.length).toBe(3);
-  expect(messageCalls[2].command).toBe("discard");
-  await panel(page)
-    .getByRole("button", { name: "Bắt đầu lại", exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Bắt đầu lại cuộc trò chuyện?" })
-    .getByRole("button", { name: "Xác nhận", exact: true })
-    .click();
-  await expect.poll(() => messageCalls.length).toBe(4);
-  expect(messageCalls[3].command).toBe("reset");
-  expect(confirmCalls).toHaveLength(0);
-});
-
-test("an expired preview stays visible but cannot be confirmed", async ({
+test("an expired preview stays visible and says it can no longer be saved", async ({
   page,
 }) => {
   conversation.currentProposal = agentProposal({
@@ -636,16 +851,11 @@ test("an expired preview stays visible but cannot be confirmed", async ({
   });
   await open(page);
   await expect(
-    panel(page).getByRole("button", {
-      name: "Xác nhận lưu vào lộ trình",
-      exact: true,
-    }),
-  ).toBeDisabled();
-  await expect(
     panel(page).getByText("Bản nháp đã hết hạn. Hãy yêu cầu phương án mới.", {
       exact: true,
     }),
   ).toBeVisible();
+  await expect(panel(page)).not.toContainText("lưu lịch này");
   expect(confirmCalls).toHaveLength(0);
 });
 
@@ -666,7 +876,7 @@ test("the proxy rejects untrusted origins and other roles before reaching the Ag
   expect(openCalls).toBe(0);
 });
 
-const prompts = ["Gợi ý bữa trưa theo ngân sách"];
+const prompts = ["Lộ trình ăn uống 1 ngày ở Đà Nẵng"];
 
 test("a closed conversation offers a new one without editing the saved roadmap", async ({
   page,
@@ -693,17 +903,12 @@ test("a failed RM-03 reload after saving retries only the read and keeps the suc
   await open(page);
   await chat(page);
   failReload = true;
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
+  chatCommit = committed;
+  await chat(page, "lưu lịch này");
   await expect(
     panel(page).getByRole("button", { name: "Tải lại lộ trình", exact: true }),
   ).toBeVisible();
-  expect(confirmCalls).toHaveLength(1);
+  const writes = committedWrites;
   failReload = false;
   await panel(page)
     .getByRole("button", { name: "Tải lại lộ trình", exact: true })
@@ -711,76 +916,15 @@ test("a failed RM-03 reload after saving retries only the read and keeps the suc
   await expect(
     panel(page).getByRole("button", { name: "Tải lại lộ trình", exact: true }),
   ).toHaveCount(0);
-  expect(confirmCalls).toHaveLength(1);
-  expect(committedWrites).toBe(1);
-});
-
-test("the save dialog names the planned days and sends a chosen start date", async ({
-  page,
-}) => {
-  const proposal = agentProposal();
-  proposal.snapshot.state.startDate = null;
-  proposal.snapshot.state.numDays = 2;
-  conversation = {
-    ...conversation,
-    state: { ...conversation.state, startDate: null, numDays: 2 },
-    currentProposal: proposal,
-  };
-  await open(page);
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  const dialog = page.getByRole("dialog", {
-    name: "Lưu bản nháp vào lộ trình?",
-  });
-  await expect(dialog).toContainText("Lịch có 2 ngày.");
-  await dialog
-    .getByRole("textbox", { name: "Ngày bắt đầu" })
-    .fill("15/06/2099");
-  await expect(dialog).toContainText("từ 15 thg 6, 2099 đến 16 thg 6, 2099");
-  await dialog
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
-  await expect.poll(() => confirmCalls.length).toBe(1);
-  expect(confirmCalls[0]).toEqual({
-    proposalId: 91,
-    proposalVersion: 1,
-    startDate: "2099-06-15",
-  });
-});
-
-test("the save dialog may stay empty when the traveler has no date yet", async ({
-  page,
-}) => {
-  const proposal = agentProposal();
-  proposal.snapshot.state.startDate = null;
-  conversation = {
-    ...conversation,
-    state: { ...conversation.state, startDate: null },
-    currentProposal: proposal,
-  };
-  await open(page);
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
-  await expect.poll(() => confirmCalls.length).toBe(1);
-  expect(confirmCalls[0]).toEqual({ proposalId: 91, proposalVersion: 1 });
+  expect(committedWrites).toBe(writes);
+  expect(confirmCalls).toHaveLength(0);
 });
 
 test("a save said in chat reloads the roadmap and shows the saved state", async ({
   page,
 }) => {
   conversation = { ...conversation, currentProposal: agentProposal() };
-  chatCommit = {
-    roadmapId: 88,
-    roadmapVersion: 6,
-    committedProposalId: 91,
-    itemIds: { r123: 456 },
-  };
+  chatCommit = committed;
   await open(page);
   const loaded = detailCalls;
   await chat(page, "chốt lịch này");
@@ -848,6 +992,19 @@ test("a short reply and the card show the plan once", async ({ page }) => {
   await expect(panel(page).getByText("Mì Quảng")).toHaveCount(1);
 });
 
+test("a draft without messages shows the draft instead of the opening suggestions", async ({
+  page,
+}) => {
+  conversation = { ...conversation, currentProposal: agentProposal() };
+  await open(page);
+  await expect(
+    panel(page).getByRole("region", { name: "Bản nháp của trợ lý" }),
+  ).toBeVisible();
+  await expect(
+    panel(page).getByRole("heading", { name: "Chưa biết ăn gì? Thử hỏi:" }),
+  ).toHaveCount(0);
+});
+
 test("the map shows the preview while the assistant is open and returns to the saved roadmap after closing or saving", async ({
   page,
 }) => {
@@ -867,13 +1024,8 @@ test("the map shows the preview while the assistant is open and returns to the s
   await open(page);
   await expect(map).toHaveAttribute("data-preview", "true");
 
-  await panel(page)
-    .getByRole("button", { name: "Xác nhận lưu vào lộ trình", exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: "Lưu bản nháp vào lộ trình?" })
-    .getByRole("button", { name: "Xác nhận lưu", exact: true })
-    .click();
+  chatCommit = committed;
+  await chat(page, "lưu lịch này");
   await expect(
     panel(page).getByText("Đã lưu thay đổi vào lộ trình.", { exact: true }),
   ).toBeVisible();
@@ -887,32 +1039,25 @@ test("day chips, the card and the map stay in step, and new dishes are marked", 
   await open(page);
   const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
   // A new preview opens on the day it changed.
-  const dishOnDay2 = panel(page).getByRole("button", {
-    name: /Ngày 2.*Bún chả cá/,
-  });
+  const dishOnDay2 = dish(page, "r200");
   await expect(dishOnDay2).toHaveAttribute("data-changed", "true");
   await expect(dishOnDay2).toContainText("Món mới");
-  await expect(
-    panel(page).getByRole("button", { name: /Mì Quảng/ }),
-  ).toHaveCount(0);
+  await expect(dish(page, "r123")).toHaveCount(0);
 
   await panel(page)
     .getByRole("button", { name: "Ngày 1", exact: true })
     .click();
   await expect(map).toContainText("Bản nháp · Ngày 1");
-  await expect(
-    panel(page).getByRole("button", { name: /Ngày 1.*Mì Quảng/ }),
-  ).toHaveAttribute("data-changed", "false");
+  await expect(dish(page, "r123")).toHaveAttribute("data-changed", "false");
 
   await map.getByRole("button", { name: "Xem vị trí Bún chả cá" }).click();
   await expect(map).toContainText("Bản nháp · Ngày 2");
-  await expect(dishOnDay2).toHaveAttribute("aria-pressed", "true");
+  await expect(dishOnDay2).toHaveAttribute("data-selected", "true");
   const card = map.getByRole("region", { name: "Món trong bản nháp" });
   await expect(card).toContainText("Quán Biển");
   await expect(card).toContainText("Món mới trong bản nháp");
 
-  await dishOnDay2.click();
-  await expect(card).toHaveCount(0);
+  // Choosing a pin shows it on the map; it does not become the subject of the next message.
   await chat(page, "Đổi sang món khác");
   await expect.poll(() => messageCalls.length).toBe(1);
   expect(messageCalls[0].selectedItemKey).toBeUndefined();

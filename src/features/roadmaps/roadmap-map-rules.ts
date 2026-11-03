@@ -25,6 +25,9 @@ export interface RoadmapMapGroup<Stop = RoadmapMapStop> {
   stops: Stop[];
 }
 
+/** One color per day (`--map-day-color`); a roadmap has at most 7 days, so no two days share one. */
+export const roadmapDayTone = (dayNumber: number) => (dayNumber - 1) % 7;
+
 export function roadmapMapCoordinate(
   latitude: number | null,
   longitude: number | null,

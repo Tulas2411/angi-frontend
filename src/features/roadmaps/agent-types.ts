@@ -21,6 +21,8 @@ export interface AgentState {
   pendingQuestion: string | null;
   focusDay: number | null;
   focusMeal: MealSlot | null;
+  /** Backend-owned stage of the questions asked before a new plan; absent once they are done. */
+  planningIntake?: "details" | "preferences" | null;
 }
 export interface AgentItem {
   itemKey: string;
@@ -76,6 +78,10 @@ export interface AgentProposal {
       | null;
     scope: { dayNumber: number | null; mealSlot: MealSlot | null } | null;
     retainedItems: AgentItem[] | null;
+    /** Backend-checked wording; older drafts have none, and a dish or day may be missing. */
+    dishNotes?:
+      { dishId: number; intro: string | null; reason: string | null }[] | null;
+    daySummaries?: { dayNumber: number; summary: string }[] | null;
   };
   validation: AgentValidation;
   expiresAt: string;
