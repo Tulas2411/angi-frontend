@@ -145,13 +145,13 @@ describe("RM-01 plan form", () => {
     expect(roadmapEndDate("", "3")).toBeNull();
     expect(roadmapEndDate("2026-02-30", "3")).toBeNull();
     expect(addDays("2028-02-28", 1)).toBe("2028-02-29");
-    expect(suggestRoadmapTitle("Thành phố Hà Nội", "2")).toBe(
-      "2 ngày ăn ngon Hà Nội",
+    expect(suggestRoadmapTitle("Thành phố Hà Nội")).toBe(
+      "Khám phá ẩm thực Hà Nội",
     );
-    expect(suggestRoadmapTitle("Tỉnh Quảng Ninh", "")).toBe(
-      "Ăn ngon Quảng Ninh",
+    expect(suggestRoadmapTitle("Tỉnh Quảng Ninh")).toBe(
+      "Khám phá ẩm thực Quảng Ninh",
     );
-    expect(suggestRoadmapTitle("", "3")).toBe("");
+    expect(suggestRoadmapTitle("")).toBe("");
   });
 });
 

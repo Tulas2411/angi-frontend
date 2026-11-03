@@ -204,14 +204,14 @@ test("RM-01 without a location sends the documented body and shows the created r
   await page.getByLabel(/^Số ngày/).fill("2");
   // The title follows the destination and the number of days until it is edited.
   await expect(page.getByLabel(/^Tên lộ trình/)).toHaveValue(
-    "2 ngày ăn ngon Hà Nội",
+    "Khám phá ẩm thực Hà Nội",
   );
   await submit(page).click();
   await expect(
-    page.getByRole("heading", { name: "2 ngày ăn ngon Hà Nội" }),
+    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
   ).toBeFocused();
   expect(creates).toEqual([
-    { title: "2 ngày ăn ngon Hà Nội", numDays: 2, originMode: "none" },
+    { title: "Khám phá ẩm thực Hà Nội", numDays: 2, originMode: "none" },
   ]);
   await expect(
     page.getByText("Đã tạo lộ trình với 2 ngày trống."),
@@ -288,11 +288,11 @@ test("the budget is shown as Vietnamese currency while typing and sends plain di
   await chooseProvince(page, "Thành phố Hà Nội");
   await submit(page).click();
   await expect(
-    page.getByRole("heading", { name: "3 ngày ăn ngon Hà Nội" }),
+    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
   ).toBeVisible();
   expect(creates).toEqual([
     {
-      title: "3 ngày ăn ngon Hà Nội",
+      title: "Khám phá ẩm thực Hà Nội",
       numDays: 3,
       budgetAmount: 2000000,
       originMode: "none",
@@ -314,10 +314,10 @@ test("a denied location permission keeps the origin unset and explains how to co
   await expect(choice(page, "gps")).toHaveAttribute("aria-pressed", "false");
   await submit(page).click();
   await expect(
-    page.getByRole("heading", { name: "3 ngày ăn ngon Hà Nội" }),
+    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
   ).toBeVisible();
   expect(creates).toEqual([
-    { title: "3 ngày ăn ngon Hà Nội", numDays: 3, originMode: "none" },
+    { title: "Khám phá ẩm thực Hà Nội", numDays: 3, originMode: "none" },
   ]);
 });
 
@@ -344,7 +344,7 @@ test("a VALIDATION_FAILED response keeps the edits and shows the field error", a
   failure = null;
   await submit(page).click();
   await expect(
-    page.getByRole("heading", { name: "3 ngày ăn ngon Hà Nội" }),
+    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
   ).toBeVisible();
   expect(creates).toHaveLength(2);
 });
@@ -385,7 +385,7 @@ test("RM-04 sends only the changed fields, reports DAY_NOT_EMPTY and asks before
   const dialog = page.getByRole("dialog", { name: "Bỏ thay đổi chưa lưu?" });
   await dialog.getByRole("button", { name: "Bỏ thay đổi" }).click();
   await expect(
-    page.getByRole("heading", { name: "3 ngày ăn ngon Hà Nội" }),
+    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
   ).toBeVisible();
   expect(patches).toHaveLength(2);
 });

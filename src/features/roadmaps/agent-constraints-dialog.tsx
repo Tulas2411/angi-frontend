@@ -100,7 +100,7 @@ export function AgentConstraintsDialog({
         </p>
         {error && <Alert>{error}</Alert>}
         <Field
-          placeholder="Ví dụ: 3 ngày ăn ngon Hà Nội"
+          placeholder="Ví dụ: Khám phá ẩm thực Hà Nội"
           label="Tên lộ trình"
           value={title}
           onChange={(e) => setTitle(e.target.value)}

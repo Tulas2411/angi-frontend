@@ -4,7 +4,7 @@ Màn `/roadmaps/new` (chỉ `TRAVELER`) gọi thật RM-01 `POST /api/v1/roadmap
 
 ## Hành vi
 
-- **Điểm đến** (tỉnh / thành, bắt buộc trên form): RM-01 không lưu điểm đến, nên tỉnh chỉ dùng để gợi ý tên lộ trình (`3 ngày ăn ngon Đà Nẵng`) cho tới khi người dùng tự sửa tên. Khi sinh món (RM-10) hoặc gợi ý món (RM-06), app phải gửi lại tỉnh.
+- **Điểm đến** (tỉnh / thành, bắt buộc trên form): RM-01 không lưu điểm đến, nên tỉnh chỉ dùng để gợi ý tên lộ trình (`Khám phá ẩm thực Đà Nẵng`) cho tới khi người dùng tự sửa tên. Khi sinh món (RM-10) hoặc gợi ý món (RM-06), app phải gửi lại tỉnh.
 - **Điểm xuất phát**: hai nút, mỗi nút tương ứng một `originMode` của API Design:
   - **Chấm trên bản đồ** (`pinned`): bấm là mở ngay hộp chọn vị trí dùng chung với F-43. Gửi `originLatitude` / `originLongitude` (làm tròn 6 chữ số) và `originLabel` (không bắt buộc, tối đa 200 ký tự). Khi bấm lưu điểm, form tra địa chỉ của điểm đó (đúng một lần tra ngược, như form đăng ký nhà hàng F-43) và tự điền ô **tỉnh / thành phố** theo danh mục tỉnh; giá trị đã nhập trước đó bị thay và gợi ý tên lộ trình được cập nhật. Không tra được hoặc không khớp danh mục thì giữ nguyên ô tỉnh và báo người dùng tự chọn. Tọa độ gửi lên vẫn là điểm người dùng chấm, không đổi theo địa chỉ. Đóng hộp mà chưa chọn điểm thì lựa chọn được bỏ.
   - **Vị trí hiện tại** (`gps`): bấm là trình duyệt hỏi người dùng có cho ANGI dùng vị trí không. Chỉ khi được phép thì lựa chọn mới giữ lại; bị từ chối hoặc lỗi thì trả về chưa chọn và hiện hướng dẫn. Tọa độ không được gửi và không được lưu; RM-10 / RM-14 sau này sẽ hỏi lại vị trí mỗi lần dùng.
