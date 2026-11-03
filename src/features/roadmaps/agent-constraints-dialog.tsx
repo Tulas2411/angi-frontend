@@ -79,7 +79,7 @@ export function AgentConstraintsDialog({
   return (
     <Dialog
       open
-      title="Xác nhận ràng buộc với trợ lý"
+      title="Xác nhận điều kiện chuyến đi"
       onClose={onClose}
       focusField
       footer={
@@ -100,7 +100,7 @@ export function AgentConstraintsDialog({
         </p>
         {error && <Alert>{error}</Alert>}
         <Field
-          placeholder="Ví dụ: 3 ngày ăn ngon Hà Nội"
+          placeholder="Ví dụ: Khám phá ẩm thực Hà Nội"
           label="Tên lộ trình"
           value={title}
           onChange={(e) => setTitle(e.target.value)}

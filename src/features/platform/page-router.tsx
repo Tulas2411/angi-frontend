@@ -38,14 +38,30 @@ import { RestaurantOperatingStatusPage } from "@/features/owner/restaurant-opera
 import { RestaurantReviewsPage } from "@/features/owner/restaurant-reviews-page";
 import { RestaurantReviewsLivePage } from "@/features/owner/restaurant-reviews-live-page";
 import {
-  ModerationReportsPage,
-  ModerationReportDetailPage,
-} from "@/features/moderation/moderation-reports-page";
+  ReportHandlingPage,
+  ReportQueuePage,
+} from "@/features/moderation/report-handling-page";
 import {
   ModerationUserDetailPage,
   ModerationUsersLivePage,
 } from "@/features/moderation/moderation-users-live-page";
 import { ModerationCommunityLivePage } from "@/features/moderation/moderation-community-live-page";
+import { PermissionsPage } from "@/features/admin/permissions-page";
+import { ModDetailPage, ModsPage } from "@/features/admin/mods-page";
+import { AdminDashboardPage } from "@/features/admin/dashboard-page";
+import { OutboxPage } from "@/features/admin/outbox-page";
+import {
+  VerificationQueuePage,
+  VerificationReviewPage,
+} from "@/features/moderation/verification-review-page";
+import {
+  MenuQueuePage,
+  MenuReviewPage,
+} from "@/features/moderation/menu-review-page";
+import {
+  RestaurantModerationDetailPage,
+  RestaurantModerationListPage,
+} from "@/features/moderation/restaurant-moderation-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -90,15 +106,18 @@ export function UnavailablePage() {
   );
 }
 /**
- * Báo cáo vi phạm trong live mode: danh sách (MOD-RP1) hoặc chi tiết (MOD-RP2).
- * Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
+ * F-59 báo cáo vi phạm trong live mode: hàng đợi (MOD-RP1, MOD-RP3) hoặc xử lý một báo cáo
+ * (MOD-RP2..MOD-RP4). Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
  */
 function ModReportsBase({ base, id }: { base: string; id?: string }) {
-  const reportId = Number(id);
-  return Number.isInteger(reportId) && reportId > 0 ? (
-    <ModerationReportDetailPage base={base} reportId={reportId} />
-  ) : (
-    <ModerationReportsPage base={base} />
+  return (
+    <WorkspaceScope base={base}>
+      {/^[1-9]\d{0,17}$/.test(id ?? "") ? (
+        <ReportHandlingPage key={id} reportId={Number(id)} />
+      ) : (
+        <ReportQueuePage />
+      )}
+    </WorkspaceScope>
   );
 }
 
@@ -202,14 +221,44 @@ export function PageRouter({
   if (role === "RESTAURANT_OWNER" && mode === "live" && area === "reviews")
     return <RestaurantReviewsLivePage />;
 
-  // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
-  if (mode === "live" && (role === "MOD" || role === "ADMIN") && area === "reports")
-    return (
-      <ModReportsBase base={base} id={id} />
+  // F-58 MOD-M1..MOD-M4 đã nối API: hàng đợi và duyệt bản thực đơn đọc ghi thật (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "menus")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <MenuReviewPage key={id} submissionId={Number(id)} />
+    ) : (
+      <MenuQueuePage />
     );
 
+  // F-56 MOD-R1..MOD-R4 đã nối API: danh sách và chi tiết kiểm duyệt nhà hàng đọc ghi thật (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "restaurants")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <RestaurantModerationDetailPage key={id} restaurantId={Number(id)} />
+    ) : (
+      <RestaurantModerationListPage />
+    );
+
+  // F-57 MOD-V1..MOD-V3 đã nối API: hàng đợi và duyệt hồ sơ xác minh đọc ghi thật.
+  if (mode === "live" && role === "MOD" && area === "verification")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <VerificationReviewPage key={id} verificationId={Number(id)} />
+    ) : (
+      <VerificationQueuePage />
+    );
+
+  // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "reports"
+  )
+    return <ModReportsBase base={base} id={id} />;
+
   // MOD-U1..MOD-U4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
-  if (mode === "live" && (role === "MOD" || role === "ADMIN") && area === "users")
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "users"
+  )
     return <ModUsersBase base={base} id={id} />;
 
   // MOD-B1..MOD-B3 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
@@ -219,6 +268,36 @@ export function PageRouter({
     area === "community"
   )
     return <ModerationCommunityLivePage />;
+
+  // F-66 ADM-P1..ADM-P4 đã nối API: phân quyền đọc và ghi thật, không phụ thuộc AppData.
+  if (mode === "live" && role === "ADMIN" && area === "permissions")
+    return <PermissionsPage />;
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderators" &&
+    operation === "permissions" &&
+    /^[1-9]\d{0,9}$/.test(id ?? "")
+  )
+    return <PermissionsPage initialModId={Number(id)} />;
+
+  // F-63 ADM-D1..ADM-D3 và OPS-01 đã nối API: tổng quan và đồng bộ gợi ý đọc số liệu thật.
+  if (mode === "live" && role === "ADMIN" && !area)
+    return <AdminDashboardPage />;
+  if (mode === "live" && role === "ADMIN" && area === "sync")
+    return <OutboxPage />;
+
+  // F-65 ADM-M1..ADM-M4 đã nối API: danh sách, tạo, chi tiết và cập nhật Mod đọc ghi thật.
+  if (mode === "live" && role === "ADMIN" && area === "moderators" && !id)
+    return <ModsPage />;
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderators" &&
+    !operation &&
+    /^[1-9]\d{0,9}$/.test(id ?? "")
+  )
+    return <ModDetailPage key={id} userId={Number(id)} />;
 
   // ADMIN gặp kiểm duyệt ở /administration/moderation/... — cùng bộ màn hình.
   if (

@@ -15,6 +15,7 @@ import {
 import { HeartIcon } from "@heroicons/react/24/solid";
 import { Button } from "@/shared/ui";
 import { Avatar, Icon, Media, Tabs } from "@/components/ui/primitives";
+import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { getErrorMessage } from "@/shared/api/error";
 import {
   businessHoursByDay,
@@ -574,7 +575,7 @@ function ReviewsPanel({
 
 /**
  * "Ảnh": every photo of the dish (DISH-02) and of its restaurant (REST-02) in two columns, like
- * Wanderlog. A photo opens full size in a new tab.
+ * Wanderlog. A photo opens full size over the page (X or Escape closes it).
  */
 function PhotosPanel({
   dishName,
@@ -608,6 +609,7 @@ function PhotosPanel({
       all.findIndex((other) => other.url === photo.url) === index,
   );
   const loading = dish.status === "loading" || restaurant.status === "loading";
+  const [viewing, setViewing] = useState<number | null>(null);
   return (
     <div className="roadmap-place-panel">
       {dish.status === "error" && (
@@ -628,18 +630,23 @@ function PhotosPanel({
         <ul className="roadmap-place-photos" aria-label="Ảnh món và ảnh quán">
           {photos.map((photo, index) => (
             <li key={photo.url}>
-              <a
-                href={photo.url}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={`${photo.alt} ${index + 1}, mở ảnh lớn ở tab mới`}
+              <button
+                type="button"
+                aria-label={`Xem lớn ${photo.alt.toLowerCase()} (${index + 1}/${photos.length})`}
+                onClick={() => setViewing(index)}
               >
                 <Media src={photo.url} alt={photo.alt} />
-              </a>
+              </button>
             </li>
           ))}
         </ul>
       )}
+      <PhotoLightbox
+        photos={photos}
+        index={viewing}
+        onIndexChange={setViewing}
+        onClose={() => setViewing(null)}
+      />
       {loading && <Loading />}
       {!loading && photos.length === 0 && (
         <p className="helper">Món và quán này chưa có ảnh nào.</p>

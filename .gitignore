@@ -39,6 +39,9 @@ yarn-error.log*
 /.cache/
 /artifacts/
 
+# private design notes, never pushed
+/.claude/ai-agent-chat-ui-spec.md
+
 # vercel
 .vercel
 

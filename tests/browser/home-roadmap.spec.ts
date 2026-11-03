@@ -174,7 +174,7 @@ test("a guest draft survives login and creates only after explicit submission as
   await expect(page).toHaveURL(/\/roadmaps\/88$/);
   expect(creates).toEqual([
     {
-      title: "3 ngày ăn ngon Đà Nẵng",
+      title: "Khám phá ẩm thực Đà Nẵng",
       startDate: "2026-11-06",
       numDays: 3,
       originMode: "none",

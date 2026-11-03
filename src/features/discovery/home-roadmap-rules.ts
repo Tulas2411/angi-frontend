@@ -21,7 +21,7 @@ function roadmapValues(values: HomeRoadmapValues) {
   return {
     ...emptyRoadmapForm,
     ...values,
-    title: suggestRoadmapTitle(values.province, values.numDays),
+    title: suggestRoadmapTitle(values.province),
     originMode: "none" as const,
   };
 }

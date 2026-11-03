@@ -7,6 +7,7 @@ import {
   agentPollLimitMs,
   agentPollMs,
   agentStorageKey,
+  agentTurnSettled,
   newAgentMessageId,
   rememberConversation,
   storedConversation,
@@ -21,6 +22,9 @@ import type {
   AgentState,
   AgentValidation,
 } from "./agent-types";
+
+/** "failed" means the text can be sent again as a new message; "unknown" keeps it for a replay of the same message. */
+export type AgentSendResult = "sent" | "failed" | "unknown";
 
 /** Keeps the conversation alive when the sheet closes. Only its opaque ID is stored per user/roadmap. */
 export function useAgentConversation({
@@ -43,6 +47,7 @@ export function useAgentConversation({
   const current = useRef<AgentConversation | null>(null);
   const mounted = useRef(false);
   const lock = useRef(false);
+  const running = useRef<AbortController | null>(null);
   const initialRequest = useRef<Promise<AgentConversation> | null>(null);
   const [attempt, setAttempt] = useState(0);
   const [work, setWork] = useState<"" | "opening" | "sending" | "confirming">(
@@ -52,6 +57,8 @@ export function useAgentConversation({
   const [validation, setValidation] = useState<AgentValidation | null>(null);
   const [stale, setStale] = useState(false);
   const [pending, setPending] = useState<AgentMessageRequest | null>(null);
+  // Shown in the transcript from the moment of sending; the backend history only holds completed turns.
+  const [outgoing, setOutgoing] = useState<string | null>(null);
   const [pendingConfirm, setPendingConfirm] =
     useState<AgentConfirmRequest | null>(null);
   const [saved, setSaved] = useState<AgentCommit | null>(null);
@@ -166,7 +173,7 @@ export function useAgentConversation({
       if (ignore) return;
       if (Date.now() - started > agentPollLimitMs) {
         setError(
-          "Trợ lý vẫn đang xử lý. Bấm Kiểm tra hội thoại để xem kết quả; không cần gửi lại tin nhắn.",
+          "Mình vẫn đang xử lý yêu cầu của bạn. Bạn đợi thêm một chút rồi bấm Thử lại nhé.",
         );
         return;
       }
@@ -180,6 +187,7 @@ export function useAgentConversation({
           if (!value.processing) {
             setError(null);
             setPending(null);
+            setOutgoing(null);
             return;
           }
         } catch (caught) {
@@ -204,18 +212,25 @@ export function useAgentConversation({
     };
   }, [open, processingId, work, publish, report, service]);
 
-  async function execute(body: AgentMessageRequest) {
+  async function execute(body: AgentMessageRequest): Promise<AgentSendResult> {
     const value = current.current;
-    if (!value || lock.current) return false;
+    if (!value || lock.current) return "failed";
     lock.current = true;
     setWork("sending");
     setError(null);
     setValidation(null);
     setPending(body);
+    setOutgoing(body.content);
     setSaved(null);
+    const abort = new AbortController();
+    running.current = abort;
     try {
-      const turn = await service.message(value.conversationId, body);
-      if (!mounted.current) return false;
+      const turn = await service.message(
+        value.conversationId,
+        body,
+        abort.signal,
+      );
+      if (!mounted.current) return "failed";
       if (turn.status === "processing") {
         // The POST is acknowledged. From here only GET polls; reopening must not require a retry POST.
         setPending(null);
@@ -227,7 +242,8 @@ export function useAgentConversation({
       } else {
         setPending(null);
         // A replay may refer to an old proposal. Only GET may replace the current preview then.
-        if (!turn.replayed)
+        if (!turn.replayed) {
+          setOutgoing(null);
           publish({
             ...value,
             version: turn.conversationVersion,
@@ -239,36 +255,59 @@ export function useAgentConversation({
               { role: "assistant", content: turn.reply },
             ],
           });
+        }
         setValidation(turn.validation);
         setStale(true);
         publish(await service.get(value.conversationId));
+        setOutgoing(null);
         setStale(false);
         setValidation(null);
-      }
-      return true;
-    } catch (caught) {
-      if (!mounted.current) return false;
-      report(caught);
-      if (
-        caught instanceof ApiError &&
-        (caught.status === 400 ||
-          caught.status === 404 ||
-          caught.status === 409 ||
-          caught.status === 410)
-      ) {
-        setPending(null);
-        setStale(true);
-        if (caught.status === 409) {
-          try {
-            publish(await service.get(value.conversationId));
-            setStale(false);
-          } catch (reloadError) {
-            report(reloadError);
-          }
+        // A save said in chat changes the roadmap just like the save button.
+        if (turn.commit) {
+          setSaved(turn.commit);
+          await reloadRoadmap(turn.commit);
         }
       }
-      return false;
+      return "sent";
+    } catch (caught) {
+      if (!mounted.current) return "failed";
+      if (abort.signal.aborted) {
+        setPending(null);
+        setOutgoing(null);
+        // The backend decides what happened: a turn that finished just before the stop stays, and its text is not put back.
+        try {
+          const fresh = await service.get(value.conversationId);
+          publish(fresh);
+          setStale(false);
+          return fresh.messages.length > value.messages.length
+            ? "sent"
+            : "failed";
+        } catch {
+          setStale(true);
+          return "failed";
+        }
+      }
+      report(caught);
+      // Unknown outcome: keep the exact payload so "Thử lại" replays it instead of processing it twice.
+      if (!agentTurnSettled(caught)) return "unknown";
+      setPending(null);
+      setOutgoing(null);
+      // The failed attempt moved the version on. Reload quietly so the next message needs no extra step from the user.
+      if (
+        caught instanceof ApiError &&
+        caught.status !== 404 &&
+        caught.status !== 410
+      ) {
+        try {
+          publish(await service.get(value.conversationId));
+          setStale(false);
+        } catch {
+          setStale(true);
+        }
+      } else setStale(true);
+      return "failed";
     } finally {
+      running.current = null;
       lock.current = false;
       if (mounted.current) setWork("");
     }
@@ -288,7 +327,7 @@ export function useAgentConversation({
       value.processing ||
       value.status !== "active"
     )
-      return Promise.resolve(false);
+      return Promise.resolve<AgentSendResult>("failed");
     return execute({
       clientMessageId: newAgentMessageId(),
       expectedConversationVersion: value.version,
@@ -297,6 +336,21 @@ export function useAgentConversation({
       ...(selectedItemKey ? { selectedItemKey } : {}),
       ...(confirmedState ? { confirmedState } : {}),
     });
+  }
+  /** Replays the same message ID after an unknown outcome, under the conversation's current version. */
+  async function retry() {
+    const value = current.current;
+    if (!pending || !value) return refresh();
+    if (lock.current) return;
+    setError(null);
+    try {
+      const fresh = await service.get(value.conversationId);
+      publish(fresh);
+      if (fresh.processing) return;
+      await execute({ ...pending, expectedConversationVersion: fresh.version });
+    } catch (caught) {
+      report(caught);
+    }
   }
   async function reloadRoadmap(commit: AgentCommit) {
     try {
@@ -350,6 +404,7 @@ export function useAgentConversation({
     current.current = null;
     setConversation(null);
     setPending(null);
+    setOutgoing(null);
     setSaved(null);
     setStale(false);
     setError(null);
@@ -363,12 +418,15 @@ export function useAgentConversation({
     validation,
     stale,
     pending,
+    outgoing,
     pendingConfirm,
     saved,
     reloadFailed,
     send,
+    /** Cancels the message being sent; the backend gives up the turn and saves nothing from it. */
+    stop: () => running.current?.abort(),
     refresh,
-    retry: () => (pending ? execute(pending) : refresh()),
+    retry,
     confirm,
     newConversation,
     retryRoadmap: () => (saved ? reloadRoadmap(saved) : Promise.resolve()),

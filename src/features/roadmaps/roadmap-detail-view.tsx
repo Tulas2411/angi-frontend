@@ -1,9 +1,15 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import { Badge } from "@/shared/ui";
 import { Button } from "@/shared/ui";
 import { RoadmapAgentPanel } from "./roadmap-agent-panel";
+import {
+  agentDefaultDay,
+  agentMapDays,
+  agentMapStops,
+} from "./agent-map-rules";
+import { useAgentConversation } from "./use-agent-conversation";
 import { Icon, Media, Tabs } from "@/components/ui/primitives";
 import { dateLabel } from "@/shared/format";
 import { RoadmapBudget } from "./roadmap-budget";
@@ -27,6 +33,13 @@ import type { RoadmapScreenService } from "./roadmap-service";
 import { roadmapDetailHref, roadmapRoutes } from "./routes";
 import type { RoadmapDetailDto, RoadmapRouteDto } from "./roadmap-types";
 
+const compactViewport = "(max-width: 900px)";
+function subscribeCompactViewport(listener: () => void) {
+  const query = window.matchMedia(compactViewport);
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+
 /**
  * Loaded roadmap: hero card, the three RoadmapDetail tabs and the day list of the sidebar
  * (Figma "ANGI / Roadmap"). The tab and the last opened day live in the URL.
@@ -42,6 +55,8 @@ export function RoadmapDetailView({
   onItemsMoved,
   onItemRated,
   userId,
+  userName,
+  userAvatar,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
@@ -58,14 +73,29 @@ export function RoadmapDetailView({
   /** Reloads the roadmap after a dish was rated; rejects when the reload fails. */
   onItemRated: () => Promise<void>;
   userId: number;
+  userName: string;
+  userAvatar: string | null;
 }) {
   const { overview, itinerary, budget } = detail;
   const [agentOpen, setAgentOpen] = useState(false);
+  const [agentMapView, setAgentMapView] = useState(false);
+  // The sidebar button opens the full panel and the map's bubble opens the popup.
+  const [agentPopup, setAgentPopup] = useState(false);
+  // Matches the 900px layout switch in roadmap-agent.css, where the map stacks and the panel fills the screen.
+  const agentCompact = useSyncExternalStore(
+    subscribeCompactViewport,
+    () => window.matchMedia(compactViewport).matches,
+    () => false,
+  );
+  const agentMode = agentPopup && !agentCompact ? "popup" : "expanded";
   function closeAgent() {
     setAgentOpen(false);
+    setAgentMapView(false);
+    const opener =
+      agentMode === "popup" ? ".roadmap-map-fab" : ".roadmap-agent-trigger";
     requestAnimationFrame(() =>
       document
-        .querySelector<HTMLButtonElement>(".roadmap-agent-trigger")
+        .querySelector<HTMLButtonElement>(opener)
         ?.focus({ preventScroll: true }),
     );
   }
@@ -97,6 +127,53 @@ export function RoadmapDetailView({
       setAgentRevision((value) => value + 1);
     },
     [detail.overview.id, onItemsGenerated],
+  );
+  const agent = useAgentConversation({
+    open: agentOpen,
+    roadmapId: detail.overview.id,
+    userId,
+    onCommitted: agentCommitted,
+  });
+  const agentProposal = agent.conversation?.currentProposal ?? null;
+  const [previewPick, setPreviewPick] = useState<{
+    proposalId: number;
+    day: number;
+  } | null>(null);
+  const [previewKey, setPreviewKey] = useState("");
+  const previewDay = !agentProposal
+    ? 1
+    : previewPick?.proposalId === agentProposal.proposalId
+      ? previewPick.day
+      : agentDefaultDay(agentProposal);
+  const previewSelected = agentProposal?.snapshot.items.some(
+    (item) => item.itemKey === previewKey,
+  )
+    ? previewKey
+    : "";
+  function pickPreviewDay(day: number) {
+    if (agentProposal)
+      setPreviewPick({ proposalId: agentProposal.proposalId, day });
+    setPreviewKey("");
+  }
+  function selectPreviewItem(itemKey: string) {
+    setPreviewKey(itemKey);
+    const item = agentProposal?.snapshot.items.find(
+      (entry) => entry.itemKey === itemKey,
+    );
+    if (agentProposal && item)
+      setPreviewPick({
+        proposalId: agentProposal.proposalId,
+        day: item.dayNumber,
+      });
+  }
+  // A saved, expired or replaced preview leaves the map to the saved roadmap.
+  const previewOnMap =
+    agentOpen && agentProposal?.status === "ready" && !agent.saved
+      ? agentProposal
+      : null;
+  const previewStops = useMemo(
+    () => (previewOnMap ? agentMapStops(previewOnMap) : null),
+    [previewOnMap],
   );
   const receiveMapRoute = useCallback((route: RoadmapRouteDto | null) => {
     setMapRoute(route);
@@ -181,13 +258,18 @@ export function RoadmapDetailView({
   );
   return (
     <div className="roadmap-detail">
-      <aside className="roadmap-detail-nav" inert={agentOpen}>
+      <aside
+        className="roadmap-detail-nav"
+        inert={agentOpen && agentMode === "expanded"}
+      >
         <Button
-          variant="secondary"
           className="roadmap-agent-trigger"
           aria-expanded={agentOpen}
           aria-controls="roadmap-agent-panel"
-          onClick={() => setAgentOpen(true)}
+          onClick={() => {
+            setAgentPopup(false);
+            setAgentOpen(true);
+          }}
         >
           ✦ Trợ lý món ăn
         </Button>
@@ -237,7 +319,10 @@ export function RoadmapDetailView({
         </nav>
       </aside>
 
-      <div className="roadmap-detail-main stack" inert={agentOpen}>
+      <div
+        className="roadmap-detail-main stack"
+        inert={agentOpen && agentMode === "expanded"}
+      >
         <div className="roadmap-back-mobile">{back}</div>
         <section className="roadmap-hero" aria-labelledby="roadmap-title">
           <div className="roadmap-hero-text stack-sm">
@@ -361,14 +446,65 @@ export function RoadmapDetailView({
         onSelectItem={selectItem}
         origin={effectiveRoute?.origin ?? null}
         originSkipped={effectiveRoute?.originSkipped ?? false}
+        preview={
+          previewOnMap && previewStops
+            ? {
+                stops: previewStops,
+                days: agentMapDays(previewOnMap),
+                activeDay: previewDay,
+                selectedKey: previewSelected,
+                onSelect: selectPreviewItem,
+              }
+            : null
+        }
+        agentPopupOpen={agentOpen && agentMode === "popup"}
+        onOpenAgent={
+          agentOpen
+            ? undefined
+            : () => {
+                setAgentPopup(true);
+                setAgentOpen(true);
+              }
+        }
       />
       <RoadmapAgentPanel
         open={agentOpen}
+        mode={agentMode}
+        compact={agentCompact}
+        onToggleMode={() => setAgentPopup((value) => !value)}
+        roadmapTitle={overview.title}
+        userName={userName}
+        userAvatar={userAvatar}
         onClose={closeAgent}
-        roadmapId={overview.id}
-        userId={userId}
-        onCommitted={agentCommitted}
+        agent={agent}
+        selected={previewSelected}
+        onSelect={selectPreviewItem}
+        previewDay={previewDay}
+        onPreviewDay={pickPreviewDay}
+        mapView={agentMapView}
+        onShowMap={() => {
+          setAgentMapView(true);
+          requestAnimationFrame(() => {
+            document
+              .querySelector(".roadmap-map-panel")
+              ?.scrollIntoView({ block: "start" });
+            document.querySelector<HTMLElement>(".agent-map-back")?.focus();
+          });
+        }}
       />
+      {agentOpen && agentMapView && (
+        <Button
+          className="agent-map-back"
+          onClick={() => {
+            setAgentMapView(false);
+            requestAnimationFrame(() =>
+              document.querySelector<HTMLElement>(".agent-map-toggle")?.focus(),
+            );
+          }}
+        >
+          Quay lại trợ lý
+        </Button>
+      )}
     </div>
   );
 }

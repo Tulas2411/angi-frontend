@@ -20,6 +20,34 @@ import Brand from "@/components/brand";
 import { ProvinceField } from "@/components/domain/province-field";
 import { useProfile } from "@/api/services/profile-service";
 import { notificationService } from "@/api/services/notification-service";
+import { AdminShell } from "./admin-shell";
+
+/**
+ * Unread notifications for the signed-in user (NotificationService: live BE, mock fallback),
+ * refreshed every 60 s so the badge follows even when the page is not reopened.
+ */
+function useUnreadCount(user: AuthUserDto | null) {
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const refresh = () => {
+      notificationService
+        .unreadCount()
+        .then((res) => {
+          if (!cancelled) setUnread(res.unreadCount);
+        })
+        .catch(() => undefined);
+    };
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [user]);
+  return unread;
+}
 
 export const navigation: Record<RoleCode, [string, string][]> = {
   TRAVELER: [
@@ -53,7 +81,8 @@ export const navigation: Record<RoleCode, [string, string][]> = {
   ],
   ADMIN: [
     ["", "Tổng quan"],
-    ["moderators", "Mod và phân quyền"],
+    ["moderators", "Quản lý Mod"],
+    ["permissions", "Phân quyền"],
     ["audit", "Nhật ký hệ thống"],
     ["sync", "Đồng bộ dữ liệu"],
   ],
@@ -157,28 +186,7 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
       window.removeEventListener("resize", close);
     };
   }, [user]);
-  // Số thông báo chưa đọc lấy từ NotificationService (BE live → fallback
-  // mock nếu DB/endpoint chưa có). Refresh nhẹ mỗi 60s để badge cập
-  // nhật ngay cả khi user không mở trang.
-  const [unread, setUnread] = useState(0);
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    const refresh = () => {
-      notificationService
-        .unreadCount()
-        .then((res) => {
-          if (!cancelled) setUnread(res.unreadCount);
-        })
-        .catch(() => undefined);
-    };
-    refresh();
-    const timer = setInterval(refresh, 60_000);
-    return () => {
-      cancelled = true;
-      clearInterval(timer);
-    };
-  }, [user]);
+  const unread = useUnreadCount(user);
   return (
     <header className={`container header ${traveler ? "" : "header-staff"}`}>
       <Brand href={base || "/"} />
@@ -235,9 +243,7 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
               href={`${base}/notifications`}
               className={`bell-cta ${path.startsWith(`${base}/notifications`) ? "is-active" : ""}`}
               aria-label={
-                unread > 0
-                  ? `Thông báo, ${unread} chưa đọc`
-                  : "Thông báo"
+                unread > 0 ? `Thông báo, ${unread} chưa đọc` : "Thông báo"
               }
             >
               <span className="bell-cta-icon">
@@ -361,54 +367,96 @@ export function WorkspaceShell({
           <a className="skip-link" href="#main-content">
             Đến nội dung chính
           </a>
-          <Header base={base} demo={demo} />
-          {!isTraveler ? (
-            <main className="container workspace" id="main-content">
-              <div className="between workspace-identity">
-                <span className="eyebrow">{label}</span>
-                {mode === "demo" && (
-                  <span className="helper">Dữ liệu minh họa</span>
-                )}
-              </div>
-              {user?.role === "ADMIN" ? (
-                <div className="grouped-navigation">
-                  <div className="nav-group">
-                    <span>Quản trị</span>
-                    <Nav items={navigation.ADMIN} base={base} />
-                  </div>
-                  <div className="nav-group">
-                    <span>Kiểm duyệt</span>
-                    <Nav
-                      items={navigation.MOD.slice(1, 8)}
-                      base={demo ? base + "/moderation" : "/moderation"}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Nav items={navigation[user!.role]} base={base} />
-              )}
-              <div>{children}</div>
-            </main>
-          ) : (
-            <main
-              id="main-content"
-              className={isRoadmap ? "" : "traveler-content"}
-            >
+          {user?.role === "ADMIN" || user?.role === "MOD" ? (
+            <AdminWorkspace base={base} demo={demo}>
               {children}
-            </main>
+            </AdminWorkspace>
+          ) : (
+            <>
+              <Header base={base} demo={demo} />
+              {!isTraveler ? (
+                <main className="container workspace" id="main-content">
+                  <div className="between workspace-identity">
+                    <span className="eyebrow">{label}</span>
+                    {mode === "demo" && (
+                      <span className="helper">Dữ liệu minh họa</span>
+                    )}
+                  </div>
+                  <Nav items={navigation[user!.role]} base={base} />
+                  <div>{children}</div>
+                </main>
+              ) : (
+                <main
+                  id="main-content"
+                  className={isRoadmap ? "" : "traveler-content"}
+                >
+                  {children}
+                </main>
+              )}
+              {!isRoadmap &&
+                (isTraveler ? (
+                  <PublicFooter base={base} />
+                ) : (
+                  <footer className="container footer">
+                    <span>ANGI · {label.toLocaleLowerCase("vi")} · © 2026</span>
+                    <span>Tiếng Việt</span>
+                  </footer>
+                ))}
+            </>
           )}
-          {!isRoadmap &&
-            (isTraveler ? (
-              <PublicFooter base={base} />
-            ) : (
-              <footer className="container footer">
-                <span>ANGI · {label.toLocaleLowerCase("vi")} · © 2026</span>
-                <span>Tiếng Việt</span>
-              </footer>
-            ))}
         </ProfileIdentity>
       </PlatformProvider>
     </WorkspaceContext.Provider>
+  );
+}
+/**
+ * The staff workspaces in the sidebar shell: the Admin gets the Admin and moderation sections,
+ * a Mod the moderation section (notifications and account sit at the sidebar's foot).
+ */
+function AdminWorkspace({
+  base,
+  demo,
+  children,
+}: {
+  base: string;
+  demo: boolean;
+  children: ReactNode;
+}) {
+  // ProfileIdentity has resolved the user (demo name and avatar included).
+  const { user } = useWorkspace();
+  const unread = useUnreadCount(user);
+  if (!user) return null;
+  const mod = user.role === "MOD";
+  return (
+    <AdminShell
+      user={user}
+      base={base}
+      demo={demo}
+      unread={unread}
+      label={mod ? "kiểm duyệt" : "quản trị"}
+      groups={
+        mod
+          ? [
+              {
+                title: "Kiểm duyệt",
+                base,
+                items: navigation.MOD.filter(
+                  ([slug]) => slug !== "notifications" && slug !== "account",
+                ),
+              },
+            ]
+          : [
+              { title: "Quản trị", base, items: navigation.ADMIN },
+              {
+                title: "Kiểm duyệt",
+                base: demo ? base + "/moderation" : "/moderation",
+                items: navigation.MOD.slice(1, 8),
+              },
+            ]
+      }
+    >
+      {children}
+    </AdminShell>
   );
 }
 function ProfileIdentity({ children }: { children: ReactNode }) {

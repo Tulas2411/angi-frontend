@@ -38,7 +38,7 @@ describe("homepage roadmap creation", () => {
   });
   it("keeps the existing contract: province suggests the title, not an invented wire field", () => {
     expect(homeRoadmapRequest(values)).toEqual({
-      title: "3 ngày ăn ngon Đà Nẵng",
+      title: "Khám phá ẩm thực Đà Nẵng",
       startDate: "2026-11-06",
       numDays: 3,
       originMode: "none",

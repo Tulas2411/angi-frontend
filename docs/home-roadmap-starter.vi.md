@@ -20,7 +20,7 @@ Ví dụ body hợp lệ:
 
 ```json
 {
-  "title": "3 ngày ăn ngon Đà Nẵng",
+  "title": "Khám phá ẩm thực Đà Nẵng",
   "startDate": "2026-11-06",
   "numDays": 3,
   "originMode": "none"

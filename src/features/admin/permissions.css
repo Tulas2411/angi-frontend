@@ -1,0 +1,539 @@
+/* F-66 Manage Permission (Admin). Theme tokens only; the save bar slides in with changes. */
+.permission-page {
+  padding-bottom: 96px;
+}
+.permission-panel {
+  display: grid;
+  gap: var(--space-5);
+}
+.permission-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--control);
+  font-size: 14px;
+}
+.permission-summary svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--success-ink);
+}
+.permission-summary p {
+  margin: 0;
+}
+
+/* --------------------------------------------------------- groups */
+.permission-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.permission-detail .permission-groups {
+  grid-template-columns: minmax(0, 1fr);
+}
+.permission-group {
+  /* Rows lay out by the width of their own card, not of the window (the sidebar takes room). */
+  container-type: inline-size;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.permission-group > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-bottom: 1px solid var(--line);
+  background: rgb(34 34 34 / 0.015);
+}
+.permission-group h3 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+}
+.permission-group > header span {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.permission-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.acl-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  min-height: 72px;
+  padding: var(--space-4) var(--space-6);
+  transition: background var(--duration) ease;
+}
+.acl-row + .acl-row {
+  border-top: 1px solid var(--line);
+}
+.acl-row:hover {
+  background: rgb(34 34 34 / 0.02);
+}
+/* A row changed and not saved yet: a coral bar on its left. */
+.acl-row::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--coral);
+  transform: scaleY(0);
+  transition: transform var(--duration) var(--ease-out);
+}
+.acl-row[data-changed="true"] {
+  background: rgb(255 94 98 / 0.05);
+}
+.acl-row[data-changed="true"]::before {
+  transform: scaleY(1);
+}
+.acl-row[data-locked] {
+  color: var(--muted);
+}
+.permission-text {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.permission-text strong {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.permission-text code {
+  justify-self: start;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: var(--control);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+/* The switch keeps its label for screen readers only; the row text is the visible label. */
+.acl-row .choice {
+  justify-self: end;
+  gap: 0;
+  min-height: 0;
+  font-size: 0;
+}
+.permission-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.permission-lock svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ------------------------------------------------- one Mod's rows */
+/* Default, the three choices and the result: one group, kept together on the right. */
+.acl-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3) var(--space-4);
+}
+.permission-default {
+  min-width: 112px;
+}
+.permission-default {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.permission-default svg {
+  width: 14px;
+  height: 14px;
+}
+.permission-default[data-on="true"] {
+  color: var(--ink);
+}
+.permission-effective {
+  min-width: 76px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease;
+}
+.permission-effective[data-on="true"] {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+
+/* Three choices that read as one control; the moving fill follows the checked one. */
+.permission-segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.permission-segmented label {
+  position: relative;
+  cursor: pointer;
+}
+.permission-segmented input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.permission-segmented span {
+  display: block;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease,
+    box-shadow var(--duration) ease;
+}
+.permission-segmented label:hover span {
+  color: var(--ink);
+}
+.permission-segmented input:checked + span {
+  background: var(--card);
+  box-shadow: 0 1px 4px rgb(34 34 34 / 0.12);
+}
+.permission-segmented [data-choice="allow"] input:checked + span {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.permission-segmented [data-choice="deny"] input:checked + span {
+  background: var(--error-bg);
+  color: var(--error-ink);
+}
+.permission-segmented input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+
+/* --------------------------------------------------- Mod picker */
+.permission-mods {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.permission-picker {
+  position: sticky;
+  top: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.permission-search {
+  position: relative;
+  display: block;
+}
+.permission-search svg {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+/* Room for the magnifier: the older workspace sheet's `.input` padding must not win here. */
+.legacy-ui .permission-search .input,
+.permission-search .input {
+  width: 100%;
+  padding-left: 44px;
+}
+.permission-search svg {
+  z-index: 1;
+}
+.permission-mod-list {
+  display: grid;
+  gap: 4px;
+  max-height: min(60vh, 520px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.permission-mod-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--duration) ease,
+    border-color var(--duration) ease;
+}
+.permission-mod-list button:hover {
+  background: var(--control);
+}
+.permission-mod-list button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--control);
+}
+.permission-mod-list button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.permission-mod-list .avatar {
+  width: 36px;
+  height: 36px;
+}
+.permission-mod-list span {
+  display: grid;
+  min-width: 0;
+}
+.permission-mod-list strong,
+.permission-mod-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.permission-mod-list strong {
+  font-size: 14px;
+}
+.permission-mod-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.permission-detail {
+  min-width: 0;
+  animation: permission-in 260ms var(--ease-out);
+}
+.permission-mod-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.permission-mod-head .avatar {
+  width: 48px;
+  height: 48px;
+}
+.permission-mod-head h3 {
+  margin: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.permission-mod-head .helper {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.permission-mod-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.permission-mod-stats span {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.permission-mod-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------ save bar */
+.permission-savebar {
+  position: fixed;
+  z-index: 30;
+  right: 50%;
+  bottom: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  width: min(720px, calc(100% - 32px));
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  box-shadow: 0 18px 40px rgb(34 34 34 / 0.25);
+  opacity: 0;
+  transform: translate(50%, calc(100% + 32px));
+  transition:
+    transform 320ms var(--ease-out),
+    opacity 200ms ease;
+}
+.permission-savebar[data-open="true"] {
+  opacity: 1;
+  transform: translate(50%, 0);
+}
+.permission-savebar p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.permission-savebar .actions {
+  flex-wrap: nowrap;
+}
+/* On the dark bar the undo button stays light text on a translucent white, never on --control. */
+.legacy-ui .permission-savebar .button.button-tertiary,
+.permission-savebar .button.button-tertiary {
+  color: var(--card);
+  background: transparent;
+}
+.legacy-ui
+  .permission-savebar
+  .button.button-tertiary:is(:hover, :focus-visible),
+.permission-savebar .button.button-tertiary:is(:hover, :focus-visible) {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--card);
+}
+.permission-savebar .button.button-tertiary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.45);
+}
+.permission-savebar .button.button-tertiary:disabled {
+  background: transparent;
+  color: rgb(255 255 255 / 0.5);
+}
+/* The save button stays coral with dark text in every state (the shared hover turns it dark). */
+.legacy-ui .permission-savebar .button.button-primary,
+.permission-savebar .button.button-primary {
+  background: var(--coral);
+  color: var(--ink);
+}
+.legacy-ui
+  .permission-savebar
+  .button.button-primary:is(:hover, :focus-visible, :active),
+.permission-savebar .button.button-primary:is(:hover, :focus-visible, :active) {
+  background: #ff7b7f;
+  color: var(--ink);
+}
+.permission-savebar .button.button-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.45);
+}
+.permission-savebar .button.button-primary:disabled {
+  background: var(--coral);
+  color: var(--ink);
+  opacity: 0.7;
+}
+
+@keyframes permission-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ---------------------------------------------------- responsive */
+/* A narrow card: the controls of a Mod row go under its text, starting on the left. */
+@container (max-width: 720px) {
+  .acl-row.is-mod {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .acl-row.is-mod .acl-controls {
+    justify-content: flex-start;
+  }
+}
+@container (max-width: 340px) {
+  .acl-row {
+    gap: var(--space-2);
+    padding-inline: var(--space-4);
+  }
+}
+@media (max-width: 900px) {
+  .permission-mods {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .permission-picker {
+    position: static;
+  }
+  .permission-mod-list {
+    max-height: 260px;
+  }
+  .permission-mod-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .permission-mod-stats {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 560px) {
+  .acl-row {
+    padding-inline: var(--space-4);
+  }
+  .permission-group > header {
+    padding-inline: var(--space-4);
+  }
+  .permission-savebar {
+    border-radius: var(--radius-lg);
+  }
+  .permission-savebar .actions {
+    width: 100%;
+  }
+  .permission-savebar .actions .button {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .acl-row,
+  .acl-row::before,
+  .permission-segmented span,
+  .permission-savebar,
+  .permission-effective {
+    transition: none;
+  }
+  .permission-detail {
+    animation: none;
+  }
+}

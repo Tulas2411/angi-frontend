@@ -11,10 +11,18 @@ import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
 import {
+  adminDashboardOperation,
+  adminModsOperation,
+  adminPermissionsOperation,
+} from "@/shared/api/admin-proxy";
+import {
   isModeratorRole,
   moderationBlogsOperation,
   moderationReportsOperation,
   moderationUsersOperation,
+  moderationMenusOperation,
+  moderationRestaurantsOperation,
+  moderationVerificationsOperation,
 } from "@/shared/api/moderation-proxy";
 import {
   roadmapOperation,
@@ -56,8 +64,22 @@ async function handle(request: Request, context: Context) {
     const moderation = moderationReportsOperation(request.method, endpoint);
     const moderationUsers = moderationUsersOperation(request.method, endpoint);
     const moderationBlogs = moderationBlogsOperation(request.method, endpoint);
+    const modVerifications = moderationVerificationsOperation(
+      request.method,
+      endpoint,
+    );
+    const modMenus = moderationMenusOperation(request.method, endpoint);
+    const modRestaurants = moderationRestaurantsOperation(
+      request.method,
+      endpoint,
+    );
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
+    // F-63 ADM-D1..ADM-D3 + OPS-01, F-65 ADM-M1..ADM-M4, F-66 ADM-P1..ADM-P4: the Admin operations.
+    const adminPermissions =
+      adminPermissionsOperation(request.method, endpoint) ??
+      adminModsOperation(request.method, endpoint) ??
+      adminDashboardOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
@@ -71,6 +93,10 @@ async function handle(request: Request, context: Context) {
       !moderation &&
       !moderationUsers &&
       !moderationBlogs &&
+      !modVerifications &&
+      !modMenus &&
+      !modRestaurants &&
+      !adminPermissions &&
       !agentOp &&
       !publicOp
     ) {
@@ -89,6 +115,10 @@ async function handle(request: Request, context: Context) {
       moderation?.body !== false &&
       moderationUsers?.body !== false &&
       moderationBlogs?.body !== false &&
+      modVerifications?.body !== false &&
+      modMenus?.body !== false &&
+      modRestaurants?.body !== false &&
+      adminPermissions?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
@@ -119,6 +149,8 @@ async function handle(request: Request, context: Context) {
           body,
           token: auth.accessToken,
           timeoutMs: agentOp.timeoutMs,
+          // Stopping a reply in the browser reaches the backend, which then cancels the turn.
+          signal: request.signal,
           onSuccess: (code) => {
             status = code;
           },
@@ -199,6 +231,63 @@ async function handle(request: Request, context: Context) {
         moderationUsers.status,
       );
     }
+    // F-57 MOD-V1..MOD-V3 — duyệt hồ sơ xác minh nhà hàng (BE chỉ cho role MOD).
+    if (modVerifications) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (auth.user.role !== "MOD")
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ Mod được duyệt hồ sơ xác minh nhà hàng.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modVerifications.status,
+      );
+    }
+    // F-58 MOD-M1..MOD-M4 — duyệt bản thực đơn chờ duyệt (Mod và Admin).
+    if (modMenus) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được duyệt thực đơn.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modMenus.status,
+      );
+    }
+    // F-56 MOD-R1..MOD-R4 — kiểm duyệt nhà hàng và món (Mod và Admin).
+    if (modRestaurants) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được kiểm duyệt nhà hàng.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modRestaurants.status,
+      );
+    }
     // MOD-B1..MOD-B3 — kiểm duyệt bài viết và bình luận (Mod và Admin).
     if (moderationBlogs) {
       return ok(
@@ -216,6 +305,25 @@ async function handle(request: Request, context: Context) {
           });
         }),
         moderationBlogs.status,
+      );
+    }
+    // F-65 ADM-M1..ADM-M4 and F-66 ADM-P1..ADM-P4: only an Admin session gets through.
+    if (adminPermissions) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (auth.user.role !== "ADMIN")
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ quản trị viên được quản lý Mod và phân quyền.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        adminPermissions.status,
       );
     }
     // OWN-19/OWN-20 — chủ nhà hàng đọc và trả lời đánh giá của mình.

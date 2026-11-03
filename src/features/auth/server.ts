@@ -108,6 +108,8 @@ export async function backend<T>(
     token?: string;
     /** Trusted server callers may allow a longer Agent turn and preserve its 200/202 status. */
     timeoutMs?: number;
+    /** Ends the backend call early, such as when the browser cancels the request it is serving. */
+    signal?: AbortSignal;
     onSuccess?: (status: number) => void;
   } = {},
 ): Promise<T> {
@@ -130,7 +132,10 @@ export async function backend<T>(
             ? undefined
             : JSON.stringify(init.body),
       cache: "no-store",
-      signal: AbortSignal.timeout(init.timeoutMs ?? 10_000),
+      signal: AbortSignal.any([
+        AbortSignal.timeout(init.timeoutMs ?? 10_000),
+        ...(init.signal ? [init.signal] : []),
+      ]),
     });
   } catch {
     throw new ApiError(

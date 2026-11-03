@@ -59,6 +59,8 @@ export type StubHandler = (
     body: unknown;
     /** Lower-case request headers, e.g. `authorization` (absent for a guest). */
     headers: Record<string, string | string[] | undefined>;
+    /** Calls back if the caller hangs up before this request was answered. */
+    onAbort: (listener: () => void) => void;
   },
   send: (
     status: number,
@@ -143,6 +145,10 @@ export async function startAccountStub(
           // A multipart upload (MEDIA-01) is not JSON: the handler gets its raw text.
           body: raw ? parseBody(raw) : null,
           headers: request.headers,
+          onAbort: (listener) =>
+            result.once("close", () => {
+              if (!result.writableEnded) listener();
+            }),
         },
         send,
       )

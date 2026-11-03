@@ -13,6 +13,10 @@
   font: inherit;
   cursor: pointer;
 }
+/* The older workspace screens style `.input` as a block, which dropped the chevron under the value. */
+.legacy-ui .ui-select-trigger.input {
+  display: flex;
+}
 .ui-select-trigger > span:first-child {
   min-width: 0;
   overflow: hidden;

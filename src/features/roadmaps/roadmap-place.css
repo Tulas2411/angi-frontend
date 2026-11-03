@@ -693,10 +693,15 @@
   margin-bottom: var(--space-2);
   break-inside: avoid;
 }
-.roadmap-place-photos a {
+.roadmap-place-photos button {
   display: block;
+  width: 100%;
+  padding: 0;
   overflow: hidden;
+  border: 0;
   border-radius: var(--radius-xs);
+  background: none;
+  cursor: zoom-in;
 }
 .roadmap-place-photos .media {
   aspect-ratio: 4 / 5;
@@ -714,10 +719,10 @@
   object-fit: cover;
   transition: transform 400ms var(--ease-out);
 }
-.roadmap-place-photos a:hover img {
+.roadmap-place-photos button:hover img {
   transform: scale(1.04);
 }
-.roadmap-place-photos a:focus-visible {
+.roadmap-place-photos button:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
