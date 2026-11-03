@@ -783,16 +783,22 @@ test.describe("dishes", () => {
       .getByRole("button", { name: "Danh sách" })
       .click();
     await expect(page.locator(".dish-row")).toHaveCount(5);
-    const lines = await dishOf(page, "Bánh mì pate")
+    // In a row the box holds at most three lines (less when the row's fixed height leaves less
+    // room); the rest scrolls and fades.
+    const listBox = await dishOf(page, "Bánh mì pate")
       .locator(".dish-description-wrap")
-      .evaluate(
-        (element) =>
+      .evaluate((element) => ({
+        lines:
           element.clientHeight /
           parseFloat(
             getComputedStyle(element.firstElementChild as Element).lineHeight,
           ),
-      );
-    expect(Math.round(lines)).toBe(3);
+        scrolls: element.scrollHeight > element.clientHeight,
+        faded: element.hasAttribute("data-faded"),
+      }));
+    expect(listBox.lines).toBeGreaterThanOrEqual(1.5);
+    expect(listBox.lines).toBeLessThanOrEqual(3.01);
+    expect(listBox).toMatchObject({ scrolls: true, faded: true });
     // Every row has the same height, whatever the length of its text.
     expect(new Set(await rowHeights(page)).size).toBe(1);
     expect(await squeezedParts(dishOf(page, "Bánh mì pate"))).toEqual([]);
