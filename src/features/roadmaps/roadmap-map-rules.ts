@@ -19,11 +19,14 @@ export interface RoadmapMapStop {
   coordinate: RoadmapMapCoordinate | null;
 }
 
-export interface RoadmapMapGroup {
+export interface RoadmapMapGroup<Stop = RoadmapMapStop> {
   key: string;
   coordinate: RoadmapMapCoordinate;
-  stops: RoadmapMapStop[];
+  stops: Stop[];
 }
+
+/** One color per day (`--map-day-color`); a roadmap has at most 7 days, so no two days share one. */
+export const roadmapDayTone = (dayNumber: number) => (dayNumber - 1) % 7;
 
 export function roadmapMapCoordinate(
   latitude: number | null,
@@ -53,10 +56,10 @@ export function roadmapMapStops(
 }
 
 /** Repeated restaurant coordinates share one marker; coordinates are never offset or rounded. */
-export function groupRoadmapStops(
-  stops: readonly RoadmapMapStop[],
-): RoadmapMapGroup[] {
-  const groups = new Map<string, RoadmapMapGroup>();
+export function groupRoadmapStops<
+  Stop extends { coordinate: RoadmapMapCoordinate | null },
+>(stops: readonly Stop[]): RoadmapMapGroup<Stop>[] {
+  const groups = new Map<string, RoadmapMapGroup<Stop>>();
   for (const stop of stops) {
     if (!stop.coordinate) continue;
     const { latitude, longitude } = stop.coordinate;
@@ -70,12 +73,13 @@ export function groupRoadmapStops(
 
 /** Fit the active day, or the other actual stops when that day has no located item. */
 export function roadmapMapPoints(
-  stops: readonly RoadmapMapStop[],
+  stops: readonly Pick<RoadmapMapStop, "coordinate" | "dayNumber">[],
   activeDay: number,
   origin?: RoadmapRouteDto["origin"],
   originSkipped = false,
 ): [number, number][] {
   const located = stops.filter((stop) => stop.coordinate !== null);
+  // The route origin belongs to the saved roadmap; callers omit it for a preview.
   const active = located.filter((stop) => stop.dayNumber === activeDay);
   const points: [number, number][] = (active.length ? active : located).flatMap(
     (stop) =>

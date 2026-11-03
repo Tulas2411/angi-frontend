@@ -77,13 +77,10 @@ export function shortProvinceName(province: string) {
     .trim();
 }
 
-export function suggestRoadmapTitle(province: string, numDays: string) {
+/** A starting name only: it never mentions the day count, which the traveler can change later, and they may rename it. */
+export function suggestRoadmapTitle(province: string) {
   const place = shortProvinceName(province);
-  if (!place) return "";
-  const days = parseDays(numDays);
-  return days && days >= roadmapLimits.minDays && days <= roadmapLimits.maxDays
-    ? `${days} ngày ăn ngon ${place}`
-    : `Ăn ngon ${place}`;
+  return place ? `Khám phá ẩm thực ${place}` : "";
 }
 
 export function isValidOrigin(origin: RoadmapOrigin | null) {

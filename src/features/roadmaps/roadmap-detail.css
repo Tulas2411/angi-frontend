@@ -980,20 +980,34 @@
   max-height: 44px;
   overflow: auto;
 }
-.roadmap-map-panel [data-tone="0"] {
-  --map-day-color: #279daf;
+/* One color per day (roadmapDayColors), shared by the map and the assistant's draft. Coral stays reserved for new dishes; each color keeps 4.5:1 with white text. */
+.roadmap-map-panel [data-tone="0"],
+.agent-proposal [data-tone="0"] {
+  --map-day-color: #0b7a8a;
 }
-.roadmap-map-panel [data-tone="1"] {
-  --map-day-color: #8062ac;
+.roadmap-map-panel [data-tone="1"],
+.agent-proposal [data-tone="1"] {
+  --map-day-color: #7446b8;
 }
-.roadmap-map-panel [data-tone="2"] {
-  --map-day-color: #487bc0;
+.roadmap-map-panel [data-tone="2"],
+.agent-proposal [data-tone="2"] {
+  --map-day-color: #2a62c9;
 }
-.roadmap-map-panel [data-tone="3"] {
-  --map-day-color: #b67732;
+.roadmap-map-panel [data-tone="3"],
+.agent-proposal [data-tone="3"] {
+  --map-day-color: #b4560f;
 }
-.roadmap-map-panel [data-tone="4"] {
-  --map-day-color: #b6566b;
+.roadmap-map-panel [data-tone="4"],
+.agent-proposal [data-tone="4"] {
+  --map-day-color: #b5267c;
+}
+.roadmap-map-panel [data-tone="5"],
+.agent-proposal [data-tone="5"] {
+  --map-day-color: #2e7d32;
+}
+.roadmap-map-panel [data-tone="6"],
+.agent-proposal [data-tone="6"] {
+  --map-day-color: #475569;
 }
 .roadmap-map-legend-day {
   padding: 4px 9px;
@@ -1004,6 +1018,23 @@
 }
 .roadmap-map-legend-day[data-active="true"] {
   font-weight: 600;
+}
+/* Sits above the stop list; the open list and the place card take its corner. */
+.roadmap-map-fab.button {
+  position: absolute;
+  z-index: 3;
+  right: var(--space-4);
+  bottom: 88px;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  font-size: 16px;
+  box-shadow: 0 4px 14px rgb(34 34 34 / 0.25);
+}
+.roadmap-map-panel[data-selected="true"] .roadmap-map-fab,
+.roadmap-map-stop-list[open] ~ .roadmap-map-fab {
+  display: none;
 }
 .roadmap-map-controls {
   position: absolute;
@@ -1025,42 +1056,45 @@
 }
 .roadmap-map-pin {
   position: absolute;
-  width: 42px;
-  height: 48px;
+  width: 28px;
+  height: 32px;
   border: 0;
-  padding: 0 0 8px;
+  padding: 0 0 6px;
   color: #fff;
   background: transparent;
   font:
-    600 13px/40px "DM Sans",
+    600 11px/26px "DM Sans",
     sans-serif;
   text-align: center;
   isolation: isolate;
   cursor: pointer;
-  filter: drop-shadow(0 2px 3px rgb(34 34 34 / 0.25));
+  filter: drop-shadow(0 1px 2px rgb(34 34 34 / 0.25));
 }
 .roadmap-map-pin::before {
   content: "";
   position: absolute;
   z-index: -1;
-  inset: 2px 3px 10px;
-  border: 2px solid #fff;
-  border-radius: 50% 50% 50% 4px;
-  background: var(--map-day-color, #279daf);
+  inset: 1px 2px 7px;
+  border: 1px solid #fff;
+  border-radius: 50% 50% 50% 3px;
+  background: var(--map-day-color, #0b7a8a);
   transform: rotate(-45deg);
 }
 .roadmap-map-pin[data-active="false"] {
-  opacity: 0.65;
+  opacity: 0.8;
 }
 .roadmap-map-pin[data-selected="true"] {
   z-index: 3;
   opacity: 1;
 }
 .roadmap-map-pin[data-selected="true"]::before {
-  box-shadow: 0 0 0 3px var(--ink);
+  box-shadow: 0 0 0 2px var(--ink);
 }
 .roadmap-map-pin:focus-visible {
   outline-offset: 4px;
+}
+.roadmap-map-pin[hidden] {
+  display: none;
 }
 .roadmap-map-origin {
   display: grid;

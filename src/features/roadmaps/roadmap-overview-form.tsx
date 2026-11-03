@@ -107,8 +107,8 @@ export function RoadmapOverviewForm({
   function update(field: keyof RoadmapFormValues, value: string) {
     setValues((previous) => {
       const next = { ...previous, [field]: value };
-      if (!titleEdited && (field === "province" || field === "numDays"))
-        next.title = suggestRoadmapTitle(next.province, next.numDays);
+      if (!titleEdited && field === "province")
+        next.title = suggestRoadmapTitle(next.province);
       return next;
     });
     setErrors((previous) => ({ ...previous, [field]: "" }));
@@ -370,11 +370,9 @@ export function RoadmapOverviewForm({
             value={values.title}
             required
             maxLength={roadmapLimits.title}
-            placeholder="Ví dụ: 3 ngày ăn ngon Đà Nẵng"
+            placeholder="Ví dụ: Khám phá ẩm thực Đà Nẵng"
             helper={
-              titleEdited
-                ? undefined
-                : "Gợi ý theo điểm đến và số ngày. Bạn có thể đổi."
+              titleEdited ? undefined : "Gợi ý theo điểm đến. Bạn có thể đổi."
             }
             error={errors.title}
             onChange={(event) => {

@@ -24,12 +24,16 @@ export function RoadmapDetailPage({
   initialTab,
   service = roadmapService,
   userId,
+  userName,
+  userAvatar,
 }: {
   roadmapId: number;
   initialDay: number;
   initialTab: DetailTab;
   service?: RoadmapScreenService;
   userId: number;
+  userName: string;
+  userAvatar: string | null;
 }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -78,6 +82,8 @@ export function RoadmapDetailPage({
         initialTab={initialTab}
         service={service}
         userId={userId}
+        userName={userName}
+        userAvatar={userAvatar}
         onItemAdded={reload}
         onItemRemoved={reload}
         onItemsGenerated={reload}
