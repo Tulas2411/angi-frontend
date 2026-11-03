@@ -13,9 +13,9 @@ test("a new owner registers a restaurant (OWN-01)", async ({ page }) => {
   await login(page, accounts.ownerNew);
   await expect(page).toHaveURL(/\/restaurant$/);
   const emptyState = page.getByText("Bạn chưa có nhà hàng");
-  // Wait for the overview to finish loading: either the empty state or the status card.
+  // Wait for the overview to finish loading: either the empty state or the status badges.
   await emptyState
-    .or(page.getByText("Trạng thái nhà hàng", { exact: true }))
+    .or(page.getByRole("list", { name: "Trạng thái nhà hàng" }))
     .first()
     .waitFor();
   test.skip(
