@@ -22,6 +22,7 @@ import {
   DishViewSwitcher,
 } from "./dish-views";
 import { useDishDescriptions } from "./use-dish-descriptions";
+import { MenuWheel } from "./menu-wheel";
 import {
   businessHoursByDay,
   googleMapsPlaceHref,
@@ -226,9 +227,11 @@ function ReviewsTab({
 
 function MenuTab({
   restaurantId,
+  restaurantName,
   service,
 }: {
   restaurantId: number;
+  restaurantName: string;
   service: ExploreService;
 }) {
   const [state, retry] = useRemote(
@@ -241,7 +244,8 @@ function MenuTab({
   const { describe, retry: retryDescription } = useDishDescriptions(
     service,
     dishes.map((dish) => dish.id),
-    view !== "gallery",
+    // The wheel shows the description of the dish on its plate, whatever the layout below.
+    true,
   );
   if (state.status === "loading") return <Skeleton rows={3} />;
   if (state.status === "error")
@@ -260,35 +264,42 @@ function MenuTab({
   // Menu dishes carry no restaurant: the page is the restaurant, so it is not named again.
   const items = dishes.map((dish) => ({ ...dish, restaurant: undefined }));
   return (
-    <section className="dish-results" aria-label="Thực đơn của quán">
-      <div className="dish-results-bar">
-        <p className="helper" role="status">
-          {items.length} món trong thực đơn
-        </p>
-        <DishViewSwitcher view={view} onChange={setView} />
-      </div>
-      <ul className={`dish-items dish-items-${view}`}>
-        {items.map((dish) => (
-          <li key={dish.id}>
-            {view === "gallery" ? (
-              <DishTile dish={dish} />
-            ) : view === "list" ? (
-              <DishRow
-                dish={dish}
-                description={describe(dish.id)}
-                onRetry={() => retryDescription(dish.id)}
-              />
-            ) : (
-              <DishDetailCard
-                dish={dish}
-                description={describe(dish.id)}
-                onRetry={() => retryDescription(dish.id)}
-              />
-            )}
-          </li>
-        ))}
-      </ul>
-    </section>
+    <>
+      <MenuWheel
+        restaurantName={restaurantName}
+        dishes={dishes}
+        describe={describe}
+      />
+      <section className="dish-results" aria-label="Thực đơn của quán">
+        <div className="dish-results-bar">
+          <p className="helper" role="status">
+            {items.length} món trong thực đơn
+          </p>
+          <DishViewSwitcher view={view} onChange={setView} />
+        </div>
+        <ul className={`dish-items dish-items-${view}`}>
+          {items.map((dish) => (
+            <li key={dish.id}>
+              {view === "gallery" ? (
+                <DishTile dish={dish} />
+              ) : view === "list" ? (
+                <DishRow
+                  dish={dish}
+                  description={describe(dish.id)}
+                  onRetry={() => retryDescription(dish.id)}
+                />
+              ) : (
+                <DishDetailCard
+                  dish={dish}
+                  description={describe(dish.id)}
+                  onRetry={() => retryDescription(dish.id)}
+                />
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </>
   );
 }
 
@@ -571,7 +582,11 @@ export function RestaurantDetailPage({
       {tab === "menu" && (
         <>
           <TabTitle restaurant={restaurant} />
-          <MenuTab restaurantId={restaurantId} service={service} />
+          <MenuTab
+            restaurantId={restaurantId}
+            restaurantName={restaurant.name}
+            service={service}
+          />
         </>
       )}
       {tab === "reviews" && (
