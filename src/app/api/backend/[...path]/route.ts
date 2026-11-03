@@ -20,6 +20,7 @@ import {
   moderationBlogsOperation,
   moderationReportsOperation,
   moderationUsersOperation,
+  moderationVerificationsOperation,
 } from "@/shared/api/moderation-proxy";
 import {
   roadmapOperation,
@@ -61,6 +62,10 @@ async function handle(request: Request, context: Context) {
     const moderation = moderationReportsOperation(request.method, endpoint);
     const moderationUsers = moderationUsersOperation(request.method, endpoint);
     const moderationBlogs = moderationBlogsOperation(request.method, endpoint);
+    const modVerifications = moderationVerificationsOperation(
+      request.method,
+      endpoint,
+    );
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     // F-63 ADM-D1..ADM-D3 + OPS-01, F-65 ADM-M1..ADM-M4, F-66 ADM-P1..ADM-P4: the Admin operations.
@@ -81,6 +86,7 @@ async function handle(request: Request, context: Context) {
       !moderation &&
       !moderationUsers &&
       !moderationBlogs &&
+      !modVerifications &&
       !adminPermissions &&
       !agentOp &&
       !publicOp
@@ -100,6 +106,7 @@ async function handle(request: Request, context: Context) {
       moderation?.body !== false &&
       moderationUsers?.body !== false &&
       moderationBlogs?.body !== false &&
+      modVerifications?.body !== false &&
       adminPermissions?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
@@ -209,6 +216,25 @@ async function handle(request: Request, context: Context) {
           });
         }),
         moderationUsers.status,
+      );
+    }
+    // F-57 MOD-V1..MOD-V3 — duyệt hồ sơ xác minh nhà hàng (BE chỉ cho role MOD).
+    if (modVerifications) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (auth.user.role !== "MOD")
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ Mod được duyệt hồ sơ xác minh nhà hàng.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modVerifications.status,
       );
     }
     // MOD-B1..MOD-B3 — kiểm duyệt bài viết và bình luận (Mod và Admin).

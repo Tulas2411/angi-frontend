@@ -57,10 +57,16 @@ export interface SidebarGroup {
   items: [slug: string, label: string][];
 }
 
-function SidebarNav({ groups }: { groups: SidebarGroup[] }) {
+function SidebarNav({
+  groups,
+  label,
+}: {
+  groups: SidebarGroup[];
+  label: string;
+}) {
   const path = usePathname();
   return (
-    <nav className="admin-sidebar-nav" aria-label="Điều hướng quản trị">
+    <nav className="admin-sidebar-nav" aria-label={`Điều hướng ${label}`}>
       {groups.map((group) => (
         <div key={group.title} className="admin-sidebar-group">
           <p>{group.title}</p>
@@ -88,8 +94,8 @@ function SidebarNav({ groups }: { groups: SidebarGroup[] }) {
 }
 
 /**
- * The Admin workspace as a dashboard: no site header, a fixed sidebar with the Admin and
- * moderation sections, the account at its foot; on a phone the sidebar is a drawer.
+ * A staff workspace as a dashboard (Admin and Mod): no site header, a fixed sidebar with the
+ * sections, the account at its foot; on a phone the sidebar is a drawer.
  */
 export function AdminShell({
   user,
@@ -97,6 +103,7 @@ export function AdminShell({
   groups,
   unread,
   demo,
+  label = "quản trị",
   children,
 }: {
   user: AuthUserDto;
@@ -104,6 +111,8 @@ export function AdminShell({
   groups: SidebarGroup[];
   unread: number;
   demo: boolean;
+  /** The workspace in lower case: "quản trị" or "kiểm duyệt". */
+  label?: string;
   children: ReactNode;
 }) {
   const path = usePathname();
@@ -134,7 +143,7 @@ export function AdminShell({
           className="admin-menu-button"
           aria-expanded={open}
           aria-controls={drawerId}
-          aria-label={open ? "Đóng menu quản trị" : "Mở menu quản trị"}
+          aria-label={open ? `Đóng menu ${label}` : `Mở menu ${label}`}
           onClick={() => setOpen((value) => !value)}
         >
           {open ? <XMarkIcon aria-hidden /> : <Bars3Icon aria-hidden />}
@@ -143,16 +152,19 @@ export function AdminShell({
       <button
         type="button"
         className="admin-backdrop"
-        aria-label="Đóng menu quản trị"
+        aria-label={`Đóng menu ${label}`}
         tabIndex={-1}
         onClick={() => setOpen(false)}
       />
       <aside id={drawerId} className="admin-sidebar">
         <div className="admin-sidebar-brand">
           <Brand href={base || "/"} />
-          <span>Quản trị{demo ? " · minh họa" : ""}</span>
+          <span>
+            {label}
+            {demo ? " · minh họa" : ""}
+          </span>
         </div>
-        <SidebarNav groups={groups} />
+        <SidebarNav groups={groups} label={label} />
         <div className="admin-sidebar-foot">
           <Link
             href={notificationsHref}

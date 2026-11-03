@@ -367,7 +367,7 @@ export function WorkspaceShell({
           <a className="skip-link" href="#main-content">
             Đến nội dung chính
           </a>
-          {user?.role === "ADMIN" ? (
+          {user?.role === "ADMIN" || user?.role === "MOD" ? (
             <AdminWorkspace base={base} demo={demo}>
               {children}
             </AdminWorkspace>
@@ -409,7 +409,10 @@ export function WorkspaceShell({
     </WorkspaceContext.Provider>
   );
 }
-/** The Admin workspace: the sidebar shell, with the Admin and moderation sections. */
+/**
+ * The staff workspaces in the sidebar shell: the Admin gets the Admin and moderation sections,
+ * a Mod the moderation section (notifications and account sit at the sidebar's foot).
+ */
 function AdminWorkspace({
   base,
   demo,
@@ -423,20 +426,34 @@ function AdminWorkspace({
   const { user } = useWorkspace();
   const unread = useUnreadCount(user);
   if (!user) return null;
+  const mod = user.role === "MOD";
   return (
     <AdminShell
       user={user}
       base={base}
       demo={demo}
       unread={unread}
-      groups={[
-        { title: "Quản trị", base, items: navigation.ADMIN },
-        {
-          title: "Kiểm duyệt",
-          base: demo ? base + "/moderation" : "/moderation",
-          items: navigation.MOD.slice(1, 8),
-        },
-      ]}
+      label={mod ? "kiểm duyệt" : "quản trị"}
+      groups={
+        mod
+          ? [
+              {
+                title: "Kiểm duyệt",
+                base,
+                items: navigation.MOD.filter(
+                  ([slug]) => slug !== "notifications" && slug !== "account",
+                ),
+              },
+            ]
+          : [
+              { title: "Quản trị", base, items: navigation.ADMIN },
+              {
+                title: "Kiểm duyệt",
+                base: demo ? base + "/moderation" : "/moderation",
+                items: navigation.MOD.slice(1, 8),
+              },
+            ]
+      }
     >
       {children}
     </AdminShell>
