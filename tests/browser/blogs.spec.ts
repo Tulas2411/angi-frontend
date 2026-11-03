@@ -623,12 +623,12 @@ test.describe("public list", () => {
       page.getByRole("link", { name: "Bài viết của tôi" }).first(),
     ).toBeVisible();
     expect(callsTo("GET", "blogs")[0].authorized).toBe(true);
-    await page.locator("summary[aria-label^='Tài khoản']").click();
+    await page
+      .getByRole("button", { name: "Mở menu tài khoản", exact: true })
+      .click();
+    const drawer = page.getByRole("dialog", { name: "Menu tài khoản" });
     await expect(
-      page.getByRole("link", { name: "Bài viết của tôi" }).last(),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Viết cẩm nang" }).last(),
+      drawer.getByRole("link", { name: "Bài viết của tôi" }),
     ).toBeVisible();
   });
 });

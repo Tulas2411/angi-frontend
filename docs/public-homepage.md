@@ -8,7 +8,6 @@ After verification, reopened backend `origin/dev` API Design Ver1.8 (`Backend AP
 
 > **Update 2026-10-28:** the homepage now starts with a real three-field RM-01 quick planner, followed by the existing hero. The historical editorial-only descriptions and verification counts below apply to earlier revisions. See [quick planner behavior and verification](home-roadmap-starter.vi.md). Homepage tests are included in `playwright.config.ts`; run focused coverage with `npx playwright test tests/browser/home-roadmap.spec.ts tests/browser/public-home.spec.ts`.
 
-
 Owner-requested homepage redesign, 2026-10-22. No Jira key was assigned. Branch: `feat/public-homepage`, created without an upstream from the latest fetched `origin/dev` (`93d502f`). Changes remain unstaged and uncommitted.
 
 ## Open and review
@@ -152,6 +151,19 @@ Owner-requested visual refresh of `/`, 2026-10-27. No Jira key. Branch `feat/ui-
 - `npx playwright test -c playwright.config.ts public-home.spec.ts routes.spec.ts`: **30 tests passed** (the four layout tests were rerun after removing an infinite animation from the hero inset photo, which had prevented Playwright from treating that image as stable). Chromium 1248 was installed into the ignored `.cache/browsers`.
 - Inspected `artifacts/homepage/home-1440.png` and `home-390.png`; layout tests confirm no horizontal overflow at 1440, 768, 390 and 320px. The dropdown has no dedicated browser test yet.
 - No API mapping: no endpoint, DTO, payload, validation or error contract is involved.
+
+### Account drawer — 2026-11-03
+
+Replaces the hover menu below, at the owner's request, on branch `feat/header-account-drawer` (from `origin/dev`, uncommitted). `AccountMenu` (`src/components/site/account-menu.tsx`, styles in `account-menu.css`) now renders four signed-in header actions instead of a `<details>` avatar menu:
+
+- **Account pill**: avatar and display name linking to `/account` (accessible name `Tài khoản <name>`); at ≤700px only the avatar shows.
+- **Notification bell**: same behavior; its glyph is now the 24px Heroicons `BellIcon` instead of the padded `bell.svg` artboard, so it lines up with the home and menu icons.
+- **Home** icon link to the role's home (`HOME_BY_ROLE`: `/`, `/restaurant`, `/moderation`, `/administration`). At ≤480px it is hidden and the actions sit 4px apart, so the header fits 320px; the logo and the drawer still lead home.
+- **Menu** button (☰, `Mở menu tài khoản`, `aria-expanded`) that opens a right-side drawer.
+
+The drawer is a modal `<dialog>` (`Menu tài khoản`), so Escape, focus containment and focus return to the menu button come from the browser. It slides in from the right over a dimmed backdrop; a backdrop click, the close button, any link and any navigation close it. Reduced motion makes it instant. Content, top to bottom: close button; name, email and role label; Trang chủ, Tài khoản của tôi and, for roles whose home is not `/`, Trang chủ ANGI; for Travelers a "Hành trình của tôi" group (Lộ trình của tôi `/roadmaps`, Bài viết của tôi `/guides/mine`) and a "Khám phá ẩm thực" group (Khám phá món ăn `/dishes`, Khám phá quán ăn `/restaurants`); a full-width Đăng xuất button. Icons come from `@heroicons/react`. Every link points to an existing route; "Lập lộ trình mới" and "Viết cẩm nang" left the menu at the owner's request and stay reachable from the roadmap list and the guides pages. `LogoutButton` gained optional `className` and `icon` props; its default rendering is unchanged.
+
+The app has no dark theme, so the drawer has no theme toggle. The legacy `.account-menu` styles stay for `src/components/layout/workspace.tsx`.
 
 ### Account menu hover — 2026-10-27
 
