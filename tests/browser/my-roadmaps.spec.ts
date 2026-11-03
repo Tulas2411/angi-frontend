@@ -138,7 +138,8 @@ test("the Traveler header links to the list and marks it as current", async ({
 test("RM-02 shows the cards of the documented sample", async ({ page }) => {
   rows = [sample];
   await open(page);
-  expect(listCalls).toEqual([`page=1&pageSize=${pageSize}`]);
+  // The heading renders before RM-02 is sent, so wait for the request instead of reading it once.
+  await expect.poll(() => listCalls).toEqual([`page=1&pageSize=${pageSize}`]);
   const card = cards(page).first();
   await expect(
     card.getByRole("heading", { name: "3 ngày ăn sập Đà Nẵng" }),

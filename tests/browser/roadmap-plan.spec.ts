@@ -163,11 +163,8 @@ test("only a signed-in Traveler can open the planner; others go to their landing
     await expect(page).toHaveURL(landing);
   }
   await loginAs(page, "traveler");
-  await page.locator("summary").first().click();
-  await page
-    .locator("header")
-    .getByRole("link", { name: "Lập lộ trình mới" })
-    .click();
+  // The account drawer no longer links the planner; the Traveler reaches it directly.
+  await page.goto("/roadmaps/new");
   await expect(page).toHaveURL(/\/roadmaps\/new$/);
   await expect(
     page
