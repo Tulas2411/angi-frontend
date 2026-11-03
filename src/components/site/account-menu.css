@@ -27,7 +27,7 @@
   height: 32px;
   font-size: 14px;
 }
-.account-pill > span {
+.account-pill-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -209,7 +209,16 @@
   .account-pill {
     padding: 4px;
   }
-  .account-pill > span {
+  .account-pill-name {
+    display: none;
+  }
+}
+/* The smallest phones drop the home shortcut (the logo and the drawer still lead home). */
+@media (max-width: 480px) {
+  .site-actions:has(.account-pill) {
+    gap: 4px;
+  }
+  .header-home {
     display: none;
   }
 }

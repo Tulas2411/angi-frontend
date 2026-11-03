@@ -42,10 +42,14 @@ export function AccountMenu({ user }: { user: AuthUserDto }) {
         aria-label={`Tài khoản ${user.displayName}`}
       >
         <Avatar name={user.displayName} image={user.avatarUrl} />
-        <span>{user.displayName}</span>
+        <span className="account-pill-name">{user.displayName}</span>
       </Link>
       <NotificationBell role={user.role} />
-      <Link href={home} className="header-icon-button" aria-label="Trang chủ">
+      <Link
+        href={home}
+        className="header-icon-button header-home"
+        aria-label="Trang chủ"
+      >
         <HomeIcon aria-hidden />
       </Link>
       <button
