@@ -10,6 +10,7 @@ import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
+import { adminPermissionsOperation } from "@/shared/api/admin-proxy";
 import {
   isModeratorRole,
   moderationBlogsOperation,
@@ -58,6 +59,10 @@ async function handle(request: Request, context: Context) {
     const moderationBlogs = moderationBlogsOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
+    const adminPermissions = adminPermissionsOperation(
+      request.method,
+      endpoint,
+    );
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
@@ -71,6 +76,7 @@ async function handle(request: Request, context: Context) {
       !moderation &&
       !moderationUsers &&
       !moderationBlogs &&
+      !adminPermissions &&
       !agentOp &&
       !publicOp
     ) {
@@ -89,6 +95,7 @@ async function handle(request: Request, context: Context) {
       moderation?.body !== false &&
       moderationUsers?.body !== false &&
       moderationBlogs?.body !== false &&
+      adminPermissions?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
@@ -216,6 +223,25 @@ async function handle(request: Request, context: Context) {
           });
         }),
         moderationBlogs.status,
+      );
+    }
+    // F-66 ADM-P1..ADM-P4 (+ ADM-M1 to pick the Mod): only an Admin session gets through.
+    if (adminPermissions) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (auth.user.role !== "ADMIN")
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ quản trị viên được quản lý phân quyền.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        adminPermissions.status,
       );
     }
     // OWN-19/OWN-20 — chủ nhà hàng đọc và trả lời đánh giá của mình.

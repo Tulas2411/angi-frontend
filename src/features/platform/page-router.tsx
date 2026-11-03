@@ -46,6 +46,7 @@ import {
   ModerationUsersLivePage,
 } from "@/features/moderation/moderation-users-live-page";
 import { ModerationCommunityLivePage } from "@/features/moderation/moderation-community-live-page";
+import { PermissionsPage } from "@/features/admin/permissions-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -203,13 +204,19 @@ export function PageRouter({
     return <RestaurantReviewsLivePage />;
 
   // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
-  if (mode === "live" && (role === "MOD" || role === "ADMIN") && area === "reports")
-    return (
-      <ModReportsBase base={base} id={id} />
-    );
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "reports"
+  )
+    return <ModReportsBase base={base} id={id} />;
 
   // MOD-U1..MOD-U4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
-  if (mode === "live" && (role === "MOD" || role === "ADMIN") && area === "users")
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "users"
+  )
     return <ModUsersBase base={base} id={id} />;
 
   // MOD-B1..MOD-B3 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
@@ -219,6 +226,18 @@ export function PageRouter({
     area === "community"
   )
     return <ModerationCommunityLivePage />;
+
+  // F-66 ADM-P1..ADM-P4 đã nối API: phân quyền đọc và ghi thật, không phụ thuộc AppData.
+  if (mode === "live" && role === "ADMIN" && area === "permissions")
+    return <PermissionsPage />;
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderators" &&
+    operation === "permissions" &&
+    /^[1-9]\d{0,9}$/.test(id ?? "")
+  )
+    return <PermissionsPage initialModId={Number(id)} />;
 
   // ADMIN gặp kiểm duyệt ở /administration/moderation/... — cùng bộ màn hình.
   if (

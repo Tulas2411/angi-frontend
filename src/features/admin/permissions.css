@@ -1,0 +1,475 @@
+/* F-66 Manage Permission (Admin). Theme tokens only; the save bar slides in with changes. */
+.permission-page {
+  padding-bottom: 96px;
+}
+.permission-panel {
+  display: grid;
+  gap: var(--space-5);
+}
+.permission-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--control);
+  font-size: 14px;
+}
+.permission-summary svg {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  color: var(--success-ink);
+}
+.permission-summary p {
+  margin: 0;
+}
+
+/* --------------------------------------------------------- groups */
+.permission-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.permission-detail .permission-groups {
+  grid-template-columns: minmax(0, 1fr);
+}
+.permission-group {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.permission-group > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.permission-group h3 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+}
+.permission-group > header span {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.permission-group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.permission-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-5);
+  transition: background var(--duration) ease;
+}
+.permission-row + .permission-row {
+  border-top: 1px solid var(--line);
+}
+.permission-row:hover {
+  background: rgb(34 34 34 / 0.02);
+}
+/* A row changed and not saved yet: a coral bar on its left. */
+.permission-row::before {
+  content: "";
+  position: absolute;
+  inset: 8px auto 8px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--coral);
+  transform: scaleY(0);
+  transition: transform var(--duration) var(--ease-out);
+}
+.permission-row[data-changed="true"] {
+  background: rgb(255 94 98 / 0.05);
+}
+.permission-row[data-changed="true"]::before {
+  transform: scaleY(1);
+}
+.permission-row[data-locked] {
+  color: var(--muted);
+}
+.permission-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.permission-text strong {
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.permission-text code {
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  overflow-wrap: anywhere;
+}
+/* The switch keeps its label for screen readers only; the row text is the visible label. */
+.permission-row .choice {
+  gap: 0;
+  font-size: 0;
+}
+.permission-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.permission-lock svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ------------------------------------------------- one Mod's rows */
+.permission-row.is-mod {
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+}
+.permission-default {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.permission-default svg {
+  width: 14px;
+  height: 14px;
+}
+.permission-default[data-on="true"] {
+  color: var(--ink);
+}
+.permission-effective {
+  min-width: 76px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease;
+}
+.permission-effective[data-on="true"] {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+
+/* Three choices that read as one control; the moving fill follows the checked one. */
+.permission-segmented {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.permission-segmented label {
+  position: relative;
+  cursor: pointer;
+}
+.permission-segmented input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.permission-segmented span {
+  display: block;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease,
+    box-shadow var(--duration) ease;
+}
+.permission-segmented label:hover span {
+  color: var(--ink);
+}
+.permission-segmented input:checked + span {
+  background: var(--card);
+  box-shadow: 0 1px 4px rgb(34 34 34 / 0.12);
+}
+.permission-segmented [data-choice="allow"] input:checked + span {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.permission-segmented [data-choice="deny"] input:checked + span {
+  background: var(--error-bg);
+  color: var(--error-ink);
+}
+.permission-segmented input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+
+/* --------------------------------------------------- Mod picker */
+.permission-mods {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.permission-picker {
+  position: sticky;
+  top: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.permission-search {
+  position: relative;
+  display: block;
+}
+.permission-search svg {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.permission-search input {
+  width: 100%;
+  padding-left: 40px;
+}
+.permission-mod-list {
+  display: grid;
+  gap: 4px;
+  max-height: min(60vh, 520px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.permission-mod-list button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--duration) ease,
+    border-color var(--duration) ease;
+}
+.permission-mod-list button:hover {
+  background: var(--control);
+}
+.permission-mod-list button[aria-pressed="true"] {
+  border-color: var(--ink);
+  background: var(--control);
+}
+.permission-mod-list button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.permission-mod-list .avatar {
+  width: 36px;
+  height: 36px;
+}
+.permission-mod-list span {
+  display: grid;
+  min-width: 0;
+}
+.permission-mod-list strong,
+.permission-mod-list small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.permission-mod-list strong {
+  font-size: 14px;
+}
+.permission-mod-list small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.permission-detail {
+  min-width: 0;
+  animation: permission-in 260ms var(--ease-out);
+}
+.permission-mod-head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.permission-mod-head .avatar {
+  width: 48px;
+  height: 48px;
+}
+.permission-mod-head h3 {
+  margin: 0;
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.permission-mod-head .helper {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.permission-mod-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.permission-mod-stats span {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.permission-mod-foot {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------ save bar */
+.permission-savebar {
+  position: fixed;
+  z-index: 30;
+  right: 50%;
+  bottom: var(--space-5);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+  width: min(720px, calc(100% - 32px));
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  box-shadow: 0 18px 40px rgb(34 34 34 / 0.25);
+  opacity: 0;
+  transform: translate(50%, calc(100% + 32px));
+  transition:
+    transform 320ms var(--ease-out),
+    opacity 200ms ease;
+}
+.permission-savebar[data-open="true"] {
+  opacity: 1;
+  transform: translate(50%, 0);
+}
+.permission-savebar p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.permission-savebar .actions {
+  flex-wrap: nowrap;
+}
+.permission-savebar .button-tertiary {
+  color: var(--card);
+}
+.permission-savebar .button-primary {
+  background: var(--coral);
+  color: var(--ink);
+}
+
+@keyframes permission-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ---------------------------------------------------- responsive */
+@media (max-width: 1100px) {
+  .permission-row.is-mod {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .permission-row.is-mod .permission-text {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 900px) {
+  .permission-mods {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .permission-picker {
+    position: static;
+  }
+  .permission-mod-list {
+    max-height: 260px;
+  }
+  .permission-mod-head {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .permission-mod-stats {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}
+@media (max-width: 560px) {
+  .permission-row,
+  .permission-row.is-mod {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: var(--space-4);
+  }
+  .permission-segmented {
+    justify-self: start;
+  }
+  .permission-savebar {
+    border-radius: var(--radius-lg);
+  }
+  .permission-savebar .actions {
+    width: 100%;
+  }
+  .permission-savebar .actions .button {
+    flex: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .permission-row,
+  .permission-row::before,
+  .permission-segmented span,
+  .permission-savebar,
+  .permission-effective {
+    transition: none;
+  }
+  .permission-detail {
+    animation: none;
+  }
+}
