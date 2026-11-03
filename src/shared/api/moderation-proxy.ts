@@ -104,6 +104,32 @@ export function moderationVerificationsOperation(
 }
 
 /**
+ * F-56 Moderate Restaurant: MOD-R1 `GET mod/restaurants`, MOD-R2 `GET mod/restaurants/{restaurantId}`,
+ * MOD-R3 `PUT .../moderation-status` and MOD-R4 `PUT mod/dishes/{dishId}/moderation-status`
+ * (`dishId` is an `int`). MOD-RP4 goes through `moderationReportsOperation`. MOD and ADMIN.
+ */
+export function moderationRestaurantsOperation(
+  method: string,
+  endpoint: string,
+) {
+  if (method === "GET" && endpoint === "mod/restaurants")
+    return { body: false, status: 200 };
+  if (method === "GET" && new RegExp(`^mod/restaurants/${id}$`).test(endpoint))
+    return { body: false, status: 200 };
+  if (
+    method === "PUT" &&
+    new RegExp(`^mod/restaurants/${id}/moderation-status$`).test(endpoint)
+  )
+    return { body: true, status: 200 };
+  if (
+    method === "PUT" &&
+    /^mod\/dishes\/[1-9]\d{0,9}\/moderation-status$/.test(endpoint)
+  )
+    return { body: true, status: 200 };
+  return null;
+}
+
+/**
  * F-58 Review Pending Menu Submission: MOD-M1 `GET mod/menu-submissions`, MOD-M2
  * `GET mod/menu-submissions/{submissionId}`, MOD-M3 `POST .../approve` and MOD-M4
  * `POST .../reject`. The BE controller allows MOD and ADMIN.

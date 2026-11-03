@@ -21,6 +21,7 @@ import {
   moderationReportsOperation,
   moderationUsersOperation,
   moderationMenusOperation,
+  moderationRestaurantsOperation,
   moderationVerificationsOperation,
 } from "@/shared/api/moderation-proxy";
 import {
@@ -68,6 +69,10 @@ async function handle(request: Request, context: Context) {
       endpoint,
     );
     const modMenus = moderationMenusOperation(request.method, endpoint);
+    const modRestaurants = moderationRestaurantsOperation(
+      request.method,
+      endpoint,
+    );
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     // F-63 ADM-D1..ADM-D3 + OPS-01, F-65 ADM-M1..ADM-M4, F-66 ADM-P1..ADM-P4: the Admin operations.
@@ -90,6 +95,7 @@ async function handle(request: Request, context: Context) {
       !moderationBlogs &&
       !modVerifications &&
       !modMenus &&
+      !modRestaurants &&
       !adminPermissions &&
       !agentOp &&
       !publicOp
@@ -111,6 +117,7 @@ async function handle(request: Request, context: Context) {
       moderationBlogs?.body !== false &&
       modVerifications?.body !== false &&
       modMenus?.body !== false &&
+      modRestaurants?.body !== false &&
       adminPermissions?.body !== false &&
       publicOp?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
@@ -258,6 +265,25 @@ async function handle(request: Request, context: Context) {
           });
         }),
         modMenus.status,
+      );
+    }
+    // F-56 MOD-R1..MOD-R4 — kiểm duyệt nhà hàng và món (Mod và Admin).
+    if (modRestaurants) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được kiểm duyệt nhà hàng.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modRestaurants.status,
       );
     }
     // MOD-B1..MOD-B3 — kiểm duyệt bài viết và bình luận (Mod và Admin).
