@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -14,7 +14,14 @@ import {
   Tabs,
 } from "@/components/ui/primitives";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { DishCard } from "./explore-cards";
+import { useDishView } from "./dish-view-mode";
+import {
+  DishDetailCard,
+  DishRow,
+  DishTile,
+  DishViewSwitcher,
+} from "./dish-views";
+import { useDishDescriptions } from "./use-dish-descriptions";
 import {
   businessHoursByDay,
   googleMapsPlaceHref,
@@ -29,6 +36,8 @@ import {
   reportError,
   reportReasons,
   reviewSortOptions,
+  todayOpening,
+  vietnamWeekday,
   visibleReply,
 } from "./explore-rules";
 import { exploreRoutes } from "./explore-routes";
@@ -226,6 +235,14 @@ function MenuTab({
     () => service.menu(restaurantId),
     String(restaurantId),
   );
+  // The same three layouts as the dish list, with the layout chosen there.
+  const [view, setView] = useDishView();
+  const dishes = state.status === "ready" ? state.data.dishes : [];
+  const { describe, retry: retryDescription } = useDishDescriptions(
+    service,
+    dishes.map((dish) => dish.id),
+    view !== "gallery",
+  );
   if (state.status === "loading") return <Skeleton rows={3} />;
   if (state.status === "error")
     return (
@@ -240,75 +257,176 @@ function MenuTab({
         Thực đơn sẽ hiện ở đây khi quán được duyệt món.
       </EmptyState>
     );
+  // Menu dishes carry no restaurant: the page is the restaurant, so it is not named again.
+  const items = dishes.map((dish) => ({ ...dish, restaurant: undefined }));
   return (
-    <ul className="explore-grid">
-      {state.data.dishes.map((dish) => (
-        <li key={dish.id}>
-          <DishCard dish={dish} showRestaurant={false} />
-        </li>
-      ))}
-    </ul>
+    <section className="dish-results" aria-label="Thực đơn của quán">
+      <div className="dish-results-bar">
+        <p className="helper" role="status">
+          {items.length} món trong thực đơn
+        </p>
+        <DishViewSwitcher view={view} onChange={setView} />
+      </div>
+      <ul className={`dish-items dish-items-${view}`}>
+        {items.map((dish) => (
+          <li key={dish.id}>
+            {view === "gallery" ? (
+              <DishTile dish={dish} />
+            ) : view === "list" ? (
+              <DishRow
+                dish={dish}
+                description={describe(dish.id)}
+                onRetry={() => retryDescription(dish.id)}
+              />
+            ) : (
+              <DishDetailCard
+                dish={dish}
+                description={describe(dish.id)}
+                onRetry={() => retryDescription(dish.id)}
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
-function InfoTab({ restaurant }: { restaurant: RestaurantDetailDto }) {
-  const days = businessHoursByDay(restaurant.businessHours);
-  const place = locationText(restaurant.district, restaurant.provinceName);
+/** The restaurant's name at the top of the menu and review tabs, where the hero is not shown. */
+function TabTitle({
+  restaurant,
+  actions,
+}: {
+  restaurant: RestaurantDetailDto;
+  actions?: ReactNode;
+}) {
+  const status = operatingBadge(
+    restaurant.operatingStatus,
+    restaurant.isOpenNow,
+  );
   return (
-    <div className="explore-info">
-      <Card title="Giờ mở cửa">
-        <dl className="detail-list">
-          {days.map((day) => (
-            <div key={day.day}>
-              <dt>{day.label}</dt>
-              <dd className={day.open ? "" : "muted"}>{day.text}</dd>
-            </div>
-          ))}
-        </dl>
-      </Card>
-      <Card title="Liên hệ">
-        <dl className="detail-list">
-          <div>
-            <dt>Địa chỉ</dt>
-            <dd>
-              {[restaurant.addressLine, restaurant.ward, place]
-                .filter(Boolean)
-                .join(", ")}
-            </dd>
-          </div>
-          {restaurant.phone && (
+    <div className="explore-tab-title">
+      <h1>{restaurant.name}</h1>
+      <p className="explore-chips">
+        <Badge tone={status.tone}>{status.text}</Badge>
+        <span>
+          {ratingSummary(restaurant.ratingAvg, restaurant.ratingCount)}
+        </span>
+      </p>
+      {actions && <div className="actions">{actions}</div>}
+    </div>
+  );
+}
+
+/**
+ * "Thông tin": the general part (photos, name, rating, description, actions) first, then where
+ * to find the restaurant and when it is open, today's hours marked.
+ */
+function InfoTab({
+  restaurant,
+  hero,
+}: {
+  restaurant: RestaurantDetailDto;
+  hero: ReactNode;
+}) {
+  const days = businessHoursByDay(restaurant.businessHours);
+  const today = vietnamWeekday();
+  const todayHours = days.find((day) => day.day === today);
+  const opening = todayOpening(
+    restaurant.operatingStatus,
+    restaurant.isOpenNow,
+    Boolean(todayHours?.open),
+  );
+  const map = googleMapsPlaceHref(restaurant.latitude, restaurant.longitude);
+  return (
+    <div className="stack">
+      {hero}
+      <div className="explore-info">
+        <Card title="Liên hệ & vị trí">
+          <dl className="detail-list">
             <div>
-              <dt>Điện thoại</dt>
+              <dt>Địa chỉ</dt>
               <dd>
-                <a href={`tel:${restaurant.phone.replace(/\s/g, "")}`}>
-                  {restaurant.phone}
-                </a>
+                {restaurant.addressLine}
+                {map && (
+                  <>
+                    <br />
+                    <a href={map} target="_blank" rel="noreferrer">
+                      Chỉ đường trên Google Maps
+                    </a>
+                  </>
+                )}
               </dd>
             </div>
-          )}
-          {restaurant.email && (
-            <div>
-              <dt>Email</dt>
-              <dd>
-                <a href={`mailto:${restaurant.email}`}>{restaurant.email}</a>
-              </dd>
-            </div>
-          )}
-          {restaurant.website && (
-            <div>
-              <dt>Website</dt>
-              <dd>
-                <a href={restaurant.website} target="_blank" rel="noreferrer">
-                  {restaurant.website}
-                </a>
-              </dd>
-            </div>
-          )}
-        </dl>
-        <Alert tone="info">
-          Kiểm tra giá, giờ mở cửa và thành phần với quán trước khi đi.
-        </Alert>
-      </Card>
+            {restaurant.ward && (
+              <div>
+                <dt>Phường / xã</dt>
+                <dd>{restaurant.ward}</dd>
+              </div>
+            )}
+            {restaurant.provinceName && (
+              <div>
+                <dt>Tỉnh / thành phố</dt>
+                <dd>{restaurant.provinceName}</dd>
+              </div>
+            )}
+            {restaurant.phone && (
+              <div>
+                <dt>Điện thoại</dt>
+                <dd>
+                  <a href={`tel:${restaurant.phone.replace(/\s/g, "")}`}>
+                    {restaurant.phone}
+                  </a>
+                </dd>
+              </div>
+            )}
+            {restaurant.email && (
+              <div>
+                <dt>Email</dt>
+                <dd>
+                  <a href={`mailto:${restaurant.email}`}>{restaurant.email}</a>
+                </dd>
+              </div>
+            )}
+            {restaurant.website && (
+              <div>
+                <dt>Website</dt>
+                <dd>
+                  <a href={restaurant.website} target="_blank" rel="noreferrer">
+                    {restaurant.website}
+                  </a>
+                </dd>
+              </div>
+            )}
+          </dl>
+          <Alert tone="info">
+            Kiểm tra giá, giờ mở cửa và thành phần với quán trước khi đi.
+          </Alert>
+        </Card>
+        <Card title="Giờ mở cửa">
+          <p className="explore-today" data-tone={opening.tone}>
+            <span className="explore-today-state">
+              <span aria-hidden /> {opening.text}
+            </span>
+            <span>
+              Hôm nay ({todayHours?.label.toLowerCase()}):{" "}
+              <strong>{todayHours?.text ?? "Chưa có giờ mở cửa"}</strong>
+            </span>
+          </p>
+          <dl className="detail-list explore-hours">
+            {days.map((day) => (
+              <div
+                key={day.day}
+                data-today={day.day === today || undefined}
+                data-tone={day.day === today ? opening.tone : undefined}
+              >
+                <dt>{day.label}</dt>
+                <dd className={day.open ? "" : "muted"}>{day.text}</dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -328,7 +446,8 @@ export function RestaurantDetailPage({
     () => service.restaurant(restaurantId),
     `${restaurantId}:${reload}`,
   );
-  const [tab, setTab] = useState("menu");
+  // The general information opens first; it holds the photos, the name and the actions.
+  const [tab, setTab] = useState("information");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [notice, setNotice] = useState<{
@@ -371,91 +490,100 @@ export function RestaurantDetailPage({
     ...(restaurant.coverUrl ? [restaurant.coverUrl] : []),
     ...restaurant.images.filter((url) => url !== restaurant.coverUrl),
   ];
+  // Writing a review: in the general information and again on the review tab.
+  const reviewAction =
+    viewer === "TRAVELER" ? (
+      mine ? (
+        <Badge tone="success">Bạn đã đánh giá quán này</Badge>
+      ) : (
+        <Button onClick={() => setReviewOpen(true)}>Viết đánh giá</Button>
+      )
+    ) : viewer === "GUEST" ? (
+      <ActionLink href="/login">Đăng nhập để đánh giá</ActionLink>
+    ) : null;
+  const hero = (
+    <div className="explore-hero">
+      <div className="explore-gallery">
+        <Media src={pictures[0]} alt={restaurant.name} />
+        {pictures.length > 1 && (
+          <ul className="explore-thumbs" aria-label="Ảnh của quán">
+            {pictures.slice(1, 5).map((url, index) => (
+              <li key={url}>
+                <Media src={url} alt={`${restaurant.name} ${index + 2}`} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="stack-sm">
+        <p className="eyebrow">Quán ăn</p>
+        <h1>{restaurant.name}</h1>
+        <p className="helper">
+          {restaurant.addressLine}
+          {place && ` · ${place}`}
+        </p>
+        <p className="explore-chips">
+          <Badge tone={status.tone}>{status.text}</Badge>
+          <span>
+            {ratingSummary(restaurant.ratingAvg, restaurant.ratingCount)}
+          </span>
+          {price && <span>Giá {price}</span>}
+        </p>
+        {restaurant.description && <p>{restaurant.description}</p>}
+        <div className="actions">
+          {map && (
+            <a
+              className="button button-secondary"
+              href={map}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Chỉ đường trên Google Maps
+            </a>
+          )}
+          {reviewAction}
+          {viewer === "TRAVELER" && (
+            <Button variant="secondary" onClick={() => setReportOpen(true)}>
+              Báo cáo quán
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
   return (
     <div className="stack">
       <nav className="explore-back" aria-label="Quay lại">
         <Link href={exploreRoutes.restaurants}>← Tất cả quán ăn</Link>
       </nav>
-      <div className="explore-hero">
-        <div className="explore-gallery">
-          <Media src={pictures[0]} alt={restaurant.name} />
-          {pictures.length > 1 && (
-            <ul className="explore-thumbs" aria-label="Ảnh của quán">
-              {pictures.slice(1, 5).map((url, index) => (
-                <li key={url}>
-                  <Media src={url} alt={`${restaurant.name} ${index + 2}`} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <div className="stack-sm">
-          <p className="eyebrow">Quán ăn</p>
-          <h1>{restaurant.name}</h1>
-          <p className="helper">
-            {restaurant.addressLine}
-            {place && ` · ${place}`}
-          </p>
-          <p className="explore-chips">
-            <Badge tone={status.tone}>{status.text}</Badge>
-            <span>
-              {ratingSummary(restaurant.ratingAvg, restaurant.ratingCount)}
-            </span>
-            {price && <span>Giá {price}</span>}
-          </p>
-          {restaurant.description && <p>{restaurant.description}</p>}
-          <div className="actions">
-            {map && (
-              <a
-                className="button button-secondary"
-                href={map}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Chỉ đường trên Google Maps
-              </a>
-            )}
-            {viewer === "TRAVELER" &&
-              (mine ? (
-                <Badge tone="success">Bạn đã đánh giá quán này</Badge>
-              ) : (
-                <Button onClick={() => setReviewOpen(true)}>
-                  Viết đánh giá
-                </Button>
-              ))}
-            {viewer === "TRAVELER" && (
-              <Button variant="secondary" onClick={() => setReportOpen(true)}>
-                Báo cáo quán
-              </Button>
-            )}
-            {viewer === "GUEST" && (
-              <ActionLink href="/login">Đăng nhập để đánh giá</ActionLink>
-            )}
-          </div>
-          {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
-        </div>
-      </div>
       <Tabs
         label="Thông tin quán"
         value={tab}
         onChange={setTab}
         items={[
+          { value: "information", label: "Thông tin" },
           { value: "menu", label: "Thực đơn" },
           { value: "reviews", label: "Đánh giá" },
-          { value: "information", label: "Thông tin" },
         ]}
       />
+      {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
+      {tab === "information" && <InfoTab restaurant={restaurant} hero={hero} />}
       {tab === "menu" && (
-        <MenuTab restaurantId={restaurantId} service={service} />
+        <>
+          <TabTitle restaurant={restaurant} />
+          <MenuTab restaurantId={restaurantId} service={service} />
+        </>
       )}
       {tab === "reviews" && (
-        <ReviewsTab
-          restaurantId={restaurantId}
-          service={service}
-          version={reload}
-        />
+        <>
+          <TabTitle restaurant={restaurant} actions={reviewAction} />
+          <ReviewsTab
+            restaurantId={restaurantId}
+            service={service}
+            version={reload}
+          />
+        </>
       )}
-      {tab === "information" && <InfoTab restaurant={restaurant} />}
       {reviewOpen && (
         <ReviewDialog
           open
