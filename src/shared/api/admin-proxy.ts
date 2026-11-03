@@ -40,3 +40,21 @@ export function adminModsOperation(method: string, endpoint: string) {
     return { body: true, status: 200 };
   return null;
 }
+
+/**
+ * F-63 View Dashboard: ADM-D1 `GET admin/dashboard/summary`, ADM-D2 `GET admin/dashboard/timeseries`,
+ * ADM-D3 `GET admin/dashboard/top` and OPS-01 `GET admin/outbox` (read only, query strings only).
+ */
+export function adminDashboardOperation(method: string, endpoint: string) {
+  if (
+    method === "GET" &&
+    [
+      "admin/dashboard/summary",
+      "admin/dashboard/timeseries",
+      "admin/dashboard/top",
+      "admin/outbox",
+    ].includes(endpoint)
+  )
+    return { body: false, status: 200 };
+  return null;
+}
