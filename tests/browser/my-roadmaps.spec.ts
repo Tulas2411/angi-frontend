@@ -104,6 +104,10 @@ test.beforeEach(() => {
 });
 
 const cards = (page: Page) => page.locator(".roadmap-card");
+// RM-02 calls of the list page. The header's "Lộ trình" link goes to /roadmaps/start, which
+// asks RM-02 for one roadmap (pageSize=1); production builds prefetch it at any moment.
+const listPageCalls = () =>
+  listCalls.filter((query) => query.endsWith(`&pageSize=${pageSize}`));
 
 async function open(page: Page, path = "/roadmaps") {
   await loginAs(page, "traveler");
@@ -139,7 +143,7 @@ test("RM-02 shows the cards of the documented sample", async ({ page }) => {
   rows = [sample];
   await open(page);
   // The heading renders before RM-02 is sent, so wait for the request instead of reading it once.
-  await expect.poll(() => listCalls).toEqual([`page=1&pageSize=${pageSize}`]);
+  await expect.poll(listPageCalls).toEqual([`page=1&pageSize=${pageSize}`]);
   const card = cards(page).first();
   await expect(
     card.getByRole("heading", { name: "3 ngày ăn sập Đà Nẵng" }),
@@ -208,7 +212,7 @@ test("pages follow ?page= in the URL, with the last page as the fallback past th
   await expect(page).toHaveURL(/\/roadmaps\?page=2$/);
   await expect(cards(page)).toHaveCount(3);
   await expect(page.getByText("13–15 trên 15 mục · Trang 2 / 2")).toBeVisible();
-  expect(listCalls.at(-1)).toBe(`page=2&pageSize=${pageSize}`);
+  expect(listPageCalls().at(-1)).toBe(`page=2&pageSize=${pageSize}`);
   await page.getByRole("button", { name: "Trang trước" }).click();
   await expect(page).toHaveURL(/\/roadmaps$/);
   await expect(cards(page)).toHaveCount(12);
@@ -220,7 +224,7 @@ test("pages follow ?page= in the URL, with the last page as the fallback past th
   listCalls = [];
   await page.goto("/roadmaps?page=abc");
   await expect(cards(page)).toHaveCount(12);
-  expect(listCalls).toEqual([`page=1&pageSize=${pageSize}`]);
+  expect(listPageCalls()).toEqual([`page=1&pageSize=${pageSize}`]);
 });
 
 test("no roadmaps offers to plan the first one", async ({ page }) => {
