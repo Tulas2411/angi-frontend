@@ -10,7 +10,10 @@ import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
-import { adminPermissionsOperation } from "@/shared/api/admin-proxy";
+import {
+  adminModsOperation,
+  adminPermissionsOperation,
+} from "@/shared/api/admin-proxy";
 import {
   isModeratorRole,
   moderationBlogsOperation,
@@ -59,10 +62,10 @@ async function handle(request: Request, context: Context) {
     const moderationBlogs = moderationBlogsOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
-    const adminPermissions = adminPermissionsOperation(
-      request.method,
-      endpoint,
-    );
+    // F-65 ADM-M1..ADM-M4 and F-66 ADM-P1..ADM-P4: the Admin operations.
+    const adminPermissions =
+      adminPermissionsOperation(request.method, endpoint) ??
+      adminModsOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);
@@ -225,7 +228,7 @@ async function handle(request: Request, context: Context) {
         moderationBlogs.status,
       );
     }
-    // F-66 ADM-P1..ADM-P4 (+ ADM-M1 to pick the Mod): only an Admin session gets through.
+    // F-65 ADM-M1..ADM-M4 and F-66 ADM-P1..ADM-P4: only an Admin session gets through.
     if (adminPermissions) {
       return ok(
         await withAuth(session, (auth) => {
@@ -233,7 +236,7 @@ async function handle(request: Request, context: Context) {
             throw new ApiError(
               403,
               "FORBIDDEN",
-              "Chỉ quản trị viên được quản lý phân quyền.",
+              "Chỉ quản trị viên được quản lý Mod và phân quyền.",
             );
           return backend<unknown>(`${endpoint}${query}`, {
             method: request.method,

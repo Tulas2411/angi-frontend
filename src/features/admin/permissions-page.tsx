@@ -287,7 +287,7 @@ function RoleDefaultsPanel({
 }
 
 /** Three choices of one permission for one Mod, as a radio group that looks like a toggle. */
-function OverrideControl({
+export function OverrideControl({
   name,
   label,
   value,
