@@ -427,7 +427,7 @@ test.describe("dishes", () => {
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
     await expect(
-      page.locator("summary[aria-label^='Tài khoản']"),
+      page.locator("header").getByRole("link", { name: /^Tài khoản / }),
     ).toBeVisible();
     expect(callsTo("GET", "dishes")[0].authorized).toBe(true);
     await expect(
