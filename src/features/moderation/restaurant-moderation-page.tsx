@@ -104,6 +104,10 @@ export function RestaurantModerationListPage({
   const [q, setQ] = useState("");
   const [province, setProvince] = useState("");
   const [page, setPage] = useState(1);
+  const [version, setVersion] = useState(0);
+  // The restaurant in the side panel stays mounted while the panel slides out.
+  const [shown, setShown] = useState<number | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   // Typed filters are asked for 400 ms after the last key.
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -125,9 +129,16 @@ export function RestaurantModerationListPage({
         page,
         pageSize,
       }),
-    [q, province, moderation, verification, operating, reported, page].join(
-      ":",
-    ),
+    [
+      q,
+      province,
+      moderation,
+      verification,
+      operating,
+      reported,
+      page,
+      version,
+    ].join(":"),
   );
 
   return (
@@ -224,6 +235,22 @@ export function RestaurantModerationListPage({
                   <Link
                     href={`${base}/restaurants/${item.id}`}
                     className="vr-card"
+                    aria-current={
+                      drawerOpen && shown === item.id ? "true" : undefined
+                    }
+                    onClick={(event) => {
+                      // A new tab still opens the full page; a plain click opens the side panel.
+                      if (
+                        event.metaKey ||
+                        event.ctrlKey ||
+                        event.shiftKey ||
+                        event.button !== 0
+                      )
+                        return;
+                      event.preventDefault();
+                      setShown(item.id);
+                      setDrawerOpen(true);
+                    }}
                   >
                     <Media
                       className="vr-card-photo"
@@ -287,6 +314,23 @@ export function RestaurantModerationListPage({
             )}
           </section>
         ))}
+      <Dialog
+        drawer
+        className="rm-drawer"
+        open={drawerOpen}
+        title="Chi tiết nhà hàng"
+        onClose={() => setDrawerOpen(false)}
+      >
+        {shown !== null && (
+          <RestaurantModerationDetailPage
+            key={shown}
+            restaurantId={shown}
+            service={service}
+            embedded
+            onChanged={() => setVersion((value) => value + 1)}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
@@ -611,9 +655,15 @@ function ReportRow({
 export function RestaurantModerationDetailPage({
   restaurantId,
   service = restaurantModerationService,
+  embedded = false,
+  onChanged,
 }: {
   restaurantId: number;
   service?: RestaurantModerationService;
+  /** Shown in the list's side panel: no back link, one column. */
+  embedded?: boolean;
+  /** Called after MOD-R3, MOD-R4 or MOD-RP4 so the list can read itself again. */
+  onChanged?: () => void;
 }) {
   const { base } = useWorkspace();
   const [version, setVersion] = useState(0);
@@ -633,9 +683,12 @@ export function RestaurantModerationDetailPage({
   const [dish, setDish] = useState<OwnerMenuDishDto | null>(null);
   const [report, setReport] = useState<ReportDto | null>(null);
   const busy = useRef(false);
-  const reload = () => setVersion((value) => value + 1);
+  const reload = () => {
+    setVersion((value) => value + 1);
+    onChanged?.();
+  };
 
-  const back = (
+  const back = embedded ? null : (
     <Link className="vr-back" href={`${base}/restaurants`}>
       <ArrowLeftIcon aria-hidden /> Danh sách nhà hàng
     </Link>
@@ -714,7 +767,7 @@ export function RestaurantModerationDetailPage({
   }
 
   return (
-    <div className="stack vr-page">
+    <div className={`stack vr-page${embedded ? " rm-embedded" : ""}`}>
       {back}
       <header className="vr-hero">
         <Media
