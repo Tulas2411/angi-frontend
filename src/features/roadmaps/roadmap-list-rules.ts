@@ -1,3 +1,4 @@
+import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { dateLabel } from "@/shared/format";
 import { formatVndInput, originModeLabels } from "./roadmap-rules";
 import type { RoadmapSummaryDto } from "./roadmap-types";
@@ -62,6 +63,25 @@ export function roadmapCountdown(
   if (days === 1) return "Ngày mai";
   if (days === 0) return "Hôm nay";
   return today <= end ? "Đang diễn ra" : null;
+}
+
+/**
+ * RM-05 failures by `errorCode`. `gone`: ROADMAP_NOT_FOUND, the roadmap was already deleted (in
+ * another tab) or is not the caller's, so the list is read again either way.
+ */
+export function deleteRoadmapError(error: unknown) {
+  const code = error instanceof ApiError ? error.errorCode : "";
+  if (code === "ROADMAP_NOT_FOUND")
+    return {
+      gone: true,
+      message: "Lộ trình này không còn nữa (có thể đã được xóa ở nơi khác).",
+    };
+  return { gone: false, message: getErrorMessage(error) };
+}
+
+/** The page to show after a deletion: the previous one when the last card of a page went away. */
+export function pageAfterDelete(page: number, itemsOnPage: number) {
+  return itemsOnPage <= 1 && page > 1 ? page - 1 : page;
 }
 
 /** Same rule as `RoadmapDetail.budget.isOverBudget`: totalEstimatedCost > budgetAmount. */

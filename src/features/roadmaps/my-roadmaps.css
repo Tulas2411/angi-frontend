@@ -66,11 +66,17 @@
 }
 
 /* Share on the top right; it sits above the link that covers the card. */
-.roadmap-card-share {
+/* Share and delete, top right of the cover, above the card-wide title link. */
+.roadmap-card-actions {
   position: absolute;
   z-index: 1;
   top: 8px;
   right: 8px;
+  display: flex;
+  gap: 6px;
+}
+.roadmap-card-share,
+.roadmap-card-delete {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -87,9 +93,24 @@
 .roadmap-card-share:hover {
   background: rgb(20 16 14 / 0.75);
 }
-.roadmap-card-share:focus-visible {
+.roadmap-card-share:focus-visible,
+.roadmap-card-delete:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
+}
+.roadmap-card-delete {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+.roadmap-card-delete svg {
+  width: 17px;
+  height: 17px;
+}
+.roadmap-card-delete:hover {
+  background: var(--error-ink);
 }
 .roadmap-card-share svg {
   fill: currentColor;
