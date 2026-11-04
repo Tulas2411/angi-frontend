@@ -307,6 +307,20 @@ test("the trash button asks first, then RM-05 deletes the roadmap and the list i
   await confirm.getByRole("button", { name: "Giữ lại" }).click();
   await expect(confirm).toBeHidden();
   expect(deleteCalls).toEqual([]);
+  // A closed dialog keeps its column layout: while it fades out it is still displayed, and in a
+  // row its text would wrap letter by letter.
+  expect(
+    await page
+      .locator("dialog.dialog", { hasText: "Xóa lộ trình?" })
+      .evaluate((element) => {
+        const style = getComputedStyle(element);
+        return [
+          element.hasAttribute("open"),
+          style.flexDirection,
+          style.overflow,
+        ];
+      }),
+  ).toEqual([false, "column", "hidden"]);
 
   await card
     .getByRole("button", { name: "Xóa lộ trình Lộ trình số 2" })

@@ -1434,6 +1434,13 @@ select.input {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-pop);
+  /*
+   * The layout stays when [open] goes: while it fades out the dialog is still displayed (flex),
+   * and without the column it lays its parts out in one row and wraps the text letter by letter.
+   * The dialog itself never scrolls; lists and pickers inside are fixed-position and not clipped.
+   */
+  flex-direction: column;
+  overflow: hidden;
   opacity: 0;
   transform: translateY(12px) scale(0.98);
   /* Closing: short and accelerating, and it is removed the moment it has faded. */
@@ -1445,9 +1452,6 @@ select.input {
 }
 .dialog[open] {
   display: flex;
-  flex-direction: column;
-  /* The dialog itself never scrolls; lists and pickers inside are fixed-position and not clipped. */
-  overflow: hidden;
   opacity: 1;
   transform: none;
   transition:

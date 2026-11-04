@@ -633,9 +633,12 @@
   box-shadow: var(--shadow-card);
   margin: auto;
 }
+& .dialog {
+  /* Kept while it fades out after [open] goes, so the parts do not fall into one row. */
+  flex-direction: column;
+}
 & .dialog[open] {
   display: flex;
-  flex-direction: column;
 }
 & .dialog::backdrop {
   background: rgb(34 34 34 / 0.45);
