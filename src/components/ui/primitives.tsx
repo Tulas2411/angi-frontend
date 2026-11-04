@@ -664,6 +664,9 @@ export function DataTable<T extends { id: string }>({
   page = 1,
   onPage,
   size = 5,
+  onRowClick,
+  rowLabel,
+  activeRowId,
 }: {
   rows: T[];
   columns: { label: string; render: (row: T) => ReactNode }[];
@@ -671,6 +674,12 @@ export function DataTable<T extends { id: string }>({
   page?: number;
   onPage?: (value: number) => void;
   size?: number;
+  /** The whole row opens the item; controls inside the row keep their own click. */
+  onRowClick?: (row: T) => void;
+  /** Accessible name of a clickable row, e.g. "Xem hồ sơ Nguyễn An". */
+  rowLabel?: (row: T) => string;
+  /** The row whose item is open, marked with aria-current. */
+  activeRowId?: string;
 }) {
   const shown = onPage ? pageSlice(rows, page, size).items : rows;
   return (
@@ -694,7 +703,37 @@ export function DataTable<T extends { id: string }>({
           </thead>
           <tbody>
             {shown.map((row) => (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                className={onRowClick ? "is-clickable" : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                aria-label={onRowClick && rowLabel ? rowLabel(row) : undefined}
+                aria-current={activeRowId === row.id ? "true" : undefined}
+                onClick={
+                  onRowClick
+                    ? (event) => {
+                        if (
+                          (event.target as HTMLElement).closest(
+                            "a, button, input, select, textarea, label",
+                          )
+                        )
+                          return;
+                        onRowClick(row);
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  onRowClick
+                    ? (event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 {columns.map((col) => (
                   <td key={col.label}>{col.render(row)}</td>
                 ))}

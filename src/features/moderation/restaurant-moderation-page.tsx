@@ -71,6 +71,7 @@ import type {
 import { SlidingSegment } from "@/components/ui/sliding-segment";
 import "./verification-review.css";
 import "./menu-review.css";
+import "./moderation-drawer.css";
 import "./restaurant-moderation.css";
 
 const pageSize = 20;
@@ -316,7 +317,7 @@ export function RestaurantModerationListPage({
         ))}
       <Dialog
         drawer
-        className="rm-drawer"
+        className="mod-drawer"
         open={drawerOpen}
         title="Chi tiết nhà hàng"
         onClose={() => setDrawerOpen(false)}

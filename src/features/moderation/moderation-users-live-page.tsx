@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
-  ActionLink,
   Avatar,
   ConfirmDialog,
+  Dialog,
   DataTable,
   EmptyState,
   Field,
@@ -22,6 +22,8 @@ import {
   userStatusLabels,
   type ModerationUsersService,
 } from "./moderation-users-service";
+import "./moderation-drawer.css";
+import "./moderation-users.css";
 import type {
   CreateSanctionRequestDto,
   ListModeratedUsersQuery,
@@ -68,7 +70,7 @@ function statusTone(
  * Màn hình đọc dữ liệu thật qua `/api/backend/mod/users`; access token của
  * kiểm duyệt viên không bao giờ tới trình duyệt.
  */
-export function ModerationUsersLivePage({ base }: { base: string }) {
+export function ModerationUsersLivePage() {
   const service: ModerationUsersService = moderationUsersService;
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("all");
@@ -86,6 +88,9 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
   );
   const [lifting, setLifting] = useState<RestrictionTarget | null>(null);
   const [busy, setBusy] = useState(false);
+  // Hồ sơ trong ngăn bên phải vẫn giữ nội dung trong lúc ngăn trượt ra.
+  const [shown, setShown] = useState<{ id: number; name: string } | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   /** Bộ lọc hiện tại là chìa khoá của lần tải; tải xong mới hiện dữ liệu. */
   const queryKey = `${query}|${role}|${status}|${page}|${attempt}`;
@@ -192,6 +197,12 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
               userId: person.id,
             }))}
             caption="Danh sách người dùng"
+            onRowClick={(person) => {
+              setShown({ id: person.userId, name: person.displayName });
+              setDrawerOpen(true);
+            }}
+            rowLabel={(person) => `Xem hồ sơ ${person.displayName}`}
+            activeRowId={drawerOpen && shown ? String(shown.id) : undefined}
             columns={[
               {
                 label: "Người dùng / Email",
@@ -225,12 +236,6 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
                 label: "Thao tác",
                 render: (person) => (
                   <div className="actions">
-                    <ActionLink
-                      href={`${base}/users/${person.userId}`}
-                      secondary
-                    >
-                      Hồ sơ →
-                    </ActionLink>
                     <Button
                       variant="tertiary"
                       onClick={() =>
@@ -275,6 +280,23 @@ export function ModerationUsersLivePage({ base }: { base: string }) {
           onChange={setPage}
         />
       )}
+
+      <Dialog
+        drawer
+        className="mod-drawer"
+        open={drawerOpen}
+        title={shown ? `Hồ sơ ${shown.name}` : "Hồ sơ người dùng"}
+        onClose={() => setDrawerOpen(false)}
+      >
+        {shown && (
+          <ModerationUserDetailPage
+            key={shown.id}
+            userId={shown.id}
+            embedded
+            onChanged={() => setAttempt((value) => value + 1)}
+          />
+        )}
+      </Dialog>
 
       <SanctionDialog
         key={sanctioning?.userId ?? "sanction"}
@@ -459,12 +481,23 @@ function LiftDialog({
  * MOD-U2 — hồ sơ chi tiết của một người dùng: thông tin, lịch sử xử phạt và
  * nhà hàng của chủ nhà hàng.
  */
-export function ModerationUserDetailPage({ userId }: { userId: number }) {
+export function ModerationUserDetailPage({
+  userId,
+  embedded = false,
+  onChanged,
+}: {
+  userId: number;
+  /** Trong ngăn bên phải của danh sách: tiêu đề nằm ở ngăn, không lặp lại. */
+  embedded?: boolean;
+  /** Gọi sau khi gỡ hạn chế để danh sách đọc lại trạng thái mới. */
+  onChanged?: () => void;
+}) {
   const service: ModerationUsersService = moderationUsersService;
   const [detail, setDetail] = useState<ModeratedUserDetailDto | null>(null);
   const [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
   const [lifting, setLifting] = useState(false);
+  const [sanctioning, setSanctioning] = useState(false);
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState("");
 
@@ -508,15 +541,17 @@ export function ModerationUserDetailPage({ userId }: { userId: number }) {
 
   return (
     <div className="stack">
-      <PageHeading
-        title={`Hồ sơ ${detail.displayName}`}
-        description="Thông tin tài khoản, lịch sử xử phạt và nội dung liên quan."
-      />
+      {!embedded && (
+        <PageHeading
+          title={`Hồ sơ ${detail.displayName}`}
+          description="Thông tin tài khoản, lịch sử xử phạt và nội dung liên quan."
+        />
+      )}
 
       {error && <Alert tone="warning">{error}</Alert>}
       {saved && <Alert tone="success">{saved}</Alert>}
 
-      <Card title="Thông tin tài khoản">
+      <Card title="Thông tin tài khoản" className="mu-profile">
         <div className="actions">
           <Avatar name={detail.displayName} image={detail.avatarUrl} />
           <div>
@@ -552,11 +587,22 @@ export function ModerationUserDetailPage({ userId }: { userId: number }) {
             {detail.restaurant.addressLine}
           </p>
         )}
-        {canLiftRestriction(detail.status) && (
-          <Button variant="secondary" onClick={() => setLifting(true)}>
-            Gỡ hạn chế
+        <div className="actions mu-profile-actions">
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setSaved("");
+              setSanctioning(true);
+            }}
+          >
+            Xử phạt
           </Button>
-        )}
+          {canLiftRestriction(detail.status) && (
+            <Button variant="secondary" onClick={() => setLifting(true)}>
+              Gỡ hạn chế
+            </Button>
+          )}
+        </div>
       </Card>
 
       <Card title="Lịch sử xử phạt">
@@ -606,6 +652,37 @@ export function ModerationUserDetailPage({ userId }: { userId: number }) {
         )}
       </Card>
 
+      <SanctionDialog
+        key={sanctioning ? `sanction-${detail.id}` : "sanction-detail"}
+        person={
+          sanctioning
+            ? {
+                userId: detail.id,
+                displayName: detail.displayName,
+                email: detail.email,
+                status: detail.status,
+              }
+            : null
+        }
+        busy={busy}
+        onClose={() => setSanctioning(false)}
+        onSubmit={async (request) => {
+          setBusy(true);
+          setError("");
+          try {
+            await service.sanction(detail.id, request);
+            setSaved(`Đã ghi nhận xử phạt với ${detail.displayName}.`);
+            setSanctioning(false);
+            setAttempt((value) => value + 1);
+            onChanged?.();
+          } catch (caught) {
+            setError(getErrorMessage(caught));
+          } finally {
+            setBusy(false);
+          }
+        }}
+      />
+
       <LiftDialog
         key={detail?.id ?? "lift-detail"}
         person={{
@@ -625,6 +702,7 @@ export function ModerationUserDetailPage({ userId }: { userId: number }) {
             setSaved("Đã gỡ hạn chế cho tài khoản.");
             setLifting(false);
             setAttempt((value) => value + 1);
+            onChanged?.();
           } catch (caught) {
             setError(getErrorMessage(caught));
           } finally {

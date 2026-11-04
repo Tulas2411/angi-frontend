@@ -129,10 +129,15 @@ function ModReportsBase({ base, id }: { base: string; id?: string }) {
  */
 function ModUsersBase({ base, id }: { base: string; id?: string }) {
   const userId = Number(id);
-  return Number.isInteger(userId) && userId > 0 ? (
-    <ModerationUserDetailPage userId={userId} />
-  ) : (
-    <ModerationUsersLivePage base={base} />
+  return (
+    <WorkspaceScope base={base}>
+      {/* The list opens a profile in its side panel; /users/{id} still opens it as a page. */}
+      {Number.isInteger(userId) && userId > 0 ? (
+        <ModerationUserDetailPage userId={userId} />
+      ) : (
+        <ModerationUsersLivePage />
+      )}
+    </WorkspaceScope>
   );
 }
 
