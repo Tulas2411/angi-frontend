@@ -92,6 +92,19 @@ export function isOverBudget(summary: RoadmapSummaryDto) {
   );
 }
 
+/** Hoan Kiem lake, shown while a roadmap has no dish yet (RM-02/RM-03 give no cover then). */
+export const emptyRoadmapCover = "/assets/roadmap-cover-hanoi.webp";
+
+/**
+ * The cover of a roadmap card or page: the backend's `coverUrl` (the first dish's photo), or the
+ * Hanoi photo while the roadmap has no dish. A roadmap whose first dish has no photo keeps the
+ * placeholder, as before.
+ */
+export function roadmapCover(summary: RoadmapSummaryDto) {
+  if (summary.coverUrl) return summary.coverUrl;
+  return summary.itemCount === 0 ? emptyRoadmapCover : undefined;
+}
+
 export const roadmapItemsLabel = (itemCount: number) =>
   itemCount > 0 ? `${itemCount} món` : "Chưa có món";
 

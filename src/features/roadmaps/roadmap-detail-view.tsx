@@ -23,6 +23,7 @@ import { RoadmapItinerary } from "./roadmap-itinerary";
 import { RoadmapDetailMap } from "./roadmap-detail-map";
 import {
   isOverBudget,
+  roadmapCover,
   roadmapDateRange,
   roadmapItemsLabel,
   roadmapOriginText,
@@ -347,7 +348,7 @@ export function RoadmapDetailView({
           </div>
           <Media
             className="roadmap-hero-media"
-            src={overview.coverUrl ?? undefined}
+            src={roadmapCover(overview)}
             alt={overview.title}
           />
         </section>

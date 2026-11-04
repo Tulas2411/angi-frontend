@@ -8,7 +8,7 @@ Màn `/roadmaps/{roadmapId}` (chỉ `TRAVELER`) gọi thật RM-03 `GET /api/v1/
   - Desktop trên 900px có ba cột: sidebar trái, sổ tay lộ trình ở giữa, bản đồ bên phải. Theo tỷ lệ frame: sidebar 200px, hai cột còn lại chia 1,16:1; sidebar thu còn 160px dưới 1200px. Thanh đầu trang nằm trên hai cột bên trái, bản đồ bắt đầu từ mép trên và cao bằng viewport. CSS chỉ mở rộng shell của trang có `.roadmap-detail-page`.
   - Sidebar và bản đồ giữ vị trí khi cuộn nội dung dài. Cột trái có ba phần và "Lịch ăn uống" liệt kê từng ngày (`T6 25/9`) kèm tên các món; bấm ngày mở tab Lịch trình và cuộn tới.
   - Dưới 901px: danh sách ngày chuyển thành dải cuộn ngang, bản đồ nằm trên nội dung; chọn món ở cột nội dung đưa thẻ địa điểm vào tầm nhìn, chọn ghim không tự cuộn xuống phần món ăn.
-  - Thẻ đầu trang: tên lộ trình, khoảng ngày, số ngày, số món (và nhãn "Vượt ngân sách" khi chi phí dự kiến lớn hơn ngân sách) nằm trong thẻ trắng riêng, ảnh bìa ở bên phải. Thẻ món cũng tách phần chữ và ảnh như thiết kế.
+  - Thẻ đầu trang: tên lộ trình, khoảng ngày, số ngày, số món (và nhãn "Vượt ngân sách" khi chi phí dự kiến lớn hơn ngân sách) nằm trong thẻ trắng riêng, ảnh bìa ở bên phải. Ảnh bìa theo cùng quy tắc với thẻ ở danh sách (`roadmapCover`, xem `docs/my-roadmaps.vi.md`): ảnh món đầu tiên, hoặc ảnh Hồ Hoàn Kiếm khi lộ trình chưa có món. Thẻ món cũng tách phần chữ và ảnh như thiết kế.
   - Ba tab dạng viên **Tổng quan | Lịch trình | Ngân sách** (đúng ba phần của `RoadmapDetail`); tab nằm trong URL (`?tab=overview|budget`; Lịch trình là mặc định nên không có tham số).
 - **Tổng quan (RM-03 `overview`):** thời gian, số ngày, số món, điểm xuất phát, ngân sách, chi phí dự kiến, ngày tạo và cập nhật.
 - **Lịch trình (RM-03 `itinerary` + RM-14):**

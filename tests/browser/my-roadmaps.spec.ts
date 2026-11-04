@@ -193,11 +193,22 @@ test("a roadmap without dates, items, budget or origin still reads clearly", asy
   const empty = cards(page).filter({ hasText: "Chuyến chưa có kế hoạch" });
   await expect(empty).toContainText("Chưa chọn ngày đi");
   await expect(empty).toContainText("Chưa có món");
+  // No dish yet: the cover is the Hanoi photo, and it loads.
+  const cover = empty.locator(".roadmap-card-cover img");
+  await expect(cover).toHaveAttribute(
+    "src",
+    "/assets/roadmap-cover-hanoi.webp",
+  );
+  await expect
+    .poll(() => cover.evaluate((image: HTMLImageElement) => image.naturalWidth))
+    .toBeGreaterThan(0);
   // Budget and origin are on the detail page, not on the card.
   await expect(empty).not.toContainText("Xuất phát");
-  await expect(
-    cards(page).filter({ hasText: "Chuyến vượt ngân sách" }),
-  ).toContainText("Vượt ngân sách");
+  const over = cards(page).filter({ hasText: "Chuyến vượt ngân sách" });
+  await expect(over).toContainText("Vượt ngân sách");
+  // It has dishes but the first one has no photo: the placeholder stays.
+  await expect(over.locator(".roadmap-card-cover img")).toHaveCount(0);
+  await expect(over.locator(".media-fallback")).toBeVisible();
 });
 
 test("pages follow ?page= in the URL, with the last page as the fallback past the end", async ({
