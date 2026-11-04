@@ -15,6 +15,7 @@ import {
   dishNotice,
   formatDistance,
   formatDuration,
+  routeSummary,
   formatRating,
   googleMapsDayLink,
   gpsRouteMessages,
@@ -300,6 +301,18 @@ function DayPanel({
   const maps = googleMapsDayLink(overview, day.items);
   const legs = route?.status === "ready" ? legsByTarget(route.route) : null;
   const bodyId = `day-body-${day.dayNumber}`;
+  // The day's route total, short ("35 phút, 8,98 km"), shown only while the day is folded.
+  const total =
+    route?.status === "ready" && route.route.legs.length > 0 ? (
+      <span className="roadmap-route-total">
+        <span className="sr-only">Cả ngày: </span>
+        {routeSummary(
+          route.route.totalDistanceMeters,
+          route.route.totalDurationSeconds,
+        )}
+        {route.route.isEstimated && " (ước tính)"}
+      </span>
+    ) : null;
   // A closed day stays drawn while it folds away, then leaves the page (so its calls stop too).
   const [drawn, setDrawn] = useState(open);
   if (open && !drawn) setDrawn(true);
@@ -331,8 +344,11 @@ function DayPanel({
           <span>{dayTitle(day)}</span>
         </button>
       </h3>
-      {/* The day's facts on the left; an open day's actions on the same line, at the right. */}
-      <div className="roadmap-day-subrow">
+      {/*
+        The day's facts on the left. Folded: the dish summary, the route total at the right end.
+        Open: "Ngày N · món · chi phí", the day's actions at the right end (no route total).
+      */}
+      <div className="roadmap-day-subrow" data-open={open || undefined}>
         <p className="roadmap-day-sub">
           {open
             ? `Ngày ${day.dayNumber} · ${
@@ -342,6 +358,7 @@ function DayPanel({
               }`
             : dayDishSummary(day.items)}
         </p>
+        {!open && total}
         {open && (
           <div className="roadmap-day-actions">
             <button type="button" onClick={() => onAdd()}>
@@ -355,8 +372,8 @@ function DayPanel({
             {maps && (
               <a href={maps.url} target="_blank" rel="noopener noreferrer">
                 <MapIcon aria-hidden />
-                Mở trên Google Maps
-                <span className="sr-only"> (mở tab mới)</span>
+                Chỉ đường
+                <span className="sr-only"> trên Google Maps (mở tab mới)</span>
               </a>
             )}
           </div>
@@ -400,39 +417,29 @@ function DayPanel({
                 </Button>
               </div>
             )}
-            {route?.status === "ready" && (
-              <div className="stack-sm">
-                {route.route.legs.length > 0 ? (
-                  <p className="roadmap-route-total">
-                    <Icon name="motorcycle" />
-                    <span>
-                      Cả ngày:{" "}
-                      <strong>
-                        {formatDistance(route.route.totalDistanceMeters)} ·{" "}
-                        {formatDuration(route.route.totalDurationSeconds)}
-                      </strong>
-                    </span>
-                    {route.route.isEstimated && (
-                      <Badge tone="warning">Ước tính</Badge>
-                    )}
-                  </p>
-                ) : (
-                  <p className="helper">Chưa đủ điểm để tính quãng đường.</p>
-                )}
-                {route.route.isEstimated && (
-                  <p className="helper">
-                    Quãng đường được ước tính theo đường chim bay vì chưa lấy
-                    được dữ liệu đường đi.
-                  </p>
-                )}
-                {route.route.originSkipped && (
-                  <Alert tone="info">
-                    Điểm xuất phát cách quán đầu tiên hơn 30 km nên chặng đầu
-                    không được tính.
-                  </Alert>
-                )}
-              </div>
-            )}
+            {/* Notes about the route; its total sits beside the day title. */}
+            {route?.status === "ready" &&
+              (route.route.legs.length === 0 ||
+                route.route.isEstimated ||
+                route.route.originSkipped) && (
+                <div className="stack-sm">
+                  {route.route.legs.length === 0 && (
+                    <p className="helper">Chưa đủ điểm để tính quãng đường.</p>
+                  )}
+                  {route.route.isEstimated && (
+                    <p className="helper">
+                      Quãng đường được ước tính theo đường chim bay vì chưa lấy
+                      được dữ liệu đường đi.
+                    </p>
+                  )}
+                  {route.route.originSkipped && (
+                    <Alert tone="info">
+                      Điểm xuất phát cách quán đầu tiên hơn 30 km nên chặng đầu
+                      không được tính.
+                    </Alert>
+                  )}
+                </div>
+              )}
 
             {day.items.length ? (
               groupByMeal(day.items).map((group) => (
@@ -661,8 +668,9 @@ export function RoadmapItinerary({
       gpsLatitude === undefined || gpsLongitude === undefined
         ? undefined
         : { latitude: gpsLatitude, longitude: gpsLongitude };
+    // Every day, open or folded: a folded day shows its route total beside its dish summary.
+    // Each (day, origin) is still asked once; RM-14 caches the Mapbox answer for 24 hours.
     for (const day of itinerary) {
-      if (!openDays.includes(day.dayNumber)) continue;
       // The order shown is not saved yet: RM-14 would still answer for the old one. It is asked
       // once the roadmap is read again, with the order the backend confirms.
       if (moved?.dayNumber === day.dayNumber) continue;
@@ -694,7 +702,6 @@ export function RoadmapItinerary({
     active,
     itinerary,
     moved,
-    openDays,
     overview,
     gpsLatitude,
     gpsLongitude,

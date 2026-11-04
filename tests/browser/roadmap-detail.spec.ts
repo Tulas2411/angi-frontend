@@ -17,6 +17,12 @@ import type {
 /** F-21: RM-03 and RM-14 against a local stub shaped like the API Design JSON samples. */
 let detail: RoadmapDetailDto;
 let routeCalls: string[] = [];
+/**
+ * RM-14 is asked for every day with stops as soon as the itinerary shows, folded days included,
+ * so a folded day can show its route total: day 1 and day 3 here (day 2 has no dish).
+ */
+const everyDayAsked = () =>
+  expect.poll(() => routeCalls.slice().sort()).toEqual(["301", "303"]);
 let failRoute = 0;
 let failDetail = 0;
 let placeCalls: string[] = [];
@@ -605,14 +611,18 @@ test("RM-03 shows the hero, the day list, the first day with its legs and its to
   );
   await expect(legs(page).nth(1)).toContainText("Bún bò Huế → Mì Quảng");
   await expect(legs(page).nth(2)).toContainText("Mì Quảng → Bánh xèo");
-  await expect(page.locator(".roadmap-route-total")).toContainText(
-    "7,9 km · 27 phút",
-  );
+  // An open day shows its legs, not the day total.
+  await expect(page.locator("#day-1 .roadmap-route-total")).toHaveCount(0);
   await expect(page.getByText("Ước tính", { exact: true })).toHaveCount(0);
   await expect(page.locator(".roadmap-day-total")).toContainText(
     "Tổng dự chi hôm nay: 145.000 VND",
   );
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
+  // Folded, the day keeps its total at the right end of its dish summary.
+  await page.getByRole("button", day1).click();
+  await expect(page.locator("#day-1 .roadmap-route-total")).toContainText(
+    "27 phút, 7,9 km",
+  );
 });
 
 test("the tabs switch between overview, itinerary and budget and follow ?tab=", async ({
@@ -650,14 +660,16 @@ test("the tabs switch between overview, itinerary and budget and follow ?tab=", 
   await expect(page).toHaveURL(/\/roadmaps\/88\?open=1$/);
   await expect(items(page)).toHaveCount(3);
   // The itinerary kept its day and its legs: nothing was asked twice.
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
 });
 
 test("the Google Maps button is built by the app from the item coordinates", async ({
   page,
 }) => {
   await open(page);
-  const link = main(page).getByRole("link", { name: /Mở trên Google Maps/ });
+  const link = main(page).getByRole("link", {
+    name: /Chỉ đường trên Google Maps/,
+  });
   await expect(link).toHaveCount(1);
   await expect(link).toHaveAttribute("target", "_blank");
   await expect(link).toHaveAttribute("rel", /noopener/);
@@ -670,11 +682,11 @@ test("the Google Maps button is built by the app from the item coordinates", asy
   expect(query.get("travelmode")).toBe("driving");
 });
 
-test("days fold and unfold, RM-14 is asked once per open day and skipped for empty days", async ({
+test("days fold and unfold, RM-14 is asked once per day with stops and skipped for empty days", async ({
   page,
 }) => {
   await open(page);
-  await expect.poll(() => routeCalls).toEqual(["301"]);
+  await everyDayAsked();
 
   await page.getByRole("button", day2).click();
   await expect(page).toHaveURL(/\/roadmaps\/88\?day=2&open=1,2$/);
@@ -685,7 +697,7 @@ test("days fold and unfold, RM-14 is asked once per open day and skipped for emp
   await expect(main(page).getByText("Ngày này chưa có món nào.")).toBeVisible();
   // Days open independently: day 1 is still open and nothing was asked for the empty day.
   await expect(items(page)).toHaveCount(3);
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
 
   await page.getByRole("button", day3).click();
   await expect(page).toHaveURL(/\/roadmaps\/88\?day=3&open=1,2,3$/);
@@ -816,7 +828,7 @@ test("a roadmap without an origin starts its legs at the first stop", async ({
   await tab(page, "Lịch trình").click();
   const query = new URL(
     (await main(page)
-      .getByRole("link", { name: /Mở trên Google Maps/ })
+      .getByRole("link", { name: /Chỉ đường trên Google Maps/ })
       .getAttribute("href")) ?? "",
   ).searchParams;
   expect(query.has("origin")).toBe(false);
@@ -834,11 +846,11 @@ test("a failed RM-14 call keeps the day readable and can be retried", async ({
   await expect(legs(page)).toHaveCount(0);
   await tab(page, "Tổng quan").click();
   await tab(page, "Lịch trình").click();
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
   await main(page).getByRole("button", { name: "Thử lại" }).click();
   await expect(legs(page)).toHaveCount(3);
   await expect(main(page).locator(".alert-error")).toHaveCount(0);
-  expect(routeCalls).toEqual(["301", "301"]);
+  expect(routeCalls).toEqual(["301", "303", "301"]);
 });
 
 test("a gps roadmap asks the browser for the position, then sends it with RM-14", async ({
@@ -862,13 +874,14 @@ test("a gps roadmap asks the browser for the position, then sends it with RM-14"
   expect(routeCalls).toEqual([
     "301",
     "301?originLat=16.0678&originLng=108.2208",
+    "303?originLat=16.0678&originLng=108.2208",
   ]);
   await expect(page.getByText(/Tọa độ không được lưu/)).toBeVisible();
 
   await page.getByRole("button", { name: "Bỏ vị trí hiện tại" }).click();
   await expect(legs(page)).toHaveCount(2);
   // The first answer is reused, so dropping the position costs no new request.
-  expect(routeCalls).toHaveLength(2);
+  expect(routeCalls).toHaveLength(3);
 });
 
 test("a blocked location explains what to do and keeps the legs between the stops", async ({
@@ -973,7 +986,7 @@ for (const width of [1024, 1440]) {
     expect(center.width).toBeGreaterThanOrEqual(280);
     expect(right.width).toBeGreaterThanOrEqual(240);
     expect(right.right).toBeLessThanOrEqual(width + 1);
-    expect(routeCalls).toEqual(["301"]);
+    await everyDayAsked();
   });
 }
 
@@ -1033,7 +1046,7 @@ test("sidebar and map stay in view while a long itinerary scrolls independently"
   expect(Math.abs(mapAfter.top - mapBefore.top)).toBeLessThanOrEqual(2);
   await expect(sidebar).toBeInViewport({ ratio: 0.4 });
   await expect(map).toBeInViewport({ ratio: 0.4 });
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
 });
 
 test("an unconfigured map keeps real stop details usable without provider requests", async ({
@@ -1075,7 +1088,7 @@ test("an unconfigured map keeps real stop details usable without provider reques
   await expect(selected).toHaveCount(0);
   await expect(stopButtons).toHaveCount(4);
   expect(providerRequests).toBe(0);
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
 });
 
 test("the selected stop shows its dish, its restaurant and the restaurant's reviews", async ({
@@ -1236,11 +1249,13 @@ test("a stop without coordinates keeps its details selectable and is omitted fro
   await expect(selected).toContainText(
     "Địa điểm này chưa có tọa độ trên bản đồ.",
   );
-  const link = main(page).getByRole("link", { name: /Mở trên Google Maps/ });
+  const link = main(page).getByRole("link", {
+    name: /Chỉ đường trên Google Maps/,
+  });
   const query = new URL((await link.getAttribute("href")) ?? "").searchParams;
   expect(query.get("waypoints")).toBe("16.07,108.23");
   expect(query.get("destination")).toBe("16.08,108.24");
-  expect(routeCalls).toEqual(["301"]);
+  await everyDayAsked();
 });
 
 test.describe("offline Mapbox roadmap rendering", () => {
@@ -1345,7 +1360,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await expect(map.locator(".roadmap-map-card")).toContainText(
       "Quán Bún bò Huế",
     );
-    expect(routeCalls).toEqual(["301"]);
+    await everyDayAsked();
   });
 
   test("closing selected stop information preserves every pin and the loaded map", async ({
@@ -1377,7 +1392,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await expect(first).toHaveAttribute("aria-pressed", "false");
     await expect(map).toHaveAttribute("data-ready", "true");
     await expect(map.locator(".mapboxgl-canvas")).toBeVisible();
-    expect(routeCalls).toEqual(["301"]);
+    await everyDayAsked();
   });
 
   test("a missing-coordinate stop stays selectable without creating a fabricated pin", async ({
@@ -1411,7 +1426,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
     );
     await expect(items(page).first()).toHaveAttribute("data-selected", "true");
     await expect(map.locator(".roadmap-map-pin")).toHaveCount(3);
-    expect(routeCalls).toEqual(["301"]);
+    await everyDayAsked();
   });
 
   test("a local style error keeps itinerary and stop details readable and can recover", async ({
@@ -1444,7 +1459,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await expect(map.locator(".roadmap-map-card")).toContainText(
       "Quán Mì Quảng",
     );
-    expect(routeCalls).toEqual(["301"]);
+    await everyDayAsked();
   });
 
   test("the Figma layout and exact assets fit desktop, tablet and mobile", async ({
@@ -1621,7 +1636,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await expect(card).toContainText("Quán Bánh mì trứng");
     await expect(card).toBeInViewport({ ratio: 0.7 });
     expect(cameraProblems).toEqual([]);
-    expect(routeCalls).toEqual(["301"]);
+    await everyDayAsked();
   });
 });
 
