@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  emptyRoadmapCover,
   isOverBudget,
   parseRoadmapPage,
   roadmapCountdown,
+  roadmapCover,
   roadmapDateRange,
   roadmapItemsLabel,
   roadmapListPageSize,
@@ -93,6 +95,16 @@ describe("RM-02 list presentation", () => {
 });
 
 describe("roadmap card", () => {
+  it("shows the first dish's photo, the Hanoi photo while there is no dish, else the placeholder", () => {
+    expect(roadmapCover(sample)).toBe("https://cdn.angi.vn/dishes/105.jpg");
+    expect(roadmapCover({ ...sample, itemCount: 0, coverUrl: null })).toBe(
+      emptyRoadmapCover,
+    );
+    expect(emptyRoadmapCover).toBe("/assets/roadmap-cover-hanoi.webp");
+    // The first dish has no photo: the placeholder stays, as before.
+    expect(roadmapCover({ ...sample, coverUrl: null })).toBeUndefined();
+  });
+
   it("writes the dates short, the year once", () => {
     expect(roadmapShortRange(sample)).toBe("10 – 12 thg 10, 2026");
     expect(

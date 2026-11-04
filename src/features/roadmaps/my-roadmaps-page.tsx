@@ -19,6 +19,7 @@ import {
   isOverBudget,
   pageAfterDelete,
   roadmapCountdown,
+  roadmapCover,
   roadmapItemsLabel,
   roadmapListPageSize,
   roadmapShortRange,
@@ -58,7 +59,7 @@ function RoadmapCard({
   return (
     <article className="roadmap-card" aria-labelledby={`roadmap-${roadmap.id}`}>
       <div className="roadmap-card-cover">
-        <Media src={roadmap.coverUrl ?? undefined} alt={roadmap.title} />
+        <Media src={roadmapCover(roadmap)} alt={roadmap.title} />
         {(countdown || over) && (
           <p className="roadmap-card-badges">
             {countdown && <span>{countdown}</span>}

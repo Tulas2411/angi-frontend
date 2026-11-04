@@ -7,7 +7,7 @@ Màn `/roadmaps` (chỉ `TRAVELER`) gọi thật RM-02 `GET /api/v1/roadmaps?pag
 - **Phân trang theo URL:** `/roadmaps?page=2`. Mỗi trang 9 thẻ (`pageSize=9`, nằm trong khoảng 1–100 của API; 3 thẻ mỗi hàng). `page` hỏng (`abc`, `0`, `-1`, số lẻ) được coi là trang 1 nên backend không bao giờ nhận tham số sai. Trang vượt quá cuối (ví dụ vừa xóa bớt lộ trình) tự chuyển về trang cuối.
 - **Thứ tự:** mới nhất trước, đúng thứ tự backend trả về (`createdAt` giảm dần, rồi `id` giảm dần). FE không sắp xếp lại.
 - **Thẻ lộ trình** chỉ hiển thị dữ liệu có trong `RoadmapSummary`:
-  - Ảnh bìa (`coverUrl`, ảnh món đầu tiên); không có ảnh thì dùng khung dự phòng.
+  - Ảnh bìa (`coverUrl`, ảnh món đầu tiên). Lộ trình chưa có món (`itemCount = 0`) dùng ảnh Hồ Hoàn Kiếm `public/assets/roadmap-cover-hanoi.webp`; có món mà món đầu không có ảnh thì vẫn dùng khung dự phòng. Quy tắc nằm ở `roadmapCover` (`roadmap-list-rules.ts`), dùng chung với trang chi tiết.
   - Tên, khoảng ngày (`startDate`–`endDate`, hoặc "Chưa chọn ngày đi"), số ngày, số món ("Chưa có món" khi `itemCount = 0`).
   - Ngân sách, chi phí dự kiến (`totalEstimatedCost`), điểm xuất phát (tên điểm đã chấm hoặc "Vị trí hiện tại"; ẩn khi `originMode = none`).
   - Nhãn "Vượt ngân sách" khi `totalEstimatedCost > budgetAmount` (cùng quy tắc `budget.isOverBudget` của RoadmapDetail). Không hiện khi chưa đặt ngân sách.
