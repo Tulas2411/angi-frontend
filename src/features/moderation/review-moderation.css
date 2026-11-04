@@ -1,0 +1,264 @@
+/* Moderate User Feedback: what differs from verification-review.css. */
+.rv-toolbar {
+  align-items: flex-end;
+}
+.rv-filters {
+  display: grid;
+  grid-template-columns: minmax(220px, 320px) minmax(160px, 200px);
+  gap: var(--space-3);
+}
+.rv-filters .field {
+  margin: 0;
+}
+
+.rv-list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rv-card {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--vr-lift);
+}
+.rv-card[data-status="hidden"] {
+  box-shadow:
+    inset 3px 0 0 var(--warning-ink),
+    var(--vr-lift);
+}
+.rv-card[data-status="removed"] {
+  box-shadow:
+    inset 3px 0 0 var(--error-ink),
+    var(--vr-lift);
+}
+
+.rv-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.rv-who {
+  display: grid;
+  flex: 1 1 160px;
+  min-width: 0;
+}
+.rv-who strong {
+  overflow-wrap: anywhere;
+}
+.rv-who small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.rv-stars {
+  display: inline-flex;
+  gap: 2px;
+}
+.rv-stars svg {
+  width: 18px;
+  height: 18px;
+  color: var(--line-strong);
+}
+.rv-stars svg[data-on] {
+  color: #f5a524;
+}
+
+.rv-place {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.rv-place svg {
+  width: 15px;
+  height: 15px;
+}
+.rv-place strong {
+  color: var(--ink);
+}
+
+.rv-content {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.rv-empty {
+  color: var(--muted);
+  font-size: 14px;
+  font-style: italic;
+}
+.rv-card[data-status="removed"] > .rv-content {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--error-ink);
+}
+
+.rv-photos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rv-photos button {
+  display: block;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 10px;
+  background: var(--control);
+  cursor: zoom-in;
+}
+.rv-photos img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 300ms var(--ease-out);
+}
+.rv-photos button:hover img {
+  transform: scale(1.06);
+}
+.rv-photos button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Small action buttons: show again, hide, remove. */
+.rv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.rv-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease;
+}
+.rv-actions svg {
+  width: 16px;
+  height: 16px;
+}
+.rv-actions button:hover {
+  background: var(--control-hover);
+}
+.rv-actions button[data-action="visible"]:hover {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.rv-actions button[data-action="hidden"]:hover {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+.rv-actions button[data-action="removed"]:hover {
+  background: var(--error-bg);
+  color: var(--error-ink);
+}
+.rv-actions button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* The owner's reply, set apart under the review. */
+.rv-reply {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--line-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--canvas);
+}
+.rv-reply[data-status="hidden"] {
+  border-left-color: var(--warning-ink);
+}
+.rv-reply[data-status="removed"] {
+  border-left-color: var(--error-ink);
+}
+.rv-reply-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-2);
+  font-size: 13px;
+}
+.rv-reply-head svg {
+  width: 16px;
+  height: 16px;
+}
+.rv-reply-head small {
+  color: var(--muted);
+}
+.rv-reply p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.rv-reply[data-status="removed"] p {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--error-ink);
+}
+.rv-reply .rv-actions button {
+  background: var(--card);
+}
+
+.rv-quote {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--line-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--control);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  .rv-filters {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+}
+@media (max-width: 480px) {
+  .rv-card {
+    padding: var(--space-4);
+  }
+  .rv-photos button {
+    width: 72px;
+    height: 72px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-actions button,
+  .rv-photos img {
+    transition: none;
+  }
+}

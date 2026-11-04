@@ -130,6 +130,21 @@ export function moderationRestaurantsOperation(
 }
 
 /**
+ * Moderate User Feedback: MOD-F1 `GET mod/reviews`, MOD-F2 `PUT mod/reviews/{reviewId}/status`
+ * and MOD-F3 `PUT mod/reviews/{reviewId}/reply/status`. MOD and ADMIN.
+ */
+export function moderationReviewsOperation(method: string, endpoint: string) {
+  if (method === "GET" && endpoint === "mod/reviews")
+    return { body: false, status: 200 };
+  if (
+    method === "PUT" &&
+    new RegExp(`^mod/reviews/${id}/(status|reply/status)$`).test(endpoint)
+  )
+    return { body: true, status: 200 };
+  return null;
+}
+
+/**
  * F-58 Review Pending Menu Submission: MOD-M1 `GET mod/menu-submissions`, MOD-M2
  * `GET mod/menu-submissions/{submissionId}`, MOD-M3 `POST .../approve` and MOD-M4
  * `POST .../reject`. The BE controller allows MOD and ADMIN.
