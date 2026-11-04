@@ -9,6 +9,8 @@
   border: 0;
   background: transparent;
   color: #fff;
+  /* Kept while it fades out after [open] goes, so the photo does not jump out of the centre. */
+  place-items: center;
   opacity: 0;
   transition:
     opacity 220ms ease,
@@ -17,7 +19,6 @@
 }
 .photo-lightbox[open] {
   display: grid;
-  place-items: center;
   opacity: 1;
 }
 @starting-style {

@@ -289,11 +289,16 @@ export function DishRow({
   onRetry,
   actions,
   newTab,
+  priceInHead = false,
 }: {
   dish: MenuDishDto;
-  /** Left out where a list shows no descriptions (the roadmap dialog). */
   description?: DishDescription;
   onRetry?: () => void;
+  /**
+   * The price on the name's line and no restaurant line (the roadmap dialog, whose rows show the
+   * description instead of the restaurant).
+   */
+  priceInHead?: boolean;
 } & CardExtras) {
   return (
     <article className="dish-item dish-row" aria-labelledby={`dish-${dish.id}`}>
@@ -305,6 +310,9 @@ export function DishRow({
       <div className="dish-body">
         <div className="dish-head">
           <DishName dish={dish} lines={1} newTab={newTab} />
+          {priceInHead && (
+            <strong className="dish-price">{vnd(dish.price)}</strong>
+          )}
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
@@ -315,7 +323,7 @@ export function DishRow({
             onRetry={onRetry ?? (() => undefined)}
           />
         )}
-        <DishPlace dish={dish} />
+        {!priceInHead && <DishPlace dish={dish} />}
         {actions && <div className="dish-actions">{actions}</div>}
       </div>
     </article>
