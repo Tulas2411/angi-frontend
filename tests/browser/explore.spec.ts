@@ -532,7 +532,7 @@ test.describe("dishes", () => {
     ).toBeVisible();
     await expect(page.getByText("Nước dùng hầm xương 8 tiếng")).toBeVisible();
     await expect(page.getByText("45.000")).toBeVisible();
-    const sells = page.locator(".explore-restaurant");
+    const sells = page.locator(".dish-page-seller");
     await expect(sells).toContainText("Bún Bò Bà Diệu");
     await expect(
       sells.getByRole("link", { name: "Chỉ đường trên Google Maps" }),
@@ -540,6 +540,12 @@ test.describe("dishes", () => {
       "href",
       /google\.com\/maps\/search\/\?api=1&query=21\.0285,105\.8542/,
     );
+    // The rest of restaurant 7's menu (REST-03), without the dish being viewed.
+    const more = page.getByRole("region", {
+      name: "Món khác ở Bún Bò Bà Diệu",
+    });
+    await expect(more.getByRole("link")).toHaveCount(2);
+    await expect(more.getByRole("link", { name: /Bún bò Huế/ })).toHaveCount(0);
     await sells.getByRole("link", { name: "Xem quán" }).click();
     await expect(page).toHaveURL(/\/restaurants\/7$/);
   });
