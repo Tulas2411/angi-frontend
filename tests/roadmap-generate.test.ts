@@ -12,6 +12,9 @@ import {
   initialGenerateForm,
   isGenerationFinished,
   preferenceTags,
+  generationPlan,
+  generationPlanText,
+  generationSubmitLabel,
   replacedItemCount,
   tagChoice,
   toggleMealSlot,
@@ -406,6 +409,62 @@ describe("RM-10 and RM-11 service", () => {
     await expect(roadmapService.tags()).resolves.toHaveLength(1);
     expect((tags.mock.calls[0] as unknown as [string])[0]).toBe(
       "/api/backend/tags",
+    );
+  });
+});
+
+describe("what a request will do (dialog footer)", () => {
+  // Day 301 has breakfast and lunch; day 302 breakfast only. Default meals: breakfast, lunch, dinner.
+  const itinerary = [day(301, "breakfast", "lunch"), day(302, "breakfast")];
+  it("fills only empty meals and keeps the dishes already there", () => {
+    expect(generationPlan(form(), itinerary)).toEqual({
+      meals: 3,
+      kept: 3,
+      replaced: 0,
+    });
+    expect(
+      generationPlan(form({ scope: "day", dayId: "301" }), itinerary),
+    ).toEqual({ meals: 1, kept: 2, replaced: 0 });
+    expect(
+      generationPlan(
+        form({ scope: "slot", dayId: "302", mealSlot: "lunch" }),
+        itinerary,
+      ),
+    ).toEqual({ meals: 1, kept: 0, replaced: 0 });
+  });
+  it("empties and refills every covered meal when replacing", () => {
+    expect(
+      generationPlan(
+        form({ scope: "day", dayId: "301", replaceExisting: true }),
+        itinerary,
+      ),
+    ).toEqual({ meals: 3, kept: 0, replaced: 2 });
+    expect(generationPlan(form({ replaceExisting: true }), itinerary)).toEqual({
+      meals: 6,
+      kept: 0,
+      replaced: 3,
+    });
+  });
+  it("says it in words, and names the count on the button", () => {
+    expect(
+      generationPlanText({ meals: 1, kept: 2, replaced: 0 }, "của Thứ Sáu"),
+    ).toBe("ANGI sẽ điền 1 bữa còn trống của Thứ Sáu · giữ 2 món đã có.");
+    expect(
+      generationPlanText({ meals: 2, kept: 0, replaced: 0 }, "trong lộ trình"),
+    ).toBe("ANGI sẽ điền 2 bữa còn trống trong lộ trình.");
+    expect(
+      generationPlanText({ meals: 3, kept: 0, replaced: 2 }, "của Thứ Sáu"),
+    ).toBe(
+      "ANGI sẽ xóa 2 món đang có của Thứ Sáu rồi điền lại 3 bữa. Không hoàn tác được.",
+    );
+    expect(
+      generationPlanText({ meals: 0, kept: 3, replaced: 0 }, "của Thứ Sáu"),
+    ).toContain("đều đã có món");
+    expect(generationSubmitLabel({ meals: 2, kept: 1, replaced: 0 })).toBe(
+      "Tạo 2 món bằng AI",
+    );
+    expect(generationSubmitLabel({ meals: 3, kept: 0, replaced: 2 })).toBe(
+      "Xóa 2 món và tạo lại",
     );
   });
 });

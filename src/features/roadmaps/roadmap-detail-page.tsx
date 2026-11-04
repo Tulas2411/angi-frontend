@@ -97,6 +97,11 @@ export function RoadmapDetailPage({
         onItemsGenerated={reload}
         onItemsMoved={reload}
         onItemRated={reload}
+        onRoadmapUpdated={(detail) =>
+          setState((current) =>
+            current.status === "ready" ? { status: "ready", detail } : current,
+          )
+        }
       />
     );
   if (state.status === "loading")

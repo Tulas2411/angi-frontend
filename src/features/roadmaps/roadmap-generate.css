@@ -1,41 +1,99 @@
-/* F-26 "ANGI lên lịch giúp bạn": AI generation dialog and its entry banner. */
-
-.roadmap-ai-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-5) var(--space-6);
-  border: 0px solid var(--line);
-  border-radius: var(--radius-md);
-  background: var(--card);
-}
-
-.roadmap-ai-banner h3 {
-  margin-bottom: var(--space-1);
-  font-size: 18px;
-}
-
-.roadmap-ai-banner p {
-  max-width: 52ch;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-.roadmap-ai-banner .button {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
+/* F-26 "ANGI lên lịch giúp bạn": AI generation dialog (opened from a day's "ANGI thêm giúp bạn"). */
 
 .roadmap-generate {
   padding-top: var(--space-2);
 }
 
-.roadmap-generate-row {
+/*
+ * Scope tabs and the day picker on one row, the picker right after "Một bữa"; it drops below on
+ * narrow dialogs. The picker keeps its "Ngày" label for screen readers only.
+ */
+.roadmap-generate-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.roadmap-generate-day {
+  flex: 0 1 260px;
+  min-width: 200px;
+}
+.roadmap-generate-day .field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Where ANGI looks (origin) under the province/price bar. */
+.roadmap-generate-origin {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+}
+.roadmap-generate-origin svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+/*
+ * The note: its "0 / 500" counter sits on the label line, at the right; an error stays under the
+ * field. The counter row is TextArea's helper row, laid out in place with display: contents.
+ */
+.roadmap-generate .field:has(> .roadmap-generate-note) {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px var(--space-3);
+}
+.roadmap-generate .field:has(> .roadmap-generate-note) > label {
+  grid-column: 1;
+  grid-row: 1;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .roadmap-generate-note {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+.roadmap-generate .field:has(> .roadmap-generate-note) > .between {
+  display: contents;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .between
+  > span:last-child {
+  grid-column: 2;
+  grid-row: 1;
+  font-variant-numeric: tabular-nums;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .between
+  > span:first-child {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .between
+  > span:first-child:empty {
+  display: none;
+}
+
+/* The note starts two lines high and grows with its text, up to about six lines. */
+.roadmap-generate .textarea.roadmap-generate-note {
+  min-height: 0;
+  max-height: 168px;
+  field-sizing: content;
 }
 
 .roadmap-generate-meals {
@@ -43,6 +101,10 @@
   margin: 0;
   padding: 0;
   border: 0;
+}
+
+.roadmap-generate-meals > .field-error {
+  margin-top: var(--space-2);
 }
 
 .roadmap-generate-meals legend,
@@ -74,15 +136,38 @@
   cursor: pointer;
   font-weight: 600;
 }
+.roadmap-generate-more > summary .helper {
+  font-weight: 400;
+}
 
 .roadmap-generate-more[open] > summary {
   margin-bottom: var(--space-4);
 }
 
-.roadmap-generate-replace {
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  background: var(--control);
+/*
+ * Footer of the form: the replace switch and what the request will do, left of the buttons and
+ * always in sight. Deleting dishes turns the line into a warning, as the button turns red.
+ */
+.roadmap-generate-plan {
+  display: grid;
+  flex: 1 1 280px;
+  gap: 2px;
+  min-width: 0;
+  margin-right: auto;
+}
+.roadmap-generate-plan .choice {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.roadmap-generate-plan-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.roadmap-generate-plan-text[data-tone="warning"] {
+  color: var(--error-ink);
+  font-weight: 600;
 }
 
 .roadmap-generate-progress {
@@ -139,13 +224,12 @@
 }
 
 @media (max-width: 700px) {
-  .roadmap-ai-banner {
-    flex-direction: column;
-    align-items: stretch;
-    padding: var(--space-4);
+  .roadmap-generate-day {
+    flex-basis: 100%;
+    min-width: 0;
   }
-  .roadmap-generate-row {
-    grid-template-columns: minmax(0, 1fr);
+  .roadmap-generate-plan {
+    flex-basis: 100%;
   }
 }
 

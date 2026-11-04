@@ -6,6 +6,16 @@ import {
   formatVndInput,
   buildCreateRoadmapRequest,
   buildRoadmapPatch,
+  budgetDigits,
+  buildBudgetPatch,
+  buildDateRangePatch,
+  buildTitlePatch,
+  dateRangeError,
+  lastPickableDay,
+  maxPickableDays,
+  nextDateRange,
+  roadmapTitleError,
+  tripDays,
   classifyGpsError,
   gpsProblemMessages,
   emptyRoadmapForm,
@@ -224,6 +234,108 @@ describe("RM-04 overview patch", () => {
       longitude: 108.227531,
     });
     expect(originFromSummary({ ...summary, originMode: "gps" })).toBeNull();
+  });
+});
+
+describe("RM-04 budget dialog on the detail page", () => {
+  it("starts from the saved amount, or empty when none is set", () => {
+    expect(budgetDigits(1500000)).toBe("1500000");
+    expect(budgetDigits(0)).toBe("0");
+    expect(budgetDigits(null)).toBe("");
+  });
+  it("sends nothing when the amount is unchanged", () => {
+    expect(buildBudgetPatch("1500000", 1500000)).toEqual({});
+    expect(buildBudgetPatch("", null)).toEqual({});
+  });
+  it("sends only budgetAmount when it is set or changed", () => {
+    expect(buildBudgetPatch("2000000", 1500000)).toEqual({
+      budgetAmount: 2000000,
+    });
+    expect(buildBudgetPatch("0", null)).toEqual({ budgetAmount: 0 });
+  });
+  it("clears the budget with an explicit null when the field is emptied", () => {
+    const patch = buildBudgetPatch("", 1500000);
+    expect(patch).toEqual({ budgetAmount: null });
+    expect("budgetAmount" in patch).toBe(true);
+  });
+});
+
+describe("RM-04 title edited in place", () => {
+  it("requires 1..200 characters once trimmed", () => {
+    expect(roadmapTitleError("   ")).toBe("Tên lộ trình không được để trống.");
+    expect(roadmapTitleError("a".repeat(201))).toContain("200");
+    expect(roadmapTitleError(` ${"a".repeat(200)} `)).toBeNull();
+  });
+  it("sends the trimmed title only when it changed", () => {
+    expect(buildTitlePatch("  Hà Nội 3 ngày ", "Hà Nội 3 ngày")).toEqual({});
+    expect(buildTitlePatch(" Huế 2 ngày ", "Hà Nội 3 ngày")).toEqual({
+      title: "Huế 2 ngày",
+    });
+  });
+});
+
+describe("RM-04 dates picked in the hero", () => {
+  it("counts both ends of the trip, across months", () => {
+    expect(tripDays("2026-11-13", "2026-11-18")).toBe(6);
+    expect(tripDays("2026-11-13", "2026-11-13")).toBe(1);
+    expect(tripDays("2026-10-30", "2026-11-02")).toBe(4);
+  });
+  it("accepts 1..7 days and rejects an end before the start", () => {
+    expect(dateRangeError("2026-11-13", "2026-11-19")).toBeNull();
+    expect(dateRangeError("2026-11-13", "2026-11-20")).toBe(
+      "Chuyến đi tối đa 7 ngày.",
+    );
+    expect(dateRangeError("2026-11-13", "2026-11-12")).toBe(
+      "Ngày về không được trước ngày đi.",
+    );
+    expect(dateRangeError("", "2026-11-12")).toBe(
+      "Chọn ngày đi rồi chọn ngày về.",
+    );
+  });
+  it("sends the start date and day count only when they changed", () => {
+    const saved = { startDate: "2026-11-13", numDays: 6 };
+    expect(buildDateRangePatch("2026-11-13", "2026-11-18", saved)).toEqual({});
+    expect(buildDateRangePatch("2026-11-14", "2026-11-19", saved)).toEqual({
+      startDate: "2026-11-14",
+    });
+    expect(buildDateRangePatch("2026-11-13", "2026-11-15", saved)).toEqual({
+      numDays: 3,
+    });
+    expect(
+      buildDateRangePatch("2026-12-01", "2026-12-02", {
+        startDate: null,
+        numDays: 3,
+      }),
+    ).toEqual({ startDate: "2026-12-01", numDays: 2 });
+  });
+  it("picks the start, then the end, and starts over on a finished range", () => {
+    expect(nextDateRange({}, "2026-11-13")).toEqual({ from: "2026-11-13" });
+    expect(nextDateRange({ from: "2026-11-13" }, "2026-11-15")).toEqual({
+      from: "2026-11-13",
+      to: "2026-11-15",
+    });
+    expect(nextDateRange({ from: "2026-11-13" }, "2026-11-13")).toEqual({
+      from: "2026-11-13",
+      to: "2026-11-13",
+    });
+    expect(nextDateRange({ from: "2026-11-13" }, "2026-11-10")).toEqual({
+      from: "2026-11-10",
+    });
+    expect(
+      nextDateRange({ from: "2026-11-13", to: "2026-11-15" }, "2026-11-20"),
+    ).toEqual({ from: "2026-11-20" });
+  });
+  it("limits the end to seven days from the start", () => {
+    expect(lastPickableDay("2026-11-28")).toBe("2026-12-04");
+  });
+  it("keeps a trip the Agent made longer than seven days movable", () => {
+    expect(maxPickableDays(3)).toBe(7);
+    expect(maxPickableDays(10)).toBe(10);
+    expect(dateRangeError("2026-11-01", "2026-11-10", 10)).toBeNull();
+    expect(dateRangeError("2026-11-01", "2026-11-11", 10)).toBe(
+      "Chuyến đi tối đa 10 ngày.",
+    );
+    expect(lastPickableDay("2026-11-01", 10)).toBe("2026-11-10");
   });
 });
 

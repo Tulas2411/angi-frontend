@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Map as MapboxMap, Marker } from "mapbox-gl";
+import { SparklesIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/shared/ui";
 import { Icon } from "@/components/ui/primitives";
 import { mapStyles } from "@/shared/maps/mapbox";
@@ -16,6 +17,8 @@ import {
 import {
   groupRoadmapStops,
   roadmapDayTone,
+  roadmapFocusOffset,
+  roadmapFocusZoom,
   roadmapMapCoordinate,
   roadmapMapPoints,
   roadmapMapStops,
@@ -56,7 +59,13 @@ function PreviewMapCard({
         </Button>
       </div>
       <div className="roadmap-map-card-body">
-        <h3>{stop.item.restaurantName ?? "Chưa có tên quán"}</h3>
+        {/* At most two lines (a long name would grow the card over the map); full name on hover. */}
+        <h3
+          className="roadmap-map-card-title"
+          title={stop.item.restaurantName ?? undefined}
+        >
+          {stop.item.restaurantName ?? "Chưa có tên quán"}
+        </h3>
         <p className="helper">
           Ngày {stop.dayNumber} · {mealSlotLabels[stop.item.mealSlot]} · Điểm{" "}
           {stop.number}
@@ -88,6 +97,32 @@ function PreviewMapCard({
   );
 }
 
+const svgNamespace = "http://www.w3.org/2000/svg";
+/** The drop of the itinerary cards' pin (`.roadmap-item-pin`), so both pins look the same. */
+const pinPath =
+  "M12 1C5.9 1 1 5.8 1 11.8 1 19.9 12 31 12 31s11-11.1 11-19.2C23 5.8 18.1 1 12 1z";
+
+/**
+ * Writes the pin's number ("3", or "3+1" for dishes sharing a place). The drop is drawn once and
+ * kept; only the number changes, and it is the button's only text.
+ */
+function setPinNumber(button: HTMLButtonElement, text: string) {
+  let label = button.querySelector<HTMLSpanElement>(".roadmap-map-pin-number");
+  if (!label) {
+    const svg = document.createElementNS(svgNamespace, "svg");
+    svg.setAttribute("viewBox", "0 0 24 32");
+    svg.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS(svgNamespace, "path");
+    path.setAttribute("d", pinPath);
+    svg.append(path);
+    label = document.createElement("span");
+    label.className = "roadmap-map-pin-number";
+    button.replaceChildren(svg, label);
+  }
+  label.textContent = text;
+  button.dataset.wide = String(text.length > 2);
+}
+
 /** Paints one preview pin; a pin holding several dishes shows the selected or active-day one first. */
 function paintPreviewPin(
   group: RoadmapMapGroup<AgentMapStop>,
@@ -108,10 +143,12 @@ function paintPreviewPin(
   );
   button.dataset.selected = String(isSelected);
   button.dataset.changed = String(group.stops.some((stop) => stop.changed));
-  button.textContent =
+  setPinNumber(
+    button,
     group.stops.length > 1
       ? `${representative.number}+${group.stops.length - 1}`
-      : String(representative.number);
+      : String(representative.number),
+  );
   button.setAttribute(
     "aria-label",
     group.stops.length > 1
@@ -183,7 +220,8 @@ export function RoadmapDetailMap({
     { group: RoadmapMapGroup<AgentMapStop>; button: HTMLButtonElement }[]
   >([]);
   const refresh = useRef<() => void>(() => {});
-  const fit = useRef<() => void>(() => {});
+  // `focus: false` frames the whole day even while a stop is selected (the "locate" button).
+  const fit = useRef<(options?: { focus?: boolean }) => void>(() => {});
   /** Draws the pins of the current stops again on the same map. */
   const sync = useRef<() => void>(() => {});
   const latest = useRef({
@@ -388,7 +426,7 @@ export function RoadmapDetailMap({
         instance.touchZoomRotate.disableRotation();
         instance.keyboard.disableRotation();
 
-        fit.current = () => {
+        fit.current = ({ focus = true } = {}) => {
           if (!instance || disposed) return;
           // A responsive map panel may be hidden until the traveler opens it.
           if (element.clientWidth === 0 || element.clientHeight === 0) return;
@@ -396,6 +434,55 @@ export function RoadmapDetailMap({
           // before ResizeObserver runs; fit against the current canvas size.
           instance.resize();
           const current = latest.current;
+          // A selected stop with a pin: zoom in on it and show it in the middle of the uncovered
+          // part of the map, between the day bar and the place card (the card covers the centre).
+          const selected = current.preview
+            ? current.preview.stops.find(
+                (stop) => stop.item.itemKey === current.preview?.selectedKey,
+              )?.coordinate
+            : current.stops.find(
+                (stop) => stop.item.id === current.selectedItemId,
+              )?.coordinate;
+          if (focus && selected) {
+            const box = element.getBoundingClientRect();
+            const panel = element.parentElement;
+            const bottomOf = (selector: string) =>
+              panel
+                ?.querySelector<HTMLElement>(selector)
+                ?.getBoundingClientRect().bottom ?? box.top;
+            const card = panel?.querySelector<HTMLElement>(".roadmap-map-card");
+            const popup = document.querySelector<HTMLElement>(
+              '.roadmap-agent-panel[data-open="true"][data-mode="popup"]',
+            );
+            const controls = panel?.querySelector<HTMLElement>(
+              ".roadmap-map-controls",
+            );
+            const coveredFrom = (overlay: HTMLElement | null | undefined) =>
+              overlay ? box.bottom - overlay.getBoundingClientRect().top : 0;
+            const offset = roadmapFocusOffset(
+              { width: box.width, height: box.height },
+              {
+                top:
+                  Math.max(
+                    bottomOf(".roadmap-map-statusbar"),
+                    bottomOf(".roadmap-map-legend"),
+                  ) - box.top,
+                bottom: Math.max(coveredFrom(card), coveredFrom(popup)),
+                right: controls
+                  ? box.right - controls.getBoundingClientRect().left
+                  : 0,
+              },
+            );
+            instance.easeTo({
+              center: [selected.longitude, selected.latitude],
+              // Never zooms back out when the traveler is already closer.
+              zoom: Math.max(instance.getZoom(), roadmapFocusZoom),
+              offset,
+              padding: { top: 0, right: 0, bottom: 0, left: 0 },
+              duration: reducedMotion() ? 0 : 420,
+            });
+            return;
+          }
           const points = current.preview
             ? roadmapMapPoints(current.preview.stops, current.preview.activeDay)
             : roadmapMapPoints(
@@ -478,10 +565,12 @@ export function RoadmapDetailMap({
                 (stop) => stop.item.id === current.selectedItemId,
               ),
             );
-            button.textContent =
+            setPinNumber(
+              button,
               group.stops.length > 1
                 ? `${representative.number}+${group.stops.length - 1}`
-                : String(representative.number);
+                : String(representative.number),
+            );
             button.setAttribute(
               "aria-label",
               group.stops.length > 1
@@ -741,7 +830,7 @@ export function RoadmapDetailMap({
           variant="icon"
           aria-label="Xem ngày đang chọn trên bản đồ"
           disabled={!ready}
-          onClick={() => fit.current()}
+          onClick={() => fit.current({ focus: false })}
         >
           <Icon name="LocateFixed" />
         </Button>
@@ -762,21 +851,14 @@ export function RoadmapDetailMap({
           <Icon name="Minus" />
         </Button>
       </div>
-      {listedCount > 0 &&
-        !loading &&
-        (ready ? (
-          <details className="roadmap-map-stop-list">
-            <summary>
-              Các điểm trong {previewStops ? "bản nháp" : "lộ trình"} (
-              {listedCount})
-            </summary>
-            {previewChoices ?? choices}
-          </details>
-        ) : (
-          <div className="roadmap-map-stop-list">
-            {previewChoices ?? choices}
-          </div>
-        ))}
+      {/*
+       * A drawn map is chosen from by its pins and the itinerary's "Xem vị trí" buttons, so it has
+       * no stop list (removed 2026-11-04). Without a map (no token, load error) the list is the
+       * only way to pick a stop, so it stays.
+       */}
+      {listedCount > 0 && !loading && !ready && (
+        <div className="roadmap-map-stop-list">{previewChoices ?? choices}</div>
+      )}
       {onOpenAgent && (
         <Button
           className="roadmap-map-fab"
@@ -784,7 +866,7 @@ export function RoadmapDetailMap({
           title="Trợ lý món ăn"
           onClick={onOpenAgent}
         >
-          ✦
+          <SparklesIcon aria-hidden />
         </Button>
       )}
       {preview

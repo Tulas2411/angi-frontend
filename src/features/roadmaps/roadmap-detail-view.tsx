@@ -25,11 +25,14 @@ import {
   CalendarIcon,
   DocumentPlusIcon,
   MapPinIcon,
+  SparklesIcon,
   WalletIcon,
 } from "@heroicons/react/24/outline";
 import { dateLabel } from "@/shared/format";
 import { Icon, Tabs } from "@/components/ui/primitives";
 import { RoadmapBudget } from "./roadmap-budget";
+import { RoadmapBudgetDialog } from "./roadmap-budget-dialog";
+import { RoadmapDatesPicker, RoadmapTitleEditor } from "./roadmap-hero-editors";
 import {
   dayAtLine,
   dayDishSummary,
@@ -78,6 +81,7 @@ export function RoadmapDetailView({
   onItemsGenerated,
   onItemsMoved,
   onItemRated,
+  onRoadmapUpdated,
   userId,
   userName,
   userAvatar,
@@ -99,6 +103,8 @@ export function RoadmapDetailView({
   onItemsMoved: () => Promise<void>;
   /** Reloads the roadmap after a dish was rated; rejects when the reload fails. */
   onItemRated: () => Promise<void>;
+  /** Shows the RoadmapDetail returned by RM-04 after the title, dates or budget were saved. */
+  onRoadmapUpdated: (detail: RoadmapDetailDto) => void;
   userId: number;
   userName: string;
   userAvatar: string | null;
@@ -106,6 +112,8 @@ export function RoadmapDetailView({
   heroImage: string;
 }) {
   const { overview, itinerary, budget } = detail;
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const openBudgetDialog = () => setBudgetDialogOpen(true);
   const [agentOpen, setAgentOpen] = useState(false);
   // The sidebar's "Lịch ăn uống" lists the days below it until its chevron folds them.
   const [daysOpen, setDaysOpen] = useState(true);
@@ -239,26 +247,42 @@ export function RoadmapDetailView({
       setSelectedItemId(null);
     }
   }
-  /** Sidebar: open that day in the itinerary and bring it into view. */
-  function showDay(dayNumber: number, itemId?: number, scroll = true) {
+  /**
+   * Sidebar and map: open that day in the itinerary and bring it into view. `center` glides the
+   * dish's whole card to the middle of the notebook (a pin picked on the map).
+   */
+  function showDay(
+    dayNumber: number,
+    itemId?: number,
+    scroll = true,
+    center = false,
+  ) {
     setTab("itinerary");
     setOpenDays((previous) =>
       previous.includes(dayNumber) ? previous : [...previous, dayNumber],
     );
     setActiveDay(dayNumber);
     setSelectedItemId(itemId ?? null);
-    // The jump below must not be read as the traveler scrolling to another day.
-    if (scroll) quietUntil.current = momentAfter(800);
-    if (scroll)
-      requestAnimationFrame(() =>
-        document
-          .getElementById(
-            itemId ? `roadmap-item-${itemId}` : `day-${dayNumber}`,
-          )
-          ?.scrollIntoView({ block: itemId ? "nearest" : "start" }),
+    if (!scroll) return;
+    const smooth =
+      center && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // The jump below must not be read as the traveler scrolling to another day; a smooth glide
+    // across several days takes longer than an instant jump.
+    quietUntil.current = momentAfter(smooth ? 1600 : 800);
+    requestAnimationFrame(() => {
+      const target = document.getElementById(
+        itemId ? `roadmap-item-${itemId}` : `day-${dayNumber}`,
       );
+      if (itemId && center)
+        (target?.closest(".roadmap-item") ?? target)?.scrollIntoView({
+          block: "center",
+          behavior: smooth ? "smooth" : "auto",
+        });
+      else target?.scrollIntoView({ block: itemId ? "nearest" : "start" });
+    });
   }
-  function selectItem(itemId: number | null) {
+  /** `fromMap`: the pin was picked on the map, so its card comes to the middle of the notebook. */
+  function selectItem(itemId: number | null, fromMap = true) {
     if (itemId === null) {
       setSelectedItemId(null);
       return;
@@ -271,6 +295,7 @@ export function RoadmapDetailView({
         day.dayNumber,
         itemId,
         window.matchMedia("(min-width: 901px)").matches,
+        fromMap,
       );
   }
   // Scrolling the itinerary follows the day being read: the day under a line 30% down the window
@@ -325,7 +350,8 @@ export function RoadmapDetailView({
     };
   }, [tab, overview.id]);
   function selectContentItem(itemId: number | null) {
-    selectItem(itemId);
+    // The card was clicked in the notebook: it is already in view, so it does not move.
+    selectItem(itemId, false);
     if (itemId !== null && window.matchMedia("(max-width: 900px)").matches)
       requestAnimationFrame(() =>
         document
@@ -354,7 +380,8 @@ export function RoadmapDetailView({
             setAgentOpen(true);
           }}
         >
-          ✦ Trợ lý món ăn
+          <SparklesIcon aria-hidden />
+          <span>Trợ lý món ăn</span>
         </Button>
         {back}
         <div className="roadmap-sidebar-section">
@@ -443,18 +470,29 @@ export function RoadmapDetailView({
           {/* eslint-disable-next-line @next/next/no-img-element -- a local banner, cropped by CSS */}
           <img className="roadmap-hero-banner" src={heroImage} alt="" />
           <div className="roadmap-hero-card">
-            <p className="eyebrow">Lộ trình ẩm thực</p>
-            <h1 id="roadmap-title">{overview.title}</h1>
-            <p className="roadmap-hero-chips">
-              <span className="roadmap-hero-dates">
-                <CalendarIcon aria-hidden />
-                {roadmapDateRange(overview)}
-              </span>
-              <span>{overview.numDays} ngày</span>
-              <span>{roadmapItemsLabel(overview.itemCount)}</span>
+            {/* The status of the roadmap sits on the eyebrow line, right after it. */}
+            <div className="roadmap-hero-top">
+              <p className="eyebrow">Lộ trình ẩm thực</p>
               {isOverBudget(overview) && (
                 <Badge tone="warning">Vượt ngân sách</Badge>
               )}
+            </div>
+            <RoadmapTitleEditor
+              overview={overview}
+              service={service}
+              onSaved={onRoadmapUpdated}
+            />
+            <p className="roadmap-hero-chips">
+              {/* The span keeps the "·" separators of the chips row. */}
+              <span>
+                <RoadmapDatesPicker
+                  overview={overview}
+                  service={service}
+                  onSaved={onRoadmapUpdated}
+                />
+              </span>
+              <span>{overview.numDays} ngày</span>
+              <span>{roadmapItemsLabel(overview.itemCount)}</span>
             </p>
           </div>
         </section>
@@ -561,13 +599,27 @@ export function RoadmapDetailView({
           />
           {tab === "itinerary" && (
             <div className="roadmap-itinerary-budget">
-              <RoadmapBudget budget={budget} />
+              <RoadmapBudget budget={budget} onEdit={openBudgetDialog} />
             </div>
           )}
         </div>
         <div role="tabpanel" aria-label="Ngân sách" hidden={tab !== "budget"}>
-          {tab === "budget" && <RoadmapBudget budget={budget} />}
+          {tab === "budget" && (
+            <RoadmapBudget budget={budget} onEdit={openBudgetDialog} />
+          )}
         </div>
+        {budgetDialogOpen && (
+          <RoadmapBudgetDialog
+            roadmapId={overview.id}
+            budgetAmount={overview.budgetAmount}
+            service={service}
+            onClose={() => setBudgetDialogOpen(false)}
+            onSaved={(updated) => {
+              setBudgetDialogOpen(false);
+              onRoadmapUpdated(updated);
+            }}
+          />
+        )}
       </div>
       <RoadmapDetailMap
         overview={overview}

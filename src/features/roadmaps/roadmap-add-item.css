@@ -9,20 +9,86 @@
   padding-top: var(--space-2);
 }
 
-.roadmap-add-filters {
+/*
+ * Destination of a picked dish: the day in words and the five meals as chips. Sticky at the top
+ * of the scrolling dialog, on the card colour, so the add buttons below always say where they go.
+ */
+.roadmap-add-target {
+  position: sticky;
+  top: 0;
+  z-index: 3;
   display: grid;
-  grid-template-columns:
-    minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr)
-    auto;
-  gap: var(--space-4);
-  align-items: start;
+  gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-8));
+  padding: var(--space-3) var(--space-8);
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.roadmap-add-meals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.roadmap-add-meals > legend {
+  float: left;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.roadmap-add-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--success-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.roadmap-add-notice svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 
-/* Fields reserve a helper line; the submit button sits with the inputs, not the helper. */
-.roadmap-add-filters > .button {
-  align-self: start;
-  margin-top: 28px;
-  white-space: nowrap;
+.roadmap-add-results-head {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.roadmap-add-results-title {
+  font-size: 20px;
+}
+.roadmap-add-nearby {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.roadmap-add-nearby svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* Phones: the sticky meal strip follows the narrower dialog padding. */
+@media (max-width: 700px) {
+  .roadmap-add-target {
+    margin-inline: calc(-1 * var(--space-5));
+    padding-inline: var(--space-5);
+  }
+  .roadmap-add-meals > legend {
+    float: none;
+  }
+}
+
+/* "Xem thêm món" (and its retry after a failed page) sits centred under the list. */
+.roadmap-add .stack-sm > .roadmap-add-more.button {
+  align-self: center;
+  min-width: 200px;
 }
 
 .roadmap-add-hint {
@@ -31,20 +97,6 @@
   border-radius: var(--radius-md);
   color: var(--muted);
   text-align: center;
-}
-
-.roadmap-add-notice {
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--success-line);
-  border-radius: var(--radius-md);
-  background: var(--success-bg);
-  color: var(--success-ink);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.roadmap-add-results-title {
-  font-size: 20px;
 }
 
 /* The suggestions are the dish cards of "Khám phá món ăn" (explore.css); only the
@@ -134,50 +186,7 @@
   align-self: flex-start;
 }
 
-@media (max-width: 900px) {
-  .roadmap-add-filters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .roadmap-add-filters > .button {
-    grid-column: 1 / -1;
-    margin-top: 0;
-  }
-}
-
-@media (max-width: 700px) {
-  .roadmap-add-filters {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* The day, meal and place a picked dish goes to: a destination, not a filter. */
-.roadmap-add-target {
-  display: grid;
-  grid-template-columns: minmax(0, 320px);
-  gap: var(--space-4);
-  align-items: start;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.roadmap-add-target > legend {
-  margin-bottom: var(--space-2);
-  padding: 0;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
 .roadmap-suggestion-map {
   align-self: flex-start;
   font-size: var(--text-sm);
-}
-
-@media (max-width: 700px) {
-  .roadmap-add-target {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-2);
-  }
 }

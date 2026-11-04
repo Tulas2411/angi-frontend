@@ -2,20 +2,38 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
   ClockIcon,
+  PencilSquareIcon,
   WalletIcon,
 } from "@heroicons/react/24/outline";
-import { Alert } from "@/shared/ui";
+import { Alert, Button } from "@/shared/ui";
 import { budgetShare, mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapBudgetDto } from "./roadmap-types";
 
-/** Budget tab of RM-03: totals use the current price of each dish (`dishes.price`). */
-export function RoadmapBudget({ budget }: { budget: RoadmapBudgetDto }) {
+/**
+ * Budget tab of RM-03: totals use the current price of each dish (`dishes.price`).
+ * `onEdit` adds the button that opens the RM-04 budget dialog.
+ */
+export function RoadmapBudget({
+  budget,
+  onEdit,
+}: {
+  budget: RoadmapBudgetDto;
+  onEdit?: () => void;
+}) {
   const { percent, over, overBy } = budgetShare(budget);
   const hasBudget = budget.budgetAmount !== null;
   return (
     <div className="roadmap-budget stack">
-      <h2>Ngân sách ăn uống</h2>
+      <div className="roadmap-budget-heading">
+        <h2>Ngân sách ăn uống</h2>
+        {onEdit && (
+          <Button variant="secondary" onClick={onEdit}>
+            <PencilSquareIcon aria-hidden />
+            {hasBudget ? "Sửa ngân sách" : "Đặt ngân sách"}
+          </Button>
+        )}
+      </div>
       <div className="card roadmap-budget-summary">
         <p className="roadmap-budget-total">
           <span className="helper roadmap-budget-label">
@@ -51,8 +69,9 @@ export function RoadmapBudget({ budget }: { budget: RoadmapBudgetDto }) {
           </div>
         ) : (
           <p className="helper">
-            Lộ trình chưa đặt ngân sách. Bạn có thể đặt ngân sách khi sửa thông
-            tin lộ trình.
+            {onEdit
+              ? "Lộ trình chưa đặt ngân sách. Bấm “Đặt ngân sách” để theo dõi chi phí so với mức bạn muốn."
+              : "Lộ trình chưa đặt ngân sách."}
           </p>
         )}
         {over && (

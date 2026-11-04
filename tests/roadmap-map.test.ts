@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   groupRoadmapStops,
+  roadmapFocusOffset,
   roadmapMapCoordinate,
   roadmapMapPoints,
   roadmapMapStops,
@@ -175,5 +176,30 @@ describe("roadmap map coordinates", () => {
     expect(roadmapMapPoints(roadmapMapStops(itinerary.slice(0, 1)), 1)).toEqual(
       [],
     );
+  });
+});
+
+describe("focus on a selected stop", () => {
+  const view = { width: 900, height: 960 };
+  it("centres the stop between the day bar and the place card", () => {
+    // Day bar ends at 150px, the card covers the lowest 460px: the free band is 150..500.
+    expect(
+      roadmapFocusOffset(view, { top: 150, bottom: 460, right: 0 }),
+    ).toEqual([0, -155]);
+  });
+  it("moves left of the zoom buttons by half their width", () => {
+    expect(roadmapFocusOffset(view, { top: 0, bottom: 0, right: 72 })).toEqual([
+      -36, 0,
+    ]);
+  });
+  it("uses the whole height under the bar when the card leaves almost no room", () => {
+    expect(
+      roadmapFocusOffset(view, { top: 150, bottom: 760, right: 0 }),
+    ).toEqual([0, 75]);
+  });
+  it("ignores overlays larger than the map", () => {
+    expect(
+      roadmapFocusOffset(view, { top: 2000, bottom: -10, right: 2000 }),
+    ).toEqual([-225, 480]);
   });
 });

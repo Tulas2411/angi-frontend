@@ -14,7 +14,6 @@ import type {
   RoadmapItemDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
-import { chooseOption } from "./select-helpers";
 /**
  * F-24: RM-06 and RM-07, F-28: RM-09 against a local stub shaped like the API Design JSON samples.
  */
@@ -403,8 +402,9 @@ test.beforeEach(async ({ page }) => {
 const day2 = { name: "Chủ Nhật, 11 tháng 10" };
 const dialog = (page: Page) =>
   page.getByRole("dialog", { name: /^Thêm món vào / });
-const targetMeal = (page: Page) =>
-  dialog(page).getByLabel("Bữa", { exact: true });
+/** The meal chips are radios named after the meal ("Bữa sáng"). */
+const mealChip = (page: Page, meal: string) =>
+  dialog(page).getByRole("radio", { name: meal, exact: true });
 const items = (page: Page) => page.locator(".roadmap-item");
 const addButton = (page: Page, name: string, slot: string) =>
   dialog(page).getByRole("button", { name: `Thêm ${name} vào ${slot}` });
@@ -438,7 +438,7 @@ test("a meal's button opens the dialog on that meal with the province already fi
     box.getByRole("heading", { name: "Thêm món vào lộ trình" }),
   ).toBeVisible();
   // The meal is only where a picked dish goes: no meal pills filter the list.
-  await expect(targetMeal(page)).toHaveValue("breakfast");
+  await expect(mealChip(page, "Bữa sáng")).toBeChecked();
   await expect(box.getByRole("tab")).toHaveCount(0);
   // The roadmap keeps no destination: it is taken from the province of the dishes already in it.
   await expect(box.getByLabel(/^Tỉnh \/ thành phố/)).toHaveValue(
@@ -488,7 +488,7 @@ test("adding a dish sends RM-07, reloads the roadmap and keeps the dialog for th
   // Choosing the target meal does not reload the list or add a filter.
   await expect(box.locator(".roadmap-suggestion")).toHaveCount(12);
   const callsBefore = suggestionCalls.length;
-  await chooseOption(targetMeal(page), "lunch");
+  await mealChip(page, "Bữa trưa").check();
   await expect(box.locator(".roadmap-suggestion")).toHaveCount(12);
   expect(suggestionCalls).toHaveLength(callsBefore);
 
@@ -542,7 +542,7 @@ test("the legs of a day are asked again once a dish is added to it", async ({
   // One dish and a pinned origin: day 1 already has its first leg.
   await expect.poll(() => routeCalls).toEqual(["301"]);
   await page.getByRole("button", { name: "Thêm món vào bữa sáng" }).click();
-  await chooseOption(targetMeal(page), "lunch");
+  await mealChip(page, "Bữa trưa").check();
   await addButton(page, "Mì Quảng ếch", "bữa trưa").click();
   await expect(items(page)).toHaveCount(2);
   await dialog(page).getByRole("button", { name: "Xong" }).click();
@@ -569,7 +569,7 @@ test("an empty day opens the dialog from its own button, starting at breakfast",
   await expect(
     box.getByRole("heading", { name: "Thêm món vào lộ trình" }),
   ).toBeVisible();
-  await expect(targetMeal(page)).toHaveValue("breakfast");
+  await expect(mealChip(page, "Bữa sáng")).toBeChecked();
   expect(new URLSearchParams(suggestionCalls[0]).get("dayId")).toBe("302");
   await addButton(page, "Mì Quảng ếch", "bữa sáng").click();
   await expect.poll(() => addCalls.length).toBe(1);

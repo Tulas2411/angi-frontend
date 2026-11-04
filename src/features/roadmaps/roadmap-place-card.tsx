@@ -22,7 +22,6 @@ import {
   dishFormLabels,
   googleMapsPlaceHref,
   operatingBadge,
-  priceLevelText,
   ratingShares,
   ratingText,
   reviewDate,
@@ -43,6 +42,7 @@ import { useRemote, type Remote } from "@/features/explore/use-remote";
 import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapMapStop } from "./roadmap-map-rules";
+import { FadingText } from "./fading-text";
 import "./roadmap-place.css";
 
 /** What the place card reads: DISH-02, REST-02 and REST-04 (public reads, the session token is sent). */
@@ -155,7 +155,7 @@ function photosOf(cover: string | null | undefined, images: readonly string[]) {
 }
 
 /**
- * Like Wanderlog's "Giới thiệu": the description beside a small photo, then one line per fact
+ * The dish description, then one line per fact
  * with its icon. DISH-02 adds to what RM-03 already knows, which is shown at once.
  */
 function DishPanel({
@@ -177,12 +177,8 @@ function DishPanel({
     .join(", ");
   return (
     <div className="roadmap-place-panel">
+      {/* No dish photo here (removed 2026-11-04): the itinerary card and the "Ảnh" tab show it. */}
       <div className="roadmap-place-intro">
-        <Media
-          className="roadmap-place-thumb roadmap-map-card-photo"
-          src={(detail?.coverUrl ?? dish.coverUrl) || undefined}
-          alt={`Ảnh món ${dish.name}`}
-        />
         {state.status === "loading" && <Loading />}
         {state.status === "error" && (
           <LoadFailed
@@ -208,9 +204,10 @@ function DishPanel({
       <ul className="roadmap-place-rows">
         <li>
           <BanknotesIcon {...icon} />
-          <span>
-            <strong>{vnd(detail?.price ?? dish.price)}</strong> ·{" "}
-            {dishFormLabels[detail?.dishForm ?? dish.dishForm]}
+          {/* Price and dish form on one line: "60.000 VND · Món nước". */}
+          <span className="roadmap-place-price">
+            <strong>{vnd(detail?.price ?? dish.price)}</strong>
+            <span>· {dishFormLabels[detail?.dishForm ?? dish.dishForm]}</span>
           </span>
         </li>
         <li>
@@ -262,11 +259,8 @@ function RestaurantPanel({
       />
     );
   const restaurant = state.data;
-  const status = operatingBadge(
-    restaurant.operatingStatus,
-    restaurant.isOpenNow,
-  );
-  const price = priceLevelText(restaurant.priceLevel);
+  // The open/closed badge sits beside the restaurant's name in the card head, and the star score
+  // row is gone (both changed 2026-11-04): the "Đánh giá" tab holds the ratings.
   const address = [
     restaurant.addressLine,
     restaurant.ward,
@@ -282,21 +276,6 @@ function RestaurantPanel({
   const today = week.find((day) => day.day === vietnamWeekday());
   return (
     <div className="roadmap-place-panel">
-      <p className="roadmap-place-score">
-        {restaurant.ratingCount > 0 ? (
-          <>
-            <strong>{ratingText(restaurant.ratingAvg)}</strong>
-            <Stars value={restaurant.ratingAvg} />
-            <span>({restaurant.ratingCount})</span>
-          </>
-        ) : (
-          <span>Chưa có đánh giá</span>
-        )}
-        {price && <span aria-label={`Mức giá ${price}`}>· {price}</span>}
-        <span className="roadmap-place-status" data-tone={status.tone}>
-          {status.text}
-        </span>
-      </p>
       <ul className="roadmap-place-rows">
         <li>
           <MapPinIcon {...icon} />
@@ -691,6 +670,13 @@ export function RoadmapPlaceCard({
         : new Promise<RestaurantDetailDto>(() => undefined),
     `${dish.restaurant.id}:${wantsRestaurant}`,
   );
+  const restaurantStatus =
+    restaurantState.status === "ready"
+      ? operatingBadge(
+          restaurantState.data.operatingStatus,
+          restaurantState.data.isOpenNow,
+        )
+      : null;
   const panels: Record<PlaceTab, ReactNode> = {
     dish: <DishPanel stop={stop} state={dishState} onRetry={retryDish} />,
     restaurant: (
@@ -749,9 +735,27 @@ export function RoadmapPlaceCard({
           </span>
           <div>
             <h3>{dish.name}</h3>
-            <p>
-              {dish.restaurant.name}
-              {place && <span className="helper"> · {place}</span>}
+            <p className="roadmap-place-restaurant">
+              {/* One line: a long name fades out so the status badge stays beside it. */}
+              <FadingText
+                text={
+                  place
+                    ? `${dish.restaurant.name} · ${place}`
+                    : dish.restaurant.name
+                }
+              >
+                {dish.restaurant.name}
+                {place && <span className="helper"> · {place}</span>}
+              </FadingText>
+              {/* On "Quán hàng", once REST-02 answered: open now or not, beside the name. */}
+              {tab === "restaurant" && restaurantStatus && (
+                <span
+                  className="roadmap-place-status"
+                  data-tone={restaurantStatus.tone}
+                >
+                  {restaurantStatus.text}
+                </span>
+              )}
             </p>
             <p className="helper">
               {stop.dayLabel} · {mealSlotLabels[stop.item.mealSlot]} ·{" "}

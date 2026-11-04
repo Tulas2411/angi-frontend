@@ -41,3 +41,5 @@ F-24 (ANGI-130, `docs/roadmap-add-item.vi.md`) đã làm hộp thoại duyệt g
 - Sheet "JSON mẫu": RM-06, RM-07, RM-08. Sheet "DTO": DishCard, RestaurantMini (tọa độ có thể null), RoadmapItem. Sheet "Mã lỗi": `*_NOT_FOUND`, `DISH_NOT_AVAILABLE`, `VALIDATION_FAILED`.
 
 Đối chiếu code backend: `AddRoadmapItemUseCase` (`SortOrder = request.SortOrder ?? NextSortOrder(day, mealSlot)`, không dồn các món khác), `UpdateRoadmapItemUseCase` (RM-08 không có `dishId` thì sửa tại chỗ đúng item đó, `ROADMAP_ITEM_NOT_FOUND` khi không có), `RoadmapMapper.MapDay` (sắp theo bữa, `SortOrder`, id) và `GetRoadmapSuggestionsUseCase` (không đọc `dayId`). Method, đường dẫn, tên và kiểu trường, enum, mã trạng thái và mã lỗi đều khớp.
+
+> Cập nhật 2026-11-04: hộp thoại không còn ô "Ngày" và "Vị trí"; bữa đích chọn bằng hàng chip radio "Thêm vào cuối bữa của {ngày}", món luôn vào cuối bữa của ngày đã bấm. Xem mục "Thiết kế lại phần tìm kiếm và chọn bữa" trong `docs/roadmap-add-item.vi.md`.

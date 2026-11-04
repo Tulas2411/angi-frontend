@@ -2,10 +2,14 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
 import {
+  BanknotesIcon,
+  BuildingStorefrontIcon,
   MapIcon,
   PlusCircleIcon,
   SparklesIcon,
 } from "@heroicons/react/24/outline";
+import { StarIcon } from "@heroicons/react/24/solid";
+import { FadingText } from "./fading-text";
 import { Icon, Media } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
 import {
@@ -187,14 +191,35 @@ function ItemCard({
         {/* The name with its tags on the same line ("ANGI gợi ý", a dish no longer sold). */}
         <div className="roadmap-item-head">
           <h5 id={`roadmap-item-${item.id}`}>{dish.name}</h5>
-          {notice && <Badge tone="warning">{notice}</Badge>}
-          {item.source === "ai" && <Badge>ANGI gợi ý</Badge>}
+          {/* The tags keep the first line, beside the name; a long name wraps under itself. */}
+          {(notice || item.source === "ai") && (
+            <span className="roadmap-item-tags">
+              {notice && <Badge tone="warning">{notice}</Badge>}
+              {item.source === "ai" && <Badge>ANGI gợi ý</Badge>}
+            </span>
+          )}
         </div>
-        <p className="roadmap-item-price">Dự chi {vnd(dish.price)}</p>
-        <p className="helper">
-          {dish.restaurant.name}
-          {place && ` · ${place}`}
-          {` · ${formatRating(dish.restaurant.ratingAvg)} sao`}
+        {/* Each fact with its icon: the price, then the restaurant and its star rating. */}
+        <p className="roadmap-item-price roadmap-item-fact">
+          <BanknotesIcon aria-hidden />
+          <span>Dự chi {vnd(dish.price)}</span>
+        </p>
+        <p className="helper roadmap-item-fact is-one-line">
+          <BuildingStorefrontIcon aria-hidden />
+          <FadingText
+            className="roadmap-item-place"
+            text={
+              place
+                ? `${dish.restaurant.name} · ${place}`
+                : dish.restaurant.name
+            }
+          />
+          <span className="roadmap-item-rating">
+            <StarIcon aria-hidden />
+            {formatRating(dish.restaurant.ratingAvg)}
+            {/* Read as "4,3 sao"; the star stands for the word on screen. */}
+            <span className="sr-only"> sao</span>
+          </span>
         </p>
         <div className="roadmap-item-actions">
           <Button
@@ -478,13 +503,15 @@ function DayPanel({
                                   </strong>{" "}
                                   · Khoảng {formatDuration(leg.durationSeconds)}
                                 </span>
-                                <small>
-                                  {legEndpoints(
+                                {/* One line: a long origin or dish name fades out instead of wrapping. */}
+                                <FadingText
+                                  as="small"
+                                  text={legEndpoints(
                                     leg,
                                     day.items,
                                     overview.originLabel,
                                   )}
-                                </small>
+                                />
                               </span>
                             </p>
                           )}
@@ -905,26 +932,10 @@ export function RoadmapItinerary({
   return (
     <div className="roadmap-itinerary stack">
       <h2 className="sr-only">Lịch trình</h2>
-      <section className="roadmap-ai-banner" aria-labelledby="roadmap-ai-title">
-        <div>
-          <h3 id="roadmap-ai-title">Để ANGI lên lịch giúp bạn</h3>
-          <p>
-            ANGI chọn món hợp với bạn và gom các quán gần nhau trong từng ngày.
-            Bạn xem lại rồi sửa từng món nếu muốn.
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setNotice(null);
-            setGenerateTarget({
-              scope: "full",
-              dayNumber: itinerary[0]?.dayNumber ?? 1,
-            });
-          }}
-        >
-          Tạo lộ trình bằng AI
-        </Button>
-      </section>
+      {/*
+       * No "Để ANGI lên lịch giúp bạn" banner (removed 2026-11-04): ANGI is opened from a day's
+       * "ANGI thêm giúp bạn", and its dialog switches to "Cả lộ trình".
+       */}
       {overview.originMode === "gps" && (
         <div className="roadmap-gps stack-sm">
           {gps.status === "granted" ? (
