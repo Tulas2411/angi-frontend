@@ -111,8 +111,11 @@ export default function SessionPanel({
           </div>
           {user.needsPreferenceSurvey === true && (
             <p className="rounded-xl bg-orange-50 p-3 text-sm leading-6 text-orange-900">
-              Phần khảo sát khẩu vị sẽ sớm được mở để ANGI gợi ý món ăn phù hợp
-              hơn.
+              Bạn chưa làm khảo sát khẩu vị.{" "}
+              <a href="/survey" className="font-semibold underline">
+                Trả lời vài câu
+              </a>{" "}
+              để ANGI gợi ý món ăn hợp với bạn hơn.
             </p>
           )}
         </>

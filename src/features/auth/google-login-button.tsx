@@ -5,6 +5,7 @@ import { getErrorMessage } from "@/shared/api/error";
 import { useState } from "react";
 import { Alert } from "@/shared/ui";
 import { HOME_BY_ROLE } from "./roles";
+import { landingAfterSignIn } from "@/features/preferences/survey-rules";
 import type { RegisterableRole } from "./types";
 
 interface GoogleLoginButtonProps {
@@ -43,7 +44,9 @@ export function GoogleLoginButton({
       // Full navigation clears cached protected content after the session changes.
       // The backend returns the persisted role (existing user) or the role we
       // just requested (new user), so we always redirect to the correct home.
-      window.location.assign(HOME_BY_ROLE[result.user.role]);
+      window.location.assign(
+        landingAfterSignIn(result.user, HOME_BY_ROLE[result.user.role]),
+      );
     } catch (err) {
       const msg = getErrorMessage(err);
       setError(msg);

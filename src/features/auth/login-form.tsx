@@ -7,6 +7,7 @@ import { Alert, Button } from "@/shared/ui";
 import { Field, PasswordField } from "@/components/ui/primitives";
 import { GoogleLoginButton } from "@/features/auth/google-login-button";
 import { HOME_BY_ROLE } from "./roles";
+import { landingAfterSignIn } from "@/features/preferences/survey-rules";
 
 const googleEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
@@ -28,7 +29,8 @@ export default function LoginForm() {
         password: String(form.get("password") ?? ""),
       });
       // Full navigation clears cached protected content after the session changes.
-      window.location.assign(HOME_BY_ROLE[user.role]);
+      // F-17: a Traveler with no survey in reco answers it first.
+      window.location.assign(landingAfterSignIn(user, HOME_BY_ROLE[user.role]));
     } catch (caught) {
       setError(getErrorMessage(caught));
       if (caught instanceof ApiError)

@@ -6,6 +6,7 @@ import {
 } from "@/features/auth/server";
 import { ApiError } from "@/shared/api/error";
 import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
+import { preferenceSurveyOperation } from "@/shared/api/preference-proxy";
 import { ownerMenuOperation } from "@/shared/api/owner-menu-proxy";
 import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
@@ -74,6 +75,7 @@ async function handle(request: Request, context: Context) {
       endpoint,
     );
     const publicOp = publicOperation(request.method, endpoint);
+    const survey = preferenceSurveyOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
     // F-63 ADM-D1..ADM-D3 + OPS-01, F-65 ADM-M1..ADM-M4, F-66 ADM-P1..ADM-P4: the Admin operations.
     const adminPermissions =
@@ -98,7 +100,8 @@ async function handle(request: Request, context: Context) {
       !modRestaurants &&
       !adminPermissions &&
       !agentOp &&
-      !publicOp
+      !publicOp &&
+      !survey
     ) {
       throw new ApiError(
         404,
@@ -120,6 +123,7 @@ async function handle(request: Request, context: Context) {
       modRestaurants?.body !== false &&
       adminPermissions?.body !== false &&
       publicOp?.body !== false &&
+      survey?.body !== false &&
       !(roadmapRoute && !roadmapOperationHasBody(request.method))
     ) {
       if (endpoint === "media") {
@@ -191,6 +195,25 @@ async function handle(request: Request, context: Context) {
           }),
         ),
         publicOp.status,
+      );
+    }
+    // F-17 PREF-02 / PREF-03 — khảo sát khẩu vị, chỉ Traveler.
+    if (survey) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (auth.user.role !== "TRAVELER")
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ người khám phá được làm khảo sát khẩu vị.",
+            );
+          return backend<unknown>(endpoint, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        survey.status,
       );
     }
     // MOD-RP1..MOD-RP4 — chỉ Mod và Admin được vào hàng đợi báo cáo.
