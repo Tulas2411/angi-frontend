@@ -405,6 +405,121 @@
   border-top: 1px solid var(--line);
 }
 
+/*
+ * ---------------------------------------------- dish page: filter sidebar
+ * Narrow screens: search bar, then the filter panel it slides down, then the results (the
+ * panel's negative margin folds this grid's row gap, as in the restaurant page's form).
+ * Wide screens: the filters are a sidebar left of the search bar and the results, always shown,
+ * following the page as it scrolls, with "Áp dụng bộ lọc" kept at its bottom.
+ */
+.dish-browse {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "search" "filters" "main";
+  row-gap: var(--space-4);
+}
+.dish-browse > .dish-search {
+  grid-area: search;
+}
+.dish-browse > .dish-filter-sidebar {
+  grid-area: filters;
+}
+.dish-browse > .dish-browse-main {
+  grid-area: main;
+  min-width: 0;
+}
+.dish-filter-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.dish-filter-head h2 {
+  font-size: 18px;
+}
+
+@media (min-width: 1024px) {
+  .dish-browse {
+    grid-template-columns: 272px minmax(0, 1fr);
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      "filters search"
+      "filters main";
+    align-items: start;
+    gap: var(--space-5) var(--space-8);
+  }
+  /* The filters are always in sight: no button to show them. */
+  .dish-browse .dish-filter-toggle {
+    display: none;
+  }
+  .dish-browse .dish-search-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Shown whatever the narrow-screen toggle says, without its slide. */
+  .dish-filter-sidebar.dish-filter-collapse,
+  .dish-filter-sidebar.dish-filter-collapse[hidden] {
+    position: sticky;
+    top: calc(var(--header-height) + var(--space-4));
+    display: block;
+    align-self: start;
+    margin-top: 0;
+    opacity: 1;
+    transition: none;
+  }
+  .dish-filter-sidebar.dish-filter-collapse > div {
+    overflow: visible;
+  }
+  /* The sidebar scrolls on its own when its groups are taller than the window. */
+  .dish-filter-sidebar .dish-filter-panel {
+    --sidebar-pad: var(--space-5);
+    max-height: calc(100dvh - var(--header-height) - 2 * var(--space-4));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    gap: var(--space-5);
+    padding: var(--sidebar-pad);
+    scrollbar-width: thin;
+  }
+  /* One column: province and dish form full width, the two prices side by side. */
+  .dish-filter-sidebar .dish-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+  .dish-filter-sidebar .dish-filter-grid > :nth-child(-n + 2) {
+    grid-column: 1 / -1;
+  }
+  .dish-filter-sidebar .dish-filter-groups {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+  .dish-filter-sidebar .dish-filter-chips .chip {
+    min-height: 32px;
+    padding: 4px 12px;
+  }
+  /* The buttons stay at the bottom of the sidebar while it scrolls. */
+  .dish-filter-sidebar .dish-filter-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0 calc(-1 * var(--sidebar-pad)) calc(-1 * var(--sidebar-pad));
+    padding: var(--space-4) var(--sidebar-pad) var(--sidebar-pad);
+    background: var(--card);
+  }
+  .dish-filter-sidebar .dish-filter-actions .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .dish-filter-sidebar .dish-filter-actions .button {
+    width: 100%;
+    padding-inline: var(--space-3);
+  }
+  /* Next to the sidebar the detailed cards need the whole width of the results. */
+  .dish-browse .dish-items-detailed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* ------------------------------------------------------- dish results */
 .dish-results {
   display: grid;

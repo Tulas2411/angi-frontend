@@ -1,5 +1,5 @@
 "use client";
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Card, Input } from "@/shared/ui";
 import { EmptyState, SelectField, Skeleton } from "@/components/ui/primitives";
@@ -78,49 +78,63 @@ function TagChips({
 }
 
 /**
- * The search row with its expandable filter panel. The panel only hides when collapsed, so a
- * choice not applied yet survives; applied filters live in the URL.
+ * The filters being chosen (the draft) next to the applied ones in the URL. The search bar and
+ * the sidebar edit the same draft, so either one applies everything chosen so far. A new search
+ * in the URL (applied here, or by back/forward) becomes the draft.
  */
-function DishSearch({
-  applied,
-  tags,
-  onApply,
-}: {
-  applied: DishFilters;
-  tags: TagDto[];
-  onApply: (filters: DishFilters) => void;
-}) {
+function useDishDraft(applied: DishFilters, onApply: (f: DishFilters) => void) {
   const [draft, setDraft] = useState(applied);
-  const [open, setOpen] = useState(false);
   const [problem, setProblem] = useState("");
-  // A new search in the URL (applied here, or by back/forward) becomes the draft; the panel
-  // stays as it is.
   const appliedKey = JSON.stringify(applied);
   const [seen, setSeen] = useState(appliedKey);
   if (seen !== appliedKey) {
     setSeen(appliedKey);
     setDraft(applied);
   }
-  const panelId = useId();
-  const count = activeDishFilterCount(applied);
-  const changed = !sameFilters(draft, applied);
-  const byType = (type: TagDto["tagType"]) =>
-    tags.filter((tag) => tag.tagType === type);
   const set = (next: Partial<DishFilters>) => {
     setProblem("");
     setDraft((current) => ({ ...current, ...next }));
   };
-
+  /** Applies the draft; false when the price range cannot match (the reason is in `problem`). */
   function submit() {
     const price = dishPriceProblem(draft);
     if (price) {
       setProblem(price);
-      setOpen(true);
-      return;
+      return false;
     }
     onApply(draft);
+    return true;
   }
+  function reset() {
+    setDraft(emptyDishFilters);
+    setProblem("");
+    onApply(emptyDishFilters);
+  }
+  return { draft, set, problem, submit, reset };
+}
+type DishDraft = ReturnType<typeof useDishDraft>;
 
+/**
+ * The search bar above the results. On narrow screens it also holds the button that shows the
+ * filters (on wide screens they are always in the sidebar and the button is hidden).
+ */
+function DishSearchBar({
+  form,
+  applied,
+  open,
+  panelId,
+  onToggle,
+  onRefused,
+}: {
+  form: DishDraft;
+  applied: DishFilters;
+  open: boolean;
+  panelId: string;
+  onToggle: () => void;
+  /** The price range was refused: show the filters, where the reason is. */
+  onRefused: () => void;
+}) {
+  const count = activeDishFilterCount(applied);
   return (
     <form
       className="dish-search"
@@ -128,7 +142,7 @@ function DishSearch({
       aria-label="Tìm món ăn"
       onSubmit={(event) => {
         event.preventDefault();
-        submit();
+        if (!form.submit()) onRefused();
       }}
     >
       <div className="dish-search-row">
@@ -149,10 +163,10 @@ function DishSearch({
             id="dish-search"
             type="search"
             aria-label="Tìm món ăn"
-            value={draft.q}
+            value={form.draft.q}
             placeholder="Tìm món hoặc quán: bún bò, phở, bánh xèo…"
             autoComplete="off"
-            onChange={(event) => set({ q: event.target.value })}
+            onChange={(event) => form.set({ q: event.target.value })}
           />
         </div>
         <button
@@ -160,7 +174,7 @@ function DishSearch({
           className="dish-filter-toggle"
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((value) => !value)}
+          onClick={onToggle}
           suppressHydrationWarning
         >
           <span>{open ? "Ẩn bộ lọc" : "Hiện bộ lọc"}</span>
@@ -177,92 +191,130 @@ function DishSearch({
           </svg>
         </button>
       </div>
+    </form>
+  );
+}
 
-      {/* Slides down when shown and back up when hidden; `hidden` applies once it has slid up. */}
-      <div className="dish-filter-collapse" hidden={!open}>
-        <div>
-          <div id={panelId} className="dish-filter-panel">
-            <div className="dish-filter-grid">
-              <ProvinceField
-                label="Tỉnh / thành phố"
-                type="search"
-                value={draft.province}
-                showCatalogStatus={false}
-                autoComplete="off"
-                helper="Để trống để tìm ở mọi nơi."
-                onChange={(value) => set({ province: value })}
-              />
-              <SelectField
-                label="Loại món"
-                value={draft.form}
-                options={dishFormOptions}
-                onChange={(value) => set({ form: value as "" | DishForm })}
-              />
-              <SelectField
-                label="Giá từ"
-                value={draft.minPrice}
-                options={dishMinPriceOptions}
-                onChange={(value) => set({ minPrice: value })}
-              />
-              <SelectField
-                label="Giá đến"
-                value={draft.maxPrice}
-                options={dishPriceOptions}
-                onChange={(value) => set({ maxPrice: value })}
-              />
-            </div>
-            <div className="dish-filter-groups">
-              <TagChips
-                legend="Bữa ăn"
-                tags={byType("meal_time")}
-                ids={draft.tagIds}
-                onChange={(tagIds) => set({ tagIds })}
-              />
-              <TagChips
-                legend="Phân loại"
-                tags={byType("category")}
-                ids={draft.tagIds}
-                onChange={(tagIds) => set({ tagIds })}
-              />
-              <TagChips
-                legend="Chế độ ăn"
-                tags={byType("dietary")}
-                ids={draft.tagIds}
-                onChange={(tagIds) => set({ tagIds })}
-              />
-              <TagChips
-                legend="Không ăn (bỏ món có thẻ)"
-                tags={[...byType("dietary"), ...byType("category")]}
-                ids={draft.excludeTagIds}
-                onChange={(excludeTagIds) => set({ excludeTagIds })}
-              />
-            </div>
-            {problem && <Alert>{problem}</Alert>}
-            <div className="dish-filter-actions">
-              <p className="helper" aria-live="polite">
-                {changed
-                  ? "Có thay đổi chưa áp dụng."
-                  : "Trong một nhóm thẻ, món chỉ cần khớp một thẻ; giữa các nhóm phải khớp đủ."}
-              </p>
-              <div className="actions">
-                <Button
-                  variant="tertiary"
-                  disabled={sameFilters(draft, emptyDishFilters) && count === 0}
-                  onClick={() => {
-                    setDraft(emptyDishFilters);
-                    setProblem("");
-                    onApply(emptyDishFilters);
-                  }}
-                >
-                  Đặt lại bộ lọc
-                </Button>
-                <Button type="submit">Áp dụng bộ lọc</Button>
-              </div>
+/**
+ * The filters. On wide screens a sidebar left of the results, always shown and following the
+ * page as it scrolls; on narrow screens the panel the search bar's button slides down (`hidden`
+ * applies once it has slid up). Choices are kept until applied; applied filters live in the URL.
+ */
+function DishFilterSidebar({
+  form,
+  applied,
+  tags,
+  open,
+  panelId,
+}: {
+  form: DishDraft;
+  applied: DishFilters;
+  tags: TagDto[];
+  open: boolean;
+  panelId: string;
+}) {
+  const { draft, set, problem } = form;
+  const count = activeDishFilterCount(applied);
+  const changed = !sameFilters(draft, applied);
+  const byType = (type: TagDto["tagType"]) =>
+    tags.filter((tag) => tag.tagType === type);
+  return (
+    <div className="dish-filter-collapse dish-filter-sidebar" hidden={!open}>
+      <div>
+        <form
+          id={panelId}
+          className="dish-filter-panel"
+          aria-label="Bộ lọc món ăn"
+          onSubmit={(event) => {
+            event.preventDefault();
+            form.submit();
+          }}
+        >
+          <div className="dish-filter-head">
+            <h2>Bộ lọc</h2>
+            {count > 0 && (
+              <span className="dish-filter-count" aria-hidden>
+                {count}
+              </span>
+            )}
+          </div>
+          <div className="dish-filter-grid">
+            <ProvinceField
+              label="Tỉnh / thành phố"
+              type="search"
+              value={draft.province}
+              showCatalogStatus={false}
+              autoComplete="off"
+              helper="Để trống để tìm ở mọi nơi."
+              onChange={(value) => set({ province: value })}
+            />
+            <SelectField
+              label="Loại món"
+              value={draft.form}
+              options={dishFormOptions}
+              onChange={(value) => set({ form: value as "" | DishForm })}
+            />
+            <SelectField
+              label="Giá từ"
+              value={draft.minPrice}
+              options={dishMinPriceOptions}
+              onChange={(value) => set({ minPrice: value })}
+            />
+            <SelectField
+              label="Giá đến"
+              value={draft.maxPrice}
+              options={dishPriceOptions}
+              onChange={(value) => set({ maxPrice: value })}
+            />
+          </div>
+          <div className="dish-filter-groups">
+            <TagChips
+              legend="Bữa ăn"
+              tags={byType("meal_time")}
+              ids={draft.tagIds}
+              onChange={(tagIds) => set({ tagIds })}
+            />
+            <TagChips
+              legend="Phân loại"
+              tags={byType("category")}
+              ids={draft.tagIds}
+              onChange={(tagIds) => set({ tagIds })}
+            />
+            <TagChips
+              legend="Chế độ ăn"
+              tags={byType("dietary")}
+              ids={draft.tagIds}
+              onChange={(tagIds) => set({ tagIds })}
+            />
+            <TagChips
+              legend="Không ăn (bỏ món có thẻ)"
+              tags={[...byType("dietary"), ...byType("category")]}
+              ids={draft.excludeTagIds}
+              onChange={(excludeTagIds) => set({ excludeTagIds })}
+            />
+          </div>
+          {problem && <Alert>{problem}</Alert>}
+          {/* Stays at the bottom of the sidebar while its groups scroll. */}
+          <div className="dish-filter-actions">
+            <p className="helper" aria-live="polite">
+              {changed
+                ? "Có thay đổi chưa áp dụng."
+                : "Trong một nhóm thẻ, món chỉ cần khớp một thẻ; giữa các nhóm phải khớp đủ."}
+            </p>
+            <div className="actions">
+              <Button
+                variant="tertiary"
+                disabled={sameFilters(draft, emptyDishFilters) && count === 0}
+                onClick={form.reset}
+              >
+                Đặt lại bộ lọc
+              </Button>
+              <Button type="submit">Áp dụng bộ lọc</Button>
             </div>
           </div>
-        </div>
+        </form>
       </div>
-    </form>
+    </div>
   );
 }
 
@@ -332,39 +384,47 @@ export function DishListPage({
       description="Tìm món hợp khẩu vị, xem quán bán món và thêm vào lộ trình của bạn."
     />
   );
-  const search = (
-    <DishSearch
-      applied={filters}
-      tags={tags.status === "ready" ? tags.data : []}
-      onApply={apply}
-    />
+  // Filters: a sidebar beside the results on wide screens; a panel under the search bar,
+  // shown by its button, on narrow ones (where `filtersOpen` matters).
+  const form = useDishDraft(filters, apply);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const panelId = useId();
+  const layout = (results: ReactNode) => (
+    <div className="stack">
+      {heading}
+      <div className="dish-browse">
+        <DishSearchBar
+          form={form}
+          applied={filters}
+          open={filtersOpen}
+          panelId={panelId}
+          onToggle={() => setFiltersOpen((value) => !value)}
+          onRefused={() => setFiltersOpen(true)}
+        />
+        <DishFilterSidebar
+          form={form}
+          applied={filters}
+          tags={tags.status === "ready" ? tags.data : []}
+          open={filtersOpen}
+          panelId={panelId}
+        />
+        <div className="dish-browse-main stack">{results}</div>
+      </div>
+    </div>
   );
 
-  if (first.status === "loading")
-    return (
-      <div className="stack">
-        {heading}
-        {search}
-        <Skeleton rows={4} />
-      </div>
-    );
+  if (first.status === "loading") return layout(<Skeleton rows={4} />);
   if (first.status === "error")
-    return (
-      <div className="stack">
-        {heading}
-        {search}
-        <Card title="Chưa tải được danh sách món">
-          <Alert>{getErrorMessage(first.error)}</Alert>
-          <Button onClick={retry}>Thử lại</Button>
-        </Card>
-      </div>
+    return layout(
+      <Card title="Chưa tải được danh sách món">
+        <Alert>{getErrorMessage(first.error)}</Alert>
+        <Button onClick={retry}>Thử lại</Button>
+      </Card>,
     );
 
   const next = extra ? extra.next : first.data.nextCursor;
-  return (
-    <div className="stack">
-      {heading}
-      {search}
+  return layout(
+    <>
       {items.length === 0 ? (
         <EmptyState title="Không tìm thấy món phù hợp">
           Thử từ khóa, tỉnh thành hoặc bộ lọc khác.
@@ -413,6 +473,6 @@ export function DishListPage({
           </Button>
         </div>
       )}
-    </div>
+    </>,
   );
 }
