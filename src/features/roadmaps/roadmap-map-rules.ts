@@ -104,3 +104,27 @@ export function roadmapMapPoints(
       ) === index,
   );
 }
+
+/** Street level: the selected restaurant and the streets around it. */
+export const roadmapFocusZoom = 16;
+
+/**
+ * Camera offset (pixels from the canvas centre, Mapbox `easeTo` `offset`) that shows a selected
+ * stop in the middle of the part of the map nobody covers: under the day bar at the top, above
+ * the place card (or the assistant popup) at the bottom, left of the zoom buttons. When the card
+ * leaves too little room, the stop goes halfway between the top bar and the bottom edge.
+ */
+export function roadmapFocusOffset(
+  view: { width: number; height: number },
+  covered: { top: number; bottom: number; right: number },
+): [number, number] {
+  const top = Math.max(0, Math.min(covered.top, view.height));
+  const bottomEdge = view.height - Math.max(0, covered.bottom);
+  const visibleBottom = bottomEdge - top >= 80 ? bottomEdge : view.height;
+  const right = Math.max(0, Math.min(covered.right, view.width / 2));
+  // `|| 0` turns a rounded -0 into 0.
+  return [
+    Math.round(-right / 2) || 0,
+    Math.round((top + visibleBottom) / 2 - view.height / 2) || 0,
+  ];
+}

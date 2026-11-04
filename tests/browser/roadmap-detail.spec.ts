@@ -1074,10 +1074,8 @@ test("an unconfigured map keeps real stop details usable without provider reques
   await expect(selected).toContainText("Quán Bún bò Huế");
   await expect(selected).toContainText("45.000 VND");
   await expect(selected).toContainText("Thành phố Đà Nẵng");
-  await expect(selected.locator(".roadmap-map-card-photo img")).toHaveAttribute(
-    "src",
-    "/assets/figma/dish-0.png",
-  );
+  // The "Món ăn" tab shows no dish photo (removed 2026-11-04).
+  await expect(selected.locator(".roadmap-place-intro img")).toHaveCount(0);
   await map
     .getByRole("button", { name: "Xem vị trí Mì Quảng", exact: true })
     .click();
@@ -1128,7 +1126,11 @@ test("the selected stop shows its dish, its restaurant and the restaurant's revi
   await expect(restaurant).toContainText(
     "12 Lê Duẩn, Phường Hải Châu, Thành phố Đà Nẵng",
   );
-  await expect(restaurant).toContainText("Đang mở cửa");
+  // The open/closed badge sits beside the restaurant's name in the card head.
+  await expect(
+    card.locator(".roadmap-place-head .roadmap-place-status"),
+  ).toHaveText("Đang mở cửa");
+  await expect(restaurant.locator(".roadmap-place-stars")).toHaveCount(0);
   await expect(restaurant).toContainText("06:00–21:00");
   await expect(
     restaurant.getByRole("link", { name: "0236 3888 999" }),
@@ -1410,10 +1412,9 @@ test.describe("offline Mapbox roadmap rendering", () => {
         exact: true,
       }),
     ).toHaveCount(0);
-    await map.locator(".roadmap-map-stop-list > summary").click();
-    const choices = map.getByRole("button", { name: /^Xem vị trí / });
-    await expect(choices).toHaveCount(4);
-    await map
+    // A drawn map has no stop list: the stop without a pin is picked from its itinerary card.
+    await expect(map.locator(".roadmap-map-stop-list")).toHaveCount(0);
+    await main(page)
       .getByRole("button", {
         name: "Xem vị trí Bún bò Huế",
         exact: true,
@@ -1499,17 +1500,8 @@ test.describe("offline Mapbox roadmap rendering", () => {
       .click();
     const card = map.locator(".roadmap-map-card");
     await expect(card).toContainText("Quán Phở bò");
-    // The "Món ăn" tab opens first and shows the selected dish image.
-    const selectedPhoto = card.locator(".roadmap-map-card-photo img");
-    await expect(selectedPhoto).toBeVisible();
-    await expect
-      .poll(() =>
-        selectedPhoto.evaluate(
-          (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
-        ),
-      )
-      .toBe(true);
-    await expect(selectedPhoto).toHaveCSS("object-fit", "cover");
+    // The "Món ăn" tab opens first, without a dish photo.
+    await expect(card.locator(".roadmap-place-intro img")).toHaveCount(0);
 
     const geometry = [
       [
@@ -1629,10 +1621,7 @@ test.describe("offline Mapbox roadmap rendering", () => {
       .click();
     await expect(card).toBeInViewport({ ratio: 0.7 });
     await map.getByRole("button", { name: "Đóng thông tin địa điểm" }).click();
-    await map.locator(".roadmap-map-stop-list > summary").click();
-    await map
-      .getByRole("button", { name: "Xem vị trí Bánh mì trứng", exact: true })
-      .click();
+    await map.getByRole("button", { name: /: Bánh mì trứng$/ }).click();
     await expect(card).toContainText("Quán Bánh mì trứng");
     await expect(card).toBeInViewport({ ratio: 0.7 });
     expect(cameraProblems).toEqual([]);

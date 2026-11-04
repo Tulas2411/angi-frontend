@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
 import { loadProvinceCatalog } from "@/shared/locations/province-service";
-import { mealSlots, provinceFromText } from "./roadmap-add-item-rules";
+import { provinceFromText } from "./roadmap-add-item-rules";
 import { dayTitle, mealSlotLabels } from "./roadmap-detail-rules";
 import {
   buildGenerateRequest,
@@ -37,7 +37,9 @@ import {
   maxPollFailures,
   noteMaxLength,
   preferenceTags,
-  replacedItemCount,
+  generationPlan,
+  generationPlanText,
+  generationSubmitLabel,
   tagChoice,
   toggleMealSlot,
   validateGenerateForm,
@@ -54,12 +56,14 @@ import type { RoadmapGenerationService } from "./roadmap-service";
 import type {
   GenerationJobDto,
   GenerationScope,
-  MealSlot,
   RoadmapDayDto,
   RoadmapSummaryDto,
   RoadmapTagDto,
 } from "./roadmap-types";
 import { VndField } from "./vnd-field";
+import { MealChips } from "./roadmap-meal-chips";
+import { MapPinIcon } from "@heroicons/react/24/outline";
+import "./roadmap-pickers.css";
 import "./roadmap-generate.css";
 
 type Phase =
@@ -273,8 +277,17 @@ export function RoadmapGenerateDialog({
   }, [jobId, round]);
 
   const hasOrigin = hasGenerationOrigin(overview.originMode, gpsOrigin);
-  const replacing = replacedItemCount(form, itinerary);
   const day = itinerary.find((entry) => String(entry.dayId) === form.dayId);
+  const plan = generationPlan(form, itinerary);
+  const where =
+    form.scope === "full"
+      ? "trong lộ trình"
+      : form.scope === "day"
+        ? `của ${day ? dayTitle(day) : "ngày này"}`
+        : `ở ${mealSlotLabels[form.mealSlot].toLowerCase()} của ${day ? dayTitle(day) : "ngày này"}`;
+  const noMealChosen = form.scope !== "slot" && form.mealSlots.length === 0;
+  // Every chosen meal already has its dish and nothing is replaced: there is nothing to ask for.
+  const nothingToFill = !noMealChosen && plan.meals === 0;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -306,12 +319,34 @@ export function RoadmapGenerateDialog({
     }
   }
 
-  const replaceNow = form.replaceExisting && replacing > 0;
+  const replaceNow = plan.replaced > 0;
   const footer =
     // Each phase's buttons have their own key: React must not reuse the button that was just
     // clicked ("Chỉnh điều kiện") as the next phase's submit button, or that same click submits.
     phase.kind === "form" ? (
       <Fragment key="form">
+        {/*
+         * Always in sight, next to the buttons: what the request will do, and the one choice
+         * that deletes dishes. The button names the same count.
+         */}
+        <div className="roadmap-generate-plan">
+          <Choice
+            label="Thay các món đã có trong phạm vi"
+            checked={form.replaceExisting}
+            onChange={(checked) =>
+              setForm((previous) => ({ ...previous, replaceExisting: checked }))
+            }
+          />
+          <p
+            className="roadmap-generate-plan-text"
+            data-tone={replaceNow ? "warning" : undefined}
+            aria-live="polite"
+          >
+            {noMealChosen
+              ? "Chọn ít nhất một bữa để ANGI tạo."
+              : generationPlanText(plan, where)}
+          </p>
+        </div>
         <Button variant="secondary" onClick={onClose} disabled={submitting}>
           Hủy
         </Button>
@@ -320,8 +355,9 @@ export function RoadmapGenerateDialog({
           form={formId}
           variant={replaceNow ? "destructive" : "primary"}
           loading={submitting}
+          disabled={nothingToFill}
         >
-          {replaceNow ? "Xóa món cũ và tạo lại" : "Tạo lịch bằng AI"}
+          {plan.meals > 0 ? generationSubmitLabel(plan) : "Tạo lịch bằng AI"}
         </Button>
       </Fragment>
     ) : phase.kind === "running" ? (
@@ -431,115 +467,118 @@ export function RoadmapGenerateDialog({
         onSubmit={(event) => void submit(event)}
       >
         <p className="helper">
-          ANGI chọn món hợp với bạn, mỗi bữa một món, và gom các quán gần nhau
-          trong cùng một ngày. Bạn xem lại toàn bộ rồi sửa từng món nếu muốn.
+          ANGI chọn mỗi bữa một món hợp với bạn và gom các quán gần nhau trong
+          ngày; bạn sửa từng món sau nếu muốn.
         </p>
-        <Tabs
-          label="Phạm vi tạo"
-          value={form.scope}
-          items={scopeTabs}
-          onChange={(value) =>
-            setForm((previous) => ({
-              ...previous,
-              scope: value as GenerationScope,
-            }))
-          }
-        />
-        {form.scope !== "full" && (
-          <div className="roadmap-generate-row">
-            <SelectField
-              label="Ngày"
-              name="dayId"
-              value={form.dayId}
-              error={errors.dayId}
-              onChange={(value) =>
-                setForm((previous) => ({ ...previous, dayId: value }))
-              }
-              options={itinerary.map((entry) => ({
-                value: String(entry.dayId),
-                label: dayTitle(entry),
-              }))}
-            />
-            {form.scope === "slot" && (
+        {/* Scope and day on one row: what part of the roadmap ANGI fills. */}
+        <div className="roadmap-generate-scope">
+          <Tabs
+            label="Phạm vi tạo"
+            value={form.scope}
+            items={scopeTabs}
+            onChange={(value) =>
+              setForm((previous) => ({
+                ...previous,
+                scope: value as GenerationScope,
+              }))
+            }
+          />
+          {form.scope !== "full" && (
+            <div className="roadmap-generate-day">
               <SelectField
-                label="Bữa"
-                name="mealSlot"
-                value={form.mealSlot}
+                label="Ngày"
+                name="dayId"
+                value={form.dayId}
+                error={errors.dayId}
                 onChange={(value) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    mealSlot: value as MealSlot,
-                  }))
+                  setForm((previous) => ({ ...previous, dayId: value }))
                 }
-                options={mealSlots.map((slot) => ({
-                  value: slot,
-                  label: mealSlotLabels[slot],
+                options={itinerary.map((entry) => ({
+                  value: String(entry.dayId),
+                  label: dayTitle(entry),
                 }))}
               />
-            )}
-          </div>
-        )}
-        <div className="roadmap-generate-row">
-          <ProvinceField
-            label="Tỉnh / thành phố"
-            name="province"
-            value={form.province}
-            required
-            maxLength={100}
-            error={errors.province}
-            showCatalogStatus={false}
-            onChange={(value) => {
-              touchedProvince.current = true;
-              setForm((previous) => ({ ...previous, province: value }));
-              setErrors((previous) => ({ ...previous, province: "" }));
-            }}
-          />
-          <VndField
-            label="Giá tối đa mỗi món"
-            name="maxPrice"
-            value={form.maxPrice}
-            placeholder="Không giới hạn"
-            error={errors.maxPrice}
-            onValueChange={(digits) => {
-              setForm((previous) => ({ ...previous, maxPrice: digits }));
-              setErrors((previous) => ({ ...previous, maxPrice: "" }));
-            }}
-          />
-        </div>
-        {form.scope !== "slot" && (
-          <fieldset className="roadmap-generate-meals">
-            <legend>Các bữa ANGI cần tạo</legend>
-            <div className="roadmap-generate-chips">
-              {mealSlots.map((slot) => (
-                <Choice
-                  key={slot}
-                  label={mealSlotLabels[slot]}
-                  checked={form.mealSlots.includes(slot)}
-                  onChange={(checked) => {
-                    setForm((previous) => ({
-                      ...previous,
-                      mealSlots: toggleMealSlot(
-                        previous.mealSlots,
-                        slot,
-                        checked,
-                      ),
-                    }));
-                    setErrors((previous) => ({ ...previous, mealSlots: "" }));
-                  }}
-                />
-              ))}
             </div>
-            {errors.mealSlots && (
-              <p className="field-error" role="alert">
-                {errors.mealSlots}
-              </p>
-            )}
-          </fieldset>
-        )}
+          )}
+        </div>
+        {/* Several meals as checkbox chips, or one meal as radio chips ("Một bữa"). */}
+        <fieldset className="roadmap-generate-meals">
+          <legend>
+            {form.scope === "slot"
+              ? "Bữa ANGI cần tạo"
+              : "Các bữa ANGI cần tạo"}
+          </legend>
+          {form.scope === "slot" ? (
+            <MealChips
+              name="mealSlot"
+              selected={[form.mealSlot]}
+              onToggle={(slot) =>
+                setForm((previous) => ({ ...previous, mealSlot: slot }))
+              }
+            />
+          ) : (
+            <MealChips
+              name="mealSlots"
+              multiple
+              selected={form.mealSlots}
+              onToggle={(slot, checked) => {
+                setForm((previous) => ({
+                  ...previous,
+                  mealSlots: toggleMealSlot(previous.mealSlots, slot, checked),
+                }));
+                setErrors((previous) => ({ ...previous, mealSlots: "" }));
+              }}
+            />
+          )}
+          {errors.mealSlots && (
+            <p className="field-error" role="alert">
+              {errors.mealSlots}
+            </p>
+          )}
+        </fieldset>
+        {/* Where ANGI looks and how much a dish may cost: the bar of "Thêm món". */}
+        <div className="stack-sm">
+          <div className="roadmap-searchbar">
+            <div className="roadmap-searchbar-part">
+              <ProvinceField
+                label="Tỉnh / thành phố"
+                name="province"
+                value={form.province}
+                required
+                maxLength={100}
+                error={errors.province}
+                showCatalogStatus={false}
+                onChange={(value) => {
+                  touchedProvince.current = true;
+                  setForm((previous) => ({ ...previous, province: value }));
+                  setErrors((previous) => ({ ...previous, province: "" }));
+                }}
+              />
+            </div>
+            <div className="roadmap-searchbar-part is-narrow">
+              <VndField
+                label="Giá tối đa mỗi món"
+                name="maxPrice"
+                value={form.maxPrice}
+                placeholder="Không giới hạn"
+                error={errors.maxPrice}
+                onValueChange={(digits) => {
+                  setForm((previous) => ({ ...previous, maxPrice: digits }));
+                  setErrors((previous) => ({ ...previous, maxPrice: "" }));
+                }}
+              />
+            </div>
+          </div>
+          <p className="helper roadmap-generate-origin">
+            <MapPinIcon aria-hidden />
+            {originNote(overview, gpsOrigin)}
+          </p>
+        </div>
         <TextArea
           label="Ghi chú cho ANGI"
           name="note"
           rows={2}
+          className="roadmap-generate-note"
           maxLength={noteMaxLength}
           placeholder="Ví dụ: Ưu tiên món nước"
           value={form.note}
@@ -550,7 +589,13 @@ export function RoadmapGenerateDialog({
           }}
         />
         <details className="roadmap-generate-more">
-          <summary>Tùy chọn thêm</summary>
+          <summary>
+            Tùy chọn thêm
+            <span className="helper">
+              {" "}
+              · {hasOrigin ? "bán kính, " : ""}loại món ưu tiên và cần tránh
+            </span>
+          </summary>
           <div className="stack">
             {hasOrigin && (
               <Field
@@ -610,27 +655,6 @@ export function RoadmapGenerateDialog({
             )}
           </div>
         </details>
-        <p className="helper">{originNote(overview, gpsOrigin)}</p>
-        <div className="roadmap-generate-replace stack-sm">
-          <Choice
-            label="Thay các món đã có trong phạm vi"
-            checked={form.replaceExisting}
-            onChange={(checked) =>
-              setForm((previous) => ({ ...previous, replaceExisting: checked }))
-            }
-          />
-          {form.replaceExisting ? (
-            <Alert tone="warning">
-              {replacing > 0
-                ? `ANGI sẽ xóa ${replacing} món đang có${form.scope === "full" ? "" : ` của ${day ? dayTitle(day) : "ngày này"}`} ở các bữa đã chọn rồi tạo lại. Không hoàn tác được.`
-                : "Chưa có món nào trong phạm vi này, nên không có gì bị xóa."}
-            </Alert>
-          ) : (
-            <p className="helper">
-              Mặc định ANGI chỉ điền các bữa còn trống và giữ nguyên món đã có.
-            </p>
-          )}
-        </div>
         {formError && (
           <div className="stack-sm">
             <Alert>{formError.message}</Alert>
@@ -657,7 +681,7 @@ export function RoadmapGenerateDialog({
     <Dialog
       open
       wide
-      focusField={!defaultProvince.trim()}
+      focusField={!defaultProvince.trim() && 'input[name="province"]'}
       title="ANGI lên lịch giúp bạn"
       onClose={() => {
         if (!submitting) onClose();

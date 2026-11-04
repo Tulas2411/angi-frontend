@@ -215,6 +215,109 @@ export function buildRoadmapPatch(
   return patch;
 }
 
+/** Digits the budget field starts with: the saved amount, or empty when none is set. */
+export function budgetDigits(amount: number | null): string {
+  return amount === null ? "" : String(amount);
+}
+
+/**
+ * RM-04 body of the budget dialog on the detail page. The field holds digits only (`VndField`);
+ * an empty field clears the budget with an explicit `null`. An unchanged value sends nothing.
+ */
+export function buildBudgetPatch(
+  digits: string,
+  current: number | null,
+): UpdateRoadmapRequestDto {
+  const amount = parseBudget(digits);
+  return amount === current ? {} : { budgetAmount: amount };
+}
+
+/** Rule of the title edited in place on the detail page: 1..200 characters once trimmed. */
+export function roadmapTitleError(text: string): string | null {
+  const title = text.trim();
+  if (!title) return "Tên lộ trình không được để trống.";
+  if (title.length > roadmapLimits.title)
+    return `Tên lộ trình không được vượt quá ${roadmapLimits.title} ký tự.`;
+  return null;
+}
+
+/** RM-04 body for the title edited in place; an unchanged title sends nothing. */
+export function buildTitlePatch(
+  text: string,
+  current: string,
+): UpdateRoadmapRequestDto {
+  const title = text.trim();
+  return title === current ? {} : { title };
+}
+
+/** Days of a trip from `from` to `to`, both counted (`2026-11-13`..`2026-11-18` → 6). */
+export function tripDays(from: string, to: string): number {
+  const start = Date.parse(`${from}T00:00:00Z`);
+  const end = Date.parse(`${to}T00:00:00Z`);
+  return Math.round((end - start) / 86_400_000) + 1;
+}
+
+/**
+ * Longest trip the hero picker offers: the product limit of RM-01, or the current length when the
+ * Agent already made the trip longer (it accepts up to 30 days), so such a trip can still be moved.
+ */
+export function maxPickableDays(currentDays: number) {
+  return Math.max(roadmapLimits.maxDays, currentDays);
+}
+
+/** Rule of the date range picked on the detail page: whole days, at most `maxDays`. */
+export function dateRangeError(
+  from: string,
+  to: string,
+  maxDays: number = roadmapLimits.maxDays,
+): string | null {
+  if (!isDateOnly(from) || !isDateOnly(to))
+    return "Chọn ngày đi rồi chọn ngày về.";
+  const days = tripDays(from, to);
+  if (days < roadmapLimits.minDays) return "Ngày về không được trước ngày đi.";
+  if (days > maxDays) return `Chuyến đi tối đa ${maxDays} ngày.`;
+  return null;
+}
+
+/** RM-04 body for a picked range: the start date and the day count, only when they changed. */
+export function buildDateRangePatch(
+  from: string,
+  to: string,
+  summary: Pick<RoadmapSummaryDto, "startDate" | "numDays">,
+): UpdateRoadmapRequestDto {
+  const patch: UpdateRoadmapRequestDto = {};
+  if (from !== summary.startDate) patch.startDate = from;
+  const numDays = tripDays(from, to);
+  if (numDays !== summary.numDays) patch.numDays = numDays;
+  return patch;
+}
+
+export interface PickedDateRange {
+  from?: string;
+  to?: string;
+}
+
+/**
+ * Range after one click in the picker: the first click is the start, the second the end. A click
+ * on a finished range, or before the start, begins a new range from that day.
+ */
+export function nextDateRange(
+  current: PickedDateRange,
+  clicked: string,
+): PickedDateRange {
+  if (!current.from || current.to || clicked < current.from)
+    return { from: clicked };
+  return { from: current.from, to: clicked };
+}
+
+/** Last day the end of the range may take, while only the start is picked. */
+export function lastPickableDay(
+  from: string,
+  maxDays: number = roadmapLimits.maxDays,
+) {
+  return addDays(from, maxDays - 1);
+}
+
 /** Maps VALIDATION_FAILED keys (any casing) onto the form fields that show them. */
 export function roadmapFieldErrors(
   errors?: Record<string, string[]>,

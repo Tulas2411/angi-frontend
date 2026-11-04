@@ -93,8 +93,9 @@ export interface RoadmapGenerationService {
   tags: () => Promise<RoadmapTagDto[]>;
 }
 
-/** Everything the roadmap detail screen calls: RM-03, RM-14, RM-06, RM-07, RM-09, RM-10 and RM-11. */
+/** Everything the roadmap detail screen calls: RM-03, RM-04 (budget), RM-14, RM-06, RM-07, RM-09, RM-10 and RM-11. */
 export type RoadmapScreenService = RoadmapDetailService &
+  Pick<RoadmapPlanService, "update"> &
   RoadmapItemService &
   RoadmapGenerationService;
 

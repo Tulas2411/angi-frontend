@@ -108,7 +108,7 @@ test.describe("offline Mapbox assistant preview", () => {
     const loaded = styleLoads;
 
     await page
-      .getByRole("button", { name: "✦ Trợ lý món ăn", exact: true })
+      .getByRole("button", { name: "Trợ lý món ăn", exact: true })
       .click();
     await expect(pins).toHaveCount(2);
     await expect(
@@ -177,7 +177,7 @@ test.describe("offline Mapbox assistant preview", () => {
     const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
     await expect(map).toHaveAttribute("data-ready", "true");
     await page
-      .getByRole("button", { name: "✦ Trợ lý món ăn", exact: true })
+      .getByRole("button", { name: "Trợ lý món ăn", exact: true })
       .click();
     const pins = map.locator(".roadmap-map-pin-preview");
     await expect(pins).toHaveCount(4);

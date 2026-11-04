@@ -78,24 +78,9 @@
   display: grid;
   gap: var(--space-3);
 }
-/* "Món ăn" like Wanderlog's "Giới thiệu": the text flows beside a small square photo. */
+/* "Món ăn": the dish description, full width (no photo since 2026-11-04). */
 .roadmap-place-intro {
   display: flow-root;
-}
-.roadmap-place .roadmap-place-thumb.roadmap-map-card-photo {
-  float: right;
-  width: 112px;
-  height: 112px;
-  max-height: none;
-  aspect-ratio: 1;
-  margin: 0 0 var(--space-2) var(--space-4);
-  overflow: hidden;
-  border-radius: var(--radius-sm);
-}
-.roadmap-place-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
 }
 .roadmap-place-intro .roadmap-place-text p {
   font-size: 15px;
@@ -169,17 +154,6 @@
   text-decoration-color: var(--coral);
   text-underline-offset: 4px;
 }
-.roadmap-place-score {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin: 0;
-  font-size: 13px;
-}
-.roadmap-place-score strong {
-  font-size: 15px;
-}
 .roadmap-place-stars {
   color: #f4a300;
   letter-spacing: 1px;
@@ -187,8 +161,19 @@
 .roadmap-place-stars > span {
   color: var(--line-strong);
 }
+/* The restaurant line of the head, with the open/closed badge right after the name. */
+.roadmap-place-head .roadmap-place-restaurant {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+/* The name shrinks and fades; the badge keeps its size beside it. */
+.roadmap-place-restaurant > .fading-text {
+  flex: 0 1 auto;
+}
 .roadmap-place-status {
-  margin-left: auto;
+  flex: none;
   padding: 2px 10px;
   border-radius: var(--radius-pill);
   background: var(--control);
@@ -241,6 +226,16 @@
 }
 .roadmap-place-rows li[data-tone] .roadmap-place-icon {
   color: currentColor;
+}
+/* The price row stays one line (wrapping only when the card is very narrow). */
+.roadmap-place-rows li > span.roadmap-place-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+}
+.roadmap-place-price > span {
+  color: var(--muted);
 }
 .roadmap-place-rows li > span {
   display: grid;
@@ -598,12 +593,10 @@
   font-weight: 500;
   line-height: 1.35;
 }
+/* Restaurant · price on one line, fading out like the other names (FadingText), not "…". */
 .roadmap-suggested-body small {
-  overflow: hidden;
   color: var(--muted);
   font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 /*
  * "+": an icon (not the "+" glyph, whose font metrics sit it off centre) in a round button. It has
@@ -815,10 +808,6 @@
   box-shadow: var(--focus-ring);
 }
 @media (max-width: 700px) {
-  .roadmap-place .roadmap-place-thumb.roadmap-map-card-photo {
-    width: 88px;
-    height: 88px;
-  }
   .roadmap-suggested-arrow {
     display: none;
   }
@@ -839,8 +828,4 @@
   .roadmap-suggested-arrow {
     transition: none;
   }
-}
-.roadmap-place .roadmap-map-card-photo {
-  aspect-ratio: 4 / 3;
-  max-height: none;
 }

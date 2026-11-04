@@ -4,7 +4,7 @@
 
 FE đã có giao diện chat và adapter gọi AGENT-01, AGENT-02, AGENT-03, AGENT-04 qua proxy cùng origin; backend đã triển khai bốn endpoint này. Sản phẩm không dùng API giả hoặc câu trả lời mẫu để thay thế lỗi BE.
 
-Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm **✦ Trợ lý món ăn** ở sidebar. Nếu endpoint không phản hồi, khung chat vẫn mở đúng bố cục và báo lỗi; ô soạn thảo giữ nội dung, nút gửi bị khóa đến khi có hội thoại hợp lệ.
+Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm **Trợ lý món ăn** ở sidebar (nút gradient san hô sang tím, biểu tượng `SparklesIcon`, sát mép trái sidebar và bo tròn bên phải; dưới 900px là viên bo tròn hai đầu). Nếu endpoint không phản hồi, khung chat vẫn mở đúng bố cục và báo lỗi; ô soạn thảo giữ nội dung, nút gửi bị khóa đến khi có hội thoại hợp lệ.
 
 ## Trả lời một lần và điểm trên bản đồ (2026-11-02)
 
@@ -21,7 +21,7 @@ Vào `/roadmaps`, mở một lộ trình của tài khoản Traveler rồi bấm
 
 Đã đọc trực tiếp Figma frame [ANGI / Roadmap / 18 Trợ lý AI (`137:712`)](https://www.figma.com/design/lxEl7PJc0LdQ8j47KlUPkO/ANGI?node-id=137-712), đặc biệt panel `140:1230`: nền trắng, header ANGI / Trợ lý ăn uống, nút Đóng, nhắc kiểm tra nội dung AI, ba gợi ý đầu cuộc trò chuyện và khung nhập ở dưới cùng. Giữ font DM Sans/Fraunces và token hiện có của màn roadmap.
 
-- Nút sidebar mở panel lớn phủ header, sidebar và sổ tay; bong bóng trên bản đồ mở popup nhỏ ở góc dưới phải. Nút trên header chuyển qua lại giữa hai dạng. Bản đồ vẫn được giữ nguyên component và sử dụng được. Panel mở bằng cách mờ dần và trượt lên (240 ms); đóng ngắn hơn và tăng tốc (160 ms, `--ease-exit`) để không lơ lửng ở cuối. Màn dưới 901px luôn dùng panel toàn chiều rộng. `prefers-reduced-motion` tắt chuyển động.
+- Nút sidebar mở panel lớn phủ header, sidebar và sổ tay; bong bóng trên bản đồ (nút tròn 52px cùng gradient san hô sang tím với nút sidebar, biểu tượng `SparklesIcon` trắng, tên "Mở trợ lý món ăn"; từ 2026-11-04 nằm sát trên dòng ghi công Mapbox vì khối danh sách điểm đã bỏ) mở popup nhỏ ở góc dưới phải. Màu gradient khai báo một lần ở `.roadmap-detail` (`--agent-gradient`, `--agent-gradient-round`). Nút trên header chuyển qua lại giữa hai dạng. Bản đồ vẫn được giữ nguyên component và sử dụng được. Panel mở bằng cách mờ dần và trượt lên (240 ms); đóng ngắn hơn và tăng tốc (160 ms, `--ease-exit`) để không lơ lửng ở cuối. Màn dưới 901px luôn dùng panel toàn chiều rộng. `prefers-reduced-motion` tắt chuyển động.
 - Đây là panel không chặn bản đồ. Nội dung bị panel lớn che không nhận focus, popup thì để trang phía sau dùng được; khi mở, focus vào ô nhập; Escape hoặc Đóng trả focus về nút đã mở. Popup xác nhận dùng `ConfirmDialog`, biểu mẫu ràng buộc dùng `Dialog`; không dùng browser alert/confirm/prompt.
 - Ba gợi ý đầu cuộc trò chuyện gửi luôn thành tin nhắn khi bấm. Địa danh và mức giá trong gợi ý lấy từ `conversation.state`, thiếu thì không tự đoán.
 - Enter gửi, Shift + Enter xuống dòng, không gửi giữa phiên gõ IME. Nội dung bắt buộc có chữ và dài tối đa 4.000 ký tự. Tin nhắn hiển thị bằng văn bản, không chèn HTML từ AI.

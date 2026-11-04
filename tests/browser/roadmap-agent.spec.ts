@@ -207,7 +207,7 @@ const committed: AgentCommit = {
 };
 async function open(page: Page) {
   await page
-    .getByRole("button", { name: "✦ Trợ lý món ăn", exact: true })
+    .getByRole("button", { name: "Trợ lý món ăn", exact: true })
     .click();
   await expect(panel(page)).toBeVisible();
 }
@@ -246,7 +246,7 @@ test("the sidebar button opens the full panel beside the map, lazily, and Escape
   await page.keyboard.press("Escape");
   await expect(panel(page)).toHaveCount(0);
   await expect(
-    page.getByRole("button", { name: "✦ Trợ lý món ăn", exact: true }),
+    page.getByRole("button", { name: "Trợ lý món ăn", exact: true }),
   ).toBeFocused();
   await open(page);
   await expect.poll(() => getCalls).toBe(1);

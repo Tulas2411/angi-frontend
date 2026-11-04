@@ -13,7 +13,6 @@ import type {
   RoadmapItemDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
-import { chooseOption } from "./select-helpers";
 /**
  * F-26: RM-10 and RM-11 against a local stub shaped like the API Design JSON samples. The stub
  * runs the job the way the backend does: queued, then running, then finished, one step per read.
@@ -332,9 +331,17 @@ const dialog = (page: Page) =>
   page.getByRole("dialog", { name: "ANGI lên lịch giúp bạn" });
 const items = (page: Page) => page.locator(".roadmap-item");
 const submitButton = (page: Page) =>
-  dialog(page).getByRole("button", { name: "Tạo lịch bằng AI" });
-const openBanner = (page: Page) =>
-  page.getByRole("button", { name: "Tạo lộ trình bằng AI" }).click();
+  // The button names what it creates ("Tạo 3 món bằng AI"); "Tạo lịch bằng AI" when no meal is picked.
+  dialog(page).getByRole("button", { name: /^Tạo (lịch|d+ món) bằng AI$/ });
+/** The day-1 "ANGI thêm giúp bạn" opener (the roadmap-wide banner was removed). */
+const dayOpener = (page: Page) =>
+  page.locator("#day-1").getByRole("button", { name: "ANGI thêm giúp bạn" });
+/** Opens the dialog for the whole roadmap: from day 1, then the "Cả lộ trình" tab. */
+async function openBanner(page: Page) {
+  await openFirstDay(page);
+  await dayOpener(page).click();
+  await dialog(page).getByRole("tab", { name: "Cả lộ trình" }).click();
+}
 
 /** Every day starts folded unless the URL names one; most tests read the first day's dishes. */
 async function openFirstDay(page: Page) {
@@ -478,7 +485,7 @@ test("one day or one meal sends its ids, the constraints and the tags as documen
     .getByRole("button", { name: "ANGI thêm giúp bạn" })
     .click();
   await box.getByRole("tab", { name: "Một bữa" }).click();
-  await chooseOption(box.getByLabel("Bữa", { exact: true }), "late_night");
+  await box.getByRole("radio", { name: "Ăn khuya" }).check();
   await expect(box.getByText("Các bữa ANGI cần tạo")).toHaveCount(0);
   await submitButton(page).click();
   await expect.poll(() => generateCalls.length).toBe(2);
@@ -525,12 +532,12 @@ test("replacing says how many dishes go and sends replaceExisting", async ({
     .getByRole("checkbox", { name: "Thay các món đã có trong phạm vi" })
     .check();
   await expect(
-    box.getByText(/ANGI sẽ xóa 1 món đang có của .* ở các bữa đã chọn/),
+    box.getByText(/ANGI sẽ xóa 1 món đang có của .* rồi điền lại d+ bữa/),
   ).toBeVisible();
   await expect(
-    box.getByRole("button", { name: "Xóa món cũ và tạo lại" }),
+    box.getByRole("button", { name: "Xóa 1 món và tạo lại" }),
   ).toBeVisible();
-  await box.getByRole("button", { name: "Xóa món cũ và tạo lại" }).click();
+  await box.getByRole("button", { name: "Xóa 1 món và tạo lại" }).click();
   await expect.poll(() => generateCalls.length).toBe(1);
   expect(generateCalls[0]).toMatchObject({
     scope: "day",
@@ -661,7 +668,8 @@ test("the dialog works with the keyboard and fits from 320px to 1440px", async (
   page,
 }) => {
   await open(page);
-  const opener = page.getByRole("button", { name: "Tạo lộ trình bằng AI" });
+  await openFirstDay(page);
+  const opener = dayOpener(page);
   await opener.focus();
   await page.keyboard.press("Enter");
   const box = dialog(page);

@@ -1,11 +1,15 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import {
+  CheckCircleIcon,
+  MagnifyingGlassIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
 import { Alert, Badge, Button } from "@/shared/ui";
 import {
   Dialog,
   EmptyState,
   Field,
-  SelectField,
   Skeleton,
 } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
@@ -14,7 +18,6 @@ import {
   addItemError,
   buildAddItemRequest,
   buildSuggestionsQuery,
-  mealSlots,
   provinceFromText,
   suggestionsError,
   validateSuggestionFilters,
@@ -31,6 +34,7 @@ import type {
   RoadmapSummaryDto,
 } from "./roadmap-types";
 import { VndField } from "./vnd-field";
+import { MealChips } from "./roadmap-meal-chips";
 import { useDishView } from "@/features/explore/dish-view-mode";
 import {
   exploreService,
@@ -318,80 +322,100 @@ function Panel({
   const slotLabel = lower(mealSlotLabels[targetSlot]);
   return (
     <div className="roadmap-add stack">
-      <p className="helper">
-        Chọn món ANGI gợi ý, rồi chọn ngày, bữa và vị trí muốn thêm vào. Danh
-        sách đã loại các món đang có trong lộ trình.
-      </p>
+      {/*
+       * One search bar: what to eat, where, and up to what price, with the button at its end. The
+       * labels sit inside their segments so the whole bar reads as a single control.
+       */}
       <form
-        className="roadmap-add-filters"
+        className="roadmap-add-search roadmap-searchbar"
+        role="search"
+        aria-label="Tìm món gợi ý"
         noValidate
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           event.preventDefault();
           search(filters);
         }}
       >
-        <ProvinceField
-          label="Tỉnh / thành phố"
-          name="province"
-          value={filters.province}
-          required
-          maxLength={100}
-          error={errors.province}
-          showCatalogStatus={false}
-          onChange={(value) => {
-            latest.current.touchedProvince = true;
-            setFilters((previous) => ({ ...previous, province: value }));
-            setErrors((previous) => ({ ...previous, province: "" }));
-          }}
-        />
-        <Field
-          label="Tìm món hoặc quán"
-          name="q"
-          type="search"
-          autoComplete="off"
-          placeholder="Ví dụ: bún bò"
-          value={filters.q}
-          onChange={(event) =>
-            setFilters((previous) => ({ ...previous, q: event.target.value }))
-          }
-        />
-        <VndField
-          label="Giá tối đa mỗi món"
-          name="maxPrice"
-          value={filters.maxPrice}
-          placeholder="Không giới hạn"
-          error={errors.maxPrice}
-          onValueChange={(digits) => {
-            setFilters((previous) => ({ ...previous, maxPrice: digits }));
-            setErrors((previous) => ({ ...previous, maxPrice: "" }));
-          }}
-        />
-        <Button type="submit" loading={list.status === "loading"}>
+        <div className="roadmap-searchbar-part is-wide">
+          <Field
+            label="Tìm món hoặc quán"
+            name="q"
+            type="search"
+            autoComplete="off"
+            placeholder="Ví dụ: bún bò, phở cuốn…"
+            value={filters.q}
+            onChange={(event) =>
+              setFilters((previous) => ({
+                ...previous,
+                q: event.target.value,
+              }))
+            }
+          />
+        </div>
+        <div className="roadmap-searchbar-part">
+          <ProvinceField
+            label="Tỉnh / thành phố"
+            name="province"
+            value={filters.province}
+            required
+            maxLength={100}
+            error={errors.province}
+            showCatalogStatus={false}
+            onChange={(value) => {
+              latest.current.touchedProvince = true;
+              setFilters((previous) => ({ ...previous, province: value }));
+              setErrors((previous) => ({ ...previous, province: "" }));
+            }}
+          />
+        </div>
+        <div className="roadmap-searchbar-part is-narrow">
+          <VndField
+            label="Giá tối đa mỗi món"
+            name="maxPrice"
+            value={filters.maxPrice}
+            placeholder="Không giới hạn"
+            error={errors.maxPrice}
+            onValueChange={(digits) => {
+              setFilters((previous) => ({ ...previous, maxPrice: digits }));
+              setErrors((previous) => ({ ...previous, maxPrice: "" }));
+            }}
+          />
+        </div>
+        <Button
+          type="submit"
+          className="roadmap-searchbar-submit"
+          loading={list.status === "loading"}
+        >
+          <MagnifyingGlassIcon aria-hidden />
           Tìm món
         </Button>
       </form>
-      <fieldset className="roadmap-add-target">
-        <legend>Thêm món đã chọn vào cuối bữa của {dayTitle(day)}</legend>
-        <SelectField
-          label="Bữa"
-          name="mealSlot"
-          value={targetSlot}
-          onChange={(value) => setTargetSlot(value as MealSlot)}
-          options={mealSlots.map((slot) => ({
-            value: slot,
-            label: mealSlotLabels[slot],
-          }))}
-        />
-      </fieldset>
-      {note && <p className="helper">{note}</p>}
-      <p className="sr-only" role="status" aria-live="polite">
-        {announcement}
-      </p>
-      {announcement && (
-        <p className="roadmap-add-notice" aria-hidden="true">
-          ✓ {announcement}
+
+      {/*
+       * Where a picked dish goes: a destination, not a filter. It stays at the top of the scrolling
+       * dialog so the meal can change between two dishes without scrolling back up.
+       */}
+      <div className="roadmap-add-target">
+        <fieldset className="roadmap-add-meals">
+          <legend>
+            Thêm vào cuối bữa của <strong>{dayTitle(day)}</strong>
+          </legend>
+          <MealChips
+            name="mealSlot"
+            selected={[targetSlot]}
+            onToggle={(slot) => setTargetSlot(slot)}
+          />
+        </fieldset>
+        <p className="sr-only" role="status" aria-live="polite">
+          {announcement}
         </p>
-      )}
+        {announcement && (
+          <p className="roadmap-add-notice" aria-hidden="true">
+            <CheckCircleIcon aria-hidden />
+            {announcement}
+          </p>
+        )}
+      </div>
 
       {stale && (
         <Alert tone="warning">
@@ -419,12 +443,23 @@ function Panel({
         (list.items.length ? (
           <section className="stack-sm" aria-labelledby="roadmap-add-results">
             <div className="dish-results-bar">
-              <h3
-                id="roadmap-add-results"
-                className="roadmap-add-results-title"
-              >
-                Món gợi ý tại {list.filters.province.trim()}
-              </h3>
+              <div className="roadmap-add-results-head">
+                <h3
+                  id="roadmap-add-results"
+                  className="roadmap-add-results-title"
+                >
+                  Món gợi ý tại {list.filters.province.trim()}
+                </h3>
+                <p className="helper">
+                  Đã loại các món đang có trong lộ trình.
+                </p>
+                {note && (
+                  <p className="helper roadmap-add-nearby">
+                    <MapPinIcon aria-hidden />
+                    {note}
+                  </p>
+                )}
+              </div>
               <DishViewSwitcher view={view} onChange={setView} />
             </div>
             <ul className={`dish-items dish-items-${view}`}>
@@ -515,6 +550,7 @@ function Panel({
                 <Alert>{list.more.message}</Alert>
                 <Button
                   variant="secondary"
+                  className="roadmap-add-more"
                   onClick={() =>
                     list.more.status === "error" && list.more.expired
                       ? search(filters)
@@ -530,6 +566,7 @@ function Panel({
             {list.nextCursor && list.more.status !== "error" && (
               <Button
                 variant="secondary"
+                className="roadmap-add-more"
                 loading={list.more.status === "loading"}
                 onClick={loadMore}
               >
@@ -575,7 +612,7 @@ export function RoadmapAddItemDialog({
       open
       wide
       className="roadmap-add-dialog"
-      focusField={!defaultProvince.trim()}
+      focusField={!defaultProvince.trim() && 'input[name="province"]'}
       title="Thêm món vào lộ trình"
       onClose={onClose}
       footer={

@@ -15,7 +15,6 @@ import type {
   UpdateRoadmapItemRequestDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
-import { chooseOption } from "./select-helpers";
 /**
  * F-25: choosing the day and the place of a dish when it is added. RM-06 and RM-07 against a local
  * stub; like the backend, RM-07 gives the item exactly the `sortOrder` it is sent (it never shifts
@@ -279,8 +278,8 @@ const dialog = (page: Page) =>
   page.getByRole("dialog", { name: "Thêm món vào lộ trình" });
 const dayField = (page: Page) =>
   dialog(page).getByLabel("Ngày", { exact: true });
-const mealField = (page: Page) =>
-  dialog(page).getByLabel("Bữa", { exact: true });
+const mealField = (page: Page, meal: string) =>
+  dialog(page).getByRole("radio", { name: meal, exact: true });
 const placeField = (page: Page) =>
   dialog(page).getByLabel("Vị trí", { exact: true });
 const addButton = (page: Page, dish: string, meal = "bữa trưa") =>
@@ -322,9 +321,9 @@ test("the dialog adds to the day it was opened from: only the meal can change", 
   // Opened from day 1, lunch; there is no day or place to pick, and the list is not filtered.
   await expect(dayField(page)).toHaveCount(0);
   await expect(placeField(page)).toHaveCount(0);
-  await expect(mealField(page)).toHaveValue("lunch");
+  await expect(mealField(page, "Bữa trưa")).toBeChecked();
   await expect(dialog(page)).toContainText(
-    "Thêm món đã chọn vào cuối bữa của Thứ Bảy, 10 tháng 10",
+    "Thêm vào cuối bữa của Thứ Bảy, 10 tháng 10",
   );
   expect(calls).toEqual([]);
 });
@@ -353,7 +352,7 @@ test("another meal of the same day takes the dish at its end", async ({
   page,
 }) => {
   await open(page);
-  await chooseOption(mealField(page), "dinner");
+  await mealField(page, "Bữa tối").check();
   await addButton(page, "Bánh cuốn", "bữa tối").click();
   await expect.poll(() => addCalls.length).toBe(1);
   expect(addCalls[0]).toEqual({

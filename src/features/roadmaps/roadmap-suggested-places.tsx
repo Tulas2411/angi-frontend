@@ -22,6 +22,7 @@ import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapItemService } from "./roadmap-service";
 import type { DishCardDto, MealSlot, RoadmapDayDto } from "./roadmap-types";
+import { FadingText } from "./fading-text";
 import "./roadmap-place.css";
 
 /** RM-06 allows 1..50; one short strip per day. */
@@ -201,9 +202,10 @@ export function SuggestedPlaces({
                 <Media src={dish.coverUrl ?? undefined} alt="" />
                 <span>
                   <strong>{dish.name}</strong>
-                  <small>
-                    {dish.restaurant.name} · {vnd(dish.price)}
-                  </small>
+                  <FadingText
+                    as="small"
+                    text={`${dish.restaurant.name} · ${vnd(dish.price)}`}
+                  />
                 </span>
               </Link>
               <Popover

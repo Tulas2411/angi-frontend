@@ -204,6 +204,62 @@ export function replacedItemCount(
     );
 }
 
+export interface GenerationPlan {
+  /** Meals ANGI will fill, one dish each (at most: fewer when too few dishes match). */
+  meals: number;
+  /** Dishes already in the covered meals that stay untouched. */
+  kept: number;
+  /** Dishes already in the covered meals that are deleted first. */
+  replaced: number;
+}
+
+/**
+ * What a request will do, mirroring the backend job (ProcessRoadmapGenerationJobUseCase): without
+ * `replaceExisting` only the covered meals that have no dish yet are filled; with it every covered
+ * meal is emptied and filled again. Shown before the traveler confirms.
+ */
+export function generationPlan(
+  form: Pick<
+    GenerateForm,
+    "scope" | "dayId" | "mealSlot" | "mealSlots" | "replaceExisting"
+  >,
+  itinerary: readonly RoadmapDayDto[],
+): GenerationPlan {
+  const meals = form.scope === "slot" ? [form.mealSlot] : form.mealSlots;
+  const days = itinerary.filter(
+    (day) => form.scope === "full" || String(day.dayId) === form.dayId,
+  );
+  let empty = 0;
+  let existing = 0;
+  for (const day of days)
+    for (const meal of meals) {
+      const count = day.items.filter((item) => item.mealSlot === meal).length;
+      existing += count;
+      if (count === 0) empty += 1;
+    }
+  return form.replaceExisting
+    ? { meals: days.length * meals.length, kept: 0, replaced: existing }
+    : { meals: empty, kept: existing, replaced: 0 };
+}
+
+/**
+ * The line beside the dialog's buttons, e.g. "ANGI sẽ điền 2 bữa còn trống · giữ 1 món đã có", or
+ * the warning when dishes are deleted first.
+ */
+export function generationPlanText(plan: GenerationPlan, where: string) {
+  if (plan.replaced > 0)
+    return `ANGI sẽ xóa ${plan.replaced} món đang có ${where} rồi điền lại ${plan.meals} bữa. Không hoàn tác được.`;
+  if (plan.meals === 0)
+    return `Các bữa đã chọn ${where} đều đã có món. Bật “Thay các món đã có trong phạm vi” để ANGI tạo lại.`;
+  return `ANGI sẽ điền ${plan.meals} bữa còn trống ${where}${plan.kept > 0 ? ` · giữ ${plan.kept} món đã có` : ""}.`;
+}
+
+/** The submit button: how many dishes it creates, or what it deletes first. */
+export function generationSubmitLabel(plan: GenerationPlan) {
+  if (plan.replaced > 0) return `Xóa ${plan.replaced} món và tạo lại`;
+  return `Tạo ${plan.meals} món bằng AI`;
+}
+
 /** What the progress view says about the request, e.g. "Cả lộ trình · Thành phố Hà Nội". */
 export function generationSummary(
   form: GenerateForm,

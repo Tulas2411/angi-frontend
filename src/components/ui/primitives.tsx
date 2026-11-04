@@ -424,8 +424,11 @@ export function Dialog({
   wide?: boolean;
   map?: boolean;
   drawer?: boolean;
-  /** Forms move initial focus to their first field instead of the close button. */
-  focusField?: boolean;
+  /**
+   * Forms move initial focus to their first field instead of the close button; a CSS selector
+   * (inside the dialog content) picks another field, e.g. `input[name="province"]`.
+   */
+  focusField?: boolean | string;
   className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
@@ -448,7 +451,9 @@ export function Dialog({
       if (focusField)
         dialog
           .querySelector<HTMLElement>(
-            ".dialog-content :is(input:not([type=hidden]), textarea, select, [role=combobox])",
+            typeof focusField === "string"
+              ? `.dialog-content ${focusField}`
+              : ".dialog-content :is(input:not([type=hidden]), textarea, select, [role=combobox])",
           )
           ?.focus();
     }

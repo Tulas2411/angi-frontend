@@ -36,6 +36,19 @@
 }
 
 .roadmap-detail {
+  /* Colour of the food assistant's two openers: the sidebar tab and the map bubble. */
+  --agent-gradient: linear-gradient(
+    90deg,
+    var(--coral) 0%,
+    #c4579a 55%,
+    #8a4fd0 100%
+  );
+  --agent-gradient-round: linear-gradient(
+    135deg,
+    var(--coral) 0%,
+    #c4579a 55%,
+    #8a4fd0 100%
+  );
   display: grid;
   grid-template-columns:
     var(--roadmap-sidebar-width) minmax(0, 1fr)
@@ -66,13 +79,69 @@
 .roadmap-detail-nav > .text-link:hover {
   color: var(--ink);
 }
-.roadmap-agent-trigger.button {
-  justify-content: flex-start;
+/*
+ * "Trợ lý món ăn": a coral-to-violet gradient tab, flush with the left edge of the sidebar and
+ * rounded on its right, white bold label centred with the sparkles icon at its start. The higher
+ * specificity beats `.button-primary` and the base rule in roadmap-agent.css.
+ */
+.roadmap-detail-nav > .roadmap-agent-trigger.button {
+  position: relative;
+  justify-content: center;
   gap: var(--space-2);
-  width: 100%;
-  min-height: 40px;
-  padding: 8px var(--space-3);
-  font-size: var(--text-sm);
+  width: calc(100% + var(--space-3));
+  min-height: 52px;
+  margin-left: calc(-1 * var(--space-3));
+  padding: 10px var(--space-4) 10px var(--space-8);
+  border: 0;
+  border-radius: 0 var(--radius-pill) var(--radius-pill) 0;
+  background: var(--agent-gradient);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: 0 6px 18px rgb(138 79 208 / 0.22);
+  transition:
+    transform var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    filter var(--duration-fast) ease;
+}
+.roadmap-detail-nav > .roadmap-agent-trigger.button:hover {
+  background: var(--agent-gradient);
+  filter: brightness(1.06) saturate(1.05);
+  box-shadow: 0 10px 24px rgb(138 79 208 / 0.3);
+}
+.roadmap-detail-nav > .roadmap-agent-trigger.button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--card),
+    0 0 0 6px rgb(138 79 208 / 0.55);
+}
+/* The icon sits at the start of the tab; the label stays centred in the rest. */
+.roadmap-detail-nav > .roadmap-agent-trigger.button svg {
+  position: absolute;
+  left: var(--space-5);
+  width: 22px;
+  height: 22px;
+}
+@media (max-width: 900px) {
+  /* The sidebar becomes a strip above the content: a normal gradient pill there. */
+  .roadmap-detail-nav > .roadmap-agent-trigger.button {
+    width: auto;
+    min-height: 44px;
+    margin-left: 0;
+    padding: 8px var(--space-5);
+    border-radius: var(--radius-pill);
+    align-self: flex-start;
+  }
+  .roadmap-detail-nav > .roadmap-agent-trigger.button svg {
+    position: static;
+    width: 20px;
+    height: 20px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-detail-nav > .roadmap-agent-trigger.button {
+    transition: none;
+  }
 }
 /* One column no wider than the sidebar: a long line of dishes must not widen it. */
 .roadmap-sidebar-section,
@@ -271,6 +340,17 @@
   background: var(--card);
   box-shadow: var(--shadow-pop);
 }
+/* "Lộ trình ẩm thực" with the roadmap status right after it. */
+.roadmap-hero-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  min-width: 0;
+}
+.roadmap-hero-top .badge {
+  flex: none;
+}
 .roadmap-hero-card .eyebrow {
   color: var(--muted);
   font-size: var(--text-xs);
@@ -315,6 +395,103 @@
   height: 16px;
 }
 
+/*
+ * In-place editing of the hero (RM-04): the title and the dates are plain-looking buttons. A
+ * dashed underline and a pencil show on hover or keyboard focus.
+ */
+.roadmap-title-button,
+button.roadmap-hero-dates {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline dashed transparent;
+  text-underline-offset: 4px;
+  transition: text-decoration-color var(--duration-fast) ease;
+}
+.roadmap-title-button:hover,
+button.roadmap-hero-dates:hover,
+button.roadmap-hero-dates[data-state="open"] {
+  text-decoration-color: var(--line-strong);
+}
+.roadmap-title-button:focus-visible,
+button.roadmap-hero-dates:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.roadmap-hero-edit-icon {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease;
+}
+.roadmap-title-button:hover .roadmap-hero-edit-icon,
+.roadmap-title-button:focus-visible .roadmap-hero-edit-icon {
+  opacity: 1;
+}
+@media (hover: none) {
+  .roadmap-hero-edit-icon {
+    opacity: 1;
+  }
+}
+.roadmap-title-editor {
+  display: grid;
+  gap: var(--space-1);
+}
+.roadmap-title-input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px var(--space-2);
+  margin-inline: calc(-1 * var(--space-2));
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-xs);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-heading);
+  font-size: clamp(26px, 2.2vw, 32px);
+  font-weight: 900;
+  line-height: 1.15;
+}
+.roadmap-title-input:focus {
+  outline: none;
+  border-color: var(--coral);
+  box-shadow: var(--focus-ring);
+}
+.roadmap-title-input[aria-invalid="true"] {
+  border-color: var(--coral);
+}
+.roadmap-title-input[aria-busy="true"] {
+  opacity: 0.7;
+}
+
+/* Range picker of the hero dates: the days between the ends get a soft band. */
+.roadmap-dates-picker {
+  display: grid;
+  gap: var(--space-3);
+  max-width: min(340px, calc(100vw - 32px));
+}
+.roadmap-dates-picker .ui-calendar-day.is-range-middle .ui-calendar-day-button {
+  border-radius: var(--radius-xs);
+  background: rgb(255 94 98 / 0.18);
+  font-weight: 600;
+}
+.roadmap-dates-picked {
+  margin: 0;
+}
+.roadmap-dates-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
 /* Tabs: underlined labels on one rule (Tổng quan, Lịch trình, Ngân sách). */
 .roadmap-detail-tabs .tabs {
   flex-wrap: nowrap;
@@ -356,8 +533,21 @@
 }
 
 .roadmap-overview h2,
-.roadmap-budget > h2 {
+.roadmap-budget-heading > h2 {
   font-size: 24px;
+}
+/* Title of the budget block with its RM-04 edit button; the button wraps below on narrow columns. */
+.roadmap-budget-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.roadmap-budget-heading .button svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
 }
 /*
  * The overview and budget cards have no outer border: white cards on the page. The rules between
@@ -671,10 +861,10 @@
   min-width: 0;
 }
 
+/* "Khách sạn Sala → Bún bò Huế": one line, a long name fades out (FadingText). */
 .roadmap-leg-text small {
   color: var(--muted);
   font-size: var(--text-xs);
-  overflow-wrap: anywhere;
 }
 
 .roadmap-item {
@@ -805,17 +995,94 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+/*
+ * FadingText (fading-text.tsx): one line that is cut at its box and fades out over its last 40px,
+ * only when the text is longer than the box. Used by every one-line name of the roadmap pages.
+ */
+.fading-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.fading-text[data-overflowing] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 40px),
+    transparent
+  );
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
 
-/* The name and its tags on one line; a long name pushes the tags under it. */
-.roadmap-item-head {
+/* A fact of the dish card with its icon (price; restaurant and rating). */
+.roadmap-item-fact {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 2px 6px;
+}
+.roadmap-item-fact > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+/*
+ * Restaurant and rating stay on one line: a long restaurant name shrinks and fades out at its end
+ * (only when it is actually cut, `data-overflowing`), so the stars never drop to a second line.
+ */
+.roadmap-item-fact.is-one-line {
+  flex-wrap: nowrap;
+}
+.roadmap-item-place {
+  flex: 0 1 auto;
+}
+.roadmap-item-rating {
+  flex: none;
+}
+/* "★ 4,3" after the restaurant, separated like the other parts of the line. */
+.roadmap-item-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+.roadmap-item-rating::before {
+  content: "·";
+  margin-right: 3px;
+}
+.roadmap-item-rating svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  color: #f4a300;
+}
+
+/*
+ * The name and its tags on one line. The tags never leave the first line (a warning such as
+ * "Món đã ngừng bán" must stay in sight): a long name wraps within its own column instead.
+ */
+.roadmap-item-head {
+  display: flex;
+  align-items: flex-start;
   gap: var(--space-1) var(--space-2);
   margin-bottom: 2px;
 }
 .roadmap-item-head h5 {
+  flex: 0 1 auto;
   min-width: 0;
+  overflow-wrap: anywhere;
+}
+.roadmap-item-tags {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  max-width: 60%;
+}
+.roadmap-item-tags .badge {
+  white-space: nowrap;
 }
 
 /* F-27: the grip at the top left of a card reorders dishes (drag, or arrow keys). */
@@ -1311,22 +1578,51 @@ h3.roadmap-budget-label svg {
 .roadmap-map-legend-day[data-active="true"] {
   font-weight: 600;
 }
-/* Sits above the stop list; the open list and the place card take its corner. */
+/*
+ * The map's assistant bubble: a round button in the same coral-to-violet gradient as the
+ * sidebar's "Trợ lý món ăn", above the Mapbox attribution. The place card takes its corner.
+ */
 .roadmap-map-fab.button {
   position: absolute;
   z-index: 3;
   right: var(--space-4);
-  bottom: 88px;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
+  bottom: 44px;
+  width: 52px;
+  height: 52px;
+  min-height: 52px;
   padding: 0;
-  font-size: 16px;
-  box-shadow: 0 4px 14px rgb(34 34 34 / 0.25);
+  border: 0;
+  border-radius: 50%;
+  background: var(--agent-gradient-round);
+  color: #fff;
+  box-shadow: 0 8px 22px rgb(138 79 208 / 0.35);
+  transition:
+    transform var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    filter var(--duration-fast) ease;
 }
-.roadmap-map-panel[data-selected="true"] .roadmap-map-fab,
-.roadmap-map-stop-list[open] ~ .roadmap-map-fab {
+.roadmap-map-fab.button:hover {
+  background: var(--agent-gradient-round);
+  filter: brightness(1.06) saturate(1.05);
+  box-shadow: 0 12px 28px rgb(138 79 208 / 0.42);
+}
+.roadmap-map-fab.button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--card),
+    0 0 0 6px rgb(138 79 208 / 0.55);
+}
+.roadmap-map-fab.button svg {
+  width: 24px;
+  height: 24px;
+}
+.roadmap-map-panel[data-selected="true"] .roadmap-map-fab {
   display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-map-fab.button {
+    transition: none;
+  }
 }
 .roadmap-map-controls {
   position: absolute;
@@ -1346,31 +1642,61 @@ h3.roadmap-budget-label svg {
   color: var(--ink);
   box-shadow: var(--shadow);
 }
+/*
+ * Map pins are the same drop as the itinerary cards' pins (`.roadmap-item-pin`): 30 × 40, the
+ * day's colour with a white outline, the white number centred in the round head, coral when the
+ * dish is selected. The tail's tip is the marker's bottom anchor, i.e. the restaurant.
+ */
 .roadmap-map-pin {
   position: absolute;
-  width: 28px;
-  height: 32px;
+  width: 30px;
+  height: 40px;
+  padding: 0;
   border: 0;
-  padding: 0 0 6px;
-  color: #fff;
   background: transparent;
-  font:
-    600 11px/26px "DM Sans",
-    sans-serif;
-  text-align: center;
-  isolation: isolate;
+  color: var(--map-day-color, #0b7a8a);
   cursor: pointer;
-  filter: drop-shadow(0 1px 2px rgb(34 34 34 / 0.25));
+  filter: drop-shadow(0 2px 3px rgb(34 34 34 / 0.22));
+  /*
+   * Mapbox places the marker with `transform` on this element, so the pin must never be scaled
+   * or moved by its own styles: `scale` would also multiply that offset and push the pin off its
+   * restaurant. Hover and selection only change colour and shadow.
+   */
+  transition:
+    color var(--duration-fast) ease,
+    opacity var(--duration-fast) ease,
+    filter var(--duration-fast) ease;
 }
-.roadmap-map-pin::before {
-  content: "";
+.roadmap-map-pin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.roadmap-map-pin path {
+  fill: currentColor;
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+.roadmap-map-pin-number {
   position: absolute;
-  z-index: -1;
-  inset: 1px 2px 7px;
-  border: 1px solid #fff;
-  border-radius: 50% 50% 50% 3px;
-  background: var(--map-day-color, #0b7a8a);
-  transform: rotate(-45deg);
+  inset: 0 0 auto;
+  display: grid;
+  place-items: center;
+  height: 29px;
+  color: #fff;
+  font:
+    700 14px/1 "DM Sans",
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+/* "3+1" (dishes sharing a place) needs a smaller size to stay inside the head. */
+.roadmap-map-pin[data-wide="true"] .roadmap-map-pin-number {
+  font-size: 10px;
+  letter-spacing: -0.02em;
+}
+.roadmap-map-pin:hover {
+  filter: drop-shadow(0 3px 6px rgb(34 34 34 / 0.38));
 }
 .roadmap-map-pin[data-active="false"] {
   opacity: 0.8;
@@ -1378,12 +1704,17 @@ h3.roadmap-budget-label svg {
 .roadmap-map-pin[data-selected="true"] {
   z-index: 3;
   opacity: 1;
-}
-.roadmap-map-pin[data-selected="true"]::before {
-  box-shadow: 0 0 0 2px var(--ink);
+  color: var(--coral);
 }
 .roadmap-map-pin:focus-visible {
-  outline-offset: 4px;
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 50% 50% 4px 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-map-pin {
+    transition: none;
+  }
 }
 .roadmap-map-pin[hidden] {
   display: none;
@@ -1410,12 +1741,6 @@ h3.roadmap-budget-label svg {
   border-radius: var(--radius-md);
   background: var(--card);
   box-shadow: var(--shadow);
-}
-.roadmap-map-stop-list summary {
-  padding: 12px 16px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
 }
 .roadmap-map-stop-choices {
   list-style: none;
@@ -1578,19 +1903,16 @@ h3.roadmap-budget-label svg {
   min-height: 0;
   margin-bottom: 4px;
 }
-.roadmap-map-panel[data-ready="true"][data-selected="true"]
-  .roadmap-map-stop-list {
-  top: 104px;
-  bottom: auto;
-  right: 68px;
-  max-height: 30%;
-}
 .roadmap-map-card .helper {
   font-size: 12px;
 }
-.roadmap-map-card-photo {
-  aspect-ratio: 16 / 9;
-  max-height: 180px;
+.roadmap-map-card-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
 }
 .roadmap-map-included {
   display: inline-block;
@@ -1740,7 +2062,8 @@ h3.roadmap-budget-label svg {
     --main-pad: var(--space-4);
     padding-bottom: var(--space-8);
   }
-  .roadmap-hero h1 {
+  .roadmap-hero h1,
+  .roadmap-title-input {
     font-size: 24px;
   }
   .roadmap-hero-banner {
