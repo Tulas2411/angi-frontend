@@ -466,12 +466,23 @@ async function bounds(locator: Locator) {
   });
 }
 
-async function open(page: Page, path = "/roadmaps/88") {
+/** Every day starts folded unless the URL names one; most tests read the first day's dishes. */
+async function openFirstDay(page: Page) {
+  const toggle = page.locator("#day-1 .roadmap-day-toggle");
+  if (
+    (await toggle.isVisible()) &&
+    (await toggle.getAttribute("aria-expanded")) === "false"
+  )
+    await toggle.click();
+}
+
+async function open(page: Page, path = "/roadmaps/88", firstDay = true) {
   await loginAs(page, "traveler");
   await page.goto(path);
   await expect(
     page.getByRole("heading", { name: detail.overview.title, level: 1 }),
   ).toBeVisible();
+  if (firstDay && !path.includes("day=")) await openFirstDay(page);
 }
 
 test("guests go to login, other roles to their landing page, a bad id shows the not-found page", async ({
@@ -497,28 +508,66 @@ test("guests go to login, other roles to their landing page, a bad id shows the 
 test("RM-03 shows the hero, the day list, the first day with its legs and its total", async ({
   page,
 }) => {
-  await open(page);
+  await open(page, "/roadmaps/88", false);
   const hero = page.locator(".roadmap-hero");
   await expect(hero).toContainText("10 thg 10, 2026 – 12 thg 10, 2026");
   await expect(hero).toContainText("3 ngày");
   await expect(hero).toContainText("4 món");
+  // The banner is one of the four Hanoi photos, not the roadmap's cover; the title card is laid
+  // over its lower edge.
+  await expect(hero.locator("img.roadmap-hero-banner")).toHaveAttribute(
+    "src",
+    /^\/assets\/roadmap-hero\/hn-0[1-4]\.webp$/,
+  );
+  const [banner, card] = await Promise.all([
+    bounds(hero.locator(".roadmap-hero-banner")),
+    bounds(hero.locator(".roadmap-hero-card")),
+  ]);
+  expect(card.top).toBeLessThan(banner.bottom);
+  expect(card.top).toBeGreaterThan(banner.top);
+  // The header trades its menu for "Chia sẻ lộ trình", a guide written from this roadmap.
+  await expect(
+    page.getByRole("navigation", { name: "Điều hướng chính" }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("banner").getByRole("link", { name: "Chia sẻ lộ trình" }),
+  ).toHaveAttribute("href", "/guides/new?roadmap=88");
+  await expect(
+    hero.getByRole("link", { name: "Chia sẻ lộ trình" }),
+  ).toHaveCount(0);
 
-  // Sidebar: every day with its short label and its dishes.
+  // Sidebar: Tổng quan, Lịch ăn uống, Ngân sách. "Lịch ăn uống" starts unfolded, listing every
+  // day with its short label and its dishes; its chevron folds them away.
   const sidebar = page.getByRole("navigation", {
     name: "Các ngày của lộ trình",
   });
+  const sections = page.getByLabel("Điều hướng chi tiết");
+  await expect(
+    sections.getByRole("button", {
+      name: /^(Tổng quan|Lịch ăn uống|Ngân sách)$/,
+    }),
+  ).toHaveText(["Tổng quan", "Lịch ăn uống", "Ngân sách"]);
   await expect(sidebar.getByRole("button")).toHaveCount(3);
   await expect(sidebar.getByRole("button").first()).toContainText("T7 10/10");
   await expect(sidebar.getByRole("button").first()).toContainText(
     "Bún bò Huế · Mì Quảng · Bánh xèo",
   );
   await expect(sidebar.getByRole("button").nth(1)).toContainText("Chưa có món");
+  await sections.getByRole("button", { name: "Thu gọn các ngày" }).click();
+  await expect(sidebar).toBeHidden();
+  await sections.getByRole("button", { name: "Hiện các ngày" }).click();
+  await expect(sidebar).toBeVisible();
 
-  // Itinerary is the default tab; the first day is open, the others are folded.
+  // Itinerary is the default tab; every day starts folded, and one opens on its title.
   await expect(tab(page, "Lịch trình")).toHaveAttribute(
     "aria-selected",
     "true",
   );
+  await expect(page.getByRole("button", day1)).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await page.getByRole("button", day1).click();
   await expect(page.getByRole("button", day1)).toHaveAttribute(
     "aria-expanded",
     "true",
@@ -571,17 +620,19 @@ test("the tabs switch between overview, itinerary and budget and follow ?tab=", 
 }) => {
   await open(page);
   await tab(page, "Tổng quan").click();
-  await expect(page).toHaveURL(/\/roadmaps\/88\?tab=overview$/);
+  await expect(page).toHaveURL(/\/roadmaps\/88\?tab=overview&open=1$/);
   const overview = page.getByRole("tabpanel", { name: "Tổng quan" });
   await expect(overview).toContainText("10 thg 10, 2026 – 12 thg 10, 2026");
   await expect(overview).toContainText("Khách sạn Sala Đà Nẵng");
   await expect(overview).toContainText("1.500.000 VND / người");
   await expect(overview).toContainText("195.000 VND");
   await expect(overview).toContainText("Cập nhật lần cuối");
+  // Every fact has its icon before the label.
+  await expect(overview.locator(".detail-list dt svg")).toHaveCount(8);
   await expect(page.getByRole("tabpanel", { name: "Lịch trình" })).toBeHidden();
 
   await tab(page, "Ngân sách").click();
-  await expect(page).toHaveURL(/\/roadmaps\/88\?tab=budget$/);
+  await expect(page).toHaveURL(/\/roadmaps\/88\?tab=budget&open=1$/);
   const budget = page.getByRole("tabpanel", { name: "Ngân sách" });
   await expect(
     budget.getByRole("heading", { name: "Ngân sách ăn uống" }),
@@ -596,7 +647,7 @@ test("the tabs switch between overview, itinerary and budget and follow ?tab=", 
   await expect(budget.getByText("Bữa trưa", { exact: true })).toBeVisible();
 
   await tab(page, "Lịch trình").click();
-  await expect(page).toHaveURL(/\/roadmaps\/88$/);
+  await expect(page).toHaveURL(/\/roadmaps\/88\?open=1$/);
   await expect(items(page)).toHaveCount(3);
   // The itinerary kept its day and its legs: nothing was asked twice.
   expect(routeCalls).toEqual(["301"]);
@@ -626,7 +677,7 @@ test("days fold and unfold, RM-14 is asked once per open day and skipped for emp
   await expect.poll(() => routeCalls).toEqual(["301"]);
 
   await page.getByRole("button", day2).click();
-  await expect(page).toHaveURL(/\/roadmaps\/88\?day=2$/);
+  await expect(page).toHaveURL(/\/roadmaps\/88\?day=2&open=1,2$/);
   await expect(page.getByRole("button", day2)).toHaveAttribute(
     "aria-expanded",
     "true",
@@ -637,7 +688,7 @@ test("days fold and unfold, RM-14 is asked once per open day and skipped for emp
   expect(routeCalls).toEqual(["301"]);
 
   await page.getByRole("button", day3).click();
-  await expect(page).toHaveURL(/\/roadmaps\/88\?day=3$/);
+  await expect(page).toHaveURL(/\/roadmaps\/88\?day=3&open=1,2,3$/);
   await expect(items(page)).toHaveCount(4);
   await expect(items(page).last()).toContainText("Món đã ngừng bán");
   // The only stop is more than 30 km away: the first leg is skipped and the figures estimated.
@@ -688,6 +739,13 @@ test("days fold and unfold, RM-14 is asked once per open day and skipped for emp
   await expect(legs(page)).toHaveCount(3);
   // Day 1 was already loaded: nothing is asked twice.
   expect(routeCalls).toEqual(["301", "303"]);
+  // A reload (F5) opens the same days again.
+  await page.reload();
+  for (const day of [day1, day2, day3])
+    await expect(page.getByRole("button", day)).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
 });
 
 test("the sidebar opens a day from any tab and brings it into view", async ({
@@ -704,7 +762,7 @@ test("the sidebar opens a day from any tab and brings it into view", async ({
     "aria-selected",
     "true",
   );
-  await expect(page).toHaveURL(/\/roadmaps\/88\?day=3$/);
+  await expect(page).toHaveURL(/\/roadmaps\/88\?day=3&open=3$/);
   await expect(page.getByRole("button", day3)).toHaveAttribute(
     "aria-expanded",
     "true",
@@ -1098,7 +1156,7 @@ test("the selected stop shows its dish, its restaurant and the restaurant's revi
   ]);
 });
 
-test("an open day suggests places and + adds one to the first free meal", async ({
+test("an open day suggests places and + adds one to the meal picked in its menu", async ({
   page,
 }) => {
   detail.itinerary[0].items = detail.itinerary[0].items.slice(0, 2);
@@ -1110,10 +1168,21 @@ test("an open day suggests places and + adds one to the first free meal", async 
   expect(placeCalls).toEqual([
     `RM-06 ${new URLSearchParams({ province: "Thành phố Đà Nẵng", dayId: "301", limit: "10" })}`,
   ]);
-  // Breakfast and lunch are taken: "+" goes to dinner.
-  await strip
+  // "+" asks which meal: the five meals, with how many dishes each already has.
+  await strip.getByRole("button", { name: "Thêm Nem lụi vào ngày 1" }).click();
+  const menu = page.getByRole("dialog", { name: "Chọn bữa cho Nem lụi" });
+  await expect(menu.getByRole("button")).toHaveText([
+    /Bữa sáng\s*1 món/,
+    /Bữa trưa\s*1 món/,
+    /Bữa tối\s*Chưa có món/,
+    /Ăn vặt\s*Chưa có món/,
+    /Ăn khuya\s*Chưa có món/,
+  ]);
+  expect(addCalls).toEqual([]);
+  await menu
     .getByRole("button", { name: "Thêm Nem lụi vào bữa tối ngày 1" })
     .click();
+  await expect(menu).toBeHidden();
   await expect
     .poll(() => addCalls)
     .toEqual([
@@ -1185,6 +1254,29 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     // Page-level handlers fulfill provider URLs before the context's external-request guard.
     await stubMapboxRendering(page);
+  });
+
+  test("while Mapbox loads the panel shows a spinner, not the fallback list of an unavailable map", async ({
+    page,
+  }) => {
+    let release = () => {};
+    const held = new Promise<void>((resolve) => (release = resolve));
+    await page.route("https://api.mapbox.com/styles/**", async (route) => {
+      await held;
+      await route.fallback();
+    });
+    await open(page);
+    const map = mapPanel(page);
+    await expect(map).toHaveAttribute("data-loading", "true");
+    await expect(map.locator(".roadmap-map-loading")).toContainText(
+      "Đang tải bản đồ…",
+    );
+    await expect(map.locator(".roadmap-map-stop-list")).toHaveCount(0);
+    await expect(map.locator(".roadmap-map-status")).toHaveCount(0);
+    release();
+    await expect(map).toHaveAttribute("data-ready", "true");
+    await expect(map).not.toHaveAttribute("data-loading");
+    await expect(map.locator(".roadmap-map-loading")).toHaveCount(0);
   });
 
   test("a roadmap without dishes still draws the base map and says why it has no pin", async ({
@@ -1443,9 +1535,9 @@ test.describe("offline Mapbox roadmap rendering", () => {
         )
         .toBe(true);
       const photos = main(page).locator(
-        ".roadmap-item-media img, .roadmap-hero-media img",
+        ".roadmap-item-media img, img.roadmap-hero-banner",
       );
-      await expect(photos).toHaveCount(4);
+      await expect(photos).toHaveCount(5);
       expect(
         await photos.evaluateAll((images) =>
           images.every((image) => {

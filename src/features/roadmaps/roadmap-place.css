@@ -605,6 +605,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/*
+ * "+": an icon (not the "+" glyph, whose font metrics sit it off centre) in a round button. It has
+ * the lift of every .button: up 2px with a soft shadow on hover, settling when pressed. It opens the
+ * menu of meals (.roadmap-meal-picker).
+ */
 .roadmap-suggested-add {
   position: absolute;
   top: 50%;
@@ -613,19 +618,102 @@
   place-items: center;
   width: 32px;
   height: 32px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: var(--control);
   color: var(--ink);
-  font-size: 20px;
-  line-height: 1;
   transform: translateY(-50%);
   cursor: pointer;
-  transition: background var(--duration) ease;
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    box-shadow var(--duration) var(--ease-out),
+    transform var(--duration) var(--ease-out);
 }
-.roadmap-suggested-add:hover:not(:disabled) {
+.roadmap-suggested-add svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
+}
+.roadmap-suggested-add:hover:not(:disabled),
+.roadmap-suggested-add[data-state="open"] {
   background: var(--ink);
   color: var(--card);
+}
+.roadmap-suggested-add:hover:not(:disabled) {
+  transform: translateY(calc(-50% - 2px));
+  box-shadow:
+    0 2px 6px rgb(34 34 34 / 0.06),
+    0 10px 24px rgb(34 34 34 / 0.16);
+}
+.roadmap-suggested-add:active:not(:disabled) {
+  transform: translateY(-50%);
+  box-shadow: 0 1px 3px rgb(34 34 34 / 0.1);
+}
+.roadmap-suggested-add:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-suggested-add {
+    transition: none;
+  }
+  .roadmap-suggested-add:hover:not(:disabled) {
+    transform: translateY(-50%);
+  }
+}
+
+/* The menu "+" opens: which meal of the day the dish goes to, with how many dishes each has. */
+.ui-popover-content.roadmap-meal-picker {
+  width: 220px;
+  padding: var(--space-2);
+}
+.roadmap-meal-picker-title {
+  padding: var(--space-1) var(--space-2) var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.roadmap-meal-picker ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roadmap-meal-picker button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 36px;
+  padding: 6px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--duration-fast) ease;
+}
+.roadmap-meal-picker button:hover {
+  background: var(--control);
+}
+.roadmap-meal-picker button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.roadmap-meal-picker small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 .roadmap-suggested-add:disabled {
   cursor: default;

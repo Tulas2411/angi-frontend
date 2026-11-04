@@ -13,9 +13,14 @@ import {
   parseTabParam,
   legsByTarget,
   parseDayParam,
+  parseOpenParam,
   parseRoadmapId,
   wantsDayRoute,
+  pickRoadmapHeroImage,
+  dayAtLine,
+  roadmapHeroImages,
 } from "@/features/roadmaps/roadmap-detail-rules";
+import { roadmapDetailIdOf } from "@/components/site/header-nav";
 import { roadmapDetailHref } from "@/features/roadmaps/routes";
 import type {
   RoadmapBudgetDto,
@@ -89,6 +94,16 @@ describe("ids and day in the URL", () => {
     expect(roadmapDetailHref(88, { tab: "budget", day: 2 })).toBe(
       "/roadmaps/88?tab=budget&day=2",
     );
+  });
+  it("keeps the unfolded days in ?open=, so a reload opens them again", () => {
+    expect(roadmapDetailHref(88, { day: 1, open: [3, 1, 3] })).toBe(
+      "/roadmaps/88?open=1,3",
+    );
+    expect(roadmapDetailHref(88, { open: [] })).toBe("/roadmaps/88");
+    expect(parseOpenParam("1,3")).toEqual([1, 3]);
+    expect(parseOpenParam(["2", "4"])).toEqual([2]);
+    expect(parseOpenParam("3,x,0,3,-1,1.5,12")).toEqual([3, 12]);
+    expect(parseOpenParam(undefined)).toEqual([]);
   });
   it("reads ?tab= as one of the three RoadmapDetail tabs, itinerary by default", () => {
     expect(parseTabParam("overview")).toBe("overview");
@@ -327,5 +342,49 @@ describe("roadmap proxy allowlist", () => {
       ["GET", "roadmaps/88/../../me"],
     ])
       expect(roadmapOperation(method, path), `${method} ${path}`).toBe(false);
+  });
+});
+
+describe("detail page header", () => {
+  it("picks one of the four Hanoi banners from a random number in [0, 1)", () => {
+    expect(roadmapHeroImages).toEqual([
+      "/assets/roadmap-hero/hn-01.webp",
+      "/assets/roadmap-hero/hn-02.webp",
+      "/assets/roadmap-hero/hn-03.webp",
+      "/assets/roadmap-hero/hn-04.webp",
+    ]);
+    expect(pickRoadmapHeroImage(0)).toBe(roadmapHeroImages[0]);
+    expect(pickRoadmapHeroImage(0.26)).toBe(roadmapHeroImages[1]);
+    expect(pickRoadmapHeroImage(0.5)).toBe(roadmapHeroImages[2]);
+    expect(pickRoadmapHeroImage(0.999)).toBe(roadmapHeroImages[3]);
+    expect(pickRoadmapHeroImage(1)).toBe(roadmapHeroImages[3]);
+  });
+
+  it("knows the roadmap detail path, where the header shows the share action instead of the menu", () => {
+    expect(roadmapDetailIdOf("/roadmaps/88")).toBe(88);
+    expect(roadmapDetailIdOf("/roadmaps/88/")).toBe(88);
+    expect(roadmapDetailIdOf("/roadmaps")).toBeNull();
+    expect(roadmapDetailIdOf("/roadmaps/new")).toBeNull();
+    expect(roadmapDetailIdOf("/roadmaps/start")).toBeNull();
+    expect(roadmapDetailIdOf("/roadmaps/88/edit")).toBeNull();
+  });
+});
+
+describe("following the day being read", () => {
+  const sections = [
+    { dayNumber: 1, top: -400, bottom: 100 },
+    { dayNumber: 2, top: 100, bottom: 700 },
+    { dayNumber: 3, top: 700, bottom: 760 },
+  ];
+  it("takes the day whose section crosses the reading line", () => {
+    expect(dayAtLine(sections, 50)).toBe(1);
+    expect(dayAtLine(sections, 300)).toBe(2);
+    expect(dayAtLine(sections, 720)).toBe(3);
+  });
+  it("keeps the last day above the line past the end, and none before the first", () => {
+    expect(dayAtLine(sections, 900)).toBe(3);
+    expect(
+      dayAtLine([{ dayNumber: 1, top: 400, bottom: 900 }], 300),
+    ).toBeNull();
   });
 });

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Alert, Button, Card } from "@/shared/ui";
 import { ActionLink, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import type { DetailTab } from "./roadmap-detail-rules";
+import { roadmapHeroImages, type DetailTab } from "./roadmap-detail-rules";
 import { RoadmapDetailView } from "./roadmap-detail-view";
 import { roadmapService, type RoadmapScreenService } from "./roadmap-service";
 import { roadmapRoutes } from "./routes";
@@ -21,19 +21,25 @@ type State =
 export function RoadmapDetailPage({
   roadmapId,
   initialDay,
+  initialOpenDays = [],
   initialTab,
   service = roadmapService,
   userId,
   userName,
   userAvatar,
+  heroImage = roadmapHeroImages[0],
 }: {
   roadmapId: number;
   initialDay: number;
+  /** The days unfolded at first (`?open=`); every other day starts folded. */
+  initialOpenDays?: readonly number[];
   initialTab: DetailTab;
   service?: RoadmapScreenService;
   userId: number;
   userName: string;
   userAvatar: string | null;
+  /** Banner of the header, picked per visit by the route (`pickRoadmapHeroImage`). */
+  heroImage?: string;
 }) {
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
@@ -79,11 +85,13 @@ export function RoadmapDetailPage({
         key={state.detail.overview.id}
         detail={state.detail}
         initialDay={initialDay}
+        initialOpenDays={initialOpenDays}
         initialTab={initialTab}
         service={service}
         userId={userId}
         userName={userName}
         userAvatar={userAvatar}
+        heroImage={heroImage}
         onItemAdded={reload}
         onItemRemoved={reload}
         onItemsGenerated={reload}

@@ -234,12 +234,23 @@ const order = async (page: Page) =>
     text.replace(/^\d+/, "").trim(),
   );
 
+/** Every day starts folded unless the URL names one; most tests read the first day's dishes. */
+async function openFirstDay(page: Page) {
+  const toggle = page.locator("#day-1 .roadmap-day-toggle");
+  if (
+    (await toggle.isVisible()) &&
+    (await toggle.getAttribute("aria-expanded")) === "false"
+  )
+    await toggle.click();
+}
+
 async function open(page: Page) {
   await loginAs(page, "traveler");
   await page.goto("/roadmaps/88");
   await expect(
     page.getByRole("heading", { name: "Đi chơi Hà Nội", level: 1 }),
   ).toBeVisible();
+  await openFirstDay(page);
   await expect(cards(page)).toHaveCount(5);
 }
 

@@ -253,9 +253,8 @@ export function RoadmapDetailMap({
   // The place card grows once its details load: fit again, or it would cover the lowest pins.
   const hasCard = preview ? previewKey !== "" : selectedItemId !== null;
   useEffect(() => {
-    const card = container.current?.parentElement?.querySelector(
-      ".roadmap-map-card",
-    );
+    const card =
+      container.current?.parentElement?.querySelector(".roadmap-map-card");
     if (!hasCard || !card) return;
     let height = card.getBoundingClientRect().height;
     const observer = new ResizeObserver(() => {
@@ -588,6 +587,8 @@ export function RoadmapDetailMap({
 
   const hasMap = Boolean(token);
   const ready = hasMap && status === "ready";
+  // Mapbox is still loading: show that, not the fallback layout of a map that cannot be shown.
+  const loading = hasMap && status === "loading";
   const legendDays = preview
     ? preview.days
     : itinerary.map((day) => day.dayNumber);
@@ -613,7 +614,7 @@ export function RoadmapDetailMap({
               : " Kiểm tra NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN trong tài khoản Mapbox rồi chạy lại ứng dụng."
           }`
         : "Chưa tải được bản đồ. Bạn vẫn có thể xem các điểm trong lộ trình."
-      : "Đang tải bản đồ…";
+      : "";
 
   const previewChoices = previewStops && (
     <ol className="roadmap-map-stop-choices">
@@ -674,6 +675,7 @@ export function RoadmapDetailMap({
       role="region"
       aria-label="Bản đồ lộ trình"
       data-ready={ready}
+      data-loading={loading || undefined}
       data-preview={preview !== null}
       data-selected={preview ? previewSelected !== null : selected !== null}
     >
@@ -692,7 +694,13 @@ export function RoadmapDetailMap({
           {locatedCount}/{listedCount} điểm có tọa độ
         </span>
       </div>
-      {!ready && (
+      {loading && (
+        <div className="roadmap-map-loading" role="status">
+          <span className="spinner" aria-hidden />
+          <p>Đang tải bản đồ…</p>
+        </div>
+      )}
+      {!ready && !loading && (
         <div className="roadmap-map-status" role="status">
           <p>{message}</p>
           {hasMap && status === "error" && (
@@ -755,6 +763,7 @@ export function RoadmapDetailMap({
         </Button>
       </div>
       {listedCount > 0 &&
+        !loading &&
         (ready ? (
           <details className="roadmap-map-stop-list">
             <summary>

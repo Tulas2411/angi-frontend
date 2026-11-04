@@ -1,3 +1,9 @@
+import {
+  BanknotesIcon,
+  CalendarDaysIcon,
+  ClockIcon,
+  WalletIcon,
+} from "@heroicons/react/24/outline";
 import { Alert } from "@/shared/ui";
 import { budgetShare, mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
@@ -12,11 +18,15 @@ export function RoadmapBudget({ budget }: { budget: RoadmapBudgetDto }) {
       <h2>Ngân sách ăn uống</h2>
       <div className="card roadmap-budget-summary">
         <p className="roadmap-budget-total">
-          <span className="helper">Chi phí dự kiến</span>
+          <span className="helper roadmap-budget-label">
+            <BanknotesIcon aria-hidden />
+            Chi phí dự kiến
+          </span>
           <strong>{vnd(budget.totalEstimatedCost)}</strong>
         </p>
         <p className="roadmap-budget-chips">
-          <span>
+          <span className="roadmap-budget-label">
+            <WalletIcon aria-hidden />
             {budget.budgetAmount === null
               ? "Chưa đặt ngân sách"
               : `Ngân sách ${vnd(budget.budgetAmount)}`}
@@ -53,7 +63,10 @@ export function RoadmapBudget({ budget }: { budget: RoadmapBudgetDto }) {
       </div>
       <div className="roadmap-budget-split">
         <div className="stack-sm">
-          <h3>Chi phí theo ngày</h3>
+          <h3 className="roadmap-budget-label">
+            <CalendarDaysIcon aria-hidden />
+            Chi phí theo ngày
+          </h3>
           <dl className="detail-list">
             {budget.byDay.map((entry) => (
               <div key={entry.dayNumber}>
@@ -64,7 +77,10 @@ export function RoadmapBudget({ budget }: { budget: RoadmapBudgetDto }) {
           </dl>
         </div>
         <div className="stack-sm">
-          <h3>Chi phí theo bữa</h3>
+          <h3 className="roadmap-budget-label">
+            <ClockIcon aria-hidden />
+            Chi phí theo bữa
+          </h3>
           <dl className="detail-list">
             {budget.byMealSlot.map((entry) => (
               <div key={entry.mealSlot}>
