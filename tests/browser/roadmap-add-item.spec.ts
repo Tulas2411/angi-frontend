@@ -220,6 +220,12 @@ function deleteItem(itemId: number) {
 const roadmaps: StubHandler = ({ method, url, body }, send) => {
   const parsed = new URL(url, "http://stub");
   const path = parsed.pathname;
+  // DISH-02: the list layout reads each dish's description.
+  const dish = path.match(/^\/api\/v1\/dishes\/(\d+)$/);
+  if (method === "GET" && dish) {
+    send(200, { id: Number(dish[1]), description: `Mô tả món số ${dish[1]}` });
+    return true;
+  }
   if (method === "GET" && path === "/api/v1/roadmaps/88") {
     detailReads += 1;
     if (failDetailReads > 0 && detailReads > 1) {
@@ -780,6 +786,54 @@ test("the position the traveler allowed is sent as a pair for a gps roadmap", as
   expect(new URLSearchParams(suggestionCalls.at(-1)).get("lng")).toBe(
     "108.2208",
   );
+});
+
+test("the suggestion cards keep one height in each layout; long parts fade instead of growing them", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page);
+  await page.getByRole("button", { name: "Thêm món vào bữa sáng" }).click();
+  const box = dialog(page);
+  await expect(box.locator(".roadmap-suggestion")).toHaveCount(12);
+  const switcher = box.getByRole("group", { name: "Kiểu hiển thị" });
+  for (const [layout, height] of [
+    ["Danh sách", 240],
+    ["Lưới chi tiết", 240],
+    ["Thư viện ảnh", null],
+  ] as const) {
+    await switcher.getByRole("button", { name: layout }).click();
+    const heights = await box
+      .locator(".roadmap-suggestion .dish-item")
+      .evaluateAll((cards) =>
+        cards.map((card) => Math.round(card.getBoundingClientRect().height)),
+      );
+    expect(new Set(heights).size, layout).toBe(1);
+    if (height) expect(heights[0], layout).toBe(height);
+  }
+  // A row shows the dish's description (DISH-02) instead of the restaurant, and the price on the
+  // name's line.
+  await switcher.getByRole("button", { name: "Danh sách" }).click();
+  const row = box.locator(".roadmap-suggestion .dish-row").first();
+  await expect(row.locator(".dish-description")).toContainText("Mô tả món số");
+  await expect(row.locator(".dish-place")).toHaveCount(0);
+  await expect(row.locator(".dish-head .dish-price")).toBeVisible();
+  // The tags keep one row and the restaurant one line; what does not fit fades at the end.
+  await switcher.getByRole("button", { name: "Lưới chi tiết" }).click();
+  expect(
+    await box
+      .locator(".roadmap-suggestion")
+      .first()
+      .evaluate((item) =>
+        [".dish-kinds", ".dish-place-name"].map((part) => {
+          const style = getComputedStyle(item.querySelector(part)!);
+          return [style.flexWrap, style.whiteSpace, style.maskImage];
+        }),
+      ),
+  ).toEqual([
+    ["nowrap", "normal", expect.stringContaining("linear-gradient")],
+    ["nowrap", "nowrap", expect.stringContaining("linear-gradient")],
+  ]);
 });
 
 test("the dialog works with the keyboard and has no horizontal overflow from 320px to 1440px", async ({
