@@ -41,6 +41,8 @@ import {
   ReportHandlingPage,
   ReportQueuePage,
 } from "@/features/moderation/report-handling-page";
+import { ModerationHomePage } from "@/features/moderation/moderation-home-page";
+import { ReviewModerationPage } from "@/features/moderation/review-moderation-page";
 import {
   ModerationUserDetailPage,
   ModerationUsersLivePage,
@@ -228,6 +230,13 @@ export function PageRouter({
     ) : (
       <MenuQueuePage />
     );
+
+  // Trang "Công việc kiểm duyệt": tổng hợp các hàng đợi thật (MOD-V1, MOD-M1, MOD-RP1, MOD-R1).
+  if (mode === "live" && role === "MOD" && !area) return <ModerationHomePage />;
+
+  // MOD-F1..MOD-F3 đã nối API: kiểm duyệt đánh giá quán và phản hồi của chủ quán (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "reviews")
+    return <ReviewModerationPage />;
 
   // F-56 MOD-R1..MOD-R4 đã nối API: danh sách và chi tiết kiểm duyệt nhà hàng đọc ghi thật (Mod và Admin).
   if (mode === "live" && role === "MOD" && area === "restaurants")
