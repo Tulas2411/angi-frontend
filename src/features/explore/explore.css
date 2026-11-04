@@ -727,8 +727,13 @@
   font-size: 22px;
 }
 
-/* Actions a list adds under a card (the roadmap dialog's "+ Thêm vào bữa…"). */
+/*
+ * Actions a list adds under a card (the roadmap dialog's "+ Thêm vào bữa…"). They sit above the
+ * name's link, which covers the whole card; otherwise every click on them would open the dish.
+ */
 .dish-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
