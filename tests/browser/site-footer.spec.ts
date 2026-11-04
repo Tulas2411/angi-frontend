@@ -45,7 +45,11 @@ test("guest footer keeps real discovery and auth links, keyboard navigation and 
   await expect(top).toBeFocused();
   await page.keyboard.press("Enter");
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-  await footer.getByRole("link", { name: "Lên lịch chuyến đi ngon" }).click();
+  // The invitation block is gone; the journey column still leads a guest to sign in.
+  await expect(footer.locator(".site-footer-invitation")).toHaveCount(0);
+  await footer
+    .getByRole("link", { name: "Lập lộ trình mới", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/login/);
 });
 
@@ -68,7 +72,7 @@ for (const role of ["traveler", "owner", "mod", "admin"] as const) {
         footer.getByRole("link", { name: "Lộ trình của tôi", exact: true }),
       ).toHaveAttribute("href", "/roadmaps");
       await expect(
-        footer.getByRole("link", { name: "Lên lịch chuyến đi ngon" }),
+        footer.getByRole("link", { name: "Lập lộ trình mới", exact: true }),
       ).toHaveAttribute("href", "/roadmaps/new");
     } else {
       await expect(
@@ -80,10 +84,8 @@ for (const role of ["traveler", "owner", "mod", "admin"] as const) {
           : role === "mod"
             ? "/moderation"
             : "/administration";
-      await expect(footer.locator(".site-footer-action")).toHaveAttribute(
-        "href",
-        href,
-      );
+      // The role's workspace is linked from the footer's second column.
+      await expect(footer.locator(`a[href="${href}"]`).first()).toBeVisible();
     }
     if (role === "owner") {
       await expect(
@@ -96,7 +98,7 @@ for (const role of ["traveler", "owner", "mod", "admin"] as const) {
 }
 
 for (const width of [1440, 1024, 768, 390, 320]) {
-  test(`footer fits ${width}px with readable local photos and no horizontal overflow`, async ({
+  test(`footer fits ${width}px with no horizontal overflow`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 1000 });
@@ -105,21 +107,6 @@ for (const width of [1440, 1024, 768, 390, 320]) {
     const footer = page.getByRole("contentinfo");
     await footer.scrollIntoViewIfNeeded();
     await page.evaluate(() => document.fonts.ready);
-    await expect(footer.locator(".site-footer-photo img")).toHaveCount(2);
-    await expect
-      .poll(() =>
-        footer
-          .locator(".site-footer-photo img")
-          .evaluateAll((images) =>
-            images.every(
-              (image) =>
-                image instanceof HTMLImageElement &&
-                image.complete &&
-                image.naturalWidth > 0,
-            ),
-          ),
-      )
-      .toBe(true);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= window.innerWidth + 1,

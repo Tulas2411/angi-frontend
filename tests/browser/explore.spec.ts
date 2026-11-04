@@ -461,7 +461,10 @@ test.describe("dishes", () => {
     await chooseOption(page.getByLabel("Loại món"), "dry");
     await chooseOption(page.getByLabel("Giá đến"), "100000");
     await page.getByRole("button", { name: "Bữa trưa" }).click();
-    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
+    // Each pick applies at once (no "Áp dụng" button), with the typed search text.
+    await expect(
+      page.getByRole("button", { name: "Áp dụng bộ lọc" }),
+    ).toHaveCount(0);
     await expect(page).toHaveURL(/q=b%C3%BAn|q=bún/);
     await expect(page).toHaveURL(/form=dry/);
     await expect(page).toHaveURL(/price=100000/);
@@ -630,17 +633,17 @@ test.describe("dishes", () => {
       .getByRole("group", { name: "Không ăn (bỏ món có thẻ)" })
       .getByRole("button", { name: "Món nước" })
       .click();
+    // Each pick applies at once; the panel stays open.
+    await expect(page).toHaveURL(/min=50000/);
+    await expect(page).toHaveURL(/notag=2/);
+    // Bún chả (55.000, no noodle tag) is the only dish left.
+    await expect(dishItems(page)).toHaveCount(1);
+    await expect(dishOf(page, "Bún chả")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Ẩn bộ lọc/ })).toBeVisible();
     await hide.click();
     await expect(page.getByLabel("Giá từ")).toBeHidden();
     await page.getByRole("button", { name: /Hiện bộ lọc/ }).click();
     await expectOption(page.getByLabel("Giá từ"), "50000");
-    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
-    await expect(page).toHaveURL(/min=50000/);
-    await expect(page).toHaveURL(/notag=2/);
-    // Bún chả (55.000, no noodle tag) is the only dish left; the panel stays open.
-    await expect(dishItems(page)).toHaveCount(1);
-    await expect(dishOf(page, "Bún chả")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Ẩn bộ lọc/ })).toBeVisible();
     const last = callsTo("GET", "dishes").at(-1)!;
     expect(last.query.get("minPrice")).toBe("50000");
     expect(last.query.getAll("excludeTagIds")).toEqual(["2"]);
@@ -732,11 +735,12 @@ test.describe("dishes", () => {
   }) => {
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
-    const before = callsTo("GET", "dishes").length;
     await chooseOption(page.getByLabel("Giá từ"), "100000");
+    await expect(page).toHaveURL(/min=100000/);
+    const before = callsTo("GET", "dishes").length;
     await chooseOption(page.getByLabel("Giá đến"), "50000");
-    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
     await expect(page.getByText("Giá từ phải thấp hơn giá đến.")).toBeVisible();
+    await expect(page).not.toHaveURL(/price=50000/);
     expect(callsTo("GET", "dishes")).toHaveLength(before);
   });
 
@@ -944,7 +948,7 @@ test.describe("dishes", () => {
         await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
       else
         await expect(
-          page.getByRole("form", { name: "Bộ lọc món ăn" }),
+          page.getByRole("complementary", { name: "Bộ lọc món ăn" }),
         ).toBeVisible();
       for (const view of ["Danh sách", "Lưới chi tiết", "Thư viện ảnh"]) {
         await page

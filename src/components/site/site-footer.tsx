@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import type { ReactNode } from "react";
 import Brand from "@/components/brand";
 import type { RoleCode } from "@/features/auth/types";
@@ -67,70 +66,6 @@ export function SiteFooter({
   ];
   return (
     <footer className="site-footer">
-      <div className="site-footer-invitation">
-        <div className="site-footer-invitation-copy">
-          <p className="site-footer-eyebrow">
-            <span aria-hidden /> Một chút cảm hứng, một chuyến đi ngon
-          </p>
-          <h2>
-            {owner ? (
-              <>
-                Hương vị của bạn.
-                <br />
-                <em>Thêm người biết đến.</em>
-              </>
-            ) : (
-              <>
-                Đi để nhớ.
-                <br />
-                <em>Ăn để thương.</em>
-              </>
-            )}
-          </h2>
-          <p>
-            {owner
-              ? "Chăm chút gian bếp của bạn trên ANGI, từ câu chuyện quán đến từng món trong thực đơn."
-              : "Từ một món ăn hợp gu đến cả hành trình khám phá. Cùng ANGI tìm hương vị khiến bạn muốn quay lại."}
-          </p>
-          <Link
-            href={traveler ? roadmapRoutes.plan : HOME_BY_ROLE[role]}
-            prefetch={false}
-            className="site-footer-action"
-          >
-            {traveler
-              ? "Lên lịch chuyến đi ngon"
-              : owner
-                ? "Quản lý nhà hàng"
-                : "Về không gian của bạn"}
-            <span aria-hidden>↗</span>
-          </Link>
-        </div>
-        <div className="site-footer-art" aria-hidden="true">
-          <span className="site-footer-orbit" />
-          <span className="site-footer-art-note">
-            Hẹn bạn ở bữa ngon tiếp theo.
-          </span>
-          <div className="site-footer-photo site-footer-photo-main">
-            <Image
-              src="/assets/figma/roll-2.png"
-              alt=""
-              fill
-              sizes="(max-width: 700px) 200px, 280px"
-            />
-          </div>
-          <div className="site-footer-photo site-footer-photo-small">
-            <Image
-              src="/assets/figma/roll-1.png"
-              alt=""
-              fill
-              sizes="(max-width: 700px) 110px, 145px"
-            />
-          </div>
-          <span className="site-footer-art-stamp">
-            Ăn đúng gu <span>✳</span> Đi thật đã
-          </span>
-        </div>
-      </div>
       <div className="site-footer-directory">
         <div className="site-footer-about">
           <Brand href="/" />

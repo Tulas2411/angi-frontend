@@ -406,17 +406,26 @@
 }
 
 /*
- * ---------------------------------------------- dish page: filter sidebar
- * Narrow screens: search bar, then the filter panel it slides down, then the results (the
- * panel's negative margin folds this grid's row gap, as in the restaurant page's form).
- * Wide screens: the filters are a sidebar left of the search bar and the results, always shown,
- * following the page as it scrolls, with "Áp dụng bộ lọc" kept at its bottom.
+ * ------------------------------------------------- dish page: Yelp-like layout
+ * Wide screens (≥1024px): the page leaves the centred column and runs edge to edge. The filter
+ * sidebar is flush with the left edge, as tall as the window under the header, sticky, and scrolls
+ * on its own; the heading, the search bar and the results fill the rest.
+ * Narrow screens: heading, search bar, the filter panel its button slides down (its negative
+ * margin folds this grid's row gap, as in the restaurant page's form), results.
  */
+/* Narrow screens keep the shell's centred column and padding. */
+.dish-list-page {
+  padding: 0;
+}
 .dish-browse {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-areas: "search" "filters" "main";
+  grid-template-areas: "head" "search" "filters" "main";
   row-gap: var(--space-4);
+}
+.dish-browse > .dish-browse-head {
+  grid-area: head;
+  padding-bottom: var(--space-2);
 }
 .dish-browse > .dish-search {
   grid-area: search;
@@ -436,16 +445,82 @@
 .dish-filter-head h2 {
   font-size: 18px;
 }
+/* "Đặt lại bộ lọc" as a quiet text button at the end of the heading row. */
+.dish-filter-head .dish-filter-reset.button {
+  min-height: 32px;
+  margin-left: auto;
+  padding: 4px 8px;
+  font-size: var(--text-sm);
+}
+/* How tag groups combine, under the groups. */
+.dish-filter-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/*
+ * Narrow screens: the panel closes like the restaurant page's `[hidden]` panel (same slide and
+ * folded gap), keyed on `data-closed` because `[hidden]` is display: none !important (Tailwind
+ * preflight) and could not be shown again on wide screens.
+ */
+@media (max-width: 1023px) {
+  .dish-filter-sidebar[data-closed] {
+    display: none;
+    grid-template-rows: 0fr;
+    margin-top: calc(-1 * var(--space-4));
+    opacity: 0;
+    transition:
+      grid-template-rows var(--duration-exit) var(--ease-exit),
+      margin-top var(--duration-exit) var(--ease-exit),
+      opacity var(--duration-exit) var(--ease-exit),
+      display var(--duration-exit) allow-discrete;
+  }
+  @starting-style {
+    .dish-filter-sidebar:not([data-closed]) {
+      grid-template-rows: 0fr;
+      margin-top: calc(-1 * var(--space-4));
+      opacity: 0;
+    }
+  }
+}
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .dish-filter-sidebar,
+  .dish-filter-sidebar[data-closed] {
+    transition: none;
+  }
+}
 
 @media (min-width: 1024px) {
+  /* Edge to edge: no centred column, no top/bottom padding of the main area. */
+  .app-shell:has(.dish-list-page) .app-main {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .dish-list-page {
+    padding: 0;
+  }
   .dish-browse {
-    grid-template-columns: 272px minmax(0, 1fr);
-    grid-template-rows: auto 1fr;
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
     grid-template-areas:
+      "filters head"
       "filters search"
       "filters main";
     align-items: start;
-    gap: var(--space-5) var(--space-8);
+    column-gap: 0;
+    row-gap: var(--space-5);
+  }
+  .dish-browse > .dish-browse-head {
+    padding: var(--space-8) var(--space-8) 0;
+  }
+  .dish-browse > .dish-search,
+  .dish-browse > .dish-browse-main {
+    padding-inline: var(--space-8);
+  }
+  .dish-browse > .dish-browse-main {
+    padding-bottom: var(--space-16);
   }
   /* The filters are always in sight: no button to show them. */
   .dish-browse .dish-filter-toggle {
@@ -454,11 +529,19 @@
   .dish-browse .dish-search-row {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* Shown whatever the narrow-screen toggle says, without its slide. */
-  .dish-filter-sidebar.dish-filter-collapse,
-  .dish-filter-sidebar.dish-filter-collapse[hidden] {
+  /*
+   * The sidebar, on the page's background like the list, with no scroll bar of its own. It is a
+   * "tall sticky": shorter than the window it stays under the header; taller, it scrolls with the
+   * page until its end shows, then stays (top = window height − its height, measured into
+   * --sidebar-height by DishFilterSidebar). Its top shows again when the page is scrolled back to
+   * where the sidebar starts.
+   */
+  .dish-filter-sidebar.dish-filter-collapse {
     position: sticky;
-    top: calc(var(--header-height) + var(--space-4));
+    top: min(
+      var(--header-height),
+      calc(100dvh - var(--sidebar-height, 100dvh))
+    );
     display: block;
     align-self: start;
     margin-top: 0;
@@ -468,55 +551,62 @@
   .dish-filter-sidebar.dish-filter-collapse > div {
     overflow: visible;
   }
-  /* The sidebar scrolls on its own when its groups are taller than the window. */
   .dish-filter-sidebar .dish-filter-panel {
-    --sidebar-pad: var(--space-5);
-    max-height: calc(100dvh - var(--header-height) - 2 * var(--space-4));
-    overflow-y: auto;
-    overscroll-behavior: contain;
     gap: var(--space-5);
-    padding: var(--sidebar-pad);
-    scrollbar-width: thin;
+    padding: var(--space-6) var(--space-6) var(--space-8);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
-  /* One column: province and dish form full width, the two prices side by side. */
+  /* One field a row: two price menus side by side would cut their values ("Khôn…"). */
   .dish-filter-sidebar .dish-filter-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-3);
-  }
-  .dish-filter-sidebar .dish-filter-grid > :nth-child(-n + 2) {
-    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
   }
   .dish-filter-sidebar .dish-filter-groups {
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-5);
+    gap: var(--space-4);
+  }
+  /*
+   * A rule above each part, as on Yelp: province, dish form, the price range (its two menus stay
+   * together), then each tag group. The hint under the last group has none.
+   */
+  .dish-filter-sidebar .dish-filter-grid > :not(:nth-child(4)),
+  .dish-filter-sidebar .dish-filter-chips {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  /* A floated legend leaves the fieldset's border, so the rule runs above it, not through it. */
+  .dish-filter-sidebar .dish-filter-chips > legend {
+    float: left;
+    width: 100%;
+  }
+  .dish-filter-sidebar .dish-filter-chips > legend + * {
+    clear: both;
   }
   .dish-filter-sidebar .dish-filter-chips .chip {
     min-height: 32px;
     padding: 4px 12px;
   }
-  /* The buttons stay at the bottom of the sidebar while it scrolls. */
-  .dish-filter-sidebar .dish-filter-actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 1;
-    flex-direction: column;
-    align-items: stretch;
-    margin: 0 calc(-1 * var(--sidebar-pad)) calc(-1 * var(--sidebar-pad));
-    padding: var(--space-4) var(--sidebar-pad) var(--sidebar-pad);
-    background: var(--card);
+  /*
+   * The results get wider without the map column: the layouts add columns instead of stretching
+   * one card across the window.
+   */
+  /* Narrower list rows than before: their tags stay on one line and fade, as on detailed cards. */
+  .dish-browse .dish-row .dish-kinds {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+    mask-image: linear-gradient(to right, #000 85%, transparent);
   }
-  .dish-filter-sidebar .dish-filter-actions .actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--space-2);
+  .dish-browse .dish-items-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 640px), 1fr));
   }
-  .dish-filter-sidebar .dish-filter-actions .button {
-    width: 100%;
-    padding-inline: var(--space-3);
-  }
-  /* Next to the sidebar the detailed cards need the whole width of the results. */
   .dish-browse .dish-items-detailed {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+  }
+  .dish-browse .dish-items-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 
