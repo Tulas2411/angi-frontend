@@ -4,14 +4,17 @@ import {
   activeRestaurantFilterCount,
   appendRestaurants,
   businessHoursByDay,
+  cloudinaryImage,
   dishApiQuery,
   dishFiltersHref,
+  dishPictures,
   dishPriceProblem,
   dishQueryFromParams,
   emptyDishFilters,
   emptyRestaurantFilters,
   googleMapsPlaceHref,
   operatingBadge,
+  otherMenuDishes,
   parseEntityId,
   priceLevelText,
   ratingShares,
@@ -394,5 +397,41 @@ describe("explore proxy rules and service", () => {
       rating: 5,
       content: "ngon",
     });
+  });
+});
+
+describe("F-13 dish detail images", () => {
+  const original =
+    "https://res.cloudinary.com/demo/image/upload/v1793778357/dish/578e.jpg";
+  it("adds a Cloudinary transformation after /image/upload/ and keeps the version", () => {
+    expect(cloudinaryImage(original, "f_auto,q_auto")).toBe(
+      "https://res.cloudinary.com/demo/image/upload/f_auto,q_auto/v1793778357/dish/578e.jpg",
+    );
+  });
+  it("leaves other hosts, other delivery types and broken URLs unchanged", () => {
+    expect(
+      cloudinaryImage("https://example.com/image/upload/a.jpg", "f_auto"),
+    ).toBe("https://example.com/image/upload/a.jpg");
+    const signed =
+      "https://res.cloudinary.com/demo/image/authenticated/s--x--/a.jpg";
+    expect(cloudinaryImage(signed, "f_auto")).toBe(signed);
+    expect(cloudinaryImage("/local/a.jpg", "f_auto")).toBe("/local/a.jpg");
+    expect(cloudinaryImage(original, "")).toBe(original);
+  });
+  it("lists the cover first and every picture once", () => {
+    expect(dishPictures("c", ["a", "c", "b", "a"])).toEqual(["c", "a", "b"]);
+    expect(dishPictures(null, ["a"])).toEqual(["a"]);
+    expect(dishPictures(null, [])).toEqual([]);
+  });
+  it("picks the other dishes of the menu, available ones first, up to the limit", () => {
+    const menu = [
+      { id: 1, isAvailable: true },
+      { id: 2, isAvailable: false },
+      { id: 3, isAvailable: true },
+      { id: 4, isAvailable: true },
+    ];
+    expect(otherMenuDishes(menu, 3).map((dish) => dish.id)).toEqual([1, 4, 2]);
+    expect(otherMenuDishes(menu, 1, 2).map((dish) => dish.id)).toEqual([3, 4]);
+    expect(otherMenuDishes([{ id: 5, isAvailable: true }], 5)).toEqual([]);
   });
 });

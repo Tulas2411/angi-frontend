@@ -122,6 +122,54 @@ export function operatingBadge(
     : { tone: "neutral", text: "Ngoài giờ mở cửa" };
 }
 
+/**
+ * Cloudinary delivery transformations used by the dish detail page. The stage photo keeps the
+ * file's own pixel size (no resize, so a small upload is never stretched) and only gets a modern
+ * format, automatic quality and a light sharpen; the backdrop is a tiny copy that CSS blurs.
+ */
+export const dishImageTransforms = {
+  stage: "f_auto,q_auto,e_sharpen:80",
+  backdrop: "c_limit,w_96,f_auto,q_auto",
+} as const;
+
+/**
+ * Adds a delivery transformation to a public Cloudinary image URL
+ * (`https://res.cloudinary.com/<cloud>/image/upload/<rest>`). Any other URL is returned unchanged.
+ */
+export function cloudinaryImage(url: string, transformation: string) {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return url;
+  }
+  const marker = "/image/upload/";
+  const at = parsed.pathname.indexOf(marker);
+  if (parsed.hostname !== "res.cloudinary.com" || at < 0 || !transformation)
+    return url;
+  const split = at + marker.length;
+  parsed.pathname = `${parsed.pathname.slice(0, split)}${transformation}/${parsed.pathname.slice(split)}`;
+  return parsed.toString();
+}
+
+/** The dish's pictures in display order: the cover first, then the other images once each. */
+export function dishPictures(coverUrl: string | null, images: string[]) {
+  return [...new Set([...(coverUrl ? [coverUrl] : []), ...images])];
+}
+
+/** Other dishes of the same restaurant for "Món khác ở quán": available ones first, menu order kept. */
+export function otherMenuDishes<T extends { id: number; isAvailable: boolean }>(
+  dishes: T[],
+  currentDishId: number,
+  limit = 8,
+) {
+  const others = dishes.filter((dish) => dish.id !== currentDishId);
+  return [
+    ...others.filter((dish) => dish.isAvailable),
+    ...others.filter((dish) => !dish.isAvailable),
+  ].slice(0, limit);
+}
+
 /** Link to a place on Google Maps from its coordinates; no map provider of ours is called. */
 export function googleMapsPlaceHref(
   latitude: number | null,
