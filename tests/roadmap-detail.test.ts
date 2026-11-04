@@ -4,6 +4,7 @@ import {
   dishNotice,
   formatDistance,
   formatDuration,
+  routeSummary,
   googleMapsDayLink,
   dayDishSummary,
   dayShortLabel,
@@ -168,6 +169,10 @@ describe("RM-14 presentation", () => {
     expect(formatDuration(7200)).toBe("2 giờ");
     expect(formatDuration(20)).toBe("1 phút");
     expect(formatDuration(0)).toBe("0 phút");
+    // The day total beside the title: duration first, then distance.
+    expect(routeSummary(7900, 1620)).toBe("27 phút, 7,9 km");
+    expect(routeSummary(12300, 4500)).toBe("1 giờ 15 phút, 12,3 km");
+    expect(routeSummary(850, 540)).toBe("9 phút, 850 m");
   });
   it("labels each leg like the Figma connection, with the origin as the start", () => {
     const items = [

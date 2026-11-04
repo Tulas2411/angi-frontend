@@ -2,13 +2,12 @@
 
 .app-shell:has(.roadmap-detail-page) {
   --roadmap-sidebar-width: 200px;
+  --roadmap-map-width: 50%;
 }
+/* Wide screens: the map takes the right half, so its edge sits on the middle of the screen. */
 .app-shell:has(.roadmap-detail-page) .site-header-bar {
   background: var(--card);
-  width: calc(
-    var(--roadmap-sidebar-width) + (100% - var(--roadmap-sidebar-width)) *
-      0.537037
-  );
+  width: calc(100% - var(--roadmap-map-width));
 }
 .app-shell:has(.roadmap-detail-page) .app-main {
   width: 100%;
@@ -38,10 +37,9 @@
 
 .roadmap-detail {
   display: grid;
-  grid-template-columns: var(--roadmap-sidebar-width) minmax(0, 1.16fr) minmax(
-      0,
-      1fr
-    );
+  grid-template-columns:
+    var(--roadmap-sidebar-width) minmax(0, 1fr)
+    var(--roadmap-map-width);
   gap: 0;
   align-items: start;
   font-family: "DM Sans", var(--font-body);
@@ -515,12 +513,16 @@
   gap: var(--space-1) var(--space-4);
   margin-top: var(--space-1);
 }
+/* The facts shrink first, so the actions stay on their line at the right. */
 .roadmap-day-subrow .roadmap-day-sub {
+  flex: 1 1 auto;
+  min-width: 0;
   margin-top: 0;
 }
 .roadmap-day-actions {
   --day-action: #4b55d6;
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-2);
@@ -537,9 +539,10 @@
   background: none;
   color: var(--day-action);
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
   transition: opacity var(--duration-fast) ease;
 }
@@ -560,17 +563,25 @@
 }
 .roadmap-day-actions svg {
   flex: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
+/* The day's route total ("35 phút, 8,98 km"): at the right end of a folded day's summary row. */
 .roadmap-route-total {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 14px;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.roadmap-day-subrow > .roadmap-route-total {
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+/* A folded day keeps its summary and total on one line: the summary wraps inside, not the total. */
+.roadmap-day-subrow:not([data-open]) {
+  flex-wrap: nowrap;
+  align-items: baseline;
 }
 
 .roadmap-meal {
@@ -994,15 +1005,23 @@
   box-shadow: var(--focus-ring);
 }
 
+/*
+ * The photo fills the button absolutely, so it never sizes the row: the card's height comes from
+ * the text column (at least 152px), and a tall or large upload is cropped (object-fit: cover)
+ * instead of stretching the card.
+ */
 .roadmap-item-media {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  min-height: 152px;
   aspect-ratio: auto;
   border-radius: var(--radius-md);
 }
 .roadmap-item-location {
   min-width: 0;
+  min-height: 152px;
+  overflow: hidden;
   position: relative;
   padding: 0;
   border: 0;
@@ -1609,6 +1628,13 @@ h3.roadmap-budget-label svg {
 @media (max-width: 1200px) {
   .app-shell:has(.roadmap-detail-page) {
     --roadmap-sidebar-width: 160px;
+  }
+  /* A half-width map would leave the notebook too narrow for the dish cards here. */
+  .app-shell:has(.roadmap-detail-page) .site-header-bar {
+    width: calc(
+      var(--roadmap-sidebar-width) + (100% - var(--roadmap-sidebar-width)) *
+        0.537037
+    );
   }
   .roadmap-detail {
     grid-template-columns:

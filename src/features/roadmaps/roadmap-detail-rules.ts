@@ -158,6 +158,11 @@ export function formatDuration(seconds: number) {
   return minutes ? `${hours} giờ ${minutes} phút` : `${hours} giờ`;
 }
 
+/** The day's route total beside its title: `35 phút, 8,98 km`, `1 giờ 15 phút, 12,3 km`. */
+export function routeSummary(meters: number, seconds: number) {
+  return `${formatDuration(seconds)}, ${formatDistance(meters)}`;
+}
+
 const ratingFormat = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 1,
   minimumFractionDigits: 1,
@@ -177,7 +182,7 @@ export interface GoogleMapsLink {
 const googleMapsMaxStops = 10;
 
 /**
- * "Mở trên Google Maps" for one day. It is built by the app, in item order, from the
+ * The "Chỉ đường" (Google Maps directions) link for one day. It is built by the app, in item order, from the
  * restaurant coordinates (RM-03 note): a pinned origin is the start, `gps` and `none`
  * leave the start to Google Maps, and items without coordinates are skipped.
  */

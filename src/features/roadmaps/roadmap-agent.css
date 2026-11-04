@@ -36,16 +36,25 @@
   box-shadow: 0 12px 40px rgb(34 34 34 / 0.12);
   overflow: hidden;
 }
-/* Everything left of the map, site header and sidebar included, at full height. */
+/*
+ * Everything left of the map, site header and sidebar included, at full height. Like the page
+ * (roadmap-detail.css), the map keeps the right half on wide screens, so the panel ends mid-screen.
+ */
 .roadmap-agent-panel[data-mode="expanded"] {
   --agent-gutter: clamp(16px, 2vw, 32px);
   inset: 0 auto 0 0;
-  width: calc(
-    var(--roadmap-sidebar-width) + (100% - var(--roadmap-sidebar-width)) *
-      0.537037
-  );
+  width: calc(100% - var(--roadmap-map-width, 50%));
   height: 100dvh;
   box-shadow: var(--shadow-pop);
+}
+/* 900–1200px: the notebook and the map keep their 1.16 : 1 split, and so does the panel. */
+@media (max-width: 1200px) {
+  .roadmap-agent-panel[data-mode="expanded"] {
+    width: calc(
+      var(--roadmap-sidebar-width) + (100% - var(--roadmap-sidebar-width)) *
+        0.537037
+    );
+  }
 }
 .roadmap-agent-panel[data-open="true"] {
   opacity: 1;
