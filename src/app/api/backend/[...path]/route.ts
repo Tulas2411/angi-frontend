@@ -23,6 +23,7 @@ import {
   moderationUsersOperation,
   moderationMenusOperation,
   moderationRestaurantsOperation,
+  moderationReviewsOperation,
   moderationVerificationsOperation,
 } from "@/shared/api/moderation-proxy";
 import {
@@ -74,6 +75,7 @@ async function handle(request: Request, context: Context) {
       request.method,
       endpoint,
     );
+    const modReviews = moderationReviewsOperation(request.method, endpoint);
     const publicOp = publicOperation(request.method, endpoint);
     const survey = preferenceSurveyOperation(request.method, endpoint);
     const agentOp = agentOperation(request.method, endpoint);
@@ -98,6 +100,7 @@ async function handle(request: Request, context: Context) {
       !modVerifications &&
       !modMenus &&
       !modRestaurants &&
+      !modReviews &&
       !adminPermissions &&
       !agentOp &&
       !publicOp &&
@@ -121,6 +124,7 @@ async function handle(request: Request, context: Context) {
       modVerifications?.body !== false &&
       modMenus?.body !== false &&
       modRestaurants?.body !== false &&
+      modReviews?.body !== false &&
       adminPermissions?.body !== false &&
       publicOp?.body !== false &&
       survey?.body !== false &&
@@ -309,6 +313,25 @@ async function handle(request: Request, context: Context) {
           });
         }),
         modRestaurants.status,
+      );
+    }
+    // MOD-F1..MOD-F3 — kiểm duyệt đánh giá quán và phản hồi của chủ quán (Mod và Admin).
+    if (modReviews) {
+      return ok(
+        await withAuth(session, (auth) => {
+          if (!isModeratorRole(auth.user.role))
+            throw new ApiError(
+              403,
+              "FORBIDDEN",
+              "Chỉ kiểm duyệt viên được kiểm duyệt đánh giá.",
+            );
+          return backend<unknown>(`${endpoint}${query}`, {
+            method: request.method,
+            body,
+            token: auth.accessToken,
+          });
+        }),
+        modReviews.status,
       );
     }
     // MOD-B1..MOD-B3 — kiểm duyệt bài viết và bình luận (Mod và Admin).
