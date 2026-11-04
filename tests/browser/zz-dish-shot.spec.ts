@@ -995,10 +995,14 @@ test("zz shot", async ({ page }) => {
         fullPage: true,
       });
     }
-    await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
-    await page.waitForTimeout(300);
+    // Wide screens show the filters as a sidebar; narrow ones open the panel first.
+    if (width < 1024) {
+      await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
+      await page.waitForTimeout(300);
+    }
     await page.screenshot({ path: `${out}/${label}-filters.png` });
-    await page.getByRole("button", { name: "Ẩn bộ lọc" }).click();
+    if (width < 1024)
+      await page.getByRole("button", { name: "Ẩn bộ lọc" }).click();
     await page.screenshot({ path: `${out}/${label}-search.png` });
   }
 });

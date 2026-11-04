@@ -454,11 +454,17 @@ test.describe("dishes", () => {
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
     await page.getByRole("searchbox", { name: "Tìm món ăn" }).fill("bún");
-    await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
+    // Wide screen: the filters are a sidebar, always shown, with no button to open them.
+    await expect(
+      page.getByRole("button", { name: "Hiện bộ lọc" }),
+    ).toBeHidden();
     await chooseOption(page.getByLabel("Loại món"), "dry");
     await chooseOption(page.getByLabel("Giá đến"), "100000");
     await page.getByRole("button", { name: "Bữa trưa" }).click();
-    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
+    // Each pick applies at once (no "Áp dụng" button), with the typed search text.
+    await expect(
+      page.getByRole("button", { name: "Áp dụng bộ lọc" }),
+    ).toHaveCount(0);
     await expect(page).toHaveURL(/q=b%C3%BAn|q=bún/);
     await expect(page).toHaveURL(/form=dry/);
     await expect(page).toHaveURL(/price=100000/);
@@ -612,6 +618,8 @@ test.describe("dishes", () => {
   test("the filter panel opens and closes without losing what was chosen", async ({
     page,
   }) => {
+    // Narrow screen: the filters are a panel the search bar's button shows and hides.
+    await page.setViewportSize({ width: 800, height: 900 });
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
     const toggle = page.getByRole("button", { name: "Hiện bộ lọc" });
@@ -625,17 +633,17 @@ test.describe("dishes", () => {
       .getByRole("group", { name: "Không ăn (bỏ món có thẻ)" })
       .getByRole("button", { name: "Món nước" })
       .click();
+    // Each pick applies at once; the panel stays open.
+    await expect(page).toHaveURL(/min=50000/);
+    await expect(page).toHaveURL(/notag=2/);
+    // Bún chả (55.000, no noodle tag) is the only dish left.
+    await expect(dishItems(page)).toHaveCount(1);
+    await expect(dishOf(page, "Bún chả")).toBeVisible();
+    await expect(page.getByRole("button", { name: /Ẩn bộ lọc/ })).toBeVisible();
     await hide.click();
     await expect(page.getByLabel("Giá từ")).toBeHidden();
     await page.getByRole("button", { name: /Hiện bộ lọc/ }).click();
     await expectOption(page.getByLabel("Giá từ"), "50000");
-    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
-    await expect(page).toHaveURL(/min=50000/);
-    await expect(page).toHaveURL(/notag=2/);
-    // Bún chả (55.000, no noodle tag) is the only dish left; the panel stays open.
-    await expect(dishItems(page)).toHaveCount(1);
-    await expect(dishOf(page, "Bún chả")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Ẩn bộ lọc/ })).toBeVisible();
     const last = callsTo("GET", "dishes").at(-1)!;
     expect(last.query.get("minPrice")).toBe("50000");
     expect(last.query.getAll("excludeTagIds")).toEqual(["2"]);
@@ -674,6 +682,8 @@ test.describe("dishes", () => {
         return frames;
       }, label);
     // The dish and the restaurant lists share the panel and its motion.
+    // The dish page slides its panel on narrow screens (a sidebar on wide ones).
+    await page.setViewportSize({ width: 800, height: 900 });
     for (const path of ["/dishes", "/restaurants"]) {
       await page.goto(path);
       await expect(dishItems(page).first()).toBeVisible();
@@ -725,12 +735,12 @@ test.describe("dishes", () => {
   }) => {
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
-    const before = callsTo("GET", "dishes").length;
-    await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
     await chooseOption(page.getByLabel("Giá từ"), "100000");
+    await expect(page).toHaveURL(/min=100000/);
+    const before = callsTo("GET", "dishes").length;
     await chooseOption(page.getByLabel("Giá đến"), "50000");
-    await page.getByRole("button", { name: "Áp dụng bộ lọc" }).click();
     await expect(page.getByText("Giá từ phải thấp hơn giá đến.")).toBeVisible();
+    await expect(page).not.toHaveURL(/price=50000/);
     expect(callsTo("GET", "dishes")).toHaveLength(before);
   });
 
@@ -933,7 +943,13 @@ test.describe("dishes", () => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/dishes");
       await expect(dishItems(page)).toHaveCount(5);
-      await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
+      // Below 1024px the filters are a panel to open; wider, the sidebar is always there.
+      if (width < 1024)
+        await page.getByRole("button", { name: "Hiện bộ lọc" }).click();
+      else
+        await expect(
+          page.getByRole("complementary", { name: "Bộ lọc món ăn" }),
+        ).toBeVisible();
       for (const view of ["Danh sách", "Lưới chi tiết", "Thư viện ảnh"]) {
         await page
           .getByRole("group", { name: "Kiểu hiển thị" })
@@ -954,8 +970,8 @@ test.describe("dishes", () => {
         .evaluateAll((items) =>
           items.slice(0, 2).map((item) => item.getBoundingClientRect().top),
         );
-      if (width === 1440) expect(Math.abs(a - b)).toBeLessThan(2);
-      else expect(b).toBeGreaterThan(a);
+      // Beside the filter sidebar, as on narrow screens, one detailed card a row.
+      expect(b).toBeGreaterThan(a);
     });
 });
 
