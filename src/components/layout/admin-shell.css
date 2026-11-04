@@ -285,3 +285,25 @@
   letter-spacing: var(--tracking-heading);
   line-height: 1.2;
 }
+
+/* DataTable rows with onRowClick: the whole row opens the item. */
+.legacy-ui .admin-shell tr.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration) ease;
+}
+.legacy-ui .admin-shell tr.is-clickable:hover,
+.legacy-ui .admin-shell tr.is-clickable[aria-current="true"] {
+  background: var(--canvas);
+}
+.legacy-ui .admin-shell tr.is-clickable:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.legacy-ui .admin-shell tr.is-clickable[aria-current="true"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .legacy-ui .admin-shell tr.is-clickable {
+    transition: none;
+  }
+}
