@@ -31,7 +31,55 @@ export function parseDayParam(value: string | string[] | undefined): number {
   return text && /^[1-9]\d{0,2}$/.test(text) ? Number(text) : 1;
 }
 
+/** `?open=1,3`: the unfolded days, each a positive day number; anything else is dropped. */
+export function parseOpenParam(value: string | string[] | undefined): number[] {
+  const text = Array.isArray(value) ? value[0] : value;
+  if (!text) return [];
+  const days = text
+    .split(",")
+    .filter((part) => /^[1-9]\d{0,2}$/.test(part))
+    .map(Number);
+  return [...new Set(days)];
+}
+
 /** The three tabs of RoadmapDetail (Overview, Itinerary, Budget). */
+/**
+ * Banner photos of the detail page's header (HN-01…HN-04: Hanoi's old quarter and train street).
+ * One is picked at random on every visit; the roadmap's own cover (its first dish) stays on the
+ * "Lộ trình của tôi" card only.
+ */
+export const roadmapHeroImages = [
+  "/assets/roadmap-hero/hn-01.webp",
+  "/assets/roadmap-hero/hn-02.webp",
+  "/assets/roadmap-hero/hn-03.webp",
+  "/assets/roadmap-hero/hn-04.webp",
+] as const;
+
+/** `random` is in [0, 1), as Math.random gives; the route calls it once per request. */
+export function pickRoadmapHeroImage(random = Math.random()) {
+  const index = Math.min(
+    roadmapHeroImages.length - 1,
+    Math.max(0, Math.floor(random * roadmapHeroImages.length)),
+  );
+  return roadmapHeroImages[index];
+}
+
+/**
+ * The day being read while the itinerary scrolls: the one whose section crosses the reading line
+ * (`line`, px from the top of the window), else the last one above it; null before the first day.
+ */
+export function dayAtLine(
+  sections: readonly { dayNumber: number; top: number; bottom: number }[],
+  line: number,
+): number | null {
+  let above: number | null = null;
+  for (const section of sections) {
+    if (section.top <= line && section.bottom > line) return section.dayNumber;
+    if (section.top <= line) above = section.dayNumber;
+  }
+  return above;
+}
+
 export type DetailTab = "overview" | "itinerary" | "budget";
 export const detailTabs: { value: DetailTab; label: string }[] = [
   { value: "overview", label: "Tổng quan" },

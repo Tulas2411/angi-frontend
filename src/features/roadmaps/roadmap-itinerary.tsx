@@ -1,6 +1,11 @@
 "use client";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
+import {
+  MapIcon,
+  PlusCircleIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import { Icon, Media } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
 import {
@@ -28,6 +33,7 @@ import {
 } from "./roadmap-add-item-rules";
 import { loadProvinceCatalog } from "@/shared/locations/province-service";
 import { SuggestedPlaces } from "./roadmap-suggested-places";
+import { roadmapDayTone } from "./roadmap-map-rules";
 import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
 import { RoadmapGenerateDialog } from "./roadmap-generate-dialog";
@@ -109,6 +115,7 @@ function routeKey(
 function ItemCard({
   item,
   order,
+  tone,
   selected,
   onSelect,
   onRemove,
@@ -118,6 +125,8 @@ function ItemCard({
 }: {
   item: RoadmapItemDto;
   order: number;
+  /** The day's color on the map (`roadmapDayTone`), shared by the number's pin. */
+  tone: number;
   /** The grip is held: the card lifts, the leg line above it stays put. */
   dragging: boolean;
   /** RM-13: rates the dish once; rejects for a failure the traveler can retry. */
@@ -167,24 +176,25 @@ function ItemCard({
             )}
           </svg>
         </button>
-        <h5 id={`roadmap-item-${item.id}`}>
-          <span className="roadmap-item-order" aria-hidden>
-            {order}
-          </span>
-          {dish.name}
-        </h5>
+        {/* The stop number as a map pin hanging over the card's top-left edge, as on the map. */}
+        <span className="roadmap-item-pin" data-tone={tone} aria-hidden>
+          <svg viewBox="0 0 24 32" aria-hidden="true">
+            <path d="M12 1C5.9 1 1 5.8 1 11.8 1 19.9 12 31 12 31s11-11.1 11-19.2C23 5.8 18.1 1 12 1z" />
+          </svg>
+          <span>{order}</span>
+        </span>
+        {/* The name with its tags on the same line ("ANGI gợi ý", a dish no longer sold). */}
+        <div className="roadmap-item-head">
+          <h5 id={`roadmap-item-${item.id}`}>{dish.name}</h5>
+          {notice && <Badge tone="warning">{notice}</Badge>}
+          {item.source === "ai" && <Badge>ANGI gợi ý</Badge>}
+        </div>
         <p className="roadmap-item-price">Dự chi {vnd(dish.price)}</p>
         <p className="helper">
           {dish.restaurant.name}
           {place && ` · ${place}`}
           {` · ${formatRating(dish.restaurant.ratingAvg)} sao`}
         </p>
-        {(notice || item.source === "ai") && (
-          <p className="roadmap-item-badges">
-            {notice && <Badge tone="warning">{notice}</Badge>}
-            {item.source === "ai" && <Badge>ANGI gợi ý</Badge>}
-          </p>
-        )}
         <div className="roadmap-item-actions">
           <Button
             variant="tertiary"
@@ -321,15 +331,37 @@ function DayPanel({
           <span>{dayTitle(day)}</span>
         </button>
       </h3>
-      <p className="roadmap-day-sub">
-        {open
-          ? `Ngày ${day.dayNumber} · ${
-              day.items.length
-                ? `${day.items.length} món · ${vnd(day.dayCost)}`
-                : "Chưa có món"
-            }`
-          : dayDishSummary(day.items)}
-      </p>
+      {/* The day's facts on the left; an open day's actions on the same line, at the right. */}
+      <div className="roadmap-day-subrow">
+        <p className="roadmap-day-sub">
+          {open
+            ? `Ngày ${day.dayNumber} · ${
+                day.items.length
+                  ? `${day.items.length} món · ${vnd(day.dayCost)}`
+                  : "Chưa có món"
+              }`
+            : dayDishSummary(day.items)}
+        </p>
+        {open && (
+          <div className="roadmap-day-actions">
+            <button type="button" onClick={() => onAdd()}>
+              <PlusCircleIcon aria-hidden />
+              Thêm món
+            </button>
+            <button type="button" onClick={onGenerate}>
+              <SparklesIcon aria-hidden />
+              ANGI thêm giúp bạn
+            </button>
+            {maps && (
+              <a href={maps.url} target="_blank" rel="noopener noreferrer">
+                <MapIcon aria-hidden />
+                Mở trên Google Maps
+                <span className="sr-only"> (mở tab mới)</span>
+              </a>
+            )}
+          </div>
+        )}
+      </div>
       {drawn && (
         <div className="roadmap-day-fold" data-open={open} inert={!open}>
           <div
@@ -343,23 +375,6 @@ function DayPanel({
               Kéo biểu tượng ở góc thẻ món để đổi thứ tự, hoặc bấm phím mũi tên
               lên xuống khi đang chọn biểu tượng đó.
             </p>
-            <div className="roadmap-day-actions">
-              <Button onClick={() => onAdd()}>+ Thêm món</Button>
-              <Button variant="secondary" onClick={onGenerate}>
-                Gợi ý bằng AI
-              </Button>
-              {maps && (
-                <a
-                  className="button button-secondary"
-                  href={maps.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Mở trên Google Maps
-                  <span className="sr-only"> (mở tab mới)</span>
-                </a>
-              )}
-            </div>
             {notice && (
               <div ref={noticeRef} tabIndex={-1} className="roadmap-day-notice">
                 <Alert tone={notice.tone}>{notice.text}</Alert>
@@ -473,6 +488,7 @@ function DayPanel({
                                 (entry) => entry.id === item.id,
                               ) + 1
                             }
+                            tone={roadmapDayTone(day.dayNumber)}
                             selected={selectedItemId === item.id}
                             onSelect={() => onSelectItem(item.id)}
                             onRemove={() => onRemove(item)}

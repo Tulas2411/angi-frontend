@@ -1,6 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Badge } from "@/shared/ui";
 import { Button } from "@/shared/ui";
 import { RoadmapAgentPanel } from "./roadmap-agent-panel";
@@ -10,10 +17,21 @@ import {
   agentMapStops,
 } from "./agent-map-rules";
 import { useAgentConversation } from "./use-agent-conversation";
-import { Icon, Media, Tabs } from "@/components/ui/primitives";
+import {
+  ArrowPathIcon,
+  BanknotesIcon,
+  CakeIcon,
+  CalendarDaysIcon,
+  CalendarIcon,
+  DocumentPlusIcon,
+  MapPinIcon,
+  WalletIcon,
+} from "@heroicons/react/24/outline";
 import { dateLabel } from "@/shared/format";
+import { Icon, Tabs } from "@/components/ui/primitives";
 import { RoadmapBudget } from "./roadmap-budget";
 import {
+  dayAtLine,
   dayDishSummary,
   dayShortLabel,
   detailTabs,
@@ -23,7 +41,6 @@ import { RoadmapItinerary } from "./roadmap-itinerary";
 import { RoadmapDetailMap } from "./roadmap-detail-map";
 import {
   isOverBudget,
-  roadmapCover,
   roadmapDateRange,
   roadmapItemsLabel,
   roadmapOriginText,
@@ -45,9 +62,15 @@ function subscribeCompactViewport(listener: () => void) {
  * Loaded roadmap: hero card, the three RoadmapDetail tabs and the day list of the sidebar
  * (Figma "ANGI / Roadmap"). The tab and the last opened day live in the URL.
  */
+/** A moment `ms` from now, on the clock the scroll follower reads. */
+function momentAfter(ms: number) {
+  return performance.now() + ms;
+}
+
 export function RoadmapDetailView({
   detail,
   initialDay,
+  initialOpenDays = [],
   initialTab,
   service,
   onItemAdded,
@@ -58,9 +81,12 @@ export function RoadmapDetailView({
   userId,
   userName,
   userAvatar,
+  heroImage,
 }: {
   detail: RoadmapDetailDto;
   initialDay: number;
+  /** The days unfolded at first (`?open=`); every other day starts folded. */
+  initialOpenDays?: readonly number[];
   initialTab: DetailTab;
   service: RoadmapScreenService;
   /** Reloads the roadmap after a dish was added; rejects when the reload fails. */
@@ -76,9 +102,13 @@ export function RoadmapDetailView({
   userId: number;
   userName: string;
   userAvatar: string | null;
+  /** The header's banner photo (one of `roadmapHeroImages`). */
+  heroImage: string;
 }) {
   const { overview, itinerary, budget } = detail;
   const [agentOpen, setAgentOpen] = useState(false);
+  // The sidebar's "Lịch ăn uống" lists the days below it until its chevron folds them.
+  const [daysOpen, setDaysOpen] = useState(true);
   const [agentMapView, setAgentMapView] = useState(false);
   // The sidebar button opens the full panel and the map's bubble opens the popup.
   const [agentPopup, setAgentPopup] = useState(false);
@@ -103,12 +133,12 @@ export function RoadmapDetailView({
   const [agentRevision, setAgentRevision] = useState(0);
   const firstDay = itinerary.find((day) => day.dayNumber === initialDay);
   const [tab, setTab] = useState<DetailTab>(initialTab);
-  const [openDays, setOpenDays] = useState<number[]>(
-    firstDay
-      ? [firstDay.dayNumber]
-      : itinerary[0]
-        ? [itinerary[0].dayNumber]
-        : [],
+  // Every day starts folded, so the itinerary reads as a short list of days; the days unfolded
+  // before a reload (`?open=`) open again.
+  const [openDays, setOpenDays] = useState<number[]>(() =>
+    initialOpenDays.filter((dayNumber) =>
+      itinerary.some((day) => day.dayNumber === dayNumber),
+    ),
   );
   const [selectedDay, setActiveDay] = useState(
     firstDay?.dayNumber ?? itinerary[0]?.dayNumber ?? 1,
@@ -117,6 +147,8 @@ export function RoadmapDetailView({
     ? selectedDay
     : (itinerary[0]?.dayNumber ?? 1);
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
+  // Until when a jump made by the page (sidebar day, map pin) is not taken for the traveler's scroll.
+  const quietUntil = useRef(0);
   const [mapRoute, setMapRoute] = useState<RoadmapRouteDto | null>(null);
   const agentCommitted = useCallback(
     async (id: number) => {
@@ -184,17 +216,16 @@ export function RoadmapDetailView({
   )?.dayId;
   const effectiveRoute = mapRoute?.dayId === activeDayId ? mapRoute : null;
 
-  function syncUrl(nextTab: DetailTab, day: number) {
+  // The URL follows the tab, the day being read and the unfolded days, so a reload keeps them.
+  useEffect(() => {
     window.history.replaceState(
       null,
       "",
-      roadmapDetailHref(overview.id, { tab: nextTab, day }),
+      roadmapDetailHref(overview.id, { tab, day: activeDay, open: openDays }),
     );
-  }
+  }, [overview.id, tab, activeDay, openDays]);
   function selectTab(value: string) {
-    const next = value as DetailTab;
-    setTab(next);
-    syncUrl(next, activeDay);
+    setTab(value as DetailTab);
   }
   function toggleDay(dayNumber: number) {
     const opening = !openDays.includes(dayNumber);
@@ -206,7 +237,6 @@ export function RoadmapDetailView({
     if (opening) {
       setActiveDay(dayNumber);
       setSelectedItemId(null);
-      syncUrl(tab, dayNumber);
     }
   }
   /** Sidebar: open that day in the itinerary and bring it into view. */
@@ -217,7 +247,8 @@ export function RoadmapDetailView({
     );
     setActiveDay(dayNumber);
     setSelectedItemId(itemId ?? null);
-    syncUrl("itinerary", dayNumber);
+    // The jump below must not be read as the traveler scrolling to another day.
+    if (scroll) quietUntil.current = momentAfter(800);
     if (scroll)
       requestAnimationFrame(() =>
         document
@@ -242,6 +273,57 @@ export function RoadmapDetailView({
         window.matchMedia("(min-width: 901px)").matches,
       );
   }
+  // Scrolling the itinerary follows the day being read: the day under a line 30% down the window
+  // becomes the active one, so the map, the sidebar and `?day=` move with it.
+  const following = useRef({ tab, activeDay, itinerary });
+  useEffect(() => {
+    following.current = { tab, activeDay, itinerary };
+  });
+  useEffect(() => {
+    if (tab !== "itinerary") return;
+    let frame = 0;
+    const follow = () => {
+      frame = 0;
+      if (performance.now() < quietUntil.current) return;
+      const current = following.current;
+      const sections = [
+        ...document.querySelectorAll<HTMLElement>(
+          ".roadmap-detail-main .roadmap-day",
+        ),
+      ].map((section) => {
+        const { top, bottom } = section.getBoundingClientRect();
+        return {
+          dayNumber: Number(section.id.replace("day-", "")),
+          top,
+          bottom,
+        };
+      });
+      const dayNumber = dayAtLine(sections, window.innerHeight * 0.3);
+      if (dayNumber === null || dayNumber === current.activeDay) return;
+      setActiveDay(dayNumber);
+      // A dish picked in another day no longer belongs on the map of this one.
+      setSelectedItemId((itemId) =>
+        itemId !== null &&
+        current.itinerary
+          .find((day) => day.dayNumber === dayNumber)
+          ?.items.some((item) => item.id === itemId)
+          ? itemId
+          : null,
+      );
+    };
+    const onScroll = () => {
+      if (!frame) frame = requestAnimationFrame(follow);
+    };
+    // Capture: the notebook may scroll in the window or in its own column.
+    window.addEventListener("scroll", onScroll, {
+      passive: true,
+      capture: true,
+    });
+    return () => {
+      window.removeEventListener("scroll", onScroll, { capture: true });
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, [tab, overview.id]);
   function selectContentItem(itemId: number | null) {
     selectItem(itemId);
     if (itemId !== null && window.matchMedia("(max-width: 900px)").matches)
@@ -276,48 +358,79 @@ export function RoadmapDetailView({
         </Button>
         {back}
         <div className="roadmap-sidebar-section">
-          <p className="roadmap-sidebar-eyebrow">Sổ tay ẩm thực</p>
+          {/* Tổng quan, Lịch ăn uống (the itinerary, with its days in a fold), Ngân sách. */}
           <div
             className="roadmap-sidebar-sections"
             aria-label="Điều hướng chi tiết"
           >
-            {detailTabs.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                aria-pressed={tab === item.value}
-                onClick={() => selectTab(item.value)}
+            <button
+              type="button"
+              aria-pressed={tab === "overview"}
+              onClick={() => selectTab("overview")}
+            >
+              Tổng quan
+            </button>
+            <div className="roadmap-sidebar-itinerary">
+              <div
+                className="roadmap-sidebar-itinerary-row"
+                data-current={tab === "itinerary" || undefined}
               >
-                {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <nav aria-label="Các ngày của lộ trình">
-          <h2 className="roadmap-nav-title">
-            <Icon name="roadmap-chevron" /> Lịch ăn uống
-          </h2>
-          <ol className="roadmap-nav-days">
-            {itinerary.map((day) => (
-              <li key={day.dayId}>
                 <button
                   type="button"
-                  aria-current={
-                    tab === "itinerary" && activeDay === day.dayNumber
-                      ? "true"
-                      : undefined
-                  }
-                  onClick={() => showDay(day.dayNumber)}
+                  aria-pressed={tab === "itinerary"}
+                  onClick={() => selectTab("itinerary")}
                 >
-                  <span className="roadmap-nav-day">{dayShortLabel(day)}</span>
-                  <span className="roadmap-nav-dishes">
-                    {dayDishSummary(day.items)}
-                  </span>
+                  Lịch ăn uống
                 </button>
-              </li>
-            ))}
-          </ol>
-        </nav>
+                <button
+                  type="button"
+                  className="roadmap-sidebar-fold"
+                  aria-expanded={daysOpen}
+                  aria-controls="roadmap-nav-days"
+                  aria-label={daysOpen ? "Thu gọn các ngày" : "Hiện các ngày"}
+                  onClick={() => setDaysOpen((open) => !open)}
+                >
+                  <Icon name="roadmap-chevron" />
+                </button>
+              </div>
+              <nav
+                id="roadmap-nav-days"
+                aria-label="Các ngày của lộ trình"
+                hidden={!daysOpen}
+              >
+                <ol className="roadmap-nav-days">
+                  {itinerary.map((day) => (
+                    <li key={day.dayId}>
+                      <button
+                        type="button"
+                        aria-current={
+                          tab === "itinerary" && activeDay === day.dayNumber
+                            ? "true"
+                            : undefined
+                        }
+                        onClick={() => showDay(day.dayNumber)}
+                      >
+                        <span className="roadmap-nav-day">
+                          {dayShortLabel(day)}
+                        </span>
+                        <span className="roadmap-nav-dishes">
+                          {dayDishSummary(day.items)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            </div>
+            <button
+              type="button"
+              aria-pressed={tab === "budget"}
+              onClick={() => selectTab("budget")}
+            >
+              Ngân sách
+            </button>
+          </div>
+        </div>
       </aside>
 
       <div
@@ -325,32 +438,25 @@ export function RoadmapDetailView({
         inert={agentOpen && agentMode === "expanded"}
       >
         <div className="roadmap-back-mobile">{back}</div>
+        {/* A banner photo with the title card laid over its lower edge; sharing is in the header. */}
         <section className="roadmap-hero" aria-labelledby="roadmap-title">
-          <div className="roadmap-hero-text stack-sm">
+          {/* eslint-disable-next-line @next/next/no-img-element -- a local banner, cropped by CSS */}
+          <img className="roadmap-hero-banner" src={heroImage} alt="" />
+          <div className="roadmap-hero-card">
             <p className="eyebrow">Lộ trình ẩm thực</p>
             <h1 id="roadmap-title">{overview.title}</h1>
-            <p className="page-description">{roadmapDateRange(overview)}</p>
             <p className="roadmap-hero-chips">
+              <span className="roadmap-hero-dates">
+                <CalendarIcon aria-hidden />
+                {roadmapDateRange(overview)}
+              </span>
               <span>{overview.numDays} ngày</span>
               <span>{roadmapItemsLabel(overview.itemCount)}</span>
               {isOverBudget(overview) && (
                 <Badge tone="warning">Vượt ngân sách</Badge>
               )}
             </p>
-            <p className="roadmap-hero-actions">
-              <Link
-                className="button button-secondary"
-                href={`/guides/new?roadmap=${overview.id}`}
-              >
-                Chia sẻ lộ trình
-              </Link>
-            </p>
           </div>
-          <Media
-            className="roadmap-hero-media"
-            src={roadmapCover(overview)}
-            alt={overview.title}
-          />
         </section>
 
         <div className="roadmap-detail-tabs">
@@ -367,23 +473,38 @@ export function RoadmapDetailView({
             <h2>Thông tin chung</h2>
             <dl className="card detail-list">
               <div>
-                <dt>Thời gian</dt>
+                <dt>
+                  <CalendarDaysIcon aria-hidden />
+                  Thời gian
+                </dt>
                 <dd>{roadmapDateRange(overview)}</dd>
               </div>
               <div>
-                <dt>Số ngày</dt>
+                <dt>
+                  <CalendarIcon aria-hidden />
+                  Số ngày
+                </dt>
                 <dd>{overview.numDays} ngày</dd>
               </div>
               <div>
-                <dt>Số món</dt>
+                <dt>
+                  <CakeIcon aria-hidden />
+                  Số món
+                </dt>
                 <dd>{roadmapItemsLabel(overview.itemCount)}</dd>
               </div>
               <div>
-                <dt>Xuất phát</dt>
+                <dt>
+                  <MapPinIcon aria-hidden />
+                  Xuất phát
+                </dt>
                 <dd>{roadmapOriginText(overview) ?? originModeLabels.none}</dd>
               </div>
               <div>
-                <dt>Ngân sách</dt>
+                <dt>
+                  <WalletIcon aria-hidden />
+                  Ngân sách
+                </dt>
                 <dd>
                   {overview.budgetAmount === null
                     ? "Chưa đặt"
@@ -391,15 +512,24 @@ export function RoadmapDetailView({
                 </dd>
               </div>
               <div>
-                <dt>Chi phí dự kiến</dt>
+                <dt>
+                  <BanknotesIcon aria-hidden />
+                  Chi phí dự kiến
+                </dt>
                 <dd>{vnd(overview.totalEstimatedCost)}</dd>
               </div>
               <div>
-                <dt>Tạo lúc</dt>
+                <dt>
+                  <DocumentPlusIcon aria-hidden />
+                  Tạo lúc
+                </dt>
                 <dd>{dateLabel(overview.createdAt)}</dd>
               </div>
               <div>
-                <dt>Cập nhật lần cuối</dt>
+                <dt>
+                  <ArrowPathIcon aria-hidden />
+                  Cập nhật lần cuối
+                </dt>
                 <dd>{dateLabel(overview.updatedAt)}</dd>
               </div>
             </dl>

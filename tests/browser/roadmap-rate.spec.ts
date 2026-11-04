@@ -226,12 +226,23 @@ const likeButton = (page: Page, dish: string) =>
 const dislikeButton = (page: Page, dish: string) =>
   card(page, dish).locator('.roadmap-rate-button[data-value="dislike"]');
 
+/** Every day starts folded unless the URL names one; most tests read the first day's dishes. */
+async function openFirstDay(page: Page) {
+  const toggle = page.locator("#day-1 .roadmap-day-toggle");
+  if (
+    (await toggle.isVisible()) &&
+    (await toggle.getAttribute("aria-expanded")) === "false"
+  )
+    await toggle.click();
+}
+
 async function open(page: Page) {
   await loginAs(page, "traveler");
   await page.goto("/roadmaps/88");
   await expect(
     page.getByRole("heading", { name: "Đi chơi Hà Nội", level: 1 }),
   ).toBeVisible();
+  await openFirstDay(page);
   await expect(page.locator("#day-1 .roadmap-item")).toHaveCount(3);
 }
 

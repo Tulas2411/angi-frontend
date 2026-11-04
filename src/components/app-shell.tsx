@@ -4,7 +4,7 @@ import { AccountMenu } from "@/components/site/account-menu";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { navigationFor } from "@/components/site/navigation";
-import { SiteNav } from "@/components/site/site-nav";
+import { HeaderNav, HeaderRoadmapShare } from "@/components/site/header-nav";
 import { HOME_BY_ROLE } from "@/features/auth/roles";
 
 export default function AppShell({
@@ -22,8 +22,9 @@ export default function AppShell({
       </a>
       <SiteHeader
         brandHref={HOME_BY_ROLE[user.role]}
-        nav={menu && <SiteNav items={menu.items} label={menu.label} />}
+        nav={menu && <HeaderNav items={menu.items} label={menu.label} />}
       >
+        <HeaderRoadmapShare />
         <AccountMenu user={user} />
       </SiteHeader>
       <main id="main-content" className="page app-main" tabIndex={-1}>

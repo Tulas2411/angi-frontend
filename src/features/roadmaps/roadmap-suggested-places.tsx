@@ -2,29 +2,35 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { PlusIcon } from "@heroicons/react/24/outline";
 import { Media } from "@/components/ui/primitives";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/shadcn/popover";
 import { Button } from "@/shared/ui";
 import { dishHref } from "@/features/explore/explore-routes";
 import { useRemote } from "@/features/explore/use-remote";
 import {
   addItemError,
   buildAddItemRequest,
-  nextMealSlot,
+  mealSlots,
   suggestionsError,
 } from "./roadmap-add-item-rules";
 import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapItemService } from "./roadmap-service";
-import type { DishCardDto, RoadmapDayDto } from "./roadmap-types";
+import type { DishCardDto, MealSlot, RoadmapDayDto } from "./roadmap-types";
 import "./roadmap-place.css";
 
 /** RM-06 allows 1..50; one short strip per day. */
 const stripSize = 10;
 
 /**
- * Wanderlog-style "Địa điểm được đề xuất" under a day: RM-06 for the day's province, and "+" adds
- * the dish (RM-07) to the first meal the day still lacks. Loaded once per day and province; an added
- * dish leaves the strip at once and RM-03 is read again by the parent.
+ * Wanderlog-style "Địa điểm được đề xuất" under a day: RM-06 for the day's province. "+" opens a
+ * small menu of the day's meals and adds the dish (RM-07) to the one picked. Loaded once per day and
+ * province; an added dish leaves the strip at once and RM-03 is read again by the parent.
  */
 export function SuggestedPlaces({
   roadmapId,
@@ -46,10 +52,11 @@ export function SuggestedPlaces({
   const [open, setOpen] = useState(true);
   const [added, setAdded] = useState<readonly number[]>([]);
   const [adding, setAdding] = useState<number | null>(null);
+  // The dish whose "+" menu of meals is open.
+  const [picking, setPicking] = useState<number | null>(null);
   const [problem, setProblem] = useState("");
   const track = useRef<HTMLUListElement>(null);
   const bodyId = `suggested-${day.dayId}`;
-  const slot = nextMealSlot(day);
   const [state, retry] = useRemote(
     () =>
       province
@@ -63,8 +70,13 @@ export function SuggestedPlaces({
     `${day.dayId}:${province}:${gps ? `${gps.latitude},${gps.longitude}` : "-"}`,
   );
 
-  async function add(dish: DishCardDto, requestId: string) {
+  /** How many dishes each meal of the day already has, shown in the menu. */
+  const dishesIn = (slot: MealSlot) =>
+    day.items.filter((item) => item.mealSlot === slot).length;
+
+  async function add(dish: DishCardDto, requestId: string, slot: MealSlot) {
     if (adding !== null) return;
+    setPicking(null);
     setAdding(dish.id);
     setProblem("");
     try {
@@ -194,21 +206,54 @@ export function SuggestedPlaces({
                   </small>
                 </span>
               </Link>
-              <button
-                type="button"
-                className="roadmap-suggested-add"
-                aria-label={`Thêm ${dish.name} vào ${mealSlotLabels[slot].toLowerCase()} ngày ${day.dayNumber}`}
-                title={`Thêm vào ${mealSlotLabels[slot].toLowerCase()}`}
-                aria-busy={adding === dish.id || undefined}
-                disabled={adding !== null}
-                onClick={() => answer && void add(dish, answer.requestId)}
+              <Popover
+                open={picking === dish.id}
+                onOpenChange={(next) => setPicking(next ? dish.id : null)}
               >
-                {adding === dish.id ? (
-                  <span className="spinner" aria-hidden />
-                ) : (
-                  <span aria-hidden>+</span>
-                )}
-              </button>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="roadmap-suggested-add"
+                    aria-label={`Thêm ${dish.name} vào ngày ${day.dayNumber}`}
+                    title="Thêm vào một bữa"
+                    aria-busy={adding === dish.id || undefined}
+                    disabled={adding !== null}
+                  >
+                    {adding === dish.id ? (
+                      <span className="spinner" aria-hidden />
+                    ) : (
+                      <PlusIcon aria-hidden />
+                    )}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="roadmap-meal-picker"
+                  align="end"
+                  aria-label={`Chọn bữa cho ${dish.name}`}
+                >
+                  <p className="roadmap-meal-picker-title">Thêm vào bữa nào?</p>
+                  <ul>
+                    {mealSlots.map((slot) => (
+                      <li key={slot}>
+                        <button
+                          type="button"
+                          aria-label={`Thêm ${dish.name} vào ${mealSlotLabels[slot].toLowerCase()} ngày ${day.dayNumber}`}
+                          onClick={() =>
+                            answer && void add(dish, answer.requestId, slot)
+                          }
+                        >
+                          <span>{mealSlotLabels[slot]}</span>
+                          <small>
+                            {dishesIn(slot)
+                              ? `${dishesIn(slot)} món`
+                              : "Chưa có món"}
+                          </small>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </PopoverContent>
+              </Popover>
             </li>
           ))}
         </ul>

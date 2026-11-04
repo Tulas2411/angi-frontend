@@ -409,12 +409,23 @@ const items = (page: Page) => page.locator(".roadmap-item");
 const addButton = (page: Page, name: string, slot: string) =>
   dialog(page).getByRole("button", { name: `Thêm ${name} vào ${slot}` });
 
+/** Every day starts folded unless the URL names one; most tests read the first day's dishes. */
+async function openFirstDay(page: Page) {
+  const toggle = page.locator("#day-1 .roadmap-day-toggle");
+  if (
+    (await toggle.isVisible()) &&
+    (await toggle.getAttribute("aria-expanded")) === "false"
+  )
+    await toggle.click();
+}
+
 async function open(page: Page, path = "/roadmaps/88") {
   await loginAs(page, "traveler");
   await page.goto(path);
   await expect(
     page.getByRole("heading", { name: detail.overview.title, level: 1 }),
   ).toBeVisible();
+  if (!path.includes("day=")) await openFirstDay(page);
 }
 
 test("a meal's button opens the dialog on that meal with the province already filled", async ({
@@ -552,7 +563,7 @@ test("an empty day opens the dialog from its own button, starting at breakfast",
   ).toBeVisible();
   await page
     .locator("#day-2")
-    .getByRole("button", { name: "+ Thêm món", exact: true })
+    .getByRole("button", { name: "Thêm món", exact: true })
     .click();
   const box = dialog(page);
   await expect(
@@ -698,7 +709,7 @@ test("without a known province nothing is asked until one is chosen", async ({
   await open(page);
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "+ Thêm món", exact: true })
+    .getByRole("button", { name: "Thêm món", exact: true })
     .click();
   const box = dialog(page);
   await expect(box.getByLabel(/^Tỉnh \/ thành phố/)).toBeFocused();
@@ -717,7 +728,7 @@ test("without a known province nothing is asked until one is chosen", async ({
   await box.getByRole("button", { name: "Xong" }).click();
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "+ Thêm món", exact: true })
+    .getByRole("button", { name: "Thêm món", exact: true })
     .click();
   await expect(dialog(page).getByLabel(/^Tỉnh \/ thành phố/)).toHaveValue(
     "Thành phố Đà Nẵng",
@@ -734,7 +745,7 @@ test("the province defaults to the one named by the roadmap's title", async ({
   await open(page);
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "+ Thêm món", exact: true })
+    .getByRole("button", { name: "Thêm món", exact: true })
     .click();
   const box = dialog(page);
   await expect(box.getByLabel(/^Tỉnh \/ thành phố/)).toHaveValue(
@@ -810,6 +821,24 @@ test("the suggestion cards keep one height in each layout; long parts fade inste
       );
     expect(new Set(heights).size, layout).toBe(1);
     if (height) expect(heights[0], layout).toBe(height);
+    // The card's actions are on top: the name's link, which covers the card, does not take their
+    // clicks.
+    const first = box.locator(".roadmap-suggestion").first();
+    const controls = first.locator(
+      ".dish-actions button, .dish-actions a.roadmap-suggestion-map",
+    );
+    for (const control of await controls.all())
+      expect(
+        await control.evaluate((element) => {
+          const { left, top, width, height } = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            left + width / 2,
+            top + height / 2,
+          );
+          return Boolean(hit && element.contains(hit));
+        }),
+        layout,
+      ).toBe(true);
   }
   // A row shows the dish's description (DISH-02) instead of the restaurant, and the price on the
   // name's line.

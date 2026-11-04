@@ -336,12 +336,23 @@ const submitButton = (page: Page) =>
 const openBanner = (page: Page) =>
   page.getByRole("button", { name: "Tạo lộ trình bằng AI" }).click();
 
+/** Every day starts folded unless the URL names one; most tests read the first day's dishes. */
+async function openFirstDay(page: Page) {
+  const toggle = page.locator("#day-1 .roadmap-day-toggle");
+  if (
+    (await toggle.isVisible()) &&
+    (await toggle.getAttribute("aria-expanded")) === "false"
+  )
+    await toggle.click();
+}
+
 async function open(page: Page, path = "/roadmaps/88") {
   await loginAs(page, "traveler");
   await page.goto(path);
   await expect(
     page.getByRole("heading", { name: detail.overview.title, level: 1 }),
   ).toBeVisible();
+  if (!path.includes("day=")) await openFirstDay(page);
 }
 
 test("the banner opens the dialog for the whole roadmap with the province from its title", async ({
@@ -413,7 +424,7 @@ test("one day or one meal sends its ids, the constraints and the tags as documen
   await open(page);
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "Gợi ý bằng AI" })
+    .getByRole("button", { name: "ANGI thêm giúp bạn" })
     .click();
   const box = dialog(page);
   await expect(box.getByRole("tab", { name: "Một ngày" })).toHaveAttribute(
@@ -464,7 +475,7 @@ test("one day or one meal sends its ids, the constraints and the tags as documen
   // One meal of one day: mealSlot replaces mealSlots.
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "Gợi ý bằng AI" })
+    .getByRole("button", { name: "ANGI thêm giúp bạn" })
     .click();
   await box.getByRole("tab", { name: "Một bữa" }).click();
   await chooseOption(box.getByLabel("Bữa", { exact: true }), "late_night");
@@ -507,7 +518,7 @@ test("replacing says how many dishes go and sends replaceExisting", async ({
   await open(page);
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "Gợi ý bằng AI" })
+    .getByRole("button", { name: "ANGI thêm giúp bạn" })
     .click();
   const box = dialog(page);
   await box
@@ -604,7 +615,7 @@ test("a rejected request says why and keeps the form", async ({ page }) => {
   failGenerate = { status: 404, errorCode: "DAY_NOT_FOUND" };
   await page
     .locator("#day-1")
-    .getByRole("button", { name: "Gợi ý bằng AI" })
+    .getByRole("button", { name: "ANGI thêm giúp bạn" })
     .click();
   await submitButton(page).click();
   await expect(dialog(page).getByRole("alert")).toContainText(

@@ -1213,6 +1213,27 @@ select.input {
   min-height: 40px;
   padding: 8px 18px;
 }
+/* The roadmap detail page's share action, in place of the menu; only its icon on a phone. */
+.header-share {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.header-share svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+@media (max-width: 600px) {
+  .site-actions .header-share {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+  }
+  .header-share span {
+    display: none;
+  }
+}
 .site-nav a {
   padding-block: 6px;
   border-bottom: 2px solid transparent;
