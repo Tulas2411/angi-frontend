@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   Avatar,
@@ -30,6 +31,7 @@ import {
   validatePasswordForm,
   validateProfilePatch,
   type PasswordFormValues,
+  permissionLabel,
 } from "./account-rules";
 import { accountService } from "./account-service";
 import type { ProfileFormValues, UserProfileDto } from "./account-types";
@@ -259,6 +261,25 @@ function AccountEditor({
           </form>
         </Card>
       </div>
+      {profile.permissions.length > 0 && (
+        <Card title="Quyền của bạn" className="account-permissions">
+          <p className="helper">
+            Các thao tác tài khoản này được làm, do Quản trị viên cấp. Thiếu
+            quyền nào thì liên hệ Quản trị viên.
+          </p>
+          <ul>
+            {profile.permissions.map((code) => (
+              <li key={code}>
+                <CheckCircleIcon aria-hidden />
+                <span>
+                  <strong>{permissionLabel(code)}</strong>
+                  <small>{code}</small>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
       <ConfirmDialog
         open={discardOpen}
         title="Bỏ thay đổi chưa lưu?"

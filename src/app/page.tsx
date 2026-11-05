@@ -17,9 +17,9 @@ export default async function HomePage({
 }) {
   const [session, params] = await Promise.all([getSession(), searchParams]);
   const auth = readAuth(session);
-  // The Restaurant Owner workspace is the only signed-in destination backed by
-  // the real API. Other roles stay on the homepage in its signed-in state.
+  // Staff and owners land on their workspace; Travelers and guests stay on the homepage.
   if (auth?.user.role === "RESTAURANT_OWNER") redirect("/restaurant");
+  if (auth?.user.role === "MOD") redirect("/moderation");
   return (
     <PublicHomePage
       selection={readHomeSelection(params)}

@@ -523,7 +523,7 @@ export function VerificationReviewPage({
                       : "Ví dụ: Bổ sung ảnh mặt tiền có biển hiệu rõ tên quán."
                 }
                 error={noteError}
-                helper={`${note.trim().length}/${reviewNoteMax} ký tự. Chủ quán sẽ thấy nội dung này.`}
+                helper="Chủ quán sẽ thấy nội dung này."
                 onChange={(event) => {
                   setNote(event.target.value);
                   setNoteError("");

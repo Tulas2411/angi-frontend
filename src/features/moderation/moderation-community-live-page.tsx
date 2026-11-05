@@ -16,6 +16,7 @@ import { PageHeading } from "@/components/layout/workspace";
 import { getErrorMessage } from "@/shared/api/error";
 import { blogService } from "@/features/blogs/blog-service";
 import type { BlogCommentDto } from "@/features/blogs/blog-types";
+import { plainText } from "./report-handling-rules";
 import {
   blogStatusLabels,
   commentStatusLabels,
@@ -213,7 +214,7 @@ export function ModerationCommunityLivePage() {
                 render: (blog) => (
                   <>
                     <strong>{blog.title}</strong>
-                    <p className="helper">{blog.excerpt}</p>
+                    <p className="helper">{plainText(blog.excerpt)}</p>
                   </>
                 ),
               },

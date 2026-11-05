@@ -427,7 +427,7 @@ function DishDialog({
               : "Ví dụ: Chủ quán đã thay ảnh đúng với món."
           }
           error={error}
-          helper={`${reason.trim().length}/${reasonMax} ký tự.`}
+          helper={undefined}
           onChange={(event) => {
             setReason(event.target.value);
             setError("");
@@ -572,7 +572,7 @@ function ReportDialog({
             value={note}
             maxLength={1000}
             placeholder="Ví dụ: Đã kiểm tra, quán đổi giờ mở cửa nhưng chưa cập nhật."
-            helper={`${note.trim().length}/1000 ký tự. Người báo cáo và chủ quán nhận thông báo.`}
+            helper="Người báo cáo và chủ quán nhận thông báo."
             onChange={(event) => setNote(event.target.value)}
           />
           {report.reportCountOnTarget > 1 && (
@@ -1068,7 +1068,7 @@ export function RestaurantModerationDetailPage({
                       : "Ví dụ: Nhiều báo cáo về vệ sinh an toàn thực phẩm."
                   }
                   error={reasonError}
-                  helper={`${reason.trim().length}/${reasonMax} ký tự. Chủ quán sẽ thấy lý do này.`}
+                  helper="Chủ quán sẽ thấy lý do này."
                   onChange={(event) => {
                     setReason(event.target.value);
                     setReasonError("");

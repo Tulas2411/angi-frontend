@@ -191,9 +191,89 @@
   font-weight: 600;
   text-decoration: none;
 }
+/*
+ * Review cards: the dish photo fills the left of the card at full height, like the dish cards of
+ * the Traveler pages. A changed photo splits that column: the old one above, the new one below.
+ */
+.mr-items > .mr-item {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0;
+  min-height: 180px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.mr-items > .mr-item::before {
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 4px;
+  border-radius: 0;
+}
+.mr-items > .mr-item > .mr-photos {
+  display: grid;
+  align-items: stretch;
+  gap: 2px;
+  background: var(--card);
+}
+.mr-items > .mr-item .mr-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.mr-items > .mr-item .mr-photos[data-compare] {
+  grid-template-rows: 1fr 1fr;
+}
+.mr-items > .mr-item .mr-photos[data-compare] .mr-photo {
+  min-height: 130px;
+}
+.mr-photo-frame {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+}
+.mr-photo-frame figcaption {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(34 34 34 / 0.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.mr-photo-frame figcaption[data-new] {
+  background: var(--warning-ink);
+}
+.mr-items > .mr-item > .mr-item-body {
+  align-content: start;
+  padding: var(--space-5) var(--space-5) var(--space-5) var(--space-6);
+}
+
 @media (max-width: 640px) {
   .mr-item {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .mr-items > .mr-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mr-items > .mr-item .mr-photo {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+  .mr-items > .mr-item .mr-photos[data-compare] {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+  }
+  .mr-items > .mr-item .mr-photos[data-compare] .mr-photo {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+  .mr-items > .mr-item > .mr-item-body {
+    padding: var(--space-4);
   }
   .mr-hero {
     grid-template-columns: minmax(0, 1fr);
