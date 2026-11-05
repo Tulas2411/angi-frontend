@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -54,7 +55,6 @@ export function MyBlogsPage({
   const [removing, setRemoving] = useState<MyBlogCardDto | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState("");
-  const [notice, setNotice] = useState("");
   const deleting = useRef(false);
 
   async function confirmRemove() {
@@ -65,13 +65,13 @@ export function MyBlogsPage({
     const target = removing;
     try {
       await service.remove(target.id);
-      setNotice(`Đã xóa “${target.title}”.`);
+      notify.success(`Đã xóa “${target.title}”.`);
       setRemoving(null);
       setVersion((value) => value + 1);
     } catch (caught) {
       const failure = blogError(caught);
       if (failure.gone) {
-        setNotice(
+        notify.info(
           `“${target.title}” không còn nữa. Danh sách đã được cập nhật.`,
         );
         setRemoving(null);
@@ -142,7 +142,6 @@ export function MyBlogsPage({
     <div className="blog-page">
       {heading}
       {tabs}
-      {notice && <Alert tone="success">{notice}</Alert>}
       {data.totalItems === 0 ? (
         <EmptyState
           title={
@@ -177,7 +176,6 @@ export function MyBlogsPage({
                       title="Xóa"
                       onClick={() => {
                         setProblem("");
-                        setNotice("");
                         setRemoving(blog);
                       }}
                       suppressHydrationWarning

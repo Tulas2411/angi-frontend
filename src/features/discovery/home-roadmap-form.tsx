@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import {
   useEffect,
   useRef,
@@ -7,7 +8,6 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Alert, Button } from "@/shared/ui";
 import { Field } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
@@ -66,7 +66,6 @@ function RoadmapFields({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [createdHref, setCreatedHref] = useState<string | null>(null);
   const submitting = useRef(false);
   const active = useRef(true);
   const form = useRef<HTMLFormElement>(null);
@@ -114,7 +113,8 @@ function RoadmapFields({
       clearHomeRoadmapDraft();
       if (!active.current) return;
       const href = roadmapDetailHref(created.overview.id);
-      setCreatedHref(href);
+      // The toast lives in the root layout, so it is still there on the new roadmap's page.
+      notify.success("Đã tạo lộ trình của bạn.");
       router.push(href);
       // Keep the submit lock until navigation, so a slow transition cannot create another record.
     } catch (caught) {
@@ -189,11 +189,6 @@ function RoadmapFields({
         />
       </div>
       {error && <Alert>{error}</Alert>}
-      {createdHref && (
-        <Alert tone="success">
-          Đã tạo lộ trình của bạn. <Link href={createdHref}>Mở lộ trình →</Link>
-        </Alert>
-      )}
       <p className="home-quick-note">
         {!allowed
           ? "Tạo lộ trình dành cho tài khoản Người khám phá."

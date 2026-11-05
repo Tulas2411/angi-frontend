@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
@@ -130,7 +131,6 @@ function OperatingStatusEditor({
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [request, setRequest] =
     useState<UpdateOperatingStatusRequestDto | null>(null);
   const [discard, setDiscard] = useState<DiscardConfirmation | null>(null);
@@ -158,7 +158,6 @@ function OperatingStatusEditor({
   function edited() {
     setErrors({});
     setError("");
-    setSuccess("");
     setFocusRequest(null);
   }
   function reset() {
@@ -186,7 +185,6 @@ function OperatingStatusEditor({
     const invalid = validateOperatingStatus(selected, note);
     setErrors(invalid);
     setError("");
-    setSuccess("");
     if (Object.keys(invalid).length) {
       setError("Vui lòng kiểm tra thông tin đã nhập.");
       setFocusRequest({ name: Object.keys(invalid)[0] });
@@ -208,7 +206,7 @@ function OperatingStatusEditor({
       setNote("");
       setErrors({});
       setFocusRequest(null);
-      setSuccess("Đã cập nhật trạng thái hoạt động.");
+      notify.success("Đã cập nhật trạng thái hoạt động.");
     } catch (caught) {
       if (!active.current) return;
       const fields =
@@ -261,7 +259,6 @@ function OperatingStatusEditor({
           viễn; chưa thể mở lại khi còn bị đình chỉ.
         </Alert>
       )}
-      {success && <Alert tone="success">{success}</Alert>}
       {error && (
         <div ref={feedback} tabIndex={-1}>
           <Alert>{error}</Alert>

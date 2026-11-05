@@ -156,26 +156,27 @@
   align-items: center;
   gap: 4px 0;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .roadmap-card-meta > span:not(.roadmap-card-owner) + span::before {
   content: "•";
-  margin-inline: 8px;
+  margin-inline: 6px;
   font-size: 10px;
   vertical-align: 2px;
 }
+/* Same look as the header avatar (.avatar): coral circle, ink initial. */
 .roadmap-card-owner {
   display: inline-grid;
   place-items: center;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   margin-right: 8px;
   border-radius: 50%;
-  background: var(--control);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
+  background: var(--coral);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
 }
 
 @media (max-width: 1280px) {

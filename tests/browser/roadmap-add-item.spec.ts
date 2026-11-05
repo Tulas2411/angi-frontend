@@ -941,15 +941,13 @@ test("removing a dish sends RM-09 at once and leaves the other dishes alone", as
     "1 món · 30.000 VND",
   );
   expect(detailReads).toBe(2);
-  await expect(page.locator(".roadmap-day-notice")).toContainText(
-    "Đã xóa Bún bò Huế khỏi lộ trình.",
-  );
-  // The card that held the focus is gone, so the notice takes it.
-  await expect(page.locator(".roadmap-day-notice")).toBeFocused();
-  // It is only a confirmation: after 5 seconds it goes away by itself.
-  await expect(page.locator(".roadmap-day-notice")).toBeHidden({
-    timeout: 8000,
-  });
+  // The confirmation is a toast that leaves by itself; nothing is added to the day.
+  const toast = page.getByText("Đã xóa Bún bò Huế khỏi lộ trình.");
+  await expect(toast).toBeVisible();
+  await expect(page.locator(".roadmap-day-notice")).toHaveCount(0);
+  // The card that held the focus is gone, so the day's heading takes it.
+  await expect(page.locator("#day-1 .roadmap-day-toggle")).toBeFocused();
+  await expect(toast).toBeHidden({ timeout: 8000 });
   await page.getByRole("tab", { name: "Ngân sách" }).click();
   await expect(
     page
@@ -991,9 +989,10 @@ test("a dish already removed elsewhere is reported and the list is refreshed", a
   await open(page);
   itemGoneElsewhere = true;
   await removeButton(page, "Bún bò Huế").click();
-  await expect(page.locator(".roadmap-day-notice")).toContainText(
-    "Bún bò Huế không còn trong lộ trình",
-  );
+  // Told by a toast; the list is read again.
+  await expect(
+    page.getByText(/Bún bò Huế không còn trong lộ trình/),
+  ).toBeVisible();
   await expect(items(page)).toHaveCount(1);
   expect(deleteCalls).toEqual([1502]);
 });

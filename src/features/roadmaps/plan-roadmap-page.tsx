@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
 import { ActionLink, Media } from "@/components/ui/primitives";
@@ -37,7 +38,6 @@ export function PlanRoadmapPage({
 }) {
   const [roadmap, setRoadmap] = useState<RoadmapDetailDto | null>(null);
   const [editing, setEditing] = useState(false);
-  const [notice, setNotice] = useState("");
   // Remounts the creation form with empty values after "Lập lộ trình khác".
   const [formKey, setFormKey] = useState(0);
   const overview = roadmap?.overview;
@@ -84,7 +84,6 @@ export function PlanRoadmapPage({
               // RM-01 keeps no destination; RM-06 asks for it, so remember it for this browser.
               rememberDestination(created.overview.id, values.province);
               setRoadmap(created);
-              setNotice("");
             }}
           />
         )}
@@ -107,7 +106,7 @@ export function PlanRoadmapPage({
               );
               setRoadmap(updated);
               setEditing(false);
-              setNotice("Đã lưu thông tin lộ trình.");
+              notify.success("Đã lưu thông tin lộ trình.");
             }}
           />
         )}
@@ -117,8 +116,7 @@ export function PlanRoadmapPage({
             aria-labelledby="roadmap-created-title"
           >
             <Alert tone="success">
-              {notice ||
-                `Đã tạo lộ trình với ${roadmap.itinerary.length} ngày trống.`}
+              {`Đã tạo lộ trình với ${roadmap.itinerary.length} ngày trống.`}
             </Alert>
             <div className="stack-sm">
               <Badge>Lộ trình của bạn</Badge>
@@ -159,7 +157,6 @@ export function PlanRoadmapPage({
             <div className="actions registration-actions">
               <Button
                 onClick={() => {
-                  setNotice("");
                   setEditing(true);
                 }}
               >
@@ -169,7 +166,6 @@ export function PlanRoadmapPage({
                 variant="secondary"
                 onClick={() => {
                   setRoadmap(null);
-                  setNotice("");
                   setFormKey((key) => key + 1);
                 }}
               >

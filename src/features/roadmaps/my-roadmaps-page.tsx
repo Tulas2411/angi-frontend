@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -122,10 +123,6 @@ export function MyRoadmapsPage({
   const [target, setTarget] = useState<RoadmapSummaryDto | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteProblem, setDeleteProblem] = useState("");
-  const [notice, setNotice] = useState<{
-    tone: "success" | "info";
-    text: string;
-  } | null>(null);
   // One RM-05 at a time: a second press while it runs must not send it again.
   const busy = useRef(false);
   useEffect(() => {
@@ -175,7 +172,9 @@ export function MyRoadmapsPage({
     setDeleting(false);
     busy.current = false;
     setTarget(null);
-    setNotice({ tone, text });
+    // The result of the deletion, as a toast (the list changes under it).
+    if (tone === "success") notify.success(text);
+    else notify.info(text);
     const next = pageAfterDelete(page, state.data.items.length);
     if (next !== page) router.push(roadmapListHref(next));
     else setAttempt((value) => value + 1);
@@ -206,11 +205,6 @@ export function MyRoadmapsPage({
         )}
       </div>
     </ConfirmDialog>
-  );
-  const noticeLine = notice && (
-    <Alert tone={notice.tone}>
-      <span role="status">{notice.text}</span>
-    </Alert>
   );
 
   const planLink = (
@@ -254,7 +248,6 @@ export function MyRoadmapsPage({
     return (
       <div className="stack">
         {heading()}
-        {noticeLine}
         <EmptyState title="Bạn chưa có lộ trình nào" action={planLink}>
           Lập lộ trình đầu tiên để sắp xếp các bữa ăn theo từng ngày của chuyến
           đi.
@@ -264,7 +257,6 @@ export function MyRoadmapsPage({
   return (
     <div className="stack">
       {heading(`Bạn có ${data.totalItems} lộ trình, mới nhất trước.`)}
-      {noticeLine}
       <ul className="roadmap-grid">
         {data.items.map((roadmap) => (
           <li key={roadmap.id}>
@@ -272,7 +264,6 @@ export function MyRoadmapsPage({
               roadmap={roadmap}
               owner={owner}
               onDelete={() => {
-                setNotice(null);
                 setDeleteProblem("");
                 setTarget(roadmap);
               }}

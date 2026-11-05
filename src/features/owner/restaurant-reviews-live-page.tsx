@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -222,7 +223,6 @@ export function RestaurantReviewsLivePage() {
   const [editing, setEditing] = useState<OwnerReviewDto | null>(null);
   const [text, setText] = useState("");
   const [fieldError, setFieldError] = useState("");
-  const [saved, setSaved] = useState("");
   const [busy, setBusy] = useState(false);
 
   /** "unanswered" là `replied=false`; "answered" là `replied=true`; "all" thì không lọc. */
@@ -271,7 +271,6 @@ export function RestaurantReviewsLivePage() {
     setEditing(review);
     setText(review.reply?.content ?? "");
     setFieldError("");
-    setSaved("");
   }
 
   function closeReply() {
@@ -313,7 +312,7 @@ export function RestaurantReviewsLivePage() {
             }
           : current,
       );
-      setSaved(`Đã gửi phản hồi tới ${editing.user.displayName}.`);
+      notify.success(`Đã gửi phản hồi tới ${editing.user.displayName}.`);
       closeReply();
     } catch (caught) {
       setFieldError(getErrorMessage(caught));
@@ -347,8 +346,7 @@ export function RestaurantReviewsLivePage() {
         description="Đọc đánh giá và phản hồi từng trải nghiệm."
       />
 
-      {error && <Alert tone="warning">{error}</Alert>}
-      {saved && <Alert tone="success">{saved}</Alert>}
+      {error && <Alert>{error}</Alert>}
 
       <RatingSummary reviews={rows} />
 

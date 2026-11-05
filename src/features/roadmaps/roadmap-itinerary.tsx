@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Alert, Badge, Button } from "@/shared/ui";
 import {
@@ -87,7 +88,6 @@ type RouteState =
 const dayFoldMs = 220;
 
 /** How long a success notice stays; a warning stays until the traveler acts again. */
-const successNoticeMs = 5000;
 
 /** What follows a removal, shown in the day it happened in. */
 interface DayNotice {
@@ -653,13 +653,9 @@ export function RoadmapItinerary({
   } | null>(null);
   // One removal at a time: a second press on the same dish must not send RM-09 twice.
   const removing = useRef(false);
+  // Warnings of a day (a move, a rating or a removal that failed) stay in that day; the
+  // confirmation of a removal is a toast.
   const [notice, setNotice] = useState<DayNotice | null>(null);
-  // "Đã xóa … khỏi lộ trình." is only confirmation: it goes away by itself after 5 seconds.
-  useEffect(() => {
-    if (notice?.tone !== "success") return;
-    const timer = setTimeout(() => setNotice(null), successNoticeMs);
-    return () => clearTimeout(timer);
-  }, [notice]);
   const [addTarget, setAddTarget] = useState<{
     dayNumber: number;
     slot: MealSlot;
@@ -873,11 +869,17 @@ export function RoadmapItinerary({
       }
       if (!mounted.current) return;
       if (selectedItemId === item.id) onSelectItem(null);
-      setNotice({
-        dayNumber,
-        tone: "success",
-        text: removeNotice(outcome, item.dish.name),
-      });
+      const text = removeNotice(outcome, item.dish.name);
+      if (outcome === "removed") notify.success(text);
+      else notify.info(text);
+      // The pressed button left with its card: keyboard focus goes to the day's heading.
+      requestAnimationFrame(() =>
+        document
+          .querySelector<HTMLButtonElement>(
+            `#day-${dayNumber} .roadmap-day-toggle`,
+          )
+          ?.focus({ preventScroll: true }),
+      );
       try {
         await onItemRemoved();
       } catch {

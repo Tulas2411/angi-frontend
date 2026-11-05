@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -60,33 +61,27 @@ export function NotificationsPage({
   // Rows read on this screen since the last load; the list is not reloaded for each one.
   const [read, setRead] = useState<ReadonlySet<number>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [problem, setProblem] = useState("");
-  const [notice, setNotice] = useState("");
   const marking = useRef(false);
 
   async function markRead(ids: number[] | "all") {
     if (marking.current) return false;
     marking.current = true;
     setBusy(true);
-    setProblem("");
-    setNotice("");
     try {
       const result = await service.markRead(
         ids === "all" ? { all: true } : { ids: ids.slice(0, maxReadIds) },
       );
       announceNotificationsChanged();
       if (ids === "all") {
-        setNotice(
-          result.updated > 0
-            ? `Đã đánh dấu ${result.updated} thông báo là đã đọc.`
-            : "Không còn thông báo chưa đọc.",
-        );
+        if (result.updated > 0)
+          notify.success(`Đã đánh dấu ${result.updated} thông báo là đã đọc.`);
+        else notify.info("Không còn thông báo chưa đọc.");
         setRead(new Set());
         setVersion((value) => value + 1);
       } else setRead((previous) => new Set([...previous, ...ids]));
       return true;
     } catch (caught) {
-      setProblem(getErrorMessage(caught));
+      notify.error(caught);
       return false;
     } finally {
       marking.current = false;
@@ -208,8 +203,6 @@ export function NotificationsPage({
     <div className="notifications-page">
       {heading}
       {tabs}
-      {notice && <Alert tone="success">{notice}</Alert>}
-      {problem && <Alert>{problem}</Alert>}
       {data.items.length === 0 ? (
         <EmptyState
           title={
