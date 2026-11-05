@@ -1,5 +1,6 @@
 "use client";
 
+import { notify } from "@/shared/ui/notify";
 import {
   useCallback,
   useEffect,
@@ -191,7 +192,6 @@ function VerificationEditor({
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [conflict, setConflict] = useState("");
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [focusRequest, setFocusRequest] = useState<{ name: string } | null>(
@@ -238,7 +238,6 @@ function VerificationEditor({
     setUploadRevision((value) => value + 1);
     setErrors({});
     setError("");
-    setSuccess("");
     setConflict("");
     setFocusRequest({ name: "legalName" });
     setTab("new");
@@ -264,7 +263,6 @@ function VerificationEditor({
     );
     setErrors(invalid);
     setError("");
-    setSuccess("");
     if (Object.keys(invalid).length) {
       focusInvalid(invalid);
       return;
@@ -296,7 +294,7 @@ function VerificationEditor({
       setResubmission(null);
       setConfirmation(null);
       setTab("status");
-      setSuccess(
+      notify.success(
         previousId !== null
           ? "Đã gửi lại hồ sơ xác minh. Trạng thái: Chờ duyệt."
           : "Đã gửi hồ sơ xác minh. Trạng thái: Chờ duyệt.",
@@ -392,7 +390,6 @@ function VerificationEditor({
         </Button>
       </div>
       <div ref={feedback} tabIndex={-1} className="stack-sm">
-        {success && <Alert tone="success">{success}</Alert>}
         {error && <Alert>{error}</Alert>}
       </div>
       <Tabs

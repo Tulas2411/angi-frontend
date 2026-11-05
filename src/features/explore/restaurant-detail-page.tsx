@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useState, type ReactNode } from "react";
 import {
   BuildingStorefrontIcon,
@@ -526,10 +527,6 @@ export function RestaurantDetailPage({
   const [tab, setTab] = useState("information");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [notice, setNotice] = useState<{
-    tone: "success" | "info";
-    text: string;
-  } | null>(null);
 
   if (state.status === "loading") return <Skeleton rows={5} />;
   if (state.status === "error") {
@@ -642,7 +639,6 @@ export function RestaurantDetailPage({
           { value: "reviews", label: "Đánh giá" },
         ]}
       />
-      {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
       {tab === "information" && <InfoTab restaurant={restaurant} hero={hero} />}
       {tab === "menu" && (
         <>
@@ -679,17 +675,11 @@ export function RestaurantDetailPage({
             setReviewOpen(false);
             setReload((value) => value + 1);
             setTab("reviews");
-            setNotice(
-              saved
-                ? {
-                    tone: "success",
-                    text: "Đã gửi đánh giá của bạn. Cảm ơn bạn!",
-                  }
-                : {
-                    tone: "info",
-                    text: "Bạn đã đánh giá quán này trước đó, nên không đánh giá lại được.",
-                  },
-            );
+            if (saved) notify.success("Đã gửi đánh giá của bạn. Cảm ơn bạn!");
+            else
+              notify.info(
+                "Bạn đã đánh giá quán này trước đó, nên không đánh giá lại được.",
+              );
           }}
         />
       )}
@@ -704,17 +694,10 @@ export function RestaurantDetailPage({
           onClose={() => setReportOpen(false)}
           onSent={(already) => {
             setReportOpen(false);
-            setNotice(
-              already
-                ? {
-                    tone: "info",
-                    text: "Báo cáo trước đó của bạn về quán này đang chờ xử lý.",
-                  }
-                : {
-                    tone: "success",
-                    text: "Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.",
-                  },
-            );
+            if (already)
+              notify.info("Báo cáo trước đó của bạn về quán này đang chờ xử lý.");
+            else
+              notify.success("Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.");
           }}
         />
       )}

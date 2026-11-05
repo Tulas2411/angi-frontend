@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
@@ -140,7 +141,6 @@ function BusinessHoursEditor({
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [focusRequest, setFocusRequest] = useState<{ name: string } | null>(
     null,
   );
@@ -171,7 +171,6 @@ function BusinessHoursEditor({
     setFocusRequest(null);
     setErrors({});
     setError("");
-    setSuccess("");
   }
   function restore(result: UpdateBusinessHoursResponseDto) {
     setDraft(sortBusinessHours(result.hours));
@@ -196,7 +195,6 @@ function BusinessHoursEditor({
   async function persist() {
     if (busy || submitting.current || !dirty) return;
     const { errors: invalid, errorCode } = validateBusinessHours(hours);
-    setSuccess("");
     setErrors(invalid);
     if (errorCode) {
       setError(
@@ -220,7 +218,7 @@ function BusinessHoursEditor({
         isOpenNow: result.isOpenNow,
       });
       restore(result);
-      setSuccess("Đã lưu giờ mở cửa.");
+      notify.success("Đã lưu giờ mở cửa.");
     } catch (caught) {
       if (!active.current) return;
       const fields =
@@ -270,7 +268,6 @@ function BusinessHoursEditor({
           { value: "status", label: "Trạng thái" },
         ]}
       />
-      {success && <Alert tone="success">{success}</Alert>}
       {error && (
         <div ref={feedback} tabIndex={-1}>
           <Alert>{error}</Alert>

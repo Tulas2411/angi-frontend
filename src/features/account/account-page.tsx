@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
@@ -104,7 +105,6 @@ function AccountEditor({
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
@@ -115,14 +115,12 @@ function AccountEditor({
   function change(key: keyof ProfileFormValues, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [key]: "" }));
-    setSuccess("");
   }
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving || submitting.current || !dirty) return;
     const invalid = validateProfilePatch(patch);
     setErrors(invalid);
-    setSuccess("");
     setError("");
     if (Object.keys(invalid).length) {
       setError("Vui lòng kiểm tra thông tin đã nhập.");
@@ -134,7 +132,7 @@ function AccountEditor({
       const saved = await accountService.updateProfile(patch);
       onSaved(saved);
       setValues(profileFormFromProfile(saved));
-      setSuccess("Đã lưu thông tin tài khoản.");
+      notify.success("Đã lưu thông tin tài khoản.");
       if (patch.displayName !== undefined) {
         // The header reads the session snapshot; refreshing it shows the new name.
         try {
@@ -158,7 +156,6 @@ function AccountEditor({
     setValues(profileFormFromProfile(profile));
     setErrors({});
     setError("");
-    setSuccess("");
   }
   return (
     <div className="stack">
@@ -167,7 +164,6 @@ function AccountEditor({
         title="Tài khoản của bạn"
         description="Cập nhật thông tin cá nhân và bảo vệ tài khoản ANGI của bạn."
       />
-      {success && <Alert tone="success">{success}</Alert>}
       <div className="account-grid">
         <Card className="account-identity">
           <Avatar
@@ -279,9 +275,9 @@ function AccountEditor({
         onClose={() => setPasswordOpen(false)}
         onChanged={() => {
           setPasswordOpen(false);
-          setSuccess(
-            "Đã cập nhật mật khẩu. Các phiên đăng nhập khác đã bị đăng xuất.",
-          );
+          notify.success("Đã cập nhật mật khẩu.", {
+            description: "Các phiên đăng nhập khác đã bị đăng xuất.",
+          });
         }}
       />
     </div>

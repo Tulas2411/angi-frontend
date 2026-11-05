@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -47,10 +48,6 @@ export function BlogDetailPage({
   const [likeBusy, setLikeBusy] = useState(false);
   const [problem, setProblem] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
-  const [notice, setNotice] = useState<{
-    tone: "success" | "info";
-    text: string;
-  } | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
   const [removeBusy, setRemoveBusy] = useState(false);
   const [removeProblem, setRemoveProblem] = useState("");
@@ -224,7 +221,6 @@ export function BlogDetailPage({
                 </div>
               </div>
               {problem && <Alert>{problem}</Alert>}
-              {notice && <Alert tone={notice.tone}>{notice.text}</Alert>}
               </header>
               {blog.coverUrl && (
                 <div className="blog-hero-media">
@@ -314,17 +310,12 @@ export function BlogDetailPage({
           onClose={() => setReportOpen(false)}
           onSent={(already) => {
             setReportOpen(false);
-            setNotice(
-              already
-                ? {
-                    tone: "info",
-                    text: "Báo cáo trước đó của bạn về bài viết này đang chờ xử lý.",
-                  }
-                : {
-                    tone: "success",
-                    text: "Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.",
-                  },
-            );
+            if (already)
+              notify.info(
+                "Báo cáo trước đó của bạn về bài viết này đang chờ xử lý.",
+              );
+            else
+              notify.success("Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.");
           }}
         />
       )}

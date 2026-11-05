@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
@@ -53,7 +54,6 @@ export function RestaurantMenuPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null),
     [existingId, setExistingId] = useState<number | null>(null);
   const [problem, setProblem] = useState(""),
-    [success, setSuccess] = useState(""),
     [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<Confirmation | null>(null),
     [editor, setEditor] = useState<{ item?: MenuItemDto } | null>(null);
@@ -125,7 +125,6 @@ export function RestaurantMenuPage() {
     locked.current = true;
     setBusy(true);
     setProblem("");
-    setSuccess("");
     setExistingId(null);
     try {
       await operation();
@@ -148,7 +147,7 @@ export function RestaurantMenuPage() {
         openSubmission: { id: result.id, status: "draft" },
       }));
       setHistoryVersion((value) => value + 1);
-      setSuccess("Đã tạo bản nháp từ thực đơn hiện tại.");
+      notify.success("Đã tạo bản nháp từ thực đơn hiện tại.");
       await open(result.id);
     });
   }
@@ -170,11 +169,11 @@ export function RestaurantMenuPage() {
               : dish,
           ),
         }));
-        setSuccess("Đã cập nhật tình trạng phục vụ món.");
+        notify.success("Đã cập nhật tình trạng phục vụ món.");
       } else if (action.kind === "remove") {
         await service.remove(action.submissionId, action.item.id);
         if (!active.current) return;
-        setSuccess(
+        notify.success(
           "Đã xóa món khỏi bản nháp. Thực đơn đang bán vẫn được giữ nguyên.",
         );
         await open(action.submissionId);
@@ -185,7 +184,7 @@ export function RestaurantMenuPage() {
         setDetail((previous) =>
           previous?.id === result.id ? { ...previous, ...result } : previous,
         );
-        setSuccess(
+        notify.success(
           "Đã hủy bản thực đơn. Thực đơn đang bán vẫn được giữ nguyên.",
         );
       }
@@ -213,7 +212,7 @@ export function RestaurantMenuPage() {
     });
     setHistoryVersion((value) => value + 1);
     setProblem("");
-    setSuccess(
+    notify.success(
       result.status === "pending"
         ? "Đã gửi thực đơn để duyệt. Trạng thái: Chờ duyệt."
         : `Trạng thái thực đơn: ${menuStatusLabels[result.status]}.`,
@@ -263,7 +262,6 @@ export function RestaurantMenuPage() {
                 Mở bản thực đơn hiện có
               </Button>
             )}
-            {success && <p role="status">{success}</p>}
             <div className="between menu-pagination">
               <strong>{restaurant.name}</strong>
               <Button
@@ -630,7 +628,7 @@ export function RestaurantMenuPage() {
           }}
           onSaved={() => {
             setEditor(null);
-            setSuccess("Đã lưu món vào bản nháp.");
+            notify.success("Đã lưu món vào bản nháp.");
             setHistoryVersion((value) => value + 1);
             void open(detail.id);
           }}

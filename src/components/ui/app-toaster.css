@@ -1,0 +1,69 @@
+/*
+ * Toasts (Sonner, unstyled) in ANGI's look. Sonner positions, stacks and animates them; these
+ * rules only draw each card: white, the theme line, the pop shadow, a round icon in the kind's
+ * colour (the card itself stays white, as the other cards of the app).
+ */
+.app-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: min(420px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow:
+    0 2px 6px rgb(34 34 34 / 0.06),
+    var(--shadow-pop);
+  font-family: var(--font-body);
+}
+.app-toast-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+}
+.app-toast-icon svg {
+  width: 22px;
+  height: 22px;
+}
+.app-toast.is-success .app-toast-icon {
+  color: var(--success-ink);
+}
+.app-toast.is-error .app-toast-icon {
+  color: var(--error-ink);
+}
+.app-toast.is-warning .app-toast-icon {
+  color: var(--warning-ink);
+}
+.app-toast.is-info .app-toast-icon {
+  color: var(--muted);
+}
+.app-toast-content {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+.app-toast-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.app-toast-description {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+/* Less motion asked for: toasts appear and leave without sliding. */
+@media (prefers-reduced-motion: reduce) {
+  [data-sonner-toast] {
+    transition: opacity var(--duration-fast) linear !important;
+    transform: none !important;
+  }
+}

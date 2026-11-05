@@ -13,7 +13,7 @@ Mã nguồn: `src/features/notifications/` và `src/features/roll/`. Route nằm
 
 - **Chuông trên header** (cạnh avatar, mọi trang khi đã đăng nhập): số chưa đọc từ NOTI-02, tối đa hiển thị `99+`. Số được đếm lại khi chuyển trang, khi quay lại tab và ngay sau khi đánh dấu đã đọc. Lỗi khi đếm chỉ ẩn con số, không chuyển người dùng sang trang đăng nhập (`getOptional`).
 - **Danh sách:** mới nhất trước, 20 thông báo mỗi trang, tab "Tất cả" và "Chưa đọc" (`isRead=false`); bộ lọc và trang nằm trên URL (`?filter=unread&page=2`). Thông báo chưa đọc có chấm màu coral, nền trắng và tiêu đề đậm.
-- **Đánh dấu đã đọc:** nút "Đã đọc" trên từng dòng (`ids: [id]`), mở một thông báo cũng đánh dấu nó đã đọc rồi mới chuyển trang, và nút "Đánh dấu tất cả đã đọc" (`all: true`).
+- **Đánh dấu đã đọc:** nút "Đã đọc" trên từng dòng (`ids: [id]`), mở một thông báo cũng đánh dấu nó đã đọc rồi mới chuyển trang, và nút "Đánh dấu tất cả đã đọc" (`all: true`). Kết quả ("Đã đánh dấu N thông báo là đã đọc.", "Không còn thông báo chưa đọc.") và lỗi khi đánh dấu hiện thành toast (`docs/toasts.vi.md`).
 - **Thông báo dẫn tới đâu** (theo `type` và `data`):
 
   | `type`                                             | Mở                                    |

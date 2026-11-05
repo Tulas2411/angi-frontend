@@ -1,7 +1,8 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, Button, Input } from "@/shared/ui";
+import { Button, Input } from "@/shared/ui";
 import {
   ActionLink,
   Choice,
@@ -118,7 +119,6 @@ export function BlogListPage({
   );
   // The blog whose report is open, and the outcome of the last report.
   const [reportBlogId, setReportBlogId] = useState<number | null>(null);
-  const [notice, setNotice] = useState("");
   // A bookmarked page past the end falls back to the last page.
   const lastPage =
     state.status === "ready" &&
@@ -195,7 +195,6 @@ export function BlogListPage({
     <div className="blog-page">
       {heading}
       {toolbar}
-      {notice && <Alert tone="success">{notice}</Alert>}
       {data.items.length === 0 ? (
         <EmptyState title="Chưa có cẩm nang phù hợp">
           Thử từ khóa khác, hoặc là người đầu tiên viết một bài.
@@ -216,7 +215,6 @@ export function BlogListPage({
                           role="menuitem"
                           className="blog-menu-item"
                           onClick={() => {
-                            setNotice("");
                             setReportBlogId(blog.id);
                           }}
                           suppressHydrationWarning
@@ -260,11 +258,12 @@ export function BlogListPage({
           onClose={() => setReportBlogId(null)}
           onSent={(already) => {
             setReportBlogId(null);
-            setNotice(
-              already
-                ? "Báo cáo trước đó của bạn về bài viết này đang chờ xử lý."
-                : "Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.",
-            );
+            if (already)
+              notify.info(
+                "Báo cáo trước đó của bạn về bài viết này đang chờ xử lý.",
+              );
+            else
+              notify.success("Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.");
           }}
         />
       )}

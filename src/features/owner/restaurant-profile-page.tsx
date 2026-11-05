@@ -1,4 +1,5 @@
 "use client";
+import { notify } from "@/shared/ui/notify";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
@@ -174,7 +175,6 @@ function RestaurantProfileEditor({
   } | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -230,7 +230,6 @@ function RestaurantProfileEditor({
         : {}),
     }));
     setErrors((current) => ({ ...current, [key]: "" }));
-    setSuccess("");
   }
   function resetDraft() {
     setFocusRequest(null);
@@ -241,7 +240,6 @@ function RestaurantProfileEditor({
     setGalleryDraft(null);
     setErrors({});
     setError("");
-    setSuccess("");
   }
   function changeTab(next: string) {
     if (blocked || next === tab) return;
@@ -269,7 +267,6 @@ function RestaurantProfileEditor({
     const invalid = validateProfilePatch(patch);
     setErrors(invalid);
     setError("");
-    setSuccess("");
     if (Object.keys(invalid).length) {
       setError("Vui lòng kiểm tra thông tin đã nhập.");
       focusErrors(invalid);
@@ -289,7 +286,7 @@ function RestaurantProfileEditor({
       setGalleryDraft(null);
       setErrors({});
       setFocusRequest(null);
-      setSuccess("Đã lưu hồ sơ nhà hàng.");
+      notify.success("Đã lưu hồ sơ nhà hàng.");
     } catch (caught) {
       if (!active.current) return;
       const fields =
@@ -323,7 +320,6 @@ function RestaurantProfileEditor({
           { value: "status", label: "Trạng thái" },
         ]}
       />
-      {success && <Alert tone="success">{success}</Alert>}
       {error && (
         <div ref={errorRef} tabIndex={-1}>
           <Alert>{error}</Alert>
@@ -479,7 +475,6 @@ function RestaurantProfileEditor({
                       setFocusRequest(null);
                       setCover(files);
                       setClearCover(false);
-                      setSuccess("");
                       setErrors((current) => ({
                         ...current,
                         coverMediaId: "",
@@ -489,7 +484,6 @@ function RestaurantProfileEditor({
                       const remove = () => {
                         setCover([]);
                         setClearCover(!!restaurant.coverUrl);
-                        setSuccess("");
                         setErrors((current) => ({
                           ...current,
                           coverMediaId: "",
@@ -539,7 +533,6 @@ function RestaurantProfileEditor({
                     onChange={(photos) => {
                       setFocusRequest(null);
                       setGalleryDraft(photos);
-                      setSuccess("");
                       setErrors((current) => ({
                         ...current,
                         imageMediaIds: "",
@@ -560,7 +553,6 @@ function RestaurantProfileEditor({
                         label: "Xóa toàn bộ ảnh",
                         action: () => {
                           setGalleryDraft([]);
-                          setSuccess("");
                         },
                       })
                     }
@@ -624,7 +616,6 @@ function RestaurantProfileEditor({
               provinceName: "",
               ward: "",
             }));
-            setSuccess("");
           }}
         />
       )}
