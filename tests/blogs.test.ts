@@ -6,6 +6,7 @@ import {
   blogProblems,
   blogReportError,
   htmlToText,
+  mealLabels,
   mineHref,
   parseBlogId,
   textToHtml,
@@ -213,6 +214,18 @@ describe("blog proxy rules and service", () => {
     expect(JSON.parse(calls[4][1].body as string)).toEqual({
       title: "Mới",
       coverMediaId: null,
+    });
+  });
+});
+
+describe("meals of a shared roadmap", () => {
+  it("names every meal of the roadmap, late night included", () => {
+    expect(mealLabels).toMatchObject({
+      breakfast: "Bữa sáng",
+      lunch: "Bữa trưa",
+      dinner: "Bữa tối",
+      snack: "Ăn vặt",
+      late_night: "Ăn khuya",
     });
   });
 });

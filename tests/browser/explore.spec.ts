@@ -988,9 +988,13 @@ test.describe("restaurants", () => {
     await page.getByRole("button", { name: "Trang sau" }).click();
     await expect(page).toHaveURL(/page=2/);
     await expect(cards(page)).toHaveCount(4);
+    // Wide screen: the filters are a sidebar and each pick applies at once (no "Áp dụng").
+    await expect(
+      page.getByRole("complementary", { name: "Bộ lọc quán ăn" }),
+    ).toBeVisible();
     await chooseOption(page.getByLabel("Mức giá"), "1");
+    await expect(page).toHaveURL(/price=1/);
     await page.getByLabel("Chỉ quán đang mở cửa").check();
-    await page.getByRole("button", { name: "Tìm quán" }).click();
     await expect(page).toHaveURL(/price=1/);
     await expect(page).toHaveURL(/open=1/);
     await expect(cards(page)).toHaveCount(1);

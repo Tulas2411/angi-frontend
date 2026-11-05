@@ -22,7 +22,7 @@ import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapItemService } from "./roadmap-service";
 import type { DishCardDto, MealSlot, RoadmapDayDto } from "./roadmap-types";
-import { FadingText } from "./fading-text";
+import { FadingText } from "@/components/ui/fading-text";
 import "./roadmap-place.css";
 
 /** RM-06 allows 1..50; one short strip per day. */

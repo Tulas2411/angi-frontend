@@ -1,7 +1,14 @@
 "use client";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Alert, Button, Card, Input } from "@/shared/ui";
+import { Alert, Button, Card } from "@/shared/ui";
 import {
   Choice,
   EmptyState,
@@ -9,7 +16,6 @@ import {
   Skeleton,
 } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
-import { PageHeading } from "@/components/layout/page-heading";
 import { getErrorMessage } from "@/shared/api/error";
 import {
   activeRestaurantFilterCount,
@@ -34,164 +40,78 @@ import {
 } from "./restaurant-views";
 import { useRestaurantDescriptions } from "./use-dish-descriptions";
 import { useRemote } from "./use-remote";
+import {
+  BrowseHeading,
+  BrowseLayout,
+  BrowseSearchBar,
+  FilterSidebar,
+  useInstantFilters,
+} from "./explore-browse";
 import "./explore.css";
-
-const sameFilters = (a: RestaurantFilters, b: RestaurantFilters) =>
-  JSON.stringify(a) === JSON.stringify(b);
 
 /** How far below the screen the next page starts loading, so the traveler rarely waits. */
 const preloadMargin = "600px";
 
+type RestaurantFilterState = ReturnType<
+  typeof useInstantFilters<RestaurantFilters>
+>;
+
 /**
- * The search row with its expandable filter panel, as on the dish list. The panel only hides when
- * collapsed, so a choice not applied yet survives; applied filters live in the URL.
+ * The restaurant filters inside the shared sidebar (explore-browse.tsx): place, price level,
+ * rating, order, then "open now". Every pick applies at once; the place after a short pause.
  */
-function RestaurantSearch({
-  applied,
-  onApply,
+function RestaurantFilterFields({
+  filters,
 }: {
-  applied: RestaurantFilters;
-  onApply: (filters: RestaurantFilters) => void;
+  filters: RestaurantFilterState;
 }) {
-  const [draft, setDraft] = useState(applied);
-  const [open, setOpen] = useState(false);
-  // A new search in the URL (applied here, or by back/forward) becomes the draft.
-  const appliedKey = JSON.stringify(applied);
-  const [seen, setSeen] = useState(appliedKey);
-  if (seen !== appliedKey) {
-    setSeen(appliedKey);
-    setDraft(applied);
-  }
-  const panelId = useId();
-  const count = activeRestaurantFilterCount(applied);
-  const changed = !sameFilters(draft, applied);
-  const set = (next: Partial<RestaurantFilters>) =>
-    setDraft((current) => ({ ...current, ...next }));
-
+  const { draft, change } = filters;
   return (
-    <form
-      className="dish-search"
-      role="search"
-      aria-label="Tìm quán ăn"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(draft);
-      }}
-    >
-      <div className="dish-search-row">
-        <div className="dish-search-box">
-          <button
-            type="submit"
-            className="dish-search-submit"
-            aria-label="Tìm quán"
-            title="Tìm quán"
-            suppressHydrationWarning
-          >
-            <svg viewBox="0 0 20 20" aria-hidden="true">
-              <circle cx="8.5" cy="8.5" r="5.5" />
-              <path d="m13 13 4.5 4.5" />
-            </svg>
-          </button>
-          <Input
-            id="restaurant-search"
-            type="search"
-            aria-label="Tìm quán ăn"
-            value={draft.q}
-            placeholder="Tìm quán theo tên: Bún Bò Bà Diệu, Phở Thìn…"
-            autoComplete="off"
-            onChange={(event) => set({ q: event.target.value })}
+    <>
+      <div className="dish-filter-grid">
+        <ProvinceField
+          label="Tỉnh / thành phố"
+          type="search"
+          placeholder="Ví dụ: Hà Nội"
+          value={draft.province}
+          showCatalogStatus={false}
+          autoComplete="off"
+          helper="Để trống để tìm ở mọi nơi."
+          onChange={(value) => change({ province: value }, "typing")}
+        />
+        <SelectField
+          label="Mức giá"
+          value={draft.priceLevel}
+          options={priceLevelOptions}
+          onChange={(value) => change({ priceLevel: value }, "now")}
+        />
+        <SelectField
+          label="Đánh giá"
+          value={draft.minRating}
+          options={ratingFilterOptions}
+          onChange={(value) => change({ minRating: value }, "now")}
+        />
+        <SelectField
+          label="Sắp xếp"
+          value={draft.sort}
+          options={restaurantSortOptions}
+          onChange={(value) => change({ sort: value as RestaurantSort }, "now")}
+        />
+      </div>
+      <div className="dish-filter-groups">
+        <fieldset className="dish-filter-chips">
+          <legend>Giờ mở cửa</legend>
+          <Choice
+            label="Chỉ quán đang mở cửa"
+            checked={draft.openNow}
+            onChange={(checked) => change({ openNow: checked }, "now")}
           />
-        </div>
-        <button
-          type="button"
-          className="dish-filter-toggle"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((value) => !value)}
-          suppressHydrationWarning
-        >
-          <span>{open ? "Ẩn bộ lọc" : "Hiện bộ lọc"}</span>
-          {count > 0 && (
-            <span
-              className="dish-filter-count"
-              aria-label={`${count} bộ lọc đang dùng`}
-            >
-              {count}
-            </span>
-          )}
-          <svg viewBox="0 0 20 20" aria-hidden="true">
-            <path d="m5 8 5 5 5-5" />
-          </svg>
-        </button>
+        </fieldset>
+        <p className="helper dish-filter-hint">
+          Kết quả gồm các quán đã được ANGI xác minh.
+        </p>
       </div>
-
-      {/* Slides down when shown and back up when hidden; `hidden` applies once it has slid up. */}
-      <div className="dish-filter-collapse" hidden={!open}>
-        <div>
-          <div id={panelId} className="dish-filter-panel">
-            <div className="dish-filter-grid">
-              <ProvinceField
-                label="Tỉnh / thành phố"
-                type="search"
-                value={draft.province}
-                showCatalogStatus={false}
-                autoComplete="off"
-                helper="Để trống để tìm ở mọi nơi."
-                onChange={(value) => set({ province: value })}
-              />
-              <SelectField
-                label="Mức giá"
-                value={draft.priceLevel}
-                options={priceLevelOptions}
-                onChange={(value) => set({ priceLevel: value })}
-              />
-              <SelectField
-                label="Đánh giá"
-                value={draft.minRating}
-                options={ratingFilterOptions}
-                onChange={(value) => set({ minRating: value })}
-              />
-              <SelectField
-                label="Sắp xếp"
-                value={draft.sort}
-                options={restaurantSortOptions}
-                onChange={(value) => set({ sort: value as RestaurantSort })}
-              />
-            </div>
-            <div className="dish-filter-groups">
-              <Choice
-                label="Chỉ quán đang mở cửa"
-                checked={draft.openNow}
-                onChange={(checked) => set({ openNow: checked })}
-              />
-            </div>
-            <div className="dish-filter-actions">
-              <p className="helper" aria-live="polite">
-                {changed
-                  ? "Có thay đổi chưa áp dụng."
-                  : "Kết quả gồm các quán đã được ANGI xác minh."}
-              </p>
-              <div className="actions">
-                <Button
-                  variant="tertiary"
-                  disabled={
-                    sameFilters(draft, emptyRestaurantFilters) &&
-                    sameFilters(applied, emptyRestaurantFilters)
-                  }
-                  onClick={() => {
-                    setDraft(emptyRestaurantFilters);
-                    onApply(emptyRestaurantFilters);
-                  }}
-                >
-                  Đặt lại bộ lọc
-                </Button>
-                <Button type="submit">Áp dụng bộ lọc</Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </form>
+    </>
   );
 }
 
@@ -246,8 +166,9 @@ export function RestaurantListPage({
     items.map((restaurant) => restaurant.id),
     view !== "gallery",
   );
+  // Each pick is a new URL (Back steps through the searches); the page keeps its scroll.
   const apply = (next: RestaurantFilters) =>
-    router.push(restaurantFiltersHref(next));
+    router.push(restaurantFiltersHref(next), { scroll: false });
 
   async function loadMore() {
     if (loadingMore.current || !hasNext) return;
@@ -300,39 +221,68 @@ export function RestaurantListPage({
   }, [hasNext, stopped, loadedPage, key]);
 
   const heading = (
-    <PageHeading
-      eyebrow="Khám phá"
+    <BrowseHeading
       title="Khám phá quán ăn"
+      section="Quán ăn"
       description="Tìm quán theo tên, khu vực, mức giá và đánh giá của thực khách."
     />
   );
-  const search = <RestaurantSearch applied={filters} onApply={apply} />;
+  // The shared Yelp-like layout (explore-browse.tsx): filters applied as they are picked.
+  const restaurantFilters = useInstantFilters(filters, apply, {
+    href: restaurantFiltersHref,
+    empty: emptyRestaurantFilters,
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const panelId = useId();
+  const count = activeRestaurantFilterCount(filters);
+  const layout = (results: ReactNode) => (
+    <BrowseLayout
+      heading={heading}
+      search={
+        <BrowseSearchBar
+          label="Tìm quán ăn"
+          inputId="restaurant-search"
+          submitLabel="Tìm quán"
+          placeholder="Tìm quán theo tên: Bún Bò Bà Diệu, Phở Thìn…"
+          value={restaurantFilters.draft.q}
+          onChange={(q) => restaurantFilters.change({ q }, "draft")}
+          onSubmit={() => restaurantFilters.submitSearch()}
+          count={count}
+          open={filtersOpen}
+          panelId={panelId}
+          onToggle={() => setFiltersOpen((value) => !value)}
+        />
+      }
+      sidebar={
+        <FilterSidebar
+          label="Bộ lọc quán ăn"
+          open={filtersOpen}
+          panelId={panelId}
+          count={count}
+          canReset={!restaurantFilters.pristine || count > 0}
+          onReset={restaurantFilters.reset}
+          problem={restaurantFilters.problem}
+        >
+          <RestaurantFilterFields filters={restaurantFilters} />
+        </FilterSidebar>
+      }
+    >
+      {results}
+    </BrowseLayout>
+  );
 
-  if (first.status === "loading")
-    return (
-      <div className="stack">
-        {heading}
-        {search}
-        <Skeleton rows={4} />
-      </div>
-    );
+  if (first.status === "loading") return layout(<Skeleton rows={4} />);
   if (first.status === "error")
-    return (
-      <div className="stack">
-        {heading}
-        {search}
-        <Card title="Chưa tải được danh sách quán">
-          <Alert>{getErrorMessage(first.error)}</Alert>
-          <Button onClick={retry}>Thử lại</Button>
-        </Card>
-      </div>
+    return layout(
+      <Card title="Chưa tải được danh sách quán">
+        <Alert>{getErrorMessage(first.error)}</Alert>
+        <Button onClick={retry}>Thử lại</Button>
+      </Card>,
     );
 
   const total = first.data.totalItems;
-  return (
-    <div className="stack">
-      {heading}
-      {search}
+  return layout(
+    <>
       {items.length === 0 ? (
         <EmptyState title="Không tìm thấy quán phù hợp">
           Thử từ khóa, tỉnh thành hoặc bộ lọc khác.
@@ -389,6 +339,6 @@ export function RestaurantListPage({
           <p className="helper">Đã hiện tất cả {items.length} quán.</p>
         )}
       </div>
-    </div>
+    </>,
   );
 }

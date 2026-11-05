@@ -18,6 +18,7 @@ import {
   parseEntityId,
   priceLevelText,
   ratingShares,
+  satisfiedShare,
   ratingSummary,
   reportError,
   reportProblems,
@@ -433,5 +434,16 @@ describe("F-13 dish detail images", () => {
     expect(otherMenuDishes(menu, 3).map((dish) => dish.id)).toEqual([1, 4, 2]);
     expect(otherMenuDishes(menu, 1, 2).map((dish) => dish.id)).toEqual([3, 4]);
     expect(otherMenuDishes([{ id: 5, isAvailable: true }], 5)).toEqual([]);
+  });
+});
+
+describe("share of satisfied diners", () => {
+  it("counts 4 and 5 stars over every review, rounded to a whole percent", () => {
+    expect(satisfiedShare({ "5": 5 })).toBe(100);
+    expect(satisfiedShare({ "5": 2, "4": 1, "3": 1, "1": 2 })).toBe(50);
+    expect(satisfiedShare({ "5": 1, "2": 2 })).toBe(33);
+  });
+  it("says nothing without reviews", () => {
+    expect(satisfiedShare({})).toBeNull();
   });
 });

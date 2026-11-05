@@ -995,25 +995,6 @@ button.roadmap-hero-dates:focus-visible {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
-/*
- * FadingText (fading-text.tsx): one line that is cut at its box and fades out over its last 40px,
- * only when the text is longer than the box. Used by every one-line name of the roadmap pages.
- */
-.fading-text {
-  display: block;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.fading-text[data-overflowing] {
-  -webkit-mask-image: linear-gradient(
-    to right,
-    #000 calc(100% - 40px),
-    transparent
-  );
-  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
-}
-
 /* A fact of the dish card with its icon (price; restaurant and rating). */
 .roadmap-item-fact {
   display: flex;

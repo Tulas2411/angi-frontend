@@ -9,7 +9,7 @@ import {
   SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon } from "@heroicons/react/24/solid";
-import { FadingText } from "./fading-text";
+import { FadingText } from "@/components/ui/fading-text";
 import { Icon, Media } from "@/components/ui/primitives";
 import { getErrorMessage } from "@/shared/api/error";
 import {

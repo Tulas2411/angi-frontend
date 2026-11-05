@@ -246,6 +246,17 @@ export function ratingShares(breakdown: Record<string, number>) {
   });
 }
 
+/** Share of reviews with 4 or 5 stars, as a whole percent; null without reviews. */
+export function satisfiedShare(breakdown: Record<string, number>) {
+  const shares = ratingShares(breakdown);
+  const total = shares.reduce((sum, row) => sum + row.count, 0);
+  if (!total) return null;
+  const happy = shares
+    .filter((row) => row.star >= 4)
+    .reduce((sum, row) => sum + row.count, 0);
+  return Math.round((happy / total) * 100);
+}
+
 export function reviewDate(value: string) {
   return new Intl.DateTimeFormat("vi-VN", {
     timeZone: "Asia/Bangkok",
