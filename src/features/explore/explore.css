@@ -379,6 +379,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-5) var(--space-6);
 }
+/* Two fields that form one part of the sidebar; in the narrow panel's grid they are two cells. */
+.dish-filter-pair {
+  display: contents;
+}
 .dish-filter-chips {
   min-width: 0;
   margin: 0;
@@ -414,7 +418,7 @@
  * margin folds this grid's row gap, as in the restaurant page's form), results.
  */
 /* Narrow screens keep the shell's centred column and padding. */
-.dish-list-page {
+.explore-browse-page {
   padding: 0;
 }
 .dish-browse {
@@ -436,6 +440,36 @@
 .dish-browse > .dish-browse-main {
   grid-area: main;
   min-width: 0;
+}
+/* Page head of the browse pages: a breadcrumb "Khám phá › Quán ăn" over the description. */
+.explore-browse-title {
+  gap: var(--space-2);
+}
+.explore-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.explore-crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.explore-crumbs [aria-current="page"] {
+  color: var(--ink);
+}
+.explore-crumbs svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
 }
 .dish-filter-head {
   display: flex;
@@ -492,13 +526,13 @@
 
 @media (min-width: 1024px) {
   /* Edge to edge: no centred column, no top/bottom padding of the main area. */
-  .app-shell:has(.dish-list-page) .app-main {
+  .app-shell:has(.explore-browse-page) .app-main {
     width: 100%;
     max-width: none;
     margin: 0;
     padding: 0;
   }
-  .dish-list-page {
+  .explore-browse-page {
     padding: 0;
   }
   .dish-browse {
@@ -568,10 +602,14 @@
     gap: var(--space-4);
   }
   /*
-   * A rule above each part, as on Yelp: province, dish form, the price range (its two menus stay
-   * together), then each tag group. The hint under the last group has none.
+   * A rule above each part, as on Yelp: every field, a pair of fields (the dish price range),
+   * every group. The hint under the last group has none.
    */
-  .dish-filter-sidebar .dish-filter-grid > :not(:nth-child(4)),
+  .dish-filter-sidebar .dish-filter-pair {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .dish-filter-sidebar .dish-filter-grid > *,
   .dish-filter-sidebar .dish-filter-chips {
     padding-top: var(--space-4);
     border-top: 1px solid var(--line);
@@ -1179,6 +1217,14 @@
   justify-content: space-between;
   gap: var(--space-3) var(--space-6);
 }
+/* The name and today's state side by side; the actions keep the right end. */
+.explore-tab-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
 .explore-tab-title h1 {
   font-size: clamp(26px, 3vw, 36px);
   overflow-wrap: anywhere;
@@ -1249,90 +1295,270 @@
 }
 
 /* -------------------------------------------------------------- reviews */
+/*
+ * REST-04 in one white card: the score and the spread of stars, a toolbar, then the reviews
+ * divided by thin rules (no box per review). Stars use the rating yellow of the cards.
+ */
+.explore-reviews {
+  --review-star: #f4a300;
+  --review-pad: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.explore-reviews > .pagination {
+  padding: var(--space-4) var(--review-pad) var(--review-pad);
+}
 .explore-rating-summary {
   display: grid;
-  grid-template-columns: 160px minmax(0, 1fr);
+  /* The spread of stars takes the rest of the card, so no half of it is left empty. */
+  grid-template-columns: 220px minmax(0, 1fr);
   gap: var(--space-8);
   align-items: center;
+  padding: var(--review-pad);
+}
+/* Score, stars, count and the satisfied share, centred in their column. */
+.explore-rating-score {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+/* "100% thực khách chấm 4–5 sao", under the count. */
+.explore-rating-satisfied {
+  justify-self: stretch;
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.explore-rating-satisfied strong {
+  color: var(--success-ink);
 }
 .explore-rating-big {
   font-family: var(--font-heading);
-  font-size: 56px;
+  font-size: 52px;
   line-height: 1;
 }
 .explore-breakdown {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .explore-breakdown-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 36px;
+  grid-template-columns: 36px minmax(0, 1fr) 32px;
   gap: var(--space-3);
   align-items: center;
   width: 100%;
-  padding: 4px var(--space-2);
+  padding: 5px var(--space-2);
   border: 0;
   border-radius: var(--radius-sm);
   background: none;
+  color: var(--muted);
   font: inherit;
   font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
   cursor: pointer;
+  transition: background var(--duration-fast) ease;
 }
-.explore-breakdown-row:hover,
+.explore-breakdown-row:hover {
+  background: var(--canvas);
+}
 .explore-breakdown-row.selected {
-  background: var(--control);
+  background: var(--canvas);
+  color: var(--ink);
+  font-weight: 600;
 }
 .explore-breakdown-row:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
+.explore-breakdown-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.explore-breakdown-star svg {
+  width: 13px;
+  height: 13px;
+  color: var(--review-star);
+}
+.explore-breakdown-count {
+  text-align: right;
+}
 .explore-bar {
   display: block;
-  height: 8px;
+  height: 6px;
   border-radius: var(--radius-pill);
-  background: var(--control-active);
+  background: var(--control);
   overflow: hidden;
 }
 .explore-bar > span {
   display: block;
   height: 100%;
   border-radius: var(--radius-pill);
-  background: var(--coral);
+  background: var(--review-star);
+}
+
+/* Toolbar: count and the star filter in use on the left, "Có ảnh" and the order on the right. */
+.explore-review-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--review-pad);
+  border-block: 1px solid var(--line);
+}
+.explore-review-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.explore-review-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 8px 4px 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.explore-review-filter-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.explore-review-filter-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 .explore-review-filters {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
-  gap: var(--space-6);
+  align-items: center;
+  gap: var(--space-3);
 }
+/* "Có ảnh": a real checkbox drawn as a chip. */
+.explore-review-photo-chip {
+  position: relative;
+}
+.explore-review-photo-chip input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.explore-review-photo-chip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.explore-review-photo-chip span svg {
+  width: 16px;
+  height: 16px;
+}
+.explore-review-photo-chip:hover span {
+  background: var(--control);
+}
+.explore-review-photo-chip input:checked + span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+.explore-review-photo-chip input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+/* The order as a compact inline menu: "Sắp xếp [Mới nhất ▾]". */
 .explore-review-filters .field {
-  min-width: 220px;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
 }
-.explore-review {
+.explore-review-filters .field > label {
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* As tall as the "Có ảnh" chip (the shared .input has a 48px field's padding). */
+.explore-review-filters .field .ui-select-trigger {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px 0 16px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+}
+
+/* The reviews, divided by rules. */
+.explore-review-list {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-5);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  background: var(--card);
 }
-.explore-review > header {
+.explore-review {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-5) var(--review-pad);
 }
-.explore-review p {
+.explore-review + .explore-review {
+  border-top: 1px solid var(--line);
+}
+.explore-review-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.explore-review-body > header {
+  display: grid;
+  gap: 2px;
+}
+.explore-review-body > header strong {
+  font-size: 15px;
+}
+.explore-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.explore-review-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 .explore-review-images {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(88px, 104px));
   gap: var(--space-2);
   margin: 0;
   padding: 0;
@@ -1342,19 +1568,52 @@
   aspect-ratio: 1;
   border-radius: var(--radius-md);
 }
+/* The restaurant's answer: a quiet block under the review. */
 .explore-reply {
+  display: grid;
+  gap: 4px;
+  margin-top: var(--space-1);
   padding: var(--space-3) var(--space-4);
-  border-left: 3px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  background: var(--control);
+  border-radius: var(--radius-md);
+  background: var(--canvas);
+  font-size: 14px;
+}
+.explore-reply p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.explore-reply-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-reply-title svg {
+  width: 16px;
+  height: 16px;
 }
 .explore-stars-static {
-  color: var(--coral);
-  letter-spacing: 2px;
+  color: var(--review-star, #f4a300);
+  letter-spacing: 1px;
   white-space: nowrap;
 }
 .explore-stars-static .off {
   color: var(--line-strong);
+}
+.explore-reviews > .empty-state {
+  margin: var(--review-pad);
+}
+
+@media (max-width: 760px) {
+  .explore-reviews {
+    --review-pad: var(--space-4);
+  }
+  .explore-rating-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
 }
 
 /* -------------------------------------------------------------- dialogs */
@@ -1408,7 +1667,6 @@
 @media (max-width: 760px) {
   .explore-hero,
   .explore-info,
-  .explore-rating-summary,
   .explore-restaurant {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-5);
@@ -1417,9 +1675,5 @@
 @media (max-width: 560px) {
   .explore-grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .explore-review-filters .field {
-    min-width: 0;
-    width: 100%;
   }
 }

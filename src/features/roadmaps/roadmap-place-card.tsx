@@ -42,7 +42,7 @@ import { useRemote, type Remote } from "@/features/explore/use-remote";
 import { mealSlotLabels } from "./roadmap-detail-rules";
 import { vnd } from "./roadmap-list-rules";
 import type { RoadmapMapStop } from "./roadmap-map-rules";
-import { FadingText } from "./fading-text";
+import { FadingText } from "@/components/ui/fading-text";
 import "./roadmap-place.css";
 
 /** What the place card reads: DISH-02, REST-02 and REST-04 (public reads, the session token is sent). */

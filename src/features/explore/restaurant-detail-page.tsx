@@ -1,11 +1,16 @@
 "use client";
 import { useState, type ReactNode } from "react";
+import {
+  BuildingStorefrontIcon,
+  PhotoIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { StarIcon } from "@heroicons/react/24/solid";
 import Link from "next/link";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   Avatar,
-  Choice,
   EmptyState,
   Media,
   Pagination,
@@ -30,8 +35,8 @@ import {
   operatingBadge,
   priceLevelText,
   ratingShares,
+  satisfiedShare,
   ratingSummary,
-  ratingText,
   reviewDate,
   reviewPageSize,
   reportError,
@@ -73,34 +78,53 @@ function ReviewItem({ review }: { review: ReviewDto }) {
   const reply = visibleReply(review);
   return (
     <article className="explore-review">
-      <header>
-        <Avatar name={review.user.displayName} image={review.user.avatarUrl} />
-        <div>
+      <Avatar name={review.user.displayName} image={review.user.avatarUrl} />
+      <div className="explore-review-body">
+        <header>
           <strong>{review.user.displayName}</strong>
-          <p className="helper">{reviewDate(review.createdAt)}</p>
-        </div>
-        <Stars value={review.rating} />
-      </header>
-      {review.content && <p>{review.content}</p>}
-      {review.images.length > 0 && (
-        <ul className="explore-review-images" aria-label="Ảnh trong đánh giá">
-          {review.images.map((url) => (
-            <li key={url}>
-              <Media src={url} alt={`Ảnh của ${review.user.displayName}`} />
-            </li>
-          ))}
-        </ul>
-      )}
-      {reply && (
-        <div className="explore-reply">
-          <p className="eyebrow">Phản hồi từ quán</p>
-          <p>{reply.content}</p>
-        </div>
-      )}
+          <p className="explore-review-meta">
+            <Stars value={review.rating} />
+            <span aria-hidden>·</span>
+            <span>{reviewDate(review.createdAt)}</span>
+          </p>
+        </header>
+        {review.content && (
+          <p className="explore-review-text">{review.content}</p>
+        )}
+        {review.images.length > 0 && (
+          <ul className="explore-review-images" aria-label="Ảnh trong đánh giá">
+            {review.images.map((url) => (
+              <li key={url}>
+                <Media src={url} alt={`Ảnh của ${review.user.displayName}`} />
+              </li>
+            ))}
+          </ul>
+        )}
+        {reply && (
+          <div className="explore-reply">
+            <p className="explore-reply-title">
+              <BuildingStorefrontIcon aria-hidden />
+              Phản hồi từ quán
+            </p>
+            <p>{reply.content}</p>
+          </div>
+        )}
+      </div>
     </article>
   );
 }
 
+/** "4,6", "5,0": the average always with one decimal, as rating sites show it. */
+const averageText = (average: number) =>
+  new Intl.NumberFormat("vi-VN", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(average);
+
+/**
+ * REST-04 in one card: the score and how the stars spread (a row filters by its star), a toolbar
+ * (count, the star filter in use, "Có ảnh", order), then the reviews divided by rules.
+ */
 function ReviewsTab({
   restaurantId,
   service,
@@ -125,27 +149,6 @@ function ReviewsTab({
       }),
     `${restaurantId}:${rating}:${hasImage}:${sort}:${page}:${version}`,
   );
-  const filters = (
-    <div className="explore-review-filters">
-      <SelectField
-        label="Sắp xếp"
-        value={sort}
-        options={reviewSortOptions}
-        onChange={(value) => {
-          setSort(value as ReviewSort);
-          setPage(1);
-        }}
-      />
-      <Choice
-        label="Chỉ đánh giá có ảnh"
-        checked={hasImage}
-        onChange={(checked) => {
-          setHasImage(checked);
-          setPage(1);
-        }}
-      />
-    </div>
-  );
   if (state.status === "loading") return <Skeleton rows={3} />;
   if (state.status === "error")
     return (
@@ -156,50 +159,102 @@ function ReviewsTab({
     );
   const { data } = state;
   const shares = ratingShares(data.ratingBreakdown);
+  const satisfied = satisfiedShare(data.ratingBreakdown);
+  const rated = data.ratingCount > 0;
   return (
-    <div className="stack">
-      <Card>
-        <div className="explore-rating-summary">
-          <div>
-            <p className="explore-rating-big">
-              {data.ratingCount ? ratingText(data.ratingAvg) : "—"}
+    <section className="explore-reviews" aria-label="Đánh giá của thực khách">
+      <div className="explore-rating-summary">
+        <div className="explore-rating-score">
+          <p className="explore-rating-big">
+            {rated ? averageText(data.ratingAvg) : "—"}
+          </p>
+          {rated && <Stars value={Math.round(data.ratingAvg)} />}
+          <p className="helper">
+            {rated ? `${data.ratingCount} đánh giá` : "Chưa có đánh giá"}
+          </p>
+          {satisfied !== null && (
+            <p className="explore-rating-satisfied">
+              <strong>{satisfied}%</strong> thực khách chấm 4–5 sao
             </p>
-            <p className="helper">
-              {data.ratingCount
-                ? `${data.ratingCount} đánh giá`
-                : "Chưa có đánh giá"}
-            </p>
-          </div>
-          <ul className="explore-breakdown" aria-label="Phân bố số sao">
-            {shares.map((row) => (
-              <li key={row.star}>
-                <button
-                  type="button"
-                  aria-pressed={rating === String(row.star)}
-                  className={`explore-breakdown-row ${rating === String(row.star) ? "selected" : ""}`}
-                  aria-label={`Lọc ${row.star} sao: ${row.count} đánh giá`}
-                  onClick={() => {
-                    setRating(
-                      rating === String(row.star) ? "" : String(row.star),
-                    );
-                    setPage(1);
-                  }}
-                  suppressHydrationWarning
-                >
-                  <span>{row.star} ★</span>
-                  <span className="explore-bar" aria-hidden>
-                    <span
-                      style={{ width: `${Math.round(row.share * 100)}%` }}
-                    />
-                  </span>
-                  <span>{row.count}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          )}
         </div>
-      </Card>
-      {filters}
+        <ul className="explore-breakdown" aria-label="Phân bố số sao">
+          {shares.map((row) => (
+            <li key={row.star}>
+              <button
+                type="button"
+                aria-pressed={rating === String(row.star)}
+                className={`explore-breakdown-row ${rating === String(row.star) ? "selected" : ""}`}
+                aria-label={`Lọc ${row.star} sao: ${row.count} đánh giá`}
+                onClick={() => {
+                  setRating(
+                    rating === String(row.star) ? "" : String(row.star),
+                  );
+                  setPage(1);
+                }}
+                suppressHydrationWarning
+              >
+                <span className="explore-breakdown-star">
+                  {row.star}
+                  <StarIcon aria-hidden />
+                </span>
+                <span className="explore-bar" aria-hidden>
+                  <span style={{ width: `${Math.round(row.share * 100)}%` }} />
+                </span>
+                <span className="explore-breakdown-count">{row.count}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="explore-review-toolbar">
+        <p className="explore-review-count" role="status">
+          {data.totalItems} đánh giá
+          {rating && (
+            <button
+              type="button"
+              className="explore-review-filter-chip"
+              onClick={() => {
+                setRating("");
+                setPage(1);
+              }}
+            >
+              Chỉ {rating} sao
+              <XMarkIcon aria-hidden />
+              <span className="sr-only">, bỏ lọc</span>
+            </button>
+          )}
+        </p>
+        <div className="explore-review-filters">
+          <label className="explore-review-photo-chip">
+            <input
+              type="checkbox"
+              aria-label="Chỉ đánh giá có ảnh"
+              checked={hasImage}
+              onChange={(event) => {
+                setHasImage(event.target.checked);
+                setPage(1);
+              }}
+              suppressHydrationWarning
+            />
+            <span>
+              <PhotoIcon aria-hidden />
+              Có ảnh
+            </span>
+          </label>
+          <SelectField
+            label="Sắp xếp"
+            value={sort}
+            options={reviewSortOptions}
+            onChange={(value) => {
+              setSort(value as ReviewSort);
+              setPage(1);
+            }}
+          />
+        </div>
+      </div>
+
       {data.items.length === 0 ? (
         <EmptyState title="Chưa có đánh giá phù hợp">
           {rating || hasImage
@@ -207,7 +262,7 @@ function ReviewsTab({
             : "Hãy là người đầu tiên đánh giá quán này."}
         </EmptyState>
       ) : (
-        <div className="stack-sm">
+        <div className="explore-review-list">
           {data.items.map((review) => (
             <ReviewItem key={review.id} review={review} />
           ))}
@@ -221,7 +276,7 @@ function ReviewsTab({
           onChange={setPage}
         />
       )}
-    </div>
+    </section>
   );
 }
 
@@ -304,12 +359,18 @@ function MenuTab({
 }
 
 /** The restaurant's name at the top of the menu and review tabs, where the hero is not shown. */
+/**
+ * The name above the menu and review tabs, with today's state right beside it. The score chip
+ * is left out on "Đánh giá", whose summary already shows it.
+ */
 function TabTitle({
   restaurant,
   actions,
+  showRating = true,
 }: {
   restaurant: RestaurantDetailDto;
   actions?: ReactNode;
+  showRating?: boolean;
 }) {
   const status = operatingBadge(
     restaurant.operatingStatus,
@@ -317,13 +378,17 @@ function TabTitle({
   );
   return (
     <div className="explore-tab-title">
-      <h1>{restaurant.name}</h1>
-      <p className="explore-chips">
-        <Badge tone={status.tone}>{status.text}</Badge>
-        <span>
-          {ratingSummary(restaurant.ratingAvg, restaurant.ratingCount)}
-        </span>
-      </p>
+      <div className="explore-tab-name">
+        <h1>{restaurant.name}</h1>
+        <p className="explore-chips">
+          <Badge tone={status.tone}>{status.text}</Badge>
+          {showRating && (
+            <span>
+              {ratingSummary(restaurant.ratingAvg, restaurant.ratingCount)}
+            </span>
+          )}
+        </p>
+      </div>
       {actions && <div className="actions">{actions}</div>}
     </div>
   );
@@ -591,7 +656,11 @@ export function RestaurantDetailPage({
       )}
       {tab === "reviews" && (
         <>
-          <TabTitle restaurant={restaurant} actions={reviewAction} />
+          <TabTitle
+            restaurant={restaurant}
+            actions={reviewAction}
+            showRating={false}
+          />
           <ReviewsTab
             restaurantId={restaurantId}
             service={service}

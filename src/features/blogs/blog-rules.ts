@@ -1,3 +1,4 @@
+import { mealSlotLabels } from "@/features/roadmaps/roadmap-detail-rules";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import type { BlogReportReason, BlogSort, BlogStatus } from "./blog-types";
 
@@ -37,12 +38,11 @@ export const blogReportReasons: { value: BlogReportReason; label: string }[] = [
   { value: "other", label: "Lý do khác" },
 ];
 
-export const mealLabels: Record<string, string> = {
-  breakfast: "Bữa sáng",
-  lunch: "Bữa trưa",
-  dinner: "Bữa tối",
-  snack: "Ăn vặt",
-};
+/**
+ * Names of the meals of a shared roadmap: the roadmap's own list, so a meal added there (as
+ * "late_night" was) never shows its raw code here.
+ */
+export const mealLabels: Record<string, string> = { ...mealSlotLabels };
 
 export function blogDate(value: string) {
   return new Intl.DateTimeFormat("vi-VN", {

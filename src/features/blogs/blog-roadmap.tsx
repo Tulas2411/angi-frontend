@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/primitives";
+import { FadingLines, FadingText } from "@/components/ui/fading-text";
 import { dateLabel } from "@/shared/format";
 import { restaurantHref } from "@/features/explore/explore-routes";
 import { vnd } from "@/features/explore/explore-rules";
@@ -73,7 +74,8 @@ export function BlogRoadmap({
           </h2>
           <p className="blog-line">
             {snapshot.startDate ? `${dateLabel(snapshot.startDate)} · ` : ""}
-            {snapshot.numDays} ngày · {dishCount} món · {vnd(snapshot.totalCost)}
+            {snapshot.numDays} ngày · {dishCount} món ·{" "}
+            {vnd(snapshot.totalCost)}
           </p>
         </div>
       </header>
@@ -133,25 +135,41 @@ export function BlogRoadmap({
                                 <div className="blog-meal-item">
                                   <div className="blog-meal-text">
                                     <h5>
-                                      <span className="blog-meal-order" aria-hidden>
+                                      <span
+                                        className="blog-meal-order"
+                                        aria-hidden
+                                      >
                                         {index + 1}
                                       </span>
-                                      {item.dishName}
+                                      <FadingText text={item.dishName} />
                                     </h5>
+                                    {/* At most 4 lines; longer text fades out at the 4th. */}
                                     {dish?.description && (
-                                      <p className="blog-meal-description">
-                                        {dish.description}
-                                      </p>
+                                      <FadingLines
+                                        className="blog-meal-description"
+                                        lines={4}
+                                        text={dish.description}
+                                      />
                                     )}
                                     <p className="blog-meal-price">
                                       Dự chi {vnd(item.price)}
                                     </p>
-                                    <p className="helper">
-                                      <Link href={restaurantHref(item.restaurantId)}>
+                                    <FadingText
+                                      as="p"
+                                      className="helper blog-meal-place"
+                                      text={
+                                        item.address
+                                          ? `${item.restaurantName} · ${item.address}`
+                                          : item.restaurantName
+                                      }
+                                    >
+                                      <Link
+                                        href={restaurantHref(item.restaurantId)}
+                                      >
                                         {item.restaurantName}
                                       </Link>
                                       {item.address && ` · ${item.address}`}
-                                    </p>
+                                    </FadingText>
                                     {dish && (
                                       <p className="blog-meal-feedback">
                                         <span>
@@ -161,7 +179,9 @@ export function BlogRoadmap({
                                             alt=""
                                             aria-hidden
                                           />
-                                          {dish.likeCount.toLocaleString("vi-VN")}{" "}
+                                          {dish.likeCount.toLocaleString(
+                                            "vi-VN",
+                                          )}{" "}
                                           lượt thích
                                         </span>
                                         <span>
@@ -171,7 +191,9 @@ export function BlogRoadmap({
                                             alt=""
                                             aria-hidden
                                           />
-                                          {dish.dislikeCount.toLocaleString("vi-VN")}{" "}
+                                          {dish.dislikeCount.toLocaleString(
+                                            "vi-VN",
+                                          )}{" "}
                                           lượt không thích
                                         </span>
                                       </p>
@@ -199,8 +221,8 @@ export function BlogRoadmap({
                   )}
                   {day.items.length > 0 && (
                     <p className="blog-day-total">
-                      Tổng dự chi hôm nay: <strong>{vnd(cost)}</strong>. Giá tính
-                      theo giá lúc đăng bài.
+                      Tổng dự chi hôm nay: <strong>{vnd(cost)}</strong>. Giá
+                      tính theo giá lúc đăng bài.
                     </p>
                   )}
                 </div>

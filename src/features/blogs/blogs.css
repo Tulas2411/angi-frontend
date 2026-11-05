@@ -1107,19 +1107,27 @@
 .blog-meal-items > li {
   min-width: 0;
 }
-/* The dish card: its name with a number, the price and the restaurant. */
+/*
+ * The dish card: its name with a number, the description, the price, the restaurant and the
+ * likes. Every card has one height (the photo fills its column): the name and the restaurant
+ * line keep one line each and fade out when longer (FadingText), the description shows at most
+ * 4 lines and fades out at its last (FadingLines), so a long text never grows or breaks a card.
+ */
 .blog-meal-item {
   display: grid;
   grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
   align-items: stretch;
   gap: var(--space-4);
   min-width: 0;
+  height: 256px;
 }
 .blog-meal-text {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   padding: var(--space-5);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -1149,24 +1157,33 @@
 }
 .blog-meal-item h5 {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
   font-size: 16px;
   font-weight: 600;
   line-height: 1.4;
-  overflow-wrap: anywhere;
 }
 /* Mô tả của món trong thẻ món ăn. */
 .blog-meal-description {
+  flex: 0 1 auto;
   color: var(--muted);
   font-size: 14px;
   line-height: 1.6;
   overflow-wrap: anywhere;
 }
+/* Price, restaurant and likes keep their size; only the description gives up room. */
+.blog-meal-price,
+.blog-meal-place,
+.blog-meal-feedback {
+  flex: none;
+}
 /* Lượt thích và không thích của món. */
 .blog-meal-feedback {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow: hidden;
   align-items: center;
   gap: 4px 16px;
   margin-top: auto;
@@ -1174,6 +1191,13 @@
   color: var(--muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+/* Narrow cards: the likes line fades at its end like the other one-line parts, not cut dead. */
+@media (max-width: 600px) {
+  .blog-meal-feedback {
+    -webkit-mask-image: linear-gradient(to right, #000 80%, transparent);
+    mask-image: linear-gradient(to right, #000 80%, transparent);
+  }
 }
 .blog-meal-feedback > span {
   display: inline-flex;

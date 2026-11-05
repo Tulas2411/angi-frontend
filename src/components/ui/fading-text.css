@@ -1,0 +1,36 @@
+/*
+ * FadingText: one line cut at its box, fading out over its last 40px, only when the text is
+ * longer than the box (`data-overflowing`).
+ */
+.fading-text {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.fading-text[data-overflowing] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    #000 calc(100% - 40px),
+    transparent
+  );
+  mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent);
+}
+
+/*
+ * FadingLines: at most --fading-lines lines (of the element's own line height); cut text fades
+ * out over its last line. It can shrink further in a flex column that has less room.
+ */
+.fading-lines {
+  max-height: calc(var(--fading-lines, 3) * 1lh);
+  min-height: 0;
+  overflow: hidden;
+}
+.fading-lines[data-overflowing] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 1lh),
+    transparent
+  );
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1lh), transparent);
+}
