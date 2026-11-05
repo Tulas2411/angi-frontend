@@ -204,20 +204,28 @@ function ItemRow({
   const coverChanged = changes.some((row) => row.label === "Ảnh món");
   return (
     <li className="mr-item" data-change={item.change}>
-      <div className="mr-photos">
+      <div
+        className="mr-photos"
+        data-compare={(coverChanged && !!item.before) || undefined}
+      >
         {coverChanged && item.before ? (
           <>
-            <Media
-              className="mr-photo is-before"
-              src={item.before.coverUrl ?? undefined}
-              alt={`Ảnh cũ của ${item.before.name}`}
-            />
-            <ArrowRightIcon aria-hidden />
-            <Media
-              className="mr-photo"
-              src={item.coverUrl ?? undefined}
-              alt={`Ảnh mới của ${item.name}`}
-            />
+            <figure className="mr-photo-frame">
+              <Media
+                className="mr-photo is-before"
+                src={item.before.coverUrl ?? undefined}
+                alt={`Ảnh cũ của ${item.before.name}`}
+              />
+              <figcaption>Ảnh cũ</figcaption>
+            </figure>
+            <figure className="mr-photo-frame">
+              <Media
+                className="mr-photo"
+                src={item.coverUrl ?? undefined}
+                alt={`Ảnh mới của ${item.name}`}
+              />
+              <figcaption data-new>Ảnh mới</figcaption>
+            </figure>
           </>
         ) : (
           <Media
@@ -551,7 +559,7 @@ export function MenuReviewPage({
                     : "Ví dụ: Ảnh món Bún bò bị mờ, giá Phở gà chưa đúng."
                 }
                 error={noteError}
-                helper={`${note.trim().length}/${menuNoteMax} ký tự. Chủ quán sẽ thấy nội dung này.`}
+                helper="Chủ quán sẽ thấy nội dung này."
                 onChange={(event) => {
                   setNote(event.target.value);
                   setNoteError("");

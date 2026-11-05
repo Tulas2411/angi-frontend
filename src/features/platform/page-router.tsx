@@ -43,6 +43,7 @@ import {
 } from "@/features/moderation/report-handling-page";
 import { ModerationHomePage } from "@/features/moderation/moderation-home-page";
 import { ReviewModerationPage } from "@/features/moderation/review-moderation-page";
+import { AccountPage as LiveAccountPage } from "@/features/account/account-page";
 import {
   ModerationUserDetailPage,
   ModerationUsersLivePage,
@@ -238,6 +239,10 @@ export function PageRouter({
 
   // Trang "Công việc kiểm duyệt": tổng hợp các hàng đợi thật (MOD-V1, MOD-M1, MOD-RP1, MOD-R1).
   if (mode === "live" && role === "MOD" && !area) return <ModerationHomePage />;
+
+  // ME-01..ME-03 đã nối API: tài khoản của Mod (hồ sơ, đổi mật khẩu, quyền hiệu lực).
+  if (mode === "live" && role === "MOD" && area === "account")
+    return <LiveAccountPage />;
 
   // MOD-F1..MOD-F3 đã nối API: kiểm duyệt đánh giá quán và phản hồi của chủ quán (Mod và Admin).
   if (mode === "live" && role === "MOD" && area === "reviews")

@@ -91,6 +91,31 @@
 .rm-dish .mr-photo {
   width: 72px;
 }
+/* The running menu: each dish photo fills the left of its row at full height. */
+.rm-dish {
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  gap: 0;
+  min-height: 112px;
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+  border-radius: var(--radius-md);
+}
+.rm-dish > .mr-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 112px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.rm-dish > .mr-item-body {
+  align-content: center;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+}
+.rm-dish > .button {
+  align-self: center;
+  margin-right: var(--space-4);
+}
 .rm-dish[data-hidden="true"] {
   background: var(--warning-bg);
 }
@@ -224,11 +249,12 @@
     justify-content: space-between;
   }
   .rm-dish {
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: 110px minmax(0, 1fr);
   }
   .rm-dish > .button {
     grid-column: 1 / -1;
     justify-self: start;
+    margin: 0 var(--space-4) var(--space-3);
   }
   .rm-owner {
     grid-template-columns: auto minmax(0, 1fr);

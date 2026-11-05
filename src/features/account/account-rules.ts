@@ -107,3 +107,22 @@ export function accountFieldErrors(
     ]),
   );
 }
+
+/** Vietnamese names of the effective permissions in ME-01 `permissions` (core.permissions descriptions). */
+const permissionLabels: Record<string, string> = {
+  USER_VIEW_AUDIT: "Xem nhật ký hoạt động của người dùng",
+  USER_SUSPEND: "Tạm khóa và mở khóa người dùng",
+  USER_BAN: "Cấm và gỡ cấm người dùng",
+  RESTAURANT_VERIFY: "Duyệt xác minh nhà hàng",
+  RESTAURANT_MODERATE: "Ẩn và đình chỉ nhà hàng",
+  MENU_APPROVE: "Duyệt thực đơn nhà hàng",
+  REPORT_RESTAURANT_HANDLE: "Xử lý báo cáo nhà hàng",
+  REPORT_SOCIAL_HANDLE: "Xử lý báo cáo bài viết",
+  BLOG_MODERATE: "Ẩn và gỡ bài viết, bình luận",
+  REVIEW_MODERATE: "Ẩn và gỡ đánh giá, phản hồi",
+  MOD_MANAGE: "Quản lý tài khoản Mod và phân quyền",
+  SYSTEM_AUDIT_VIEW: "Xem nhật ký hệ thống",
+  DASHBOARD_VIEW: "Xem bảng thống kê",
+};
+
+export const permissionLabel = (code: string) => permissionLabels[code] ?? code;

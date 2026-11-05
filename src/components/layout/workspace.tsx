@@ -424,15 +424,17 @@ function AdminWorkspace({
 }) {
   // ProfileIdentity has resolved the user (demo name and avatar included).
   const { user } = useWorkspace();
-  const unread = useUnreadCount(user);
+  const mod = user?.role === "MOD";
+  // The backend sends a Mod no notification yet, so the Mod sidebar has no bell to count for.
+  const unread = useUnreadCount(mod ? null : user);
   if (!user) return null;
-  const mod = user.role === "MOD";
   return (
     <AdminShell
       user={user}
       base={base}
       demo={demo}
       unread={unread}
+      notifications={!mod}
       label={mod ? "kiểm duyệt" : "quản trị"}
       groups={
         mod

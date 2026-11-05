@@ -256,7 +256,7 @@ export function ReviewModerationPage({
           ? `đánh giá của ${pending.review.user.displayName}`
           : `phản hồi của chủ quán ${pending.review.restaurant.name}`;
       setDone(
-        `Đã ${actionLabels[pending.status].toLowerCase()} ${what}. Người viết đã nhận thông báo kèm lý do.`,
+        `Đã ${actionLabels[pending.status].toLowerCase()} ${what}. Lý do đã được lưu vào nhật ký kiểm duyệt.`,
       );
       setPending(null);
       setReason("");
@@ -409,7 +409,7 @@ export function ReviewModerationPage({
                   : "Ví dụ: Nội dung quảng cáo, không liên quan tới quán."
               }
               error={reasonError}
-              helper={`${reason.trim().length}/${reasonMax} ký tự. Người viết sẽ thấy lý do này.`}
+              helper="Lý do được lưu vào nhật ký kiểm duyệt."
               onChange={(event) => {
                 setReason(event.target.value);
                 setReasonError("");

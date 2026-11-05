@@ -560,6 +560,7 @@ export function ReportHandlingPage({
           </Card>
 
           <Card
+            className="rh-target-card"
             title={`${report.targetType === "restaurant" ? "Nhà hàng" : "Bài viết"} bị báo cáo`}
           >
             {report.targetType === "restaurant" ? (
@@ -726,7 +727,7 @@ export function ReportHandlingPage({
                     : "Ví dụ: Ảnh bằng chứng cho thấy quán đã đóng cửa."
                 }
                 error={problems.note}
-                helper={`${form.note.trim().length}/${resolutionNoteMax} ký tự. Người báo cáo sẽ thấy ghi chú này.`}
+                helper="Người báo cáo sẽ thấy ghi chú này."
                 onChange={(event) => update({ note: event.target.value })}
               />
               {report.relatedReports.length > 0 && (

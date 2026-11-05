@@ -32,6 +32,7 @@ import { Avatar } from "@/components/ui/primitives";
 import { LogoutButton } from "@/features/auth/session-panel";
 import type { AuthUserDto } from "@/features/auth/types";
 import "./admin-shell.css";
+import "./moderation-polish.css";
 
 type HeroIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
@@ -69,7 +70,8 @@ function SidebarNav({
     <nav className="admin-sidebar-nav" aria-label={`Điều hướng ${label}`}>
       {groups.map((group) => (
         <div key={group.title} className="admin-sidebar-group">
-          <p>{group.title}</p>
+          {/* A single group (the Mod sidebar) is already named under the logo. */}
+          {groups.length > 1 && <p>{group.title}</p>}
           <ul>
             {group.items.map(([slug, label]) => {
               const href = group.base + (slug ? `/${slug}` : "");
@@ -104,6 +106,7 @@ export function AdminShell({
   unread,
   demo,
   label = "quản trị",
+  notifications = true,
   children,
 }: {
   user: AuthUserDto;
@@ -113,6 +116,8 @@ export function AdminShell({
   demo: boolean;
   /** The workspace in lower case: "quản trị" or "kiểm duyệt". */
   label?: string;
+  /** Shows the notifications link; off where the backend sends this role none. */
+  notifications?: boolean;
   children: ReactNode;
 }) {
   const path = usePathname();
@@ -135,7 +140,11 @@ export function AdminShell({
   const notificationsHref = `${base}/notifications`;
 
   return (
-    <div className="admin-shell" data-drawer={open || undefined}>
+    <div
+      className="admin-shell"
+      data-drawer={open || undefined}
+      data-workspace={label === "kiểm duyệt" ? "mod" : "admin"}
+    >
       <div className="admin-topbar">
         <Brand href={base || "/"} />
         <button
@@ -166,24 +175,26 @@ export function AdminShell({
         </div>
         <SidebarNav groups={groups} label={label} />
         <div className="admin-sidebar-foot">
-          <Link
-            href={notificationsHref}
-            className="admin-sidebar-bell"
-            aria-current={
-              path.startsWith(notificationsHref) ? "page" : undefined
-            }
-            aria-label={
-              unread > 0 ? `Thông báo, ${unread} chưa đọc` : "Thông báo"
-            }
-          >
-            <BellIcon aria-hidden />
-            <span aria-hidden>Thông báo</span>
-            {unread > 0 && (
-              <span className="admin-sidebar-badge" aria-hidden>
-                {unread > 9 ? "9+" : unread}
-              </span>
-            )}
-          </Link>
+          {notifications && (
+            <Link
+              href={notificationsHref}
+              className="admin-sidebar-bell"
+              aria-current={
+                path.startsWith(notificationsHref) ? "page" : undefined
+              }
+              aria-label={
+                unread > 0 ? `Thông báo, ${unread} chưa đọc` : "Thông báo"
+              }
+            >
+              <BellIcon aria-hidden />
+              <span aria-hidden>Thông báo</span>
+              {unread > 0 && (
+                <span className="admin-sidebar-badge" aria-hidden>
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
+            </Link>
+          )}
           <Link
             href={`${base}/account`}
             className="admin-sidebar-account"
