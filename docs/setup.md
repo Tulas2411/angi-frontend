@@ -32,7 +32,7 @@ Open <http://localhost:3000/>. The public homepage uses local editorial content 
 | `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | Empty                          | Optional public `pk.*` token for the owner map picker and permanent address lookup |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`    | Empty                          | Optional; must match `Google:ClientId` in the backend. Empty → no Google button    |
 
-Public variables are selected at build time; restart development or rebuild after changing them. Use IPv4 `127.0.0.1` in `API_BASE_URL` for the local Docker stack: Node.js may resolve `localhost` to `::1`, but the backend port is bound to IPv4 only, which produces `503 SERVICE_UNAVAILABLE` on login.
+For production on Vercel (`BACKEND_PROXY_KEY`, `/demo` off by default, security headers) see [deploy](deploy.vi.md). Public variables are selected at build time; restart development or rebuild after changing them. Use IPv4 `127.0.0.1` in `API_BASE_URL` for the local Docker stack: Node.js may resolve `localhost` to `::1`, but the backend port is bound to IPv4 only, which produces `503 SERVICE_UNAVAILABLE` on login.
 
 ## Maps
 

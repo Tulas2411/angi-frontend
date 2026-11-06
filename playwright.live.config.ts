@@ -47,6 +47,8 @@ export default defineConfig({
       APP_URL: "http://localhost:3001",
       NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: "",
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: "",
+      // /demo pages are off unless enabled (production default); several specs use them.
+      NEXT_PUBLIC_ENABLE_DEMO: "true",
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_OPTIONS: "",
     },

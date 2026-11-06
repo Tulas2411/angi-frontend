@@ -82,7 +82,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 | `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | Empty                            | Optional public `pk.*` token for the owner map picker                              |
 | `NEXT_PUBLIC_GOOGLE_CLIENT_ID`    | Empty                            | Optional; must match `Google:ClientId` in the backend. No value → no Google button |
 
-Real values belong in `.env.local` (ignored by Git). `NEXT_PUBLIC_*` values are public and fixed at build time; restart or rebuild after changing them. Use `127.0.0.1` for the local backend URL: the Docker stack binds IPv4 only, while Node.js can resolve `localhost` to IPv6 and return `503 SERVICE_UNAVAILABLE` on login. Manual coordinates and browser geolocation work without a map token. `./scripts/sync-mapbox-env.ps1` copies the backend's public Mapbox token when you want maps locally.
+Production (Vercel) also needs `BACKEND_PROXY_KEY` and leaves `NEXT_PUBLIC_ENABLE_DEMO` unset (`/demo` is served only when it is exactly `true`); see [deploy](docs/deploy.vi.md). Real values belong in `.env.local` (ignored by Git). `NEXT_PUBLIC_*` values are public and fixed at build time; restart or rebuild after changing them. Use `127.0.0.1` for the local backend URL: the Docker stack binds IPv4 only, while Node.js can resolve `localhost` to IPv6 and return `503 SERVICE_UNAVAILABLE` on login. Manual coordinates and browser geolocation work without a map token. `./scripts/sync-mapbox-env.ps1` copies the backend's public Mapbox token when you want maps locally.
 
 ### 3. Start the backend
 

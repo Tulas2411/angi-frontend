@@ -54,6 +54,8 @@ export default defineConfig({
       SESSION_PASSWORD: "angi-homepage-local-test-session-key-only",
       NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: "",
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: "",
+      // /demo pages are off unless enabled (production default); several specs use them.
+      NEXT_PUBLIC_ENABLE_DEMO: "true",
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_OPTIONS: "",
     },
