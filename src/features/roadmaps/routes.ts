@@ -1,7 +1,8 @@
 /** Integrated Traveler roadmap routes (backed by the real RM endpoints). */
 export const roadmapRoutes = {
   list: "/roadmaps",
-  plan: "/roadmaps/new",
+  /** "Lộ trình của tôi" with the "Lập lộ trình mới" dialog open (F-19 has no page of its own). */
+  plan: "/roadmaps?new=1",
   /** Redirects to `plan` when the Traveler has no roadmap yet, otherwise to `list`. */
   start: "/roadmaps/start",
 } as const;

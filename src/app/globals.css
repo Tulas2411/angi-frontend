@@ -1574,6 +1574,13 @@ select.input {
   padding: var(--space-6) var(--space-8);
   flex-shrink: 0;
 }
+/*
+ * Three parts split by the theme line: heading (title and close) on top, content, and the footer
+ * with the actions (its line is set below). A dialog without a footer only has the heading line.
+ */
+.dialog-heading {
+  border-bottom: 1px solid var(--line);
+}
 .dialog-heading h2 {
   font-size: 26px;
 }
@@ -1583,10 +1590,49 @@ select.input {
  * giving it a second scrollbar.
  */
 .dialog-content {
+  /*
+   * Its top padding: a sticky child sits inside it, so a bar that must stay flush with the top
+   * of the scrolling area uses top: calc(-1 * var(--dialog-content-pad-top)).
+   */
+  --dialog-content-pad-top: var(--space-6);
   position: relative;
   min-height: 0;
-  padding: 0 var(--space-8) var(--space-6);
+  padding: var(--dialog-content-pad-top) var(--space-8) var(--space-6);
   overflow: auto;
+}
+/*
+ * Slim scrollbars for the app's own scroll areas (dialog content, suggestion lists): a thin thumb
+ * in the theme's line colour on a clear track. The standard properties drive current Chromium,
+ * Firefox and Safari (Chromium then ignores ::-webkit-scrollbar); the ::-webkit-scrollbar parts
+ * below only serve older Safari, with a rounded thumb and no arrow buttons.
+ */
+.dialog-content,
+.combobox-options {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.dialog-content::-webkit-scrollbar,
+.combobox-options::-webkit-scrollbar {
+  width: 12px;
+}
+.dialog-content::-webkit-scrollbar-track,
+.combobox-options::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dialog-content::-webkit-scrollbar-thumb,
+.combobox-options::-webkit-scrollbar-thumb {
+  /* The clear border keeps the thumb thin and off the edge. */
+  border: 4px solid transparent;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong) padding-box;
+}
+.dialog-content::-webkit-scrollbar-thumb:hover,
+.combobox-options::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted);
+}
+.dialog-content::-webkit-scrollbar-button,
+.combobox-options::-webkit-scrollbar-button {
+  display: none;
 }
 .dialog-footer {
   justify-content: flex-end;
@@ -1616,6 +1662,8 @@ select.input {
   top: 16px;
   right: 16px;
   padding: 0;
+  /* Only the close button floats over the map: no heading line. */
+  border-bottom: 0;
 }
 .dialog-map .dialog-heading h2 {
   position: absolute;

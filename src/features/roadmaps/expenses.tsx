@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Alert, Button, Card } from "@/shared/ui";
 import {
   ConfirmDialog,
@@ -27,6 +27,8 @@ export function TripExpenses({
     [amount, setAmount] = useState(""),
     [sort, setSort] = useState("new"),
     [remove, setRemove] = useState<string | null>(null);
+  // The save button sits in the dialog footer and submits the form by id.
+  const formId = useId();
   const records = [...(trip.expenses ?? [])].sort((a, b) =>
     sort === "high"
       ? b.amount - a.amount
@@ -89,8 +91,18 @@ export function TripExpenses({
       <p className="helper">
         Chi phí bạn ghi riêng với dự chi theo món. Dữ liệu minh họa.
       </p>
-      <Dialog open={open} title="Thêm chi phí" onClose={() => setOpen(false)}>
+      <Dialog
+        open={open}
+        title="Thêm chi phí"
+        onClose={() => setOpen(false)}
+        footer={
+          <Button type="submit" form={formId} loading={busy}>
+            Lưu chi phí
+          </Button>
+        }
+      >
         <form
+          id={formId}
           className="stack"
           onSubmit={async (e) => {
             e.preventDefault();
@@ -148,9 +160,6 @@ export function TripExpenses({
           <Alert tone="info">
             Khoản chi minh họa do bạn nhập; không phải thanh toán tại quán.
           </Alert>
-          <Button type="submit" loading={busy}>
-            Lưu chi phí
-          </Button>
         </form>
       </Dialog>
       <ConfirmDialog

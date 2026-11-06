@@ -1,6 +1,6 @@
 "use client";
 import { notify } from "@/shared/ui/notify";
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
@@ -327,6 +327,8 @@ function PasswordDialog({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
+  // The actions sit in the dialog footer, outside the form, and submit it by id.
+  const formId = useId();
   function update(key: keyof PasswordFormValues, value: string) {
     setValues((current) => ({ ...current, [key]: value }));
     setErrors((current) => ({ ...current, [passwordField[key]]: "" }));
@@ -377,8 +379,24 @@ function PasswordDialog({
       onClose={close}
       title={hasPassword ? "Đổi mật khẩu" : "Tạo mật khẩu"}
       focusField
+      footer={
+        <>
+          <Button variant="secondary" disabled={busy} onClick={close}>
+            Hủy
+          </Button>
+          <Button type="submit" form={formId} loading={busy}>
+            Cập nhật mật khẩu
+          </Button>
+        </>
+      }
     >
-      <form className="stack" noValidate onSubmit={submit} aria-busy={busy}>
+      <form
+        id={formId}
+        className="stack"
+        noValidate
+        onSubmit={submit}
+        aria-busy={busy}
+      >
         {error && <Alert>{error}</Alert>}
         {hasPassword && (
           <PasswordField
@@ -418,14 +436,6 @@ function PasswordDialog({
           error={errors.confirm}
           disabled={busy}
         />
-        <div className="actions">
-          <Button type="submit" loading={busy}>
-            Cập nhật mật khẩu
-          </Button>
-          <Button variant="secondary" disabled={busy} onClick={close}>
-            Hủy
-          </Button>
-        </div>
       </form>
     </Dialog>
   );
