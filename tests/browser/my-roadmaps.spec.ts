@@ -247,10 +247,13 @@ test("no roadmaps offers to plan the first one", async ({ page }) => {
   ).toBeVisible();
   await page
     .getByRole("main")
-    .getByRole("link", { name: "Lập lộ trình mới" })
+    .getByRole("button", { name: "Lập lộ trình mới" })
     .last()
     .click();
-  await expect(page).toHaveURL(/\/roadmaps\/new$/);
+  // F-19 is a dialog over the list, not a page of its own.
+  await expect(
+    page.getByRole("dialog", { name: "Lập lộ trình mới" }),
+  ).toBeVisible();
 });
 
 test("a failed load shows the error and a retry that works", async ({

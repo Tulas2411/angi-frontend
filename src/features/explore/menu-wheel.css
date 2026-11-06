@@ -581,9 +581,6 @@
   opacity: 0;
   transition: opacity 450ms var(--ease-exit);
 }
-.menu-dish-dialog .dialog-heading {
-  padding-bottom: var(--space-2);
-}
 .menu-dish-dialog .dialog-heading h2 {
   font-size: 30px;
   line-height: 1.1;

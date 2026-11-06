@@ -6,6 +6,7 @@
   right: 16px;
   padding: 0;
   z-index: 6;
+  border-bottom: 0;
 }
 .dialog.dialog-map .dialog-heading .button {
   width: 36px;

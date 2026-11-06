@@ -444,3 +444,51 @@ export function applyVndEdit(
   }
   return { digits, caret: position };
 }
+
+/**
+ * Step 1 of the "Lập lộ trình mới" dialog: does the traveler know exactly where they will be?
+ * `known`: a point on the map (pinned) or the current location (gps); `unknown`: only the city.
+ */
+export type RoadmapPlaceKnowledge = "known" | "unknown";
+
+/** Step 1 must give a usable place before step 2 (dates, budget, title) opens. */
+export function validateRoadmapPlace(
+  knowledge: RoadmapPlaceKnowledge | null,
+  values: Pick<RoadmapFormValues, "province" | "originMode">,
+  origin: RoadmapOrigin | null,
+  { gpsReady = false }: { gpsReady?: boolean } = {},
+): Record<string, string> {
+  const errors: Record<string, string> = {};
+  if (!knowledge) {
+    errors.knowledge = "Cho ANGI biết bạn đã biết chính xác nơi sẽ đến chưa.";
+    return errors;
+  }
+  if (knowledge === "known") {
+    if (values.originMode === "none")
+      errors.origin = "Chấm vị trí trên bản đồ hoặc dùng vị trí hiện tại.";
+    else if (values.originMode === "pinned" && !isValidOrigin(origin))
+      errors.origin = "Chấm vị trí trên bản đồ.";
+    else if (values.originMode === "gps" && !gpsReady)
+      errors.origin =
+        "Cho phép ANGI dùng vị trí hiện tại, hoặc chấm trên bản đồ.";
+    // The city comes with the place: it is asked only once a place is chosen.
+    if (errors.origin) return errors;
+  }
+  if (!values.province.trim())
+    errors.province = "Chọn tỉnh / thành phố bạn muốn đến.";
+  return errors;
+}
+
+/** One line recalling step 1 at the top of step 2, e.g. "Khách sạn Sala · Đà Nẵng". */
+export function roadmapPlaceSummary(
+  values: Pick<RoadmapFormValues, "province" | "originMode" | "originLabel">,
+): string {
+  const city = shortProvinceName(values.province);
+  const place =
+    values.originMode === "pinned"
+      ? values.originLabel.trim() || originModeLabels.pinned
+      : values.originMode === "gps"
+        ? originModeLabels.gps
+        : "";
+  return [place, city].filter(Boolean).join(" · ");
+}

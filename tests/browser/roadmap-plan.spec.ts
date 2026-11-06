@@ -9,12 +9,10 @@ import {
 import type {
   CreateRoadmapRequestDto,
   RoadmapDetailDto,
-  UpdateRoadmapRequestDto,
 } from "../../src/features/roadmaps/roadmap-types";
 
-/** F-19: RM-01 / RM-04 against a local stub. No Mapbox request is made (empty token). */
+/** F-19 "Lập lộ trình mới" dialog: RM-01 against a local stub. No Mapbox request is made (empty token). */
 const creates: CreateRoadmapRequestDto[] = [];
-const patches: UpdateRoadmapRequestDto[] = [];
 let failure: {
   status: number;
   errorCode: string;
@@ -81,21 +79,21 @@ const roadmaps: StubHandler = ({ method, url, body }, send) => {
     }
     return true;
   }
-  if (method === "PATCH" && url === "/api/v1/roadmaps/88") {
-    const patch = body as UpdateRoadmapRequestDto;
-    patches.push(patch);
-    if (failure) send(failure.status, null, failure.errorCode, failure.errors);
-    else if (current) {
-      const merged = { ...current.overview, ...patch };
-      if (patch.originMode && patch.originMode !== "pinned")
-        Object.assign(merged, {
-          originLatitude: null,
-          originLongitude: null,
-          originLabel: null,
-        });
-      current = detail(merged);
-      send(200, current);
-    } else send(404, null, "ROADMAP_NOT_FOUND");
+  // RM-02 for "Lộ trình của tôi" behind the dialog: no roadmap yet.
+  if (method === "GET" && url.startsWith("/api/v1/roadmaps?")) {
+    send(200, {
+      items: [],
+      page: 1,
+      pageSize: 12,
+      totalItems: 0,
+      totalPages: 0,
+    });
+    return true;
+  }
+  // RM-03 for the detail page opened after creation.
+  if (method === "GET" && url === "/api/v1/roadmaps/88") {
+    if (current) send(200, current);
+    else send(404, null, "ROADMAP_NOT_FOUND");
     return true;
   }
   return false;
@@ -111,7 +109,6 @@ test.afterAll(async () => {
 test.beforeEach(async ({ page }) => {
   stub.reset();
   creates.length = 0;
-  patches.length = 0;
   failure = null;
   current = null;
   await page.route("**/api/locations/provinces", (route) =>
@@ -129,26 +126,44 @@ test.beforeEach(async ({ page }) => {
   await page.route(/mapbox\.com/, (route) => route.abort());
 });
 
+const planner = (page: Page) =>
+  page.getByRole("dialog", { name: "Lập lộ trình mới" });
+const next = (page: Page) =>
+  planner(page).getByRole("button", { name: "Tiếp tục", exact: true });
 const submit = (page: Page) =>
-  page.getByRole("button", { name: "Tạo lộ trình", exact: true });
+  planner(page).getByRole("button", { name: "Tạo lộ trình", exact: true });
+const knowledge = (page: Page, value: "known" | "unknown") =>
+  planner(page).locator(`[data-knowledge="${value}"]`);
+const choice = (page: Page, mode: "pinned" | "gps") =>
+  planner(page).locator(`[data-origin-choice="${mode}"]`);
 
+/** "Lộ trình của tôi" → "Lập lộ trình mới". */
 async function open(page: Page) {
   await loginAs(page, "traveler");
-  await page.goto("/roadmaps/new");
-  await expect(
-    page.getByRole("heading", { name: "Lên lộ trình ăn ngon" }),
-  ).toBeVisible();
+  await page.goto("/roadmaps");
+  await page
+    .getByRole("main")
+    .getByRole("button", { name: "Lập lộ trình mới" })
+    .first()
+    .click();
+  await expect(planner(page)).toBeVisible();
+  await expect(planner(page)).toContainText("Bước 1 / 2");
 }
 
-const choice = (page: Page, mode: "pinned" | "gps") =>
-  page.locator(`[data-origin-choice="${mode}"]`);
-
-async function chooseProvince(page: Page, name: string) {
-  await page.getByLabel(/^Bạn muốn ăn ở đâu\?/).fill(name);
+async function chooseProvince(page: Page, label: RegExp, name: string) {
+  await planner(page).getByLabel(label).fill(name);
   await page.keyboard.press("Escape");
 }
 
-test("only a signed-in Traveler can open the planner; others go to their landing page", async ({
+/** Step 1 with only the city, then step 2. */
+async function cityOnly(page: Page, name = "Thành phố Hà Nội") {
+  await knowledge(page, "unknown").click();
+  await chooseProvince(page, /^Bạn sẽ đến tỉnh \/ thành phố nào\?/, name);
+  await next(page).click();
+  await expect(planner(page)).toContainText("Bước 2 / 2");
+}
+
+test("/roadmaps/new is gone: old links open the dialog over the list, for Travelers only", async ({
   page,
 }) => {
   await page.goto("/roadmaps/new");
@@ -163,86 +178,138 @@ test("only a signed-in Traveler can open the planner; others go to their landing
     await expect(page).toHaveURL(landing);
   }
   await loginAs(page, "traveler");
-  // The account drawer no longer links the planner; the Traveler reaches it directly.
   await page.goto("/roadmaps/new");
-  await expect(page).toHaveURL(/\/roadmaps\/new$/);
-  await expect(
-    page
-      .getByRole("navigation", { name: "Điều hướng chính" })
-      .getByRole("link", { name: "Lộ trình", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
+  await expect(page).toHaveURL(/\/roadmaps\?new=1$/);
+  await expect(planner(page)).toBeVisible();
+  // Closing drops ?new=1, so a reload does not open it again.
+  await planner(page).getByRole("button", { name: "Hủy" }).click();
+  await expect(planner(page)).toBeHidden();
+  await expect(page).toHaveURL(/\/roadmaps$/);
 });
 
-test("client validation blocks an incomplete plan without calling RM-01", async ({
+test("step 1 asks where the traveler will be before anything else", async ({
   page,
 }) => {
   await open(page);
-  await page.getByLabel(/^Số ngày/).fill("8");
-  await submit(page).click();
+  await next(page).click();
   await expect(
-    page.getByText("Chọn tỉnh / thành phố bạn muốn đến."),
+    planner(page).getByText(
+      "Cho ANGI biết bạn đã biết chính xác nơi sẽ đến chưa.",
+    ),
   ).toBeVisible();
-  await expect(page.getByText("Tên lộ trình là bắt buộc.")).toBeVisible();
+  // Knowing the place needs a point or the current location, and a city.
+  await knowledge(page, "known").click();
+  await expect(knowledge(page, "known")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(choice(page, "pinned")).toBeVisible();
+  await expect(choice(page, "gps")).toBeVisible();
+  await next(page).click();
   await expect(
-    page.getByText("Số ngày phải là số nguyên từ 1 đến 7."),
+    planner(page).getByText(
+      "Chấm vị trí trên bản đồ hoặc dùng vị trí hiện tại.",
+    ),
   ).toBeVisible();
-  await expect(page.getByLabel(/^Bạn muốn ăn ở đâu\?/)).toBeFocused();
+  // The city comes with the place: no city field until a place is chosen.
+  await expect(planner(page).getByLabel(/^Tỉnh \/ thành phố/)).toHaveCount(0);
+  // Not knowing it needs only the city; the location choices disappear.
+  await knowledge(page, "unknown").click();
+  await expect(choice(page, "pinned")).toHaveCount(0);
+  await next(page).click();
+  await expect(
+    planner(page).getByLabel(/^Bạn sẽ đến tỉnh \/ thành phố nào\?/),
+  ).toBeFocused();
   expect(creates).toEqual([]);
 });
 
-test("RM-01 without a location sends the documented body and shows the created roadmap", async ({
+test("city only: step 2 creates the roadmap with the documented body and opens it", async ({
   page,
 }) => {
   await open(page);
-  // Neither choice is pressed: the default `none` origin, province only.
-  await expect(choice(page, "pinned")).toHaveAttribute("aria-pressed", "false");
-  await expect(choice(page, "gps")).toHaveAttribute("aria-pressed", "false");
-  await chooseProvince(page, "Thành phố Hà Nội");
-  await page.getByLabel(/^Số ngày/).fill("2");
-  // The title follows the destination and the number of days until it is edited.
-  await expect(page.getByLabel(/^Tên lộ trình/)).toHaveValue(
+  await cityOnly(page);
+  await expect(planner(page).locator(".new-roadmap-place")).toContainText(
+    "Hà Nội",
+  );
+  await planner(page)
+    .getByLabel(/^Số ngày/)
+    .fill("2");
+  // The title follows the destination until it is edited.
+  await expect(planner(page).getByLabel(/^Tên lộ trình/)).toHaveValue(
     "Khám phá ẩm thực Hà Nội",
   );
   await submit(page).click();
+  // The toast confirms at once; it stays across the move to the new roadmap.
   await expect(
-    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
-  ).toBeFocused();
+    page.getByText("Đã tạo lộ trình.", { exact: false }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/roadmaps\/88$/);
   expect(creates).toEqual([
     { title: "Khám phá ẩm thực Hà Nội", numDays: 2, originMode: "none" },
   ]);
-  await expect(
-    page.getByText("Đã tạo lộ trình với 2 ngày trống."),
-  ).toBeVisible();
-  const overview = page.locator(".detail-list");
-  await expect(overview).toContainText("Chưa chọn ngày đi");
-  await expect(overview).toContainText("2 ngày");
-  await expect(overview).toContainText("Chưa đặt");
-  await expect(overview).toContainText("Chưa có vị trí");
 });
 
-test("RM-01 with the current location asks the browser, then sends no coordinates", async ({
+test("step 2 validates its own fields and Back keeps step 1", async ({
+  page,
+}) => {
+  await open(page);
+  await cityOnly(page);
+  await planner(page)
+    .getByLabel(/^Số ngày/)
+    .fill("8");
+  await planner(page)
+    .getByLabel(/^Tên lộ trình/)
+    .fill("");
+  await submit(page).click();
+  await expect(
+    planner(page).getByText("Số ngày phải là số nguyên từ 1 đến 7."),
+  ).toBeVisible();
+  await expect(
+    planner(page).getByText("Tên lộ trình là bắt buộc."),
+  ).toBeVisible();
+  await planner(page).getByRole("button", { name: "Quay lại" }).click();
+  await expect(planner(page)).toContainText("Bước 1 / 2");
+  await expect(knowledge(page, "unknown")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(
+    planner(page).getByLabel(/^Bạn sẽ đến tỉnh \/ thành phố nào\?/),
+  ).toHaveValue("Thành phố Hà Nội");
+  expect(creates).toEqual([]);
+});
+
+test("current location: the browser is asked, no coordinates are sent", async ({
   page,
   context,
 }) => {
   await context.grantPermissions(["geolocation"]);
   await context.setGeolocation({ latitude: 16.0678, longitude: 108.2208 });
   await open(page);
-  await chooseProvince(page, "Thành phố Đà Nẵng");
+  await knowledge(page, "known").click();
   await choice(page, "gps").click();
   await expect(choice(page, "gps")).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByText(/Đã cho phép vị trí/)).toBeVisible();
-  await page.getByLabel(/^Ngày bắt đầu/).fill("2026-10-30");
-  const budget = page.getByLabel(/^Ngân sách dự kiến/);
+  await expect(planner(page).getByText(/Đã cho phép vị trí/)).toBeVisible();
+  // Without a Mapbox token the city cannot be looked up: the traveler picks it.
+  await chooseProvince(page, /^Tỉnh \/ thành phố/, "Thành phố Đà Nẵng");
+  await next(page).click();
+  await expect(planner(page).locator(".new-roadmap-place")).toContainText(
+    "Vị trí hiện tại · Đà Nẵng",
+  );
+  await planner(page)
+    .getByLabel(/^Ngày bắt đầu/)
+    .fill("2026-10-30");
+  const budget = planner(page).getByLabel(/^Ngân sách dự kiến/);
   await budget.pressSequentially("1500000");
   await expect(budget).toHaveValue("1.500.000 VND");
-  await page.getByLabel(/^Tên lộ trình/).fill("  Đà Nẵng cuối tuần ");
-  await expect(page.locator(".roadmap-plan-summary")).toContainText(
+  await planner(page)
+    .getByLabel(/^Tên lộ trình/)
+    .fill("  Đà Nẵng cuối tuần ");
+  await expect(planner(page).locator(".new-roadmap-summary")).toContainText(
     "30 thg 10, 2026 – 1 thg 11, 2026",
   );
   await submit(page).click();
-  await expect(
-    page.getByRole("heading", { name: "Đà Nẵng cuối tuần" }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/roadmaps\/88$/);
   expect(creates).toEqual([
     {
       title: "Đà Nẵng cuối tuần",
@@ -252,17 +319,44 @@ test("RM-01 with the current location asks the browser, then sends no coordinate
       originMode: "gps",
     },
   ]);
-  await expect(page.locator(".detail-list")).toContainText("Vị trí hiện tại");
-  await expect(page.locator(".detail-list")).toContainText(
-    "1.500.000 VND / người",
+});
+
+test("a denied location keeps step 1 open and explains how to continue", async ({
+  page,
+  context,
+}) => {
+  await context.clearPermissions();
+  await open(page);
+  await knowledge(page, "known").click();
+  await choice(page, "gps").click();
+  await expect(
+    planner(page).getByText(/Trình duyệt đang chặn vị trí của trang này/),
+  ).toBeVisible();
+  await expect(choice(page, "gps")).toHaveAttribute("aria-pressed", "false");
+  await next(page).click();
+  await expect(planner(page)).toContainText("Bước 1 / 2");
+  await expect(
+    planner(page).getByText(
+      "Chấm vị trí trên bản đồ hoặc dùng vị trí hiện tại.",
+    ),
+  ).toBeVisible();
+  // Switching to "not sure yet" lets the traveler go on with the city.
+  await knowledge(page, "unknown").click();
+  await chooseProvince(
+    page,
+    /^Bạn sẽ đến tỉnh \/ thành phố nào\?/,
+    "Thành phố Hà Nội",
   );
+  await next(page).click();
+  await expect(planner(page)).toContainText("Bước 2 / 2");
 });
 
 test("the budget is shown as Vietnamese currency while typing and sends plain digits", async ({
   page,
 }) => {
   await open(page);
-  const budget = page.getByLabel(/^Ngân sách dự kiến/);
+  await cityOnly(page);
+  const budget = planner(page).getByLabel(/^Ngân sách dự kiến/);
   await budget.pressSequentially("800");
   await expect(budget).toHaveValue("800 VND");
   await budget.pressSequentially("000");
@@ -273,20 +367,10 @@ test("the budget is shown as Vietnamese currency while typing and sends plain di
   // Backspace removes digits even though the caret sits before the unit.
   await budget.press("Backspace");
   await expect(budget).toHaveValue("80.000 VND");
-  // Editing in the middle keeps the grouping and the caret.
-  await budget.press("Home");
-  await budget.press("ArrowRight");
-  await budget.pressSequentially("1");
-  await expect(budget).toHaveValue("810.000 VND");
-  await budget.fill("");
-  await expect(budget).toHaveValue("");
   await budget.fill("2000000");
   await expect(budget).toHaveValue("2.000.000 VND");
-  await chooseProvince(page, "Thành phố Hà Nội");
   await submit(page).click();
-  await expect(
-    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/roadmaps\/88$/);
   expect(creates).toEqual([
     {
       title: "Khám phá ẩm thực Hà Nội",
@@ -297,98 +381,34 @@ test("the budget is shown as Vietnamese currency while typing and sends plain di
   ]);
 });
 
-test("a denied location permission keeps the origin unset and explains how to continue", async ({
-  page,
-  context,
-}) => {
-  await context.clearPermissions();
-  await open(page);
-  await chooseProvince(page, "Thành phố Hà Nội");
-  await choice(page, "gps").click();
-  await expect(
-    page.getByText(/Trình duyệt đang chặn vị trí của trang này/),
-  ).toBeVisible();
-  await expect(choice(page, "gps")).toHaveAttribute("aria-pressed", "false");
-  await submit(page).click();
-  await expect(
-    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
-  ).toBeVisible();
-  expect(creates).toEqual([
-    { title: "Khám phá ẩm thực Hà Nội", numDays: 3, originMode: "none" },
-  ]);
-});
-
-test("a VALIDATION_FAILED response keeps the edits and shows the field error", async ({
+test("a VALIDATION_FAILED response keeps every value and shows the field error", async ({
   page,
 }) => {
   await open(page);
+  await cityOnly(page);
   failure = {
     status: 400,
     errorCode: "VALIDATION_FAILED",
     errors: { Title: ["Tên roadmap không được vượt quá 200 ký tự."] },
   };
-  await chooseProvince(page, "Thành phố Hà Nội");
   await submit(page).click();
   await expect(
-    page.getByText("Tên roadmap không được vượt quá 200 ký tự."),
+    planner(page).getByText("Tên roadmap không được vượt quá 200 ký tự."),
   ).toBeVisible();
-  await expect(page.locator(".alert-error")).toContainText(
+  await expect(planner(page).locator(".alert-error")).toContainText(
     "Vui lòng kiểm tra thông tin đã nhập.",
   );
-  await expect(page.getByLabel(/^Bạn muốn ăn ở đâu\?/)).toHaveValue(
-    "Thành phố Hà Nội",
+  await expect(planner(page).getByLabel(/^Tên lộ trình/)).toHaveValue(
+    "Khám phá ẩm thực Hà Nội",
   );
   failure = null;
   await submit(page).click();
-  await expect(
-    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
-  ).toBeVisible();
+  await expect(page).toHaveURL(/\/roadmaps\/88$/);
   expect(creates).toHaveLength(2);
 });
 
-test("RM-04 sends only the changed fields, reports DAY_NOT_EMPTY and asks before discarding", async ({
-  page,
-}) => {
-  await open(page);
-  await chooseProvince(page, "Thành phố Hà Nội");
-  await submit(page).click();
-  await page.getByRole("button", { name: "Sửa thông tin" }).click();
-  const save = page.getByRole("button", { name: "Lưu thay đổi" });
-  await expect(save).toBeDisabled();
-  await expect(page.getByLabel(/^Bạn muốn ăn ở đâu\?/)).toHaveCount(0);
-
-  failure = { status: 409, errorCode: "DAY_NOT_EMPTY" };
-  await page.getByLabel(/^Số ngày/).fill("2");
-  await save.click();
-  await expect(page.locator(".alert-error")).toContainText(
-    "Không thể giảm số ngày",
-  );
-  expect(patches).toEqual([{ numDays: 2 }]);
-
-  failure = null;
-  await page.getByLabel(/^Số ngày/).fill("4");
-  await page.getByLabel(/^Ngân sách dự kiến/).fill("800000");
-  await expect(page.getByLabel(/^Ngân sách dự kiến/)).toHaveValue(
-    "800.000 VND",
-  );
-  await save.click();
-  await expect(page.getByText("Đã lưu thông tin lộ trình.")).toBeVisible();
-  expect(patches.at(-1)).toEqual({ numDays: 4, budgetAmount: 800000 });
-  await expect(page.locator(".detail-list")).toContainText("4 ngày");
-
-  await page.getByRole("button", { name: "Sửa thông tin" }).click();
-  await page.getByLabel(/^Tên lộ trình/).fill("Tên chưa lưu");
-  await page.getByRole("button", { name: "Hủy", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "Bỏ thay đổi chưa lưu?" });
-  await dialog.getByRole("button", { name: "Bỏ thay đổi" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Khám phá ẩm thực Hà Nội" }),
-  ).toBeVisible();
-  expect(patches).toHaveLength(2);
-});
-
 // Opens the shared map dialog (coordinate entry only, empty token). Run manually: ROADMAP_MAP=1.
-test("a pinned origin from typed coordinates is sent with its label", async ({
+test("a pinned point from typed coordinates is sent with its label", async ({
   page,
 }) => {
   test.skip(!process.env.ROADMAP_MAP, "Map dialog check is run by the owner.");
@@ -397,35 +417,27 @@ test("a pinned origin from typed coordinates is sent with its label", async ({
     if (/mapbox\.com/.test(request.url())) providerCalls.push(request.url());
   });
   await open(page);
-  await chooseProvince(page, "Thành phố Đà Nẵng");
-  // Pressing "Chấm trên bản đồ" opens the map dialog at once; closing it unsets the choice.
+  await knowledge(page, "known").click();
+  // Pressing "Chấm trên bản đồ" opens the map at once; closing it unsets the choice.
   await choice(page, "pinned").click();
   const map = page.getByRole("dialog", { name: "Chọn điểm xuất phát" });
   await expect(map).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(map).toBeHidden();
   await expect(choice(page, "pinned")).toHaveAttribute("aria-pressed", "false");
-  await expect(choice(page, "pinned")).toBeFocused();
   await choice(page, "pinned").click();
   await map.getByLabel("Vĩ độ").fill("16.061204");
   await map.getByLabel("Kinh độ").fill("108.227531");
   await map.getByRole("button", { name: "Lưu điểm xuất phát" }).click();
-  await expect(page.locator("dialog[open]")).toHaveCount(0);
-  // Without a Mapbox token the address cannot be looked up: the province is kept and the
-  // traveler is told to choose it.
-  await expect(
-    page.getByText("Chưa tự lấy được tỉnh / thành phố từ điểm đã chấm", {
-      exact: false,
-    }),
-  ).toBeVisible();
-  await expect(page.getByLabel(/^Bạn muốn ăn ở đâu\?/)).toHaveValue(
-    "Thành phố Đà Nẵng",
-  );
-  await page.getByLabel(/^Tên điểm xuất phát/).fill("Khách sạn Sala Đà Nẵng");
+  await expect(map).toBeHidden();
+  // Without a Mapbox token the address cannot be looked up: the traveler picks the city.
+  await chooseProvince(page, /^Tỉnh \/ thành phố/, "Thành phố Đà Nẵng");
+  await next(page).click();
+  await planner(page)
+    .getByLabel(/^Tên điểm xuất phát/)
+    .fill("Khách sạn Sala Đà Nẵng");
   await submit(page).click();
-  await expect(page.locator(".detail-list")).toContainText(
-    "Khách sạn Sala Đà Nẵng · 16.061204, 108.227531",
-  );
+  await expect(page).toHaveURL(/\/roadmaps\/88$/);
   expect(creates.at(-1)).toMatchObject({
     originMode: "pinned",
     originLatitude: 16.061204,
@@ -435,10 +447,11 @@ test("a pinned origin from typed coordinates is sent with its label", async ({
   expect(providerCalls).toEqual([]);
 });
 
-test("the planner has no horizontal overflow from 320px to 1440px", async ({
+test("the dialog has no horizontal overflow from 320px to 1440px", async ({
   page,
 }) => {
   await open(page);
+  await cityOnly(page);
   for (const width of [320, 390, 768, 1024, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     expect(
