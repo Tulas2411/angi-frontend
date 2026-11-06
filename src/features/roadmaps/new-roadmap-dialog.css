@@ -1,0 +1,151 @@
+/* F-19 "Lập lộ trình mới": two-step dialog opened from "Lộ trình của tôi". */
+
+.new-roadmap-dialog {
+  width: min(560px, calc(100vw - 32px));
+}
+
+.new-roadmap-step {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* A group of toggle cards; `aria-pressed` drives `is-selected`. */
+.new-roadmap-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.new-roadmap-group legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.new-roadmap-options {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.new-roadmap-options.is-row {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.new-roadmap-option {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease;
+}
+
+.new-roadmap-option:hover {
+  border-color: var(--ink);
+}
+
+.new-roadmap-option.is-selected {
+  border-color: var(--ink);
+  background: var(--control);
+}
+
+.new-roadmap-option:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.new-roadmap-option > .choice-mark {
+  margin-top: 2px;
+  border-radius: 50%;
+}
+
+.new-roadmap-option.is-selected > .choice-mark {
+  background: var(--ink);
+  box-shadow: inset 0 0 0 4px var(--card);
+}
+
+.new-roadmap-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* The chosen point (step 1) and the place recalled at the top of step 2. */
+.new-roadmap-point,
+.new-roadmap-place {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--canvas);
+  font-size: var(--text-sm);
+}
+
+.new-roadmap-place {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.new-roadmap-point > svg,
+.new-roadmap-place > svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--coral);
+}
+
+.new-roadmap-point > span,
+.new-roadmap-place > span {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.new-roadmap-point > .button,
+.new-roadmap-place > .button {
+  flex: none;
+}
+
+/* Days and dates recap above the actions. */
+.new-roadmap-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.new-roadmap-summary > span {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+@media (max-width: 560px) {
+  .new-roadmap-options.is-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .new-roadmap-option {
+    padding: var(--space-3);
+  }
+}

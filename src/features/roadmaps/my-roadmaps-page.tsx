@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { Alert, Button, Card } from "@/shared/ui";
 import {
-  ActionLink,
   ConfirmDialog,
   EmptyState,
   Media,
@@ -25,8 +24,13 @@ import {
   roadmapListPageSize,
   roadmapShortRange,
 } from "./roadmap-list-rules";
-import { roadmapService, type RoadmapListService } from "./roadmap-service";
-import { roadmapDetailHref, roadmapListHref, roadmapRoutes } from "./routes";
+import {
+  roadmapService,
+  type RoadmapListService,
+  type RoadmapPlanService,
+} from "./roadmap-service";
+import { NewRoadmapDialog } from "./new-roadmap-dialog";
+import { roadmapDetailHref, roadmapListHref } from "./routes";
 import type { RoadmapPageDto, RoadmapSummaryDto } from "./roadmap-types";
 import "./my-roadmaps.css";
 
@@ -109,14 +113,23 @@ function RoadmapCard({
 export function MyRoadmapsPage({
   page,
   owner,
+  planning = false,
   service = roadmapService,
 }: {
   page: number;
   /** The traveler's display name, for the initial on each card. */
   owner?: string;
-  service?: RoadmapListService;
+  /** Opens "Lập lộ trình mới" right away (`/roadmaps?new=1`). */
+  planning?: boolean;
+  service?: RoadmapListService & RoadmapPlanService;
 }) {
   const router = useRouter();
+  const [planOpen, setPlanOpen] = useState(planning);
+  function closePlanner() {
+    setPlanOpen(false);
+    // Drops `?new=1`, so a reload or Back does not open the dialog again.
+    if (planning) router.replace(roadmapListHref(page), { scroll: false });
+  }
   const [state, setState] = useState<State>({ status: "loading" });
   const [attempt, setAttempt] = useState(0);
   /** The roadmap whose deletion is being confirmed. */
@@ -208,7 +221,12 @@ export function MyRoadmapsPage({
   );
 
   const planLink = (
-    <ActionLink href={roadmapRoutes.plan}>Lập lộ trình mới</ActionLink>
+    <Button aria-haspopup="dialog" onClick={() => setPlanOpen(true)}>
+      Lập lộ trình mới
+    </Button>
+  );
+  const planner = planOpen && (
+    <NewRoadmapDialog onClose={closePlanner} service={service} />
   );
   const heading = (description?: string) => (
     <PageHeading
@@ -223,6 +241,7 @@ export function MyRoadmapsPage({
     return (
       <div className="stack">
         {heading()}
+        {planner}
         <Skeleton rows={4} />
       </div>
     );
@@ -230,6 +249,7 @@ export function MyRoadmapsPage({
     return (
       <div className="stack">
         {heading()}
+        {planner}
         <Card title="Chưa tải được danh sách lộ trình">
           <Alert>{state.message}</Alert>
           <Button
@@ -248,6 +268,7 @@ export function MyRoadmapsPage({
     return (
       <div className="stack">
         {heading()}
+        {planner}
         <EmptyState title="Bạn chưa có lộ trình nào" action={planLink}>
           Lập lộ trình đầu tiên để sắp xếp các bữa ăn theo từng ngày của chuyến
           đi.
@@ -257,6 +278,7 @@ export function MyRoadmapsPage({
   return (
     <div className="stack">
       {heading(`Bạn có ${data.totalItems} lộ trình, mới nhất trước.`)}
+      {planner}
       <ul className="roadmap-grid">
         {data.items.map((roadmap) => (
           <li key={roadmap.id}>

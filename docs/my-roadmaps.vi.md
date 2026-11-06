@@ -12,6 +12,7 @@ Màn `/roadmaps` (chỉ `TRAVELER`) gọi thật RM-02 `GET /api/v1/roadmaps?pag
   - Ngân sách, chi phí dự kiến (`totalEstimatedCost`), điểm xuất phát (tên điểm đã chấm hoặc "Vị trí hiện tại"; ẩn khi `originMode = none`).
   - Nhãn "Vượt ngân sách" khi `totalEstimatedCost > budgetAmount` (cùng quy tắc `budget.isOverBudget` của RoadmapDetail). Không hiện khi chưa đặt ngân sách.
   - Tiền hiển thị `1.500.000 VND`, cùng định dạng với ô ngân sách của F-19.
+- **Lập lộ trình mới:** nút ở đầu trang (và trong trạng thái chưa có lộ trình) mở hộp thoại 2 bước ngay trên danh sách; `/roadmaps?new=1` mở sẵn hộp thoại. Xem [roadmap-plan.vi.md](roadmap-plan.vi.md).
 - **Trạng thái:** đang tải (skeleton), lỗi (thông báo theo `errorCode` kèm nút "Thử lại", không dùng dữ liệu mẫu thay thế), chưa có lộ trình (nút "Lập lộ trình mới"), có dữ liệu (kèm bộ chuyển trang khi có hơn một trang).
 - **Lối vào:** liên kết "Lộ trình của tôi" trên thanh điều hướng và trong menu tài khoản của Traveler; nút "Xem lộ trình của tôi" ở thẻ kết quả của màn lập lộ trình (F-19).
 - Proxy: thêm `GET roadmaps` vào allowlist; query `page` và `pageSize` được chuyển nguyên cho backend.

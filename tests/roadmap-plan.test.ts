@@ -23,6 +23,8 @@ import {
   provinceFromOrigin,
   roadmapEndDate,
   roadmapErrorMessage,
+  roadmapPlaceSummary,
+  validateRoadmapPlace,
   roadmapFieldErrors,
   roadmapFormFromSummary,
   suggestRoadmapTitle,
@@ -451,5 +453,89 @@ describe("VND budget input", () => {
       caret: 1,
     });
     expect(applyVndEdit("", "1".repeat(20), 20, false).digits).toHaveLength(14);
+  });
+});
+
+describe("new roadmap dialog, step 1 (where the traveler will be)", () => {
+  const point = { name: "Khách sạn Sala", latitude: 16.06, longitude: 108.24 };
+  it("asks first whether the exact place is known", () => {
+    expect(
+      validateRoadmapPlace(null, { province: "", originMode: "none" }, null),
+    ).toEqual({
+      knowledge: "Cho ANGI biết bạn đã biết chính xác nơi sẽ đến chưa.",
+    });
+  });
+  it("needs a point or the current location first, then its city, when the place is known", () => {
+    expect(
+      validateRoadmapPlace("known", { province: "", originMode: "none" }, null),
+    ).toEqual({
+      origin: "Chấm vị trí trên bản đồ hoặc dùng vị trí hiện tại.",
+    });
+    // A point whose city could not be looked up still needs one.
+    expect(
+      validateRoadmapPlace(
+        "known",
+        { province: "", originMode: "pinned" },
+        point,
+      ),
+    ).toEqual({ province: "Chọn tỉnh / thành phố bạn muốn đến." });
+    expect(
+      validateRoadmapPlace(
+        "known",
+        { province: "Thành phố Đà Nẵng", originMode: "pinned" },
+        point,
+      ),
+    ).toEqual({});
+  });
+  it("accepts the current location only once the browser allowed it", () => {
+    const values = {
+      province: "Thành phố Đà Nẵng",
+      originMode: "gps" as const,
+    };
+    expect(validateRoadmapPlace("known", values, null)).toHaveProperty(
+      "origin",
+    );
+    expect(
+      validateRoadmapPlace("known", values, null, { gpsReady: true }),
+    ).toEqual({});
+  });
+  it("needs only the city when the exact place is not known yet", () => {
+    expect(
+      validateRoadmapPlace(
+        "unknown",
+        { province: "", originMode: "none" },
+        null,
+      ),
+    ).toEqual({ province: "Chọn tỉnh / thành phố bạn muốn đến." });
+    expect(
+      validateRoadmapPlace(
+        "unknown",
+        { province: "Thành phố Hà Nội", originMode: "none" },
+        null,
+      ),
+    ).toEqual({});
+  });
+  it("recalls the place at the top of step 2", () => {
+    expect(
+      roadmapPlaceSummary({
+        province: "Thành phố Đà Nẵng",
+        originMode: "pinned",
+        originLabel: " Khách sạn Sala ",
+      }),
+    ).toBe("Khách sạn Sala · Đà Nẵng");
+    expect(
+      roadmapPlaceSummary({
+        province: "Thành phố Đà Nẵng",
+        originMode: "gps",
+        originLabel: "",
+      }),
+    ).toBe("Vị trí hiện tại · Đà Nẵng");
+    expect(
+      roadmapPlaceSummary({
+        province: "Tỉnh Lào Cai",
+        originMode: "none",
+        originLabel: "",
+      }),
+    ).toBe("Lào Cai");
   });
 });

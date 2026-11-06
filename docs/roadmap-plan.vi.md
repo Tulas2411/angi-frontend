@@ -1,34 +1,53 @@
 # F-19 Lập lộ trình mới (ANGI-105)
 
-Màn `/roadmaps/new` (chỉ `TRAVELER`) gọi thật RM-01 `POST /api/v1/roadmaps` để tạo lộ trình và RM-04 `PATCH /api/v1/roadmaps/{roadmapId}` để sửa thông tin chung. Mã nguồn nằm trong `src/features/roadmaps/` (`plan-roadmap-page.tsx`, `roadmap-overview-form.tsx`, `roadmap-rules.ts`, `roadmap-service.ts`, `roadmap-types.ts`). Màn demo cũ `src/features/roadmaps/pages.tsx` (`/demo/traveler/roadmaps/*`) không bị sửa.
+Từ 2026-11-06, lập lộ trình là **hộp thoại 2 bước** mở trên màn "Lộ trình của tôi" (`/roadmaps`, chỉ `TRAVELER`), không còn trang riêng. `/roadmaps/new` chỉ còn chuyển hướng tới `/roadmaps?new=1`, nơi hộp thoại tự mở, nên link và bookmark cũ vẫn dùng được. Hộp thoại gọi thật RM-01 `POST /api/v1/roadmaps`. Mã nguồn: `src/features/roadmaps/new-roadmap-dialog.tsx` (+ `.css`), luật trong `roadmap-rules.ts` (`validateRoadmapPlace`, `roadmapPlaceSummary`, `validateRoadmapForm`, `buildCreateRoadmapRequest`). Màn demo cũ `src/features/roadmaps/pages.tsx` (`/demo/traveler/roadmaps/*`) không bị sửa.
 
 ## Hành vi
 
-- **Điểm đến** (tỉnh / thành, bắt buộc trên form): RM-01 không lưu điểm đến, nên tỉnh chỉ dùng để gợi ý tên lộ trình (`Khám phá ẩm thực Đà Nẵng`) cho tới khi người dùng tự sửa tên. Khi sinh món (RM-10) hoặc gợi ý món (RM-06), app phải gửi lại tỉnh.
-- **Điểm xuất phát**: hai nút, mỗi nút tương ứng một `originMode` của API Design:
-  - **Chấm trên bản đồ** (`pinned`): bấm là mở ngay hộp chọn vị trí dùng chung với F-43. Gửi `originLatitude` / `originLongitude` (làm tròn 6 chữ số) và `originLabel` (không bắt buộc, tối đa 200 ký tự). Khi bấm lưu điểm, form tra địa chỉ của điểm đó (đúng một lần tra ngược, như form đăng ký nhà hàng F-43) và tự điền ô **tỉnh / thành phố** theo danh mục tỉnh; giá trị đã nhập trước đó bị thay và gợi ý tên lộ trình được cập nhật. Không tra được hoặc không khớp danh mục thì giữ nguyên ô tỉnh và báo người dùng tự chọn. Tọa độ gửi lên vẫn là điểm người dùng chấm, không đổi theo địa chỉ. Đóng hộp mà chưa chọn điểm thì lựa chọn được bỏ.
-  - **Vị trí hiện tại** (`gps`): bấm là trình duyệt hỏi người dùng có cho ANGI dùng vị trí không. Chỉ khi được phép thì lựa chọn mới giữ lại; bị từ chối hoặc lỗi thì trả về chưa chọn và hiện hướng dẫn. Tọa độ không được gửi và không được lưu; RM-10 / RM-14 sau này sẽ hỏi lại vị trí mỗi lần dùng.
-  - Không chọn nút nào (hoặc bấm "Bỏ điểm xuất phát") thì gửi `originMode: "none"`, chỉ cần tỉnh.
-- **Ngày bắt đầu** (không bắt buộc) và **số ngày** (số nguyên 1–7, bắt buộc; giới hạn 7 ngày là quy định của ứng dụng, RM-01 ở backend vẫn nhận 1–30). Ngày kết thúc chỉ hiển thị, tính theo `startDate + numDays − 1`. Figma có chọn ngày kết thúc, nhưng hợp đồng nhận `numDays`.
-- **Ngân sách** (VND mỗi người, cả chuyến, số nguyên ≥ 0, không bắt buộc): ô nhập tự định dạng khi gõ thành `1.500.000 VND` (dấu chấm phân cách hàng nghìn, đơn vị luôn ở cuối), tối đa 14 chữ số theo cột `numeric(14,0)` của Data Dictionary. Form chỉ giữ và gửi các chữ số (`budgetAmount: 1500000`); chữ cái, ký tự lạ bị bỏ, Backspace xóa được số dù con trỏ đứng cạnh dấu chấm hoặc `VND`. Thẻ kết quả cũng hiển thị dạng `1.500.000 VND / người`. và **tên lộ trình** (1–200 ký tự).
-- Sau khi tạo: thẻ tóm tắt lấy từ `RoadmapDetail` trả về (`overview`, số ngày theo `itinerary`), kèm nút **Sửa thông tin** và **Lập lộ trình khác**.
-- **Sửa thông tin** (RM-04): chỉ gửi các trường đã đổi; trường tùy chọn bị xóa được gửi `null`. Khi rời `pinned`, app chỉ gửi `originMode`, backend tự xóa tọa độ và tên điểm. Nút lưu bị khóa khi chưa có thay đổi. Bấm hủy khi còn thay đổi thì mở `ConfirmDialog`.
-- **Lỗi** xử lý theo `errorCode`:
-  - `VALIDATION_FAILED`: hiện lỗi dưới từng trường (khóa PascalCase hoặc camelCase đều được).
-  - `DAY_NOT_EMPTY`: báo cần xóa món ở những ngày bị cắt.
-  - `ROADMAP_NOT_FOUND`: báo không tìm thấy lộ trình.
-  - Mọi lỗi đều giữ nguyên dữ liệu đã nhập.
-- Lối vào:
-  - liên kết "Lập lộ trình" trên thanh điều hướng của Traveler;
-  - mục "Lập lộ trình mới" trong menu tài khoản;
-  - liên kết "Lập lộ trình của bạn" trong khối Roadmap của trang chủ.
+### Bước 1: Bạn sẽ ăn ở đâu
+
+Hộp thoại hỏi trước: **"Bạn đã biết chính xác nơi mình sẽ đến chưa?"**
+
+- **Đã biết chính xác**: chọn một trong hai cách, mỗi cách tương ứng một `originMode` của API Design:
+  - **Chấm trên bản đồ** (`pinned`): bấm là mở ngay hộp chọn vị trí dùng chung với F-43. Khi lưu điểm, app tra địa chỉ của điểm đó (đúng một lần tra ngược) và tự điền tỉnh / thành phố theo danh mục tỉnh; tên điểm (nếu tìm được) được điền sẵn làm tên điểm xuất phát. Đóng hộp mà chưa chọn điểm thì lựa chọn được bỏ. Tọa độ gửi lên là điểm người dùng chấm, làm tròn 6 chữ số.
+  - **Vị trí hiện tại** (`gps`): trình duyệt hỏi quyền vị trí. Chỉ khi được phép thì lựa chọn mới giữ lại; bị từ chối hoặc lỗi thì về chưa chọn và hiện hướng dẫn. Khi có token Mapbox, tọa độ chỉ dùng để tra tỉnh / thành phố; tọa độ **không được gửi và không được lưu** (RM-10 / RM-14 hỏi lại vị trí mỗi lần dùng).
+  - Ô **Tỉnh / thành phố**: với **Chấm trên bản đồ** không có ô này, thành phố lấy theo điểm đã chấm và hiện cạnh điểm (`Khách sạn Sala · Đà Nẵng`); ô chỉ hiện khi không tra được thành phố từ điểm (không có token, không khớp danh mục). Với **Vị trí hiện tại** ô hiện bên dưới, tự điền khi tra được và vẫn sửa được. Chưa chọn cách nào thì chỉ báo thiếu vị trí, chưa hỏi thành phố.
+- **Chưa biết chính xác**: chỉ cần chọn **tỉnh / thành phố** sẽ đến; gửi `originMode: "none"`.
+- Danh sách gợi ý tỉnh / thành phố trong hộp thoại nổi trên nội dung (`position: fixed` theo ô nhập, dùng chung cho mọi `Combobox` trong hộp thoại), không bị cắt bởi vùng cuộn; thiếu chỗ phía dưới thì mở lên trên.
+- Nút **Tiếp tục** chỉ sang bước 2 khi đủ: đã trả lời câu hỏi, có tỉnh / thành phố, và nếu "đã biết" thì có điểm đã chấm hoặc vị trí đã được cho phép. Thiếu thì báo lỗi ngay dưới phần thiếu và đưa focus tới đó.
+
+RM-01 không lưu điểm đến, nên tỉnh chỉ dùng để gợi ý tên lộ trình (`Khám phá ẩm thực Đà Nẵng`) và được nhớ trong trình duyệt cho RM-06 (`rememberDestination`).
+
+### Bước 2: Thời gian và ngân sách
+
+- Đầu bước có dòng tóm tắt nơi đến (ví dụ `Vị trí hiện tại · Đà Nẵng`, `Khách sạn Sala · Đà Nẵng`, hoặc chỉ `Hà Nội`) với nút **Đổi** quay lại bước 1. Nút **Quay lại** cũng vậy; mọi giá trị đã nhập được giữ.
+- **Tên điểm xuất phát** (chỉ khi chấm trên bản đồ, không bắt buộc, tối đa 200 ký tự).
+- **Ngày bắt đầu** (không bắt buộc) và **số ngày** (số nguyên 1–7, bắt buộc; giới hạn 7 ngày là quy định của ứng dụng, RM-01 ở backend nhận 1–100). Ngày kết thúc chỉ hiển thị, tính theo `startDate + numDays − 1`.
+- **Ngân sách** (VND mỗi người, cả chuyến, số nguyên ≥ 0, không bắt buộc): tự định dạng khi gõ thành `1.500.000 VND`, tối đa 14 chữ số (`numeric(14,0)`); chỉ gửi các chữ số (`budgetAmount: 1500000`).
+- **Tên lộ trình** (1–200 ký tự): gợi ý theo tỉnh cho tới khi người dùng tự sửa.
+- **Tạo lộ trình**: gọi RM-01, hiện toast "Đã tạo lộ trình. Thêm món cho từng bữa nhé." và mở trang chi tiết lộ trình vừa tạo (`/roadmaps/{id}`). Nút giữ trạng thái đang xử lý tới khi trang chi tiết mở, nên không gửi hai lần. Sửa thông tin chung (RM-04) làm ở trang chi tiết.
+- **Lỗi** theo `errorCode`: `VALIDATION_FAILED` hiện lỗi dưới từng trường (khóa PascalCase hoặc camelCase); lỗi khác hiện thông báo chung trong hộp thoại. Mọi lỗi đều giữ nguyên dữ liệu đã nhập.
+
+### Lối vào
+
+- Nút **Lập lộ trình mới** trên màn "Lộ trình của tôi" (cả khi chưa có lộ trình nào).
+- `roadmapRoutes.plan` = `/roadmaps?new=1`: liên kết "Lập lộ trình mới" ở footer, khối Roadmap của trang chủ, và `/roadmaps/start` (header "Lộ trình" khi Traveler chưa có lộ trình). Đóng hộp thoại thì `?new=1` bị bỏ khỏi URL, nên tải lại trang không mở lại hộp thoại.
+- Đóng bằng nút ✕, nút **Hủy**, phím Escape hoặc bấm ra ngoài; không đóng được khi đang tạo.
 
 ## Giới hạn hiện tại
 
-- Tải lại trang thì không mở lại lộ trình vừa tạo, vì màn chi tiết (F-21, RM-03) chưa làm.
 - Không có quyền riêng tư và mời bạn đồng hành (Figma frame 07–10), vì RM-01 không có các trường này.
+- Đóng hộp thoại giữa chừng thì không hỏi lại; các giá trị đã nhập bị bỏ.
 
-## Kiểm tra (2026-10-24)
+## Kiểm tra (2026-11-06, hộp thoại 2 bước)
+
+| Kiểm tra                                                                               | Kết quả                                                                                   |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `npm test`                                                                             | `tests/roadmap-plan.test.ts`: thêm test cho `validateRoadmapPlace`, `roadmapPlaceSummary` |
+| `tests/browser/roadmap-plan.spec.ts` (viết lại cho hộp thoại) và `my-roadmaps.spec.ts` | Đạt với `ANGI_TEST_DEV=1`; ca chấm bản đồ (`ROADMAP_MAP=1`) vẫn do chủ dự án tự chạy      |
+| Giao diện                                                                              | Chụp ở 1280px và 390px: không tràn ngang                                                  |
+
+## Kiểm tra (2026-10-24, trang cũ `/roadmaps/new`)
 
 | Kiểm tra                                                                 | Kết quả                                                        |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------- |

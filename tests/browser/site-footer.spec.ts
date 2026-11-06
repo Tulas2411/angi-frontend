@@ -73,7 +73,7 @@ for (const role of ["traveler", "owner", "mod", "admin"] as const) {
       ).toHaveAttribute("href", "/roadmaps");
       await expect(
         footer.getByRole("link", { name: "Lập lộ trình mới", exact: true }),
-      ).toHaveAttribute("href", "/roadmaps/new");
+      ).toHaveAttribute("href", "/roadmaps?new=1");
     } else {
       await expect(
         footer.getByRole("link", { name: "Lộ trình của tôi", exact: true }),
