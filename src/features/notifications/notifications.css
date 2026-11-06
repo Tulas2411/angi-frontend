@@ -242,10 +242,10 @@
   height: 10px;
 }
 
+/* Wave and colour: shared skeleton rule in globals.css. */
 .notifications-skeleton {
   height: 50px;
   border-radius: 12px;
-  background: var(--control);
 }
 .notifications-problem {
   padding: var(--space-5);
@@ -524,14 +524,6 @@
 }
 .notification-dropdown-skeleton {
   height: 220px;
-  background: linear-gradient(
-    90deg,
-    var(--control) 25%,
-    var(--card) 50%,
-    var(--control) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s linear infinite;
 }
 .notification-dropdown-foot {
   padding: var(--space-3) var(--space-4);

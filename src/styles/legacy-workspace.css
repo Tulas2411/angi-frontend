@@ -837,11 +837,9 @@
 & .empty-symbol {
   font-size: 32px;
 }
+/* Wave and colour: shared skeleton rule in globals.css. */
 & .skeleton {
   height: 48px;
-  background: linear-gradient(90deg, var(--control), #f6f3f1, var(--control));
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 16px;
 }
 & .avatar {

@@ -112,12 +112,11 @@
   color: var(--muted);
   font-size: 13px;
 }
+/* Wave and colour: shared skeleton rule in globals.css. */
 .mh-tile-skeleton {
   width: 64px;
   height: 40px;
   border-radius: 10px;
-  background: var(--control);
-  animation: shimmer 1.2s ease-in-out infinite alternate;
 }
 .mh-tile-retry {
   display: inline-flex;

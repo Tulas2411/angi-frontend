@@ -1519,10 +1519,10 @@
   flex-direction: column;
   gap: 16px;
 }
+/* Wave and colour: shared skeleton rule in globals.css. */
 .blog-skeleton-lead {
   height: 280px;
   border-radius: 12px;
-  background: var(--control);
 }
 .blog-skeleton-rows {
   display: grid;
@@ -1532,7 +1532,6 @@
 .blog-skeleton-row {
   height: 138px;
   border-radius: 12px;
-  background: var(--control);
 }
 
 /* ------------------------------------------------------------ responsive */

@@ -837,12 +837,71 @@ select.input {
   background: var(--control);
   font-size: 24px;
 }
+/*
+ * Loading placeholders: a flat block with a soft light band sweeping left to right (wave). Every
+ * skeleton of the app shares it, so they move in the same rhythm; feature CSS sets only size and radius.
+ * The band moves with transform (no repaint of the block), and stops under reduced motion.
+ */
 .skeleton {
   height: 48px;
   border-radius: var(--radius-md);
-  background: linear-gradient(90deg, var(--control), #f7f4f2, var(--control));
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+}
+.skeleton,
+.blog-skeleton-lead,
+.blog-skeleton-row,
+.notifications-skeleton,
+.notification-dropdown-skeleton,
+.mh-tile-skeleton,
+.dash-chart-skeleton,
+.dash-kpi.is-loading,
+.roadmap-suggested-card.is-loading,
+.roadmap-place-loading > span:not(.sr-only) {
+  position: relative;
+  overflow: hidden;
+  background: var(--control);
+  isolation: isolate;
+}
+.skeleton::after,
+.blog-skeleton-lead::after,
+.blog-skeleton-row::after,
+.notifications-skeleton::after,
+.notification-dropdown-skeleton::after,
+.mh-tile-skeleton::after,
+.dash-chart-skeleton::after,
+.dash-kpi.is-loading::after,
+.roadmap-suggested-card.is-loading::after,
+.roadmap-place-loading > span:not(.sr-only)::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.7) 50%,
+    transparent 80%
+  );
+  transform: translateX(-100%);
+  animation: skeleton-wave 1.6s ease-in-out infinite;
+  content: "";
+}
+@keyframes skeleton-wave {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .blog-skeleton-lead::after,
+  .blog-skeleton-row::after,
+  .notifications-skeleton::after,
+  .notification-dropdown-skeleton::after,
+  .mh-tile-skeleton::after,
+  .dash-chart-skeleton::after,
+  .dash-kpi.is-loading::after,
+  .roadmap-suggested-card.is-loading::after,
+  .roadmap-place-loading > span:not(.sr-only)::after {
+    animation: none;
+    opacity: 0;
+  }
 }
 .avatar {
   display: inline-flex;

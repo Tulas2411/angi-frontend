@@ -87,16 +87,7 @@
   color: var(--muted);
   font-size: 12px;
 }
-.dash-kpi.is-loading {
-  background: linear-gradient(
-    90deg,
-    var(--control),
-    var(--line),
-    var(--control)
-  );
-  background-size: 200% 100%;
-  animation: dash-shimmer 1.2s linear infinite;
-}
+/* .dash-kpi.is-loading: wave and colour from the shared skeleton rule in globals.css. */
 
 /* ----------------------------------------------------- queues */
 .dash-queues h2,
@@ -279,17 +270,10 @@
   font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
+/* Wave and colour: shared skeleton rule in globals.css. */
 .dash-chart-skeleton {
   height: 260px;
   border-radius: var(--radius-sm);
-  background: linear-gradient(
-    90deg,
-    var(--control),
-    var(--line),
-    var(--control)
-  );
-  background-size: 200% 100%;
-  animation: dash-shimmer 1.2s linear infinite;
 }
 .dash-table-wrap {
   max-height: 320px;
@@ -548,12 +532,6 @@
   font-size: 12px;
 }
 
-@keyframes dash-shimmer {
-  to {
-    background-position: -200% 0;
-  }
-}
-
 /* ---------------------------------------------------- responsive */
 @media (max-width: 1100px) {
   .dash-columns {
@@ -580,10 +558,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dash-kpi.is-loading,
-  .dash-chart-skeleton {
-    animation: none;
-  }
   .dash-queues a,
   .dash-bars-track span,
   .dash-segmented button {

@@ -383,28 +383,16 @@
   display: grid;
   gap: var(--space-2);
 }
+/* Wave and colour: shared skeleton rule in globals.css. */
 .roadmap-place-loading > span:not(.sr-only) {
   height: 12px;
   border-radius: var(--radius-pill);
-  background: linear-gradient(
-    90deg,
-    var(--control),
-    var(--line),
-    var(--control)
-  );
-  background-size: 200% 100%;
-  animation: roadmap-place-shimmer 1.2s linear infinite;
 }
 .roadmap-place-loading > span:nth-child(2) {
   width: 80%;
 }
 .roadmap-place-loading > span:nth-child(3) {
   width: 55%;
-}
-@keyframes roadmap-place-shimmer {
-  to {
-    background-position: -200% 0;
-  }
 }
 
 /* "Địa điểm được đề xuất" under a day (Wanderlog style). */
@@ -549,14 +537,7 @@
 .roadmap-suggested-card.is-loading {
   border-style: solid;
   border-color: var(--line);
-  background: linear-gradient(
-    90deg,
-    var(--control),
-    var(--line),
-    var(--control)
-  );
-  background-size: 200% 100%;
-  animation: roadmap-place-shimmer 1.2s linear infinite;
+  /* Wave and colour: shared skeleton rule in globals.css. */
 }
 .roadmap-suggested-body {
   display: flex;
@@ -813,10 +794,6 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .roadmap-place-loading > span,
-  .roadmap-suggested-card.is-loading {
-    animation: none;
-  }
   .roadmap-place-photos img,
   .roadmap-place .roadmap-map-card-heading .tabs .chip {
     transition: none;
