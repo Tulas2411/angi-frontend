@@ -18,6 +18,8 @@ export function ownerServer(mapboxToken = "") {
       SESSION_PASSWORD: "angi-owner-tests-isolated-local-session-key-only",
       NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: mapboxToken,
       NEXT_PUBLIC_GOOGLE_CLIENT_ID: "",
+      // /demo pages are off unless enabled (production default); several specs use them.
+      NEXT_PUBLIC_ENABLE_DEMO: "true",
       NEXT_TELEMETRY_DISABLED: "1",
       NODE_OPTIONS: "",
     },

@@ -3,7 +3,7 @@ import Brand from "@/components/brand";
 import { ActionLink } from "@/components/ui/primitives";
 import { Card, Alert } from "@/shared/ui";
 export default function DemoPortal() {
-  if (process.env.NEXT_PUBLIC_ENABLE_DEMO === "false") notFound();
+  if (process.env.NEXT_PUBLIC_ENABLE_DEMO !== "true") notFound();
   return (
     <main className="container workspace stack">
       <Brand />
