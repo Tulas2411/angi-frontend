@@ -1,12 +1,13 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers as requestHeaders } from "next/headers";
 import { redirect } from "next/navigation";
 import { getIronSession, type SessionOptions } from "iron-session";
 import { ApiError, readApiResponse } from "@/shared/api/error";
 import { HOME_BY_ROLE, ROLE_CODES } from "./roles";
 import { createRefreshCoordinator } from "./refresh-coordinator";
-import { createSessionRegistry } from "./session-registry";
+import { createSessionRegistry, newerAuth } from "./session-registry";
+import { clientIpFrom } from "./client-ip";
 import { runAuthenticated } from "./authenticated-request";
 import type { AuthResultDto, AuthUserDto, RoleCode } from "./types";
 
@@ -64,7 +65,7 @@ const sessions = (state.angiSessions ??= createSessionRegistry());
 
 export function readAuth(session: AuthSession): AuthResultDto | null {
   if (!session.id || sessions.isRevoked(session.id)) return null;
-  const auth = sessions.get(session.id) ?? session.auth;
+  const auth = newerAuth(sessions.get(session.id), session.auth);
   return validAuth(auth) ? auth : null;
 }
 
@@ -120,6 +121,7 @@ export async function backend<T>(
   if (init.body !== undefined && !multipart)
     headers.set("Content-Type", "application/json");
   if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  await forwardClientIp(headers);
   let response: Response;
   try {
     response = await fetch(`${baseUrl.replace(/\/$/, "")}/${path}`, {
@@ -147,6 +149,25 @@ export async function backend<T>(
   const data = await readApiResponse<T>(response);
   init.onSuccess?.(response.status);
   return data;
+}
+
+/**
+ * Sends the browser IP with the shared key (BACKEND_PROXY_KEY = TrustedClientIp:ProxyKey of the backend), so the
+ * backend's per-IP limits count each visitor instead of this server. Nothing is sent without the key, or outside a
+ * request (build time).
+ */
+async function forwardClientIp(headers: Headers) {
+  const key = process.env.BACKEND_PROXY_KEY;
+  if (!key) return;
+  let ip: string | null;
+  try {
+    ip = clientIpFrom(await requestHeaders());
+  } catch {
+    return;
+  }
+  if (!ip) return;
+  headers.set("X-Angi-Proxy-Key", key);
+  headers.set("X-Angi-Client-Ip", ip);
 }
 
 export async function refreshSession(session: AuthSession) {
