@@ -2,10 +2,13 @@
 import Link from "next/link";
 import {
   useCallback,
+  useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type InputHTMLAttributes,
   type ReactNode,
   type TextareaHTMLAttributes,
@@ -788,11 +791,46 @@ export function Combobox({
   );
   const expanded = open && matches.length > 0;
   const activeOption = useRef<HTMLLIElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  // Inside a dialog the content scrolls and clips: the list is placed fixed under (or above) the input.
+  const inDialog = useContext(PortalContainerContext) !== null;
+  const [placement, setPlacement] = useState<CSSProperties>();
+  useLayoutEffect(() => {
+    if (!expanded || !inDialog) return;
+    const input = box.current?.querySelector("input");
+    if (!input) return;
+    const place = () => {
+      const rect = input.getBoundingClientRect();
+      const gap = 6;
+      const below = window.innerHeight - rect.bottom - gap - 12;
+      const above = rect.top - gap - 12;
+      const up = below < 200 && above > below;
+      const maxHeight = Math.max(120, Math.min(260, up ? above : below));
+      setPlacement({
+        position: "fixed",
+        left: rect.left,
+        width: rect.width,
+        margin: 0,
+        maxHeight,
+        ...(up
+          ? { top: "auto", bottom: window.innerHeight - rect.top + gap }
+          : { top: rect.bottom + gap }),
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    // Capture: the dialog content scrolls, not the window.
+    document.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      document.removeEventListener("scroll", place, true);
+    };
+  }, [expanded, inDialog]);
   useEffect(() => {
     if (expanded) activeOption.current?.scrollIntoView({ block: "nearest" });
   }, [active, expanded, value, options]);
   return (
-    <div className="field combobox">
+    <div ref={box} className="field combobox">
       <label htmlFor={id}>
         {label}
         {props.required && " *"}
@@ -857,7 +895,12 @@ export function Combobox({
         }}
       />
       {expanded && (
-        <ul role="listbox" id={`${id}-list`} className="combobox-options">
+        <ul
+          role="listbox"
+          id={`${id}-list`}
+          className="combobox-options"
+          style={inDialog ? placement : undefined}
+        >
           {matches.map((o, i) => (
             <li
               key={o}

@@ -652,9 +652,12 @@
   justify-content: space-between;
   flex-shrink: 0;
 }
+& .dialog-heading {
+  border-bottom: 1px solid var(--line);
+}
 & .dialog-content {
   overflow: auto;
-  padding: 0 32px 24px;
+  padding: 24px 32px;
   min-height: 0;
 }
 & .dialog-footer {
@@ -807,6 +810,7 @@
   right: 8px;
   top: 0;
   padding: 12px;
+  border-bottom: 0;
 }
 & .dialog-map .dialog-heading h2 {
   position: absolute;

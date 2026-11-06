@@ -15,7 +15,8 @@
  */
 .roadmap-add-target {
   position: sticky;
-  top: 0;
+  /* Flush with the top of the scrolling area, above the dialog content's top padding. */
+  top: calc(-1 * var(--dialog-content-pad-top, 0px));
   z-index: 3;
   display: grid;
   gap: var(--space-2);
