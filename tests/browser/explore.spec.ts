@@ -537,7 +537,16 @@ test.describe("dishes", () => {
       page.getByRole("heading", { name: "Bún bò Huế", level: 1 }),
     ).toBeVisible();
     await expect(page.getByText("Nước dùng hầm xương 8 tiếng")).toBeVisible();
-    await expect(page.getByText("45.000")).toBeVisible();
+    await expect(page.locator(".dish-page-price")).toHaveText("45.000đ");
+    // No photo: the plate holds the placeholder and nothing opens a zoom.
+    await expect(page.locator(".dish-plate .dish-plate-empty")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Xem ảnh lớn của Bún bò Huế" }),
+    ).toHaveCount(0);
+    // The facts row: price, form and likes.
+    await expect(page.locator(".dish-page-facts")).toContainText(
+      "12 lượt thích",
+    );
     const sells = page.locator(".dish-page-seller");
     await expect(sells).toContainText("Bún Bò Bà Diệu");
     await expect(
@@ -546,12 +555,12 @@ test.describe("dishes", () => {
       "href",
       /google\.com\/maps\/search\/\?api=1&query=21\.0285,105\.8542/,
     );
-    // The rest of restaurant 7's menu (REST-03), without the dish being viewed.
+    // Restaurant 7's menu (REST-03), the dish being viewed included (as in the mock-up).
     const more = page.getByRole("region", {
-      name: "Món khác ở Bún Bò Bà Diệu",
+      name: "Khám phá menu ở Bún Bò Bà Diệu",
     });
-    await expect(more.getByRole("link")).toHaveCount(2);
-    await expect(more.getByRole("link", { name: /Bún bò Huế/ })).toHaveCount(0);
+    await expect(more.getByRole("link")).toHaveCount(3);
+    await expect(more.getByRole("link", { name: /Bún bò Huế/ })).toHaveCount(1);
     await sells.getByRole("link", { name: "Xem quán" }).click();
     await expect(page).toHaveURL(/\/restaurants\/7$/);
   });
@@ -1219,12 +1228,13 @@ test.describe("restaurants", () => {
     await expect(
       page.getByRole("heading", { name: "Bún Bò Bà Diệu", level: 1 }),
     ).toBeVisible();
-    await expect(page.getByText("Quán bún bò gia truyền 30 năm")).toBeVisible();
-    // The tabs come first and "Thông tin" opens by default.
-    await expect(page.getByRole("tab", { name: "Thông tin" })).toHaveAttribute(
+    // The tabs come first and "Thực đơn" opens by default.
+    await expect(page.getByRole("tab", { name: "Thực đơn" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
+    await page.getByRole("tab", { name: "Thông tin" }).click();
+    await expect(page.getByText("Quán bún bò gia truyền 30 năm")).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Liên hệ & vị trí" }),
     ).toBeVisible();
@@ -1276,6 +1286,8 @@ test.describe("restaurants", () => {
     page,
   }) => {
     await page.goto("/restaurants/7");
+    // The review and report buttons sit with the information (the menu opens first).
+    await page.getByRole("tab", { name: "Thông tin" }).click();
     await expect(
       page.getByRole("link", { name: "Đăng nhập để đánh giá" }),
     ).toBeVisible();
@@ -1287,6 +1299,7 @@ test.describe("restaurants", () => {
     await expect(
       page.getByRole("heading", { name: "Bún Bò Bà Diệu", level: 1 }),
     ).toBeVisible();
+    await page.getByRole("tab", { name: "Thông tin" }).click();
     await expect(
       page.getByRole("button", { name: "Viết đánh giá" }),
     ).toHaveCount(0);
@@ -1300,6 +1313,11 @@ test.describe("restaurants", () => {
 });
 
 test.describe("review and report (traveler)", () => {
+  /** The review and report buttons sit on the information tab (the menu opens first). */
+  const openInformation = async (page: Page) => {
+    await page.goto("/restaurants/7");
+    await page.getByRole("tab", { name: "Thông tin" }).click();
+  };
   const dialogOf = (page: Page, name: string) =>
     page.getByRole("dialog", { name });
 
@@ -1307,7 +1325,7 @@ test.describe("review and report (traveler)", () => {
     page,
   }) => {
     await loginAs(page, "traveler");
-    await page.goto("/restaurants/7");
+    await openInformation(page);
     await page.getByRole("button", { name: "Viết đánh giá" }).click();
     const box = dialogOf(page, "Đánh giá Bún Bò Bà Diệu");
     await expect(box).toBeVisible();
@@ -1349,7 +1367,7 @@ test.describe("review and report (traveler)", () => {
     page,
   }) => {
     await loginAs(page, "traveler");
-    await page.goto("/restaurants/7");
+    await openInformation(page);
     await page.getByRole("button", { name: "Viết đánh giá" }).click();
     const box = dialogOf(page, "Đánh giá Bún Bò Bà Diệu");
     await box.getByRole("radio", { name: "4 sao: Ngon" }).click();
@@ -1372,7 +1390,7 @@ test.describe("review and report (traveler)", () => {
     page,
   }) => {
     await loginAs(page, "traveler");
-    await page.goto("/restaurants/7");
+    await openInformation(page);
     await page.getByRole("button", { name: "Báo cáo quán" }).click();
     const box = dialogOf(page, "Báo cáo Bún Bò Bà Diệu");
     await box.getByLabel("Lý do khác").check();
@@ -1406,7 +1424,7 @@ test.describe("review and report (traveler)", () => {
 
   test("a report that is still waiting is explained", async ({ page }) => {
     await loginAs(page, "traveler");
-    await page.goto("/restaurants/7");
+    await openInformation(page);
     await page.getByRole("button", { name: "Báo cáo quán" }).click();
     failReport = { status: 409, errorCode: "REPORT_ALREADY_PENDING" };
     const box = dialogOf(page, "Báo cáo Bún Bò Bà Diệu");
@@ -1421,7 +1439,7 @@ test.describe("review and report (traveler)", () => {
     page,
   }) => {
     await loginAs(page, "traveler");
-    await page.goto("/restaurants/7");
+    await openInformation(page);
     await page.getByRole("button", { name: "Viết đánh giá" }).click();
     const box = dialogOf(page, "Đánh giá Bún Bò Bà Diệu");
     await box.getByLabel("Ảnh món ăn").setInputFiles({

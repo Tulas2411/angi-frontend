@@ -157,18 +157,37 @@ export function dishPictures(coverUrl: string | null, images: string[]) {
   return [...new Set([...(coverUrl ? [coverUrl] : []), ...images])];
 }
 
-/** Other dishes of the same restaurant for "Món khác ở quán": available ones first, menu order kept. */
+/** Other dishes of the same restaurant: available ones first, menu order kept. */
 export function otherMenuDishes<T extends { id: number; isAvailable: boolean }>(
   dishes: T[],
   currentDishId: number,
   limit = 8,
 ) {
-  const others = dishes.filter((dish) => dish.id !== currentDishId);
+  return menuPreview(
+    dishes.filter((dish) => dish.id !== currentDishId),
+    limit,
+  );
+}
+
+/**
+ * "Khám phá menu ở {quán}" on the dish page: the restaurant's menu, the dish being read included
+ * (as in the 2026-11-07 mock-up), available dishes first, menu order kept.
+ */
+export function menuPreview<T extends { isAvailable: boolean }>(
+  dishes: T[],
+  limit = 8,
+) {
   return [
-    ...others.filter((dish) => dish.isAvailable),
-    ...others.filter((dish) => !dish.isAvailable),
+    ...dishes.filter((dish) => dish.isAvailable),
+    ...dishes.filter((dish) => !dish.isAvailable),
   ].slice(0, limit);
 }
+
+const priceNumber = new Intl.NumberFormat("vi-VN", {
+  maximumFractionDigits: 0,
+});
+/** "75.000đ": the short price of the dish page (the mock-up's form, no space, no ₫ sign). */
+export const priceTag = (value: number) => `${priceNumber.format(value)}đ`;
 
 /** Link to a place on Google Maps from its coordinates; no map provider of ours is called. */
 export function googleMapsPlaceHref(

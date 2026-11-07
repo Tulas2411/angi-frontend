@@ -105,6 +105,7 @@
 }
 
 /* -------------------------------------------------------------- plates */
+/* The wood of each plate (.menu-plate-face) is shared with the dish page: wood-plate.css. */
 .menu-plate {
   --tilt: calc(var(--angle) + var(--spin));
   position: absolute;
@@ -163,61 +164,6 @@
   opacity: 0;
 }
 
-/*
- * A dark, polished walnut plate. It is redder and deeper than the wheel's walnut, with a lacquer
- * sheen at the upper left and a light bevel at the rim, so it still lifts off the wheel. The grain
- * is the wheel's technique: SVG fractal noise stretched across the plate gives long wavy streaks,
- * dark ones and a few lighter ones (the figure), laid over a warm base and under the light.
- */
-.menu-plate-face {
-  --plate-wood-light: #7a4a2c;
-  --plate-wood: #55301b;
-  --plate-wood-deep: #2e170b;
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background:
-    /* lacquer sheen at the upper left, shade at the lower right */
-    radial-gradient(
-      ellipse 42% 30% at 30% 22%,
-      rgb(255 236 214 / 0.34) 0%,
-      rgb(255 236 214 / 0.1) 55%,
-      transparent 100%
-    ),
-    radial-gradient(
-      circle at 34% 28%,
-      transparent 52%,
-      rgb(14 6 2 / 0.42) 100%
-    ),
-    /* the grain: dark wavy streaks, then a few lighter ones */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' preserveAspectRatio='none'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006 0.09' numOctaves='4' seed='11'/%3E%3CfeColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.04 0 0 0 0 0.02 0 0 0 1.4 -0.32'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")
-      center / 100% 100% no-repeat,
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400' preserveAspectRatio='none'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.006 0.09' numOctaves='4' seed='29'/%3E%3CfeColorMatrix values='0 0 0 0 0.62 0 0 0 0 0.38 0 0 0 0 0.22 0 0 0 0.9 -0.38'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")
-      center / 100% 100% no-repeat,
-    /* fine fibres running with the grain */
-    repeating-linear-gradient(
-        177deg,
-        rgb(10 4 1 / 0.12) 0 1px,
-        transparent 1px 4px
-      ),
-    linear-gradient(
-      118deg,
-      var(--plate-wood-light) 0%,
-      var(--plate-wood) 50%,
-      var(--plate-wood-deep) 100%
-    );
-  box-shadow:
-    inset 0 0 0 1px rgb(255 222 190 / 0.16),
-    inset 0 0 0 3px rgb(20 9 3 / 0.35),
-    inset -6px -8px 16px rgb(10 4 1 / 0.45),
-    inset 5px 6px 10px rgb(255 228 200 / 0.18),
-    0 0 0 1px rgb(255 228 200 / 0.1),
-    16px 22px 36px rgb(10 4 1 / 0.38),
-    4px 6px 10px rgb(10 4 1 / 0.2);
-  transition: box-shadow 300ms ease;
-}
 .menu-plate[data-active]:hover .menu-plate-face {
   box-shadow:
     inset 0 0 0 1px rgb(255 222 190 / 0.16),
@@ -228,32 +174,6 @@
     20px 28px 44px rgb(10 4 1 / 0.4),
     4px 6px 10px rgb(10 4 1 / 0.2);
 }
-/* The well of the plate: a carved ring in the wood, then the dish photo cut to a circle. */
-.menu-plate-face::before {
-  content: "";
-  position: absolute;
-  inset: 9%;
-  border-radius: 50%;
-  box-shadow:
-    inset 3px 4px 10px rgb(8 3 1 / 0.6),
-    inset -2px -3px 6px rgb(255 222 190 / 0.14),
-    0 0 0 1px rgb(255 222 190 / 0.08);
-}
-.menu-plate-food {
-  position: relative;
-  width: 76%;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1px rgb(34 34 34 / 0.06);
-}
-.menu-plate-food img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  scale: 1.08;
-}
-
 /* ------------------------------------------------- side copy and hint */
 .menu-wheel-tagline,
 .menu-wheel-hint {
@@ -388,6 +308,17 @@
   color: var(--ink);
   font-size: 20px;
   font-weight: 700;
+}
+/* Heroicons' solid heart, as on the dish page's facts row. */
+.menu-wheel-likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.menu-wheel-likes svg {
+  width: 14px;
+  height: 14px;
+  color: var(--coral);
 }
 .menu-wheel-divider {
   width: 1px;

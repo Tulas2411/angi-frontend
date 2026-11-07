@@ -524,7 +524,8 @@ export function RestaurantDetailPage({
     `${restaurantId}:${reload}`,
   );
   // The general information opens first; it holds the photos, the name and the actions.
-  const [tab, setTab] = useState("information");
+  // The menu opens first (owner request 2026-11-07): people come to a restaurant for its dishes.
+  const [tab, setTab] = useState("menu");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 

@@ -14,9 +14,11 @@ import {
   emptyRestaurantFilters,
   googleMapsPlaceHref,
   operatingBadge,
+  menuPreview,
   otherMenuDishes,
   parseEntityId,
   priceLevelText,
+  priceTag,
   ratingShares,
   satisfiedShare,
   ratingSummary,
@@ -434,6 +436,19 @@ describe("F-13 dish detail images", () => {
     expect(otherMenuDishes(menu, 3).map((dish) => dish.id)).toEqual([1, 4, 2]);
     expect(otherMenuDishes(menu, 1, 2).map((dish) => dish.id)).toEqual([3, 4]);
     expect(otherMenuDishes([{ id: 5, isAvailable: true }], 5)).toEqual([]);
+  });
+  it("previews the whole menu on the dish page, the dish being read included", () => {
+    const menu = [
+      { id: 1, isAvailable: true },
+      { id: 2, isAvailable: false },
+      { id: 3, isAvailable: true },
+    ];
+    expect(menuPreview(menu).map((dish) => dish.id)).toEqual([1, 3, 2]);
+    expect(menuPreview(menu, 2).map((dish) => dish.id)).toEqual([1, 3]);
+  });
+  it("writes the dish page price as the mock-up does", () => {
+    expect(priceTag(75000)).toBe("75.000đ");
+    expect(priceTag(1250000)).toBe("1.250.000đ");
   });
 });
 
