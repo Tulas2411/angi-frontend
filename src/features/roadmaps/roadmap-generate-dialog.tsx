@@ -23,18 +23,12 @@ import { provinceFromText } from "./roadmap-add-item-rules";
 import { dayTitle, mealSlotLabels } from "./roadmap-detail-rules";
 import {
   buildGenerateRequest,
-  createdItemCount,
   defaultRadiusKm,
   generateError,
-  generationDoneText,
-  generationFailureText,
-  generationJobError,
-  generationMaxWaitMs,
-  generationPollMs,
   generationStatusText,
   generationSummary,
+  generationTips,
   hasGenerationOrigin,
-  maxPollFailures,
   noteMaxLength,
   preferenceTags,
   generationPlan,
@@ -46,15 +40,12 @@ import {
   withTagChoice,
   type GenerateForm,
 } from "./roadmap-generate-rules";
-import {
-  forgetGenerationJob,
-  recallGenerationJob,
-  rememberGenerationJob,
-} from "./roadmap-generation-job";
+import { recallGenerationJob } from "./roadmap-generation-job";
+import type { GenerationWatch } from "./roadmap-generation-watch";
+import { AngiWorker } from "./angi-worker";
 import { rememberDestination } from "./roadmap-destination";
 import type { RoadmapGenerationService } from "./roadmap-service";
 import type {
-  GenerationJobDto,
   GenerationScope,
   RoadmapDayDto,
   RoadmapSummaryDto,
@@ -65,12 +56,6 @@ import { MealChips } from "./roadmap-meal-chips";
 import { MapPinIcon } from "@heroicons/react/24/outline";
 import "./roadmap-pickers.css";
 import "./roadmap-generate.css";
-
-type Phase =
-  | { kind: "form" }
-  | { kind: "running"; jobId: number }
-  | { kind: "done"; job: GenerationJobDto; reloadFailed: boolean }
-  | { kind: "failed"; message: string };
 
 const scopeTabs: { value: GenerationScope; label: string }[] = [
   { value: "full", label: "Cả lộ trình" },
@@ -133,7 +118,8 @@ export function RoadmapGenerateDialog({
   defaultProvince,
   gpsOrigin,
   service,
-  onGenerated,
+  watch,
+  onHide,
   onClose,
 }: {
   roadmapId: number;
@@ -144,8 +130,10 @@ export function RoadmapGenerateDialog({
   defaultProvince: string;
   gpsOrigin?: { latitude: number; longitude: number };
   service: RoadmapGenerationService;
-  /** The job succeeded: the parent reloads the roadmap (RM-03); rejects when that fails. */
-  onGenerated: () => Promise<void>;
+  /** The job follow-up, owned by the roadmap screen so it outlives this dialog. */
+  watch: GenerationWatch;
+  /** "Ẩn, ANGI vẫn tạo ở nền": the dialog goes, the job and its worker badge stay. */
+  onHide: () => void;
   onClose: () => void;
 }) {
   const formId = useId();
@@ -168,20 +156,12 @@ export function RoadmapGenerateDialog({
     inProgress: boolean;
   } | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  // A job started before the dialog was closed is followed again instead of queued twice.
-  const [remembered] = useState(() => recallGenerationJob(roadmapId));
-  const [phase, setPhase] = useState<Phase>(
-    remembered ? { kind: "running", jobId: remembered } : { kind: "form" },
-  );
-  const firstLook = useRef(remembered !== null);
-  const [job, setJob] = useState<GenerationJobDto | null>(null);
-  const [stalled, setStalled] = useState<string | null>(null);
-  const [round, setRound] = useState(0);
+  // The job lives in the screen's watch: a job started before the dialog was hidden is shown
+  // again here instead of being queued twice.
+  const phase = watch.state;
   const [tags, setTags] = useState<RoadmapTagDto[]>([]);
   const mounted = useRef(true);
   const touchedProvince = useRef(false);
-  // What was asked, for the progress line; unknown when a remembered job is followed again.
-  const [submitted, setSubmitted] = useState<GenerateForm | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -214,67 +194,17 @@ export function RoadmapGenerateDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Follow the job: RM-11 every 2–3 s until it finishes, stops answering, or takes too long.
-  const jobId = phase.kind === "running" ? phase.jobId : null;
+  // While ANGI works, a line of what it is doing changes every few seconds.
+  const [tip, setTip] = useState(0);
+  const running = phase.kind === "running" && !phase.stalled;
   useEffect(() => {
-    if (jobId === null) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    let failures = 0;
-    const started = Date.now();
-
-    function later() {
-      if (Date.now() - started >= generationMaxWaitMs) {
-        setStalled(
-          "ANGI đang tạo lâu hơn dự kiến. Bạn có thể đóng hộp này, lịch sẽ xuất hiện khi xong và ANGI sẽ gửi thông báo.",
-        );
-        return;
-      }
-      timer = setTimeout(poll, generationPollMs);
-    }
-    async function poll() {
-      try {
-        const current = await service.generationJob(roadmapId, jobId!);
-        if (cancelled) return;
-        failures = 0;
-        setJob(current);
-        if (current.status === "succeeded") {
-          forgetGenerationJob(roadmapId);
-          let reloadFailed = false;
-          try {
-            await onGenerated();
-          } catch {
-            reloadFailed = true;
-          }
-          if (!cancelled)
-            setPhase({ kind: "done", job: current, reloadFailed });
-        } else if (current.status === "failed") {
-          forgetGenerationJob(roadmapId);
-          setPhase({ kind: "failed", message: generationFailureText(current) });
-        } else later();
-      } catch (caught) {
-        if (cancelled) return;
-        const failure = generationJobError(caught);
-        if (failure.missing) {
-          forgetGenerationJob(roadmapId);
-          setPhase({ kind: "failed", message: failure.message });
-        } else if (++failures >= maxPollFailures)
-          setStalled(
-            `Chưa kiểm tra được tiến trình: ${failure.message} ANGI vẫn tiếp tục tạo ở nền.`,
-          );
-        else later();
-      }
-    }
-    // A remembered job may already be finished: look at once, then every poll interval.
-    timer = setTimeout(poll, firstLook.current ? 0 : generationPollMs);
-    firstLook.current = false;
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-    // `onGenerated` and `service` are stable for the life of the dialog.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId, round]);
+    if (!running) return;
+    const timer = setInterval(
+      () => setTip((value) => (value + 1) % generationTips.length),
+      2800,
+    );
+    return () => clearInterval(timer);
+  }, [running]);
 
   const hasOrigin = hasGenerationOrigin(overview.originMode, gpsOrigin);
   const day = itinerary.find((entry) => String(entry.dayId) === form.dayId);
@@ -306,12 +236,8 @@ export function RoadmapGenerateDialog({
         }),
       );
       if (!mounted.current) return;
-      setSubmitted(form);
-      rememberGenerationJob(roadmapId, queued.jobId);
       rememberDestination(roadmapId, form.province);
-      setJob(null);
-      setStalled(null);
-      setPhase({ kind: "running", jobId: queued.jobId });
+      watch.start(queued.jobId, form);
     } catch (caught) {
       if (mounted.current) setFormError(generateError(caught));
     } finally {
@@ -323,7 +249,7 @@ export function RoadmapGenerateDialog({
   const footer =
     // Each phase's buttons have their own key: React must not reuse the button that was just
     // clicked ("Chỉnh điều kiện") as the next phase's submit button, or that same click submits.
-    phase.kind === "form" ? (
+    phase.kind === "idle" || phase.kind === "leaving" ? (
       <Fragment key="form">
         {/*
          * Always in sight, next to the buttons: what the request will do, and the one choice
@@ -362,38 +288,27 @@ export function RoadmapGenerateDialog({
       </Fragment>
     ) : phase.kind === "running" ? (
       <Fragment key="running">
-        {stalled && (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setStalled(null);
-              setRound((value) => value + 1);
-            }}
-          >
+        {phase.stalled && (
+          <Button variant="secondary" onClick={watch.retry}>
             Kiểm tra lại
           </Button>
         )}
-        <Button variant="secondary" onClick={onClose}>
-          Đóng, ANGI vẫn tạo ở nền
+        <Button variant="secondary" onClick={onHide}>
+          Ẩn, ANGI vẫn tạo ở nền
         </Button>
       </Fragment>
-    ) : phase.kind === "done" ? (
-      <Button key="done" onClick={onClose}>
-        Xem lộ trình
-      </Button>
     ) : (
       <Fragment key="failed">
         <Button variant="secondary" onClick={onClose}>
           Đóng
         </Button>
-        <Button onClick={() => setPhase({ kind: "form" })}>
-          Chỉnh điều kiện
-        </Button>
+        <Button onClick={watch.reset}>Chỉnh điều kiện</Button>
       </Fragment>
     );
 
   let content: ReactNode;
   if (phase.kind === "running") {
+    const { submitted, stalled, job } = phase;
     const summary = submitted
       ? generationSummary(
           submitted,
@@ -405,47 +320,46 @@ export function RoadmapGenerateDialog({
           mealSlotLabels,
         )
       : null;
+    const status = job?.status ?? "queued";
+    // Queued, then choosing dishes, then writing them in: one chip per step on a line.
+    const steps = [
+      { label: "Xếp hàng", state: status === "running" ? "done" : "active" },
+      {
+        label: "Chọn món, gom quán gần nhau",
+        state: status === "running" ? "active" : "todo",
+      },
+      { label: "Ghi vào lộ trình", state: "todo" },
+    ];
     content = (
-      <div className="roadmap-generate-progress stack" aria-live="polite">
-        <div className="roadmap-generate-status">
-          {!stalled && <span className="spinner" aria-hidden />}
-          <p role="status">
-            <strong>
-              {stalled ?? generationStatusText(job?.status ?? "queued")}
-            </strong>
+      <div
+        className={`roadmap-generate-run ${stalled ? "is-stalled" : ""}`.trim()}
+        aria-live="polite"
+      >
+        <AngiWorker className="is-large" />
+        <p role="status" className="roadmap-generate-run-status">
+          <strong>{stalled ?? generationStatusText(status)}</strong>
+        </p>
+        {!stalled && (
+          <p className="roadmap-generate-run-tip" aria-hidden>
+            <span key={tip}>{generationTips[tip]}</span>
           </p>
-        </div>
-        {summary && <p className="helper">{summary}</p>}
-        <ol className="roadmap-generate-steps" aria-label="Tiến trình">
-          <li data-state={job?.status === "running" ? "done" : "active"}>
-            Xếp hàng
-          </li>
-          <li data-state={job?.status === "running" ? "active" : "todo"}>
-            Chọn món và gom quán gần nhau
-          </li>
-          <li data-state="todo">Ghi vào lộ trình</li>
+        )}
+        <ol className="roadmap-generate-run-steps" aria-label="Tiến trình">
+          {steps.map((step) => (
+            <li key={step.label} data-state={step.state}>
+              <span className="roadmap-generate-run-dot" aria-hidden />
+              {step.label}
+            </li>
+          ))}
         </ol>
+        {summary && <p className="helper">{summary}</p>}
         <p className="helper">
-          Việc này thường mất vài giây. Bạn có thể đóng hộp này, ANGI sẽ gửi
-          thông báo khi xong.
+          Thường chỉ mất vài giây. Bạn có thể ẩn hộp này, ANGI vẫn tạo ở nền và
+          báo khi xong.
         </p>
       </div>
     );
-  } else if (phase.kind === "done")
-    content = (
-      <div className="stack">
-        <Alert tone="success">
-          {generationDoneText(createdItemCount(phase.job))}
-        </Alert>
-        {phase.reloadFailed && (
-          <Alert tone="warning">
-            Lịch đã được tạo nhưng chưa tải lại được lộ trình. Hãy đóng hộp này
-            rồi tải lại trang để xem đầy đủ.
-          </Alert>
-        )}
-      </div>
-    );
-  else if (phase.kind === "failed")
+  } else if (phase.kind === "failed")
     content = (
       <div className="stack">
         <Alert>{phase.message}</Alert>
@@ -663,10 +577,7 @@ export function RoadmapGenerateDialog({
                 <Button
                   variant="secondary"
                   onClick={() =>
-                    setPhase({
-                      kind: "running",
-                      jobId: recallGenerationJob(roadmapId)!,
-                    })
+                    watch.start(recallGenerationJob(roadmapId)!, null)
                   }
                 >
                   Xem tiến trình
@@ -684,7 +595,9 @@ export function RoadmapGenerateDialog({
       focusField={!defaultProvince.trim() && 'input[name="province"]'}
       title="ANGI lên lịch giúp bạn"
       onClose={() => {
-        if (!submitting) onClose();
+        // Closing while ANGI works only hides the dialog: the job and its badge stay.
+        if (phase.kind === "running") onHide();
+        else if (!submitting) onClose();
       }}
       footer={footer}
     >

@@ -332,7 +332,7 @@ const dialog = (page: Page) =>
 const items = (page: Page) => page.locator(".roadmap-item");
 const submitButton = (page: Page) =>
   // The button names what it creates ("Tạo 3 món bằng AI"); "Tạo lịch bằng AI" when no meal is picked.
-  dialog(page).getByRole("button", { name: /^Tạo (lịch|d+ món) bằng AI$/ });
+  dialog(page).getByRole("button", { name: /^Tạo (lịch|\d+ món) bằng AI$/ });
 /** The day-1 "ANGI thêm giúp bạn" opener (the roadmap-wide banner was removed). */
 const dayOpener = (page: Page) =>
   page.locator("#day-1").getByRole("button", { name: "ANGI thêm giúp bạn" });
@@ -407,11 +407,11 @@ test("generating sends RM-10, follows RM-11 to the end and reloads the roadmap",
     },
   ]);
   await expect(box.getByRole("status")).toContainText("đang chọn món");
-  await expect(box.getByText(/ANGI đã thêm 8 món vào lộ trình/)).toBeVisible();
+  await expect(page.getByText(/ANGI đã thêm 8 món vào lộ trình/)).toBeVisible();
   expect(jobReads).toEqual([77, 77, 77]);
 
   // The breakfast of day 1 was already there; every other meal got a dish.
-  await box.getByRole("button", { name: "Xem lộ trình" }).click();
+  // Success is a toast; the dialog closes by itself.
   await expect(box).toBeHidden();
   await expect(items(page)).toHaveCount(3);
   await expect(page.locator(".roadmap-day-sub").first()).toContainText("3 món");
@@ -476,8 +476,9 @@ test("one day or one meal sends its ids, the constraints and the tags as documen
       radiusKm: 5,
     },
   ]);
-  await expect(box.getByText(/ANGI đã thêm 2 món/)).toBeVisible();
-  await box.getByRole("button", { name: "Xem lộ trình" }).click();
+  await expect(page.getByText(/ANGI đã thêm 2 món/)).toBeVisible();
+  // Success is a toast; the dialog closes by itself.
+  await expect(box).toBeHidden();
 
   // One meal of one day: mealSlot replaces mealSlots.
   await page
@@ -532,7 +533,7 @@ test("replacing says how many dishes go and sends replaceExisting", async ({
     .getByRole("checkbox", { name: "Thay các món đã có trong phạm vi" })
     .check();
   await expect(
-    box.getByText(/ANGI sẽ xóa 1 món đang có của .* rồi điền lại d+ bữa/),
+    box.getByText(/ANGI sẽ xóa 1 món đang có của .* rồi điền lại \d+ bữa/),
   ).toBeVisible();
   await expect(
     box.getByRole("button", { name: "Xóa 1 món và tạo lại" }),
@@ -544,8 +545,9 @@ test("replacing says how many dishes go and sends replaceExisting", async ({
     dayId: 301,
     replaceExisting: true,
   });
-  await expect(box.getByText(/ANGI đã thêm 3 món/)).toBeVisible();
-  await box.getByRole("button", { name: "Xem lộ trình" }).click();
+  await expect(page.getByText(/ANGI đã thêm 3 món/)).toBeVisible();
+  // Success is a toast; the dialog closes by itself.
+  await expect(box).toBeHidden();
   // The manual breakfast was replaced by a dish of ANGI's.
   await expect(
     page.locator(".roadmap-item", { hasText: "Bún bò Huế" }),
@@ -585,19 +587,61 @@ test("closing keeps the job running and reopening follows it; a second job is re
   await submitButton(page).click();
   await expect(dialog(page).getByRole("status")).toContainText("Đang xếp hàng");
   await dialog(page)
-    .getByRole("button", { name: "Đóng, ANGI vẫn tạo ở nền" })
+    .getByRole("button", { name: "Ẩn, ANGI vẫn tạo ở nền" })
     .click();
   await expect(dialog(page)).toBeHidden();
   const readsAtClose = jobReads.length;
-  await openBanner(page);
+  // Reopened from the day: the dialog shows the running job (no form, so no scope tabs).
+  await dayOpener(page).click();
   // The remembered job is followed again: no second RM-10 call.
   await expect(dialog(page).getByRole("status")).toBeVisible();
   expect(generateCalls).toHaveLength(1);
-  await expect(dialog(page).getByText(/ANGI đã thêm/)).toBeVisible({
+  await expect(page.getByText(/ANGI đã thêm/)).toBeVisible({
     timeout: 15000,
   });
   expect(jobReads.length).toBeGreaterThan(readsAtClose);
   expect(new Set(jobReads)).toEqual(new Set([77]));
+});
+
+const worker = (page: Page) =>
+  page.getByRole("button", { name: "ANGI đang lên lịch ở nền. Mở tiến trình" });
+
+test("hidden, ANGI works at the screen edge; the end is a toast and the worker fades", async ({
+  page,
+}) => {
+  await open(page);
+  await openBanner(page);
+  await submitButton(page).click();
+  await expect(dialog(page).getByRole("status")).toContainText("Đang xếp hàng");
+  await dialog(page)
+    .getByRole("button", { name: "Ẩn, ANGI vẫn tạo ở nền" })
+    .click();
+  await expect(dialog(page)).toBeHidden();
+  await expect(worker(page)).toBeVisible();
+  // The job is still followed while hidden, then told by a toast; the worker leaves.
+  await expect(page.getByText(/ANGI đã thêm \d+ món/)).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(worker(page)).toHaveCount(0);
+  await expect(dialog(page)).toBeHidden();
+  expect(generateCalls).toHaveLength(1);
+});
+
+test("the worker at the edge opens the progress again", async ({ page }) => {
+  await open(page);
+  await openBanner(page);
+  await submitButton(page).click();
+  await expect(dialog(page).getByRole("status")).toContainText("Đang xếp hàng");
+  // Escape hides it too while ANGI works.
+  await page.keyboard.press("Escape");
+  await expect(dialog(page)).toBeHidden();
+  await worker(page).click();
+  await expect(dialog(page).getByRole("status")).toBeVisible();
+  await expect(page.getByText(/ANGI đã thêm/)).toBeVisible({
+    timeout: 15000,
+  });
+  await expect(worker(page)).toHaveCount(0);
+  expect(generateCalls).toHaveLength(1);
 });
 
 test("a running job refuses a second one with its own message", async ({
@@ -646,7 +690,7 @@ test("when the job cannot be read the dialog says so and can look again", async 
     "ANGI vẫn tiếp tục tạo ở nền",
   );
   await dialog(page).getByRole("button", { name: "Kiểm tra lại" }).click();
-  await expect(dialog(page).getByText(/ANGI đã thêm/)).toBeVisible({
+  await expect(page.getByText(/ANGI đã thêm/)).toBeVisible({
     timeout: 15000,
   });
 });

@@ -41,12 +41,14 @@ export interface RoadmapDetailService {
   get: (roadmapId: number) => Promise<RoadmapDetailDto>;
   /**
    * RM-14: the legs of one day. `gpsOrigin` is only for roadmaps with `originMode = gps`:
-   * both coordinates go together on each call and the backend never stores them.
+   * both coordinates go together on each call and the backend never stores them. `profile`
+   * is the means of travel; driving (the backend default) is not sent.
    */
   dayRoute: (
     roadmapId: number,
     dayId: number,
     gpsOrigin?: { latitude: number; longitude: number },
+    profile?: RoadmapRouteDto["profile"],
   ) => Promise<RoadmapRouteDto>;
 }
 
@@ -113,10 +115,14 @@ export const roadmapService: RoadmapPlanService &
     await api.delete<null>(`roadmaps/${roadmapId}`);
   },
   get: (roadmapId) => api.get<RoadmapDetailDto>(`roadmaps/${roadmapId}`),
-  dayRoute: (roadmapId, dayId, gpsOrigin) => {
-    const query = gpsOrigin
-      ? `?originLat=${gpsOrigin.latitude}&originLng=${gpsOrigin.longitude}`
-      : "";
+  dayRoute: (roadmapId, dayId, gpsOrigin, profile = "driving") => {
+    const params = new URLSearchParams();
+    if (gpsOrigin) {
+      params.set("originLat", String(gpsOrigin.latitude));
+      params.set("originLng", String(gpsOrigin.longitude));
+    }
+    if (profile !== "driving") params.set("profile", profile);
+    const query = params.size ? `?${params}` : "";
     return api.get<RoadmapRouteDto>(
       `roadmaps/${roadmapId}/days/${dayId}/route${query}`,
     );

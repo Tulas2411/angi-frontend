@@ -13,6 +13,9 @@ import {
   legEndpoints,
   parseTabParam,
   legsByTarget,
+  legKey,
+  mixRoute,
+  travelModeOf,
   parseDayParam,
   parseOpenParam,
   parseRoadmapId,
@@ -391,5 +394,78 @@ describe("following the day being read", () => {
     expect(
       dayAtLine([{ dayNumber: 1, top: 400, bottom: 900 }], 300),
     ).toBeNull();
+  });
+});
+
+describe("travel mode per leg", () => {
+  const leg = (
+    fromItemId: number | null,
+    toItemId: number,
+    distanceMeters: number,
+    durationSeconds: number,
+  ) => ({ fromItemId, toItemId, distanceMeters, durationSeconds });
+  const route = (
+    profile: RoadmapRouteDto["profile"],
+    legs: ReturnType<typeof leg>[],
+    isEstimated = false,
+  ): RoadmapRouteDto => ({
+    dayId: 301,
+    profile,
+    origin: null,
+    originSkipped: false,
+    legs,
+    totalDistanceMeters: legs.reduce((sum, l) => sum + l.distanceMeters, 0),
+    totalDurationSeconds: legs.reduce((sum, l) => sum + l.durationSeconds, 0),
+    isEstimated,
+  });
+  const driving = route("driving", [
+    leg(1, 2, 1220, 360),
+    leg(2, 3, 3000, 600),
+  ]);
+  const walking = route("walking", [
+    leg(1, 2, 1100, 900),
+    leg(2, 3, 2900, 2400),
+  ]);
+
+  it("names each leg by its two ends, the origin included", () => {
+    expect(legKey(leg(null, 5, 0, 0))).toBe("origin-5");
+    expect(legKey(leg(4, 5, 0, 0))).toBe("4-5");
+    expect(travelModeOf("cycling").label).toBe("Xe đạp");
+  });
+
+  it("keeps driving for every leg when nothing is chosen", () => {
+    const mixed = mixRoute(driving, {}, { driving });
+    expect(mixed.legs.map((entry) => entry.mode)).toEqual([
+      "driving",
+      "driving",
+    ]);
+    expect(mixed.totalDistanceMeters).toBe(4220);
+    expect(mixed.totalDurationSeconds).toBe(960);
+    expect(mixed.pending).toBe(false);
+  });
+
+  it("adds the day total again from each leg's own means", () => {
+    const mixed = mixRoute(driving, { "1-2": "walking" }, { driving, walking });
+    expect(mixed.legs[0]).toMatchObject({ mode: "walking", pending: false });
+    expect(mixed.legs[0].leg.durationSeconds).toBe(900);
+    expect(mixed.totalDistanceMeters).toBe(1100 + 3000);
+    expect(mixed.totalDurationSeconds).toBe(900 + 600);
+  });
+
+  it("is pending while the chosen means is not answered yet", () => {
+    const mixed = mixRoute(driving, { "2-3": "cycling" }, { driving });
+    expect(mixed.legs[1]).toMatchObject({ mode: "cycling", pending: true });
+    expect(mixed.pending).toBe(true);
+  });
+
+  it("marks the total estimated when a used answer is estimated", () => {
+    const estimated = route("walking", walking.legs, true);
+    expect(
+      mixRoute(driving, { "1-2": "walking" }, { driving, walking: estimated })
+        .isEstimated,
+    ).toBe(true);
+    expect(
+      mixRoute(driving, {}, { driving, walking: estimated }).isEstimated,
+    ).toBe(false);
   });
 });

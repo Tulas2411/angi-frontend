@@ -33,6 +33,10 @@ import "mapbox-gl/dist/mapbox-gl.css";
 
 /** Shown when nothing is located yet: the whole country, like the owner location picker. */
 const vietnamView = { center: [106.2, 16.3] as [number, number], zoom: 4.6 };
+/** How long Mapbox may take to say "load" before the panel offers "Thử lại bản đồ". */
+const mapLoadTimeoutMs = 20_000;
+/** Automatic rebuilds after the browser drops the WebGL context, before asking the traveler. */
+const maxContextRebuilds = 2;
 
 /** A preview dish on the map. Previews carry no rating or photo, so only their real fields are shown. */
 function PreviewMapCard({
@@ -239,6 +243,8 @@ export function RoadmapDetailMap({
     "loading",
   );
   const [attempt, setAttempt] = useState(0);
+  // WebGL contexts lost so far; reset by "Thử lại bản đồ".
+  const contextLosses = useRef(0);
   // Counts completed map loads, so preview pins are drawn again on a replaced map instance.
   const [loadedMaps, setLoadedMaps] = useState(0);
   // HTTP status of the provider error, when there is one (401 = the token was refused).
@@ -382,9 +388,34 @@ export function RoadmapDetailMap({
       map.current = null;
     };
 
+    /**
+     * Resolves once the surface has a real size. A map created in a 0 × 0 box (the page's CSS not
+     * applied yet, a hidden column) keeps an empty canvas and puts every pin outside it: the panel
+     * stays blank until a reload.
+     */
+    const sized = () =>
+      new Promise<void>((resolve) => {
+        if (element.clientWidth > 0 && element.clientHeight > 0) {
+          resolve();
+          return;
+        }
+        const watcher = new ResizeObserver(() => {
+          if (
+            disposed ||
+            (element.clientWidth > 0 && element.clientHeight > 0)
+          ) {
+            watcher.disconnect();
+            resolve();
+          }
+        });
+        watcher.observe(element);
+      });
+
     async function initialize() {
       try {
         const { default: mapboxgl } = await import("mapbox-gl");
+        if (disposed) return;
+        await sized();
         if (disposed) return;
         mapbox.current = mapboxgl;
         const current = latest.current;
@@ -421,6 +452,9 @@ export function RoadmapDetailMap({
           dragRotate: false,
           pitchWithRotate: false,
           touchPitch: false,
+          // No performance metrics to events.mapbox.com: ad blockers refuse them, which only filled
+          // the console with ERR_BLOCKED_BY_CLIENT. Map load events, needed by Mapbox, still go.
+          performanceMetricsCollection: false,
         });
         map.current = instance;
         instance.touchZoomRotate.disableRotation();
@@ -589,15 +623,30 @@ export function RoadmapDetailMap({
                 )
               : null;
           if (start) {
+            // The same drop as the dishes' pins, in ink, with a white dot in its head instead of
+            // a number; its tip (bottom anchor) is the pinned point.
             const pin = document.createElement("span");
             pin.className = "roadmap-map-origin";
-            pin.textContent = "●";
             pin.setAttribute("role", "img");
             pin.setAttribute(
               "aria-label",
               current.origin?.label || "Điểm xuất phát",
             );
-            startMarker = new mapboxgl.Marker({ element: pin })
+            const svg = document.createElementNS(svgNamespace, "svg");
+            svg.setAttribute("viewBox", "0 0 24 32");
+            svg.setAttribute("aria-hidden", "true");
+            const drop = document.createElementNS(svgNamespace, "path");
+            drop.setAttribute("d", pinPath);
+            const dot = document.createElementNS(svgNamespace, "circle");
+            dot.setAttribute("cx", "12");
+            dot.setAttribute("cy", "11.8");
+            dot.setAttribute("r", "4.2");
+            svg.append(drop, dot);
+            pin.append(svg);
+            startMarker = new mapboxgl.Marker({
+              element: pin,
+              anchor: "bottom",
+            })
               .setLngLat([start.longitude, start.latitude])
               .addTo(instance);
           }
@@ -639,15 +688,41 @@ export function RoadmapDetailMap({
           refresh.current();
         };
 
+        // Mapbox never said "load" (a stalled style or tile request): an error with "Thử lại",
+        // not an endless blank panel.
+        const loadTimer = window.setTimeout(() => {
+          if (!loaded) fail();
+        }, mapLoadTimeoutMs);
         instance.on("load", () => {
+          window.clearTimeout(loadTimer);
           if (!instance || disposed) return;
           loaded = true;
           sync.current();
           fit.current();
           setStatus("ready");
           setLoadedMaps((value) => value + 1);
+          // The layout can still settle in the same frame (columns, the place card): measure again.
+          requestAnimationFrame(() => {
+            if (!instance || disposed) return;
+            instance.resize();
+            fit.current();
+          });
         });
         instance.on("error", fail);
+        // The browser took the WebGL context back (too many maps, a GPU reset): the canvas goes
+        // blank for good. Build the map again, a couple of times, then offer "Thử lại".
+        instance.on("webglcontextlost", () => {
+          if (disposed) return;
+          window.clearTimeout(loadTimer);
+          if (contextLosses.current >= maxContextRebuilds) {
+            loaded = false;
+            fail();
+            return;
+          }
+          contextLosses.current += 1;
+          setStatus("loading");
+          setAttempt((value) => value + 1);
+        });
         observer = new ResizeObserver(() => {
           instance?.resize();
           fit.current();
@@ -798,6 +873,7 @@ export function RoadmapDetailMap({
               onClick={() => {
                 setStatus("loading");
                 setErrorStatus(null);
+                contextLosses.current = 0;
                 setAttempt((value) => value + 1);
               }}
             >
