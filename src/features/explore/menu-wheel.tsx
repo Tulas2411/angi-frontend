@@ -8,6 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from "react";
+import { HeartIcon } from "@heroicons/react/20/solid";
 import { Badge } from "@/shared/ui";
 import { ActionLink, Dialog, Media } from "@/components/ui/primitives";
 import { dishHref } from "./explore-routes";
@@ -24,6 +25,7 @@ import {
   wheelStep,
 } from "./menu-wheel-rules";
 import type { DishDescription } from "./use-dish-descriptions";
+import "./wood-plate.css";
 import "./menu-wheel.css";
 
 const reducedMotion = () =>
@@ -110,8 +112,12 @@ function DishInfo({
         <span className="menu-wheel-divider" aria-hidden />
         <span>{dishFormLabels[dish.dishForm]}</span>
         <span className="menu-wheel-divider" aria-hidden />
-        <span aria-label={`${dish.likeCount} lượt thích`}>
-          ♥ {dish.likeCount.toLocaleString("vi-VN")}
+        <span
+          className="menu-wheel-likes"
+          aria-label={`${dish.likeCount} lượt thích`}
+        >
+          <HeartIcon aria-hidden />
+          {dish.likeCount.toLocaleString("vi-VN")}
         </span>
       </p>
       {(tags.length > 0 || !dish.isAvailable) && (

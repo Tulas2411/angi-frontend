@@ -1,5 +1,6 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { HeartIcon } from "@heroicons/react/20/solid";
 import Link from "next/link";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
@@ -16,11 +17,11 @@ import {
   dishPictures,
   googleMapsPlaceHref,
   locationText,
+  menuPreview,
   operatingBadge,
-  otherMenuDishes,
   priceLevelText,
+  priceTag,
   ratingSummary,
-  vnd,
 } from "./explore-rules";
 import { DishTile } from "./dish-views";
 import { exploreRoutes, restaurantHref } from "./explore-routes";
@@ -28,15 +29,16 @@ import { exploreService, type ExploreService } from "./explore-service";
 import type { DishDetailDto, RestaurantCardDto } from "./explore-types";
 import { useRemote } from "./use-remote";
 import "./explore.css";
+import "./wood-plate.css";
 import "./dish-detail.css";
 
 /**
- * The dish photo on a backdrop made from the same photo, blurred. The photo keeps its own aspect
- * ratio and is never drawn larger than the file, so small or portrait uploads stay sharp and whole;
- * the backdrop fills the rest of the square. A failed Cloudinary transformation falls back to the
+ * The dish served on a round wooden plate: the photo is cropped to a circle inside a turned-wood
+ * rim, so every upload (small, square or portrait) reads as the same plate. The plate is a button
+ * that opens the photo alone in a dialog. A failed Cloudinary transformation falls back to the
  * original URL, and a missing or broken original shows the shared "Chưa có ảnh" placeholder.
  */
-function DishStage({ dish }: { dish: DishDetailDto }) {
+function DishPlate({ dish }: { dish: DishDetailDto }) {
   const pictures = dishPictures(dish.coverUrl, dish.images);
   const [chosen, setChosen] = useState(0);
   const [zoomed, setZoomed] = useState(false);
@@ -44,10 +46,10 @@ function DishStage({ dish }: { dish: DishDetailDto }) {
   const [broken, setBroken] = useState<string[]>([]);
   const current = pictures[Math.min(chosen, pictures.length - 1)];
   const usable = current !== undefined && !broken.includes(current);
-  const variant = (transformation: string) =>
+  const shown =
     current === undefined || plain.includes(current)
       ? current
-      : cloudinaryImage(current, transformation);
+      : cloudinaryImage(current, dishImageTransforms.stage);
   const failed = () => {
     if (current === undefined) return;
     if (plain.includes(current)) setBroken((list) => [...list, current]);
@@ -55,53 +57,33 @@ function DishStage({ dish }: { dish: DishDetailDto }) {
   };
   return (
     <div className="dish-page-gallery">
-      {usable ? (
-        <figure
-          className={`dish-page-stage${dish.isAvailable ? "" : " dish-page-stage-out"}`}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            className="dish-page-stage-backdrop"
-            src={variant(dishImageTransforms.backdrop)}
-            alt=""
-            aria-hidden
-            onError={failed}
-          />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            key={current}
-            className="dish-page-stage-photo"
-            src={variant(dishImageTransforms.stage)}
-            alt={dish.name}
-            onError={failed}
-          />
-          {!dish.isAvailable && (
-            <span className="dish-page-stage-flag">Tạm hết món</span>
-          )}
-          <button
-            type="button"
-            className="dish-page-stage-zoom"
-            aria-label={`Xem ảnh lớn của ${dish.name}`}
-            onClick={() => setZoomed(true)}
-            suppressHydrationWarning
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden
+      <figure
+        className={`dish-plate${dish.isAvailable ? "" : " dish-plate-out"}`}
+      >
+        {/* The same walnut plate as the restaurant's menu wheel (wood-plate.css). */}
+        <span className="wood-plate">
+          {usable ? (
+            <button
+              type="button"
+              className="wood-plate-food dish-plate-food"
+              aria-label={`Xem ảnh lớn của ${dish.name}`}
+              onClick={() => setZoomed(true)}
+              suppressHydrationWarning
             >
-              <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-            </svg>
-          </button>
-        </figure>
-      ) : (
-        <Media className="dish-page-stage-empty" alt={dish.name} />
-      )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img key={current} src={shown} alt={dish.name} onError={failed} />
+            </button>
+          ) : (
+            <Media
+              className="wood-plate-food dish-plate-empty"
+              alt={dish.name}
+            />
+          )}
+        </span>
+        {!dish.isAvailable && (
+          <span className="dish-plate-flag">Tạm hết món</span>
+        )}
+      </figure>
       {pictures.length > 1 && (
         <ul className="explore-thumbs" aria-label="Ảnh của món">
           {pictures.map((url, index) => (
@@ -130,6 +112,45 @@ function DishStage({ dish }: { dish: DishDetailDto }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="dish-page-zoom-photo" src={current} alt={dish.name} />
         </Dialog>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The description, four lines at most: a longer one fades out on its last line and "Xem thêm"
+ * below shows it whole ("Thu gọn" folds it again). The button only appears when text is cut.
+ */
+function DishDescription({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [cut, setCut] = useState(false);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!element || open) return;
+    const observer = new ResizeObserver(() =>
+      setCut(element.scrollHeight > element.clientHeight + 1),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [open, text]);
+  return (
+    <div className="dish-page-description">
+      <p
+        ref={ref}
+        data-folded={open ? undefined : ""}
+        data-cut={cut && !open ? "" : undefined}
+      >
+        {text}
+      </p>
+      {(cut || open) && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? "Thu gọn" : "Xem thêm"}
+        </button>
       )}
     </div>
   );
@@ -192,14 +213,12 @@ function Seller({ restaurant }: { restaurant: RestaurantCardDto }) {
   );
 }
 
-/** "Món khác ở quán": the rest of the restaurant's menu (REST-03) as a swipeable row. */
+/** "Khám phá menu ở {quán}": the restaurant's menu (REST-03), four tall tiles a row. */
 function OtherDishes({
   restaurant,
-  dishId,
   service,
 }: {
   restaurant: RestaurantCardDto;
-  dishId: number;
   service: ExploreService;
 }) {
   const headingId = useId();
@@ -207,7 +226,7 @@ function OtherDishes({
     () => service.menu(restaurant.id),
     `menu-${restaurant.id}`,
   );
-  const heading = <h2 id={headingId}>Món khác ở {restaurant.name}</h2>;
+  const heading = <h2 id={headingId}>Khám phá menu ở {restaurant.name}</h2>;
   if (state.status === "loading")
     return (
       <section className="dish-page-more" aria-labelledby={headingId}>
@@ -225,7 +244,7 @@ function OtherDishes({
         </div>
       </section>
     );
-  const dishes = otherMenuDishes(state.data?.dishes ?? [], dishId);
+  const dishes = menuPreview(state.data?.dishes ?? []);
   if (dishes.length === 0) return null;
   return (
     <section className="dish-page-more" aria-labelledby={headingId}>
@@ -281,41 +300,42 @@ export function DishDetailPage({
         <Link href={exploreRoutes.dishes}>← Tất cả món ăn</Link>
       </nav>
       <div className="dish-page-hero">
-        <DishStage key={dish.id} dish={dish} />
-        <div className="dish-page-panel">
-          <div className="dish-page-title">
-            <p className="eyebrow">
-              {dishFormLabels[dish.dishForm]} · {restaurant.name}
-            </p>
-            <h1>{dish.name}</h1>
-          </div>
-          <p className="dish-page-price">{vnd(dish.price)}</p>
-          {(dish.tags.length > 0 || !dish.isAvailable) && (
-            <p className="dish-page-tags">
-              {!dish.isAvailable && <Badge tone="warning">Tạm hết món</Badge>}
+        <div className="dish-page-intro">
+          <DishPlate key={dish.id} dish={dish} />
+          <p className="dish-page-kicker">Chi tiết · Hương vị & đặc điểm</p>
+          <h1>{dish.name}</h1>
+          {dish.description && <DishDescription text={dish.description} />}
+          <ul className="dish-page-facts">
+            <li className="dish-page-price">{priceTag(dish.price)}</li>
+            <li>{dishFormLabels[dish.dishForm]}</li>
+            <li>
+              <HeartIcon aria-hidden />
+              {dish.likeCount}
+              <span className="sr-only"> lượt thích</span>
+            </li>
+            {!dish.isAvailable && (
+              <li>
+                <Badge tone="warning">Tạm hết món</Badge>
+              </li>
+            )}
+          </ul>
+          {dish.tags.length > 0 && (
+            <ul className="dish-page-tags" aria-label="Đặc điểm">
               {dish.tags.map((tag) => (
-                <span key={tag.id} className="dish-page-tag">
-                  {tag.name}
-                </span>
+                <li key={tag.id}>{tag.name}</li>
               ))}
-            </p>
+            </ul>
           )}
-          {dish.description && (
-            <p className="dish-page-description">{dish.description}</p>
-          )}
+        </div>
+        <div className="dish-page-side">
           <Seller restaurant={restaurant} />
+          <OtherDishes
+            key={restaurant.id}
+            restaurant={restaurant}
+            service={service}
+          />
         </div>
       </div>
-      <OtherDishes
-        key={restaurant.id}
-        restaurant={restaurant}
-        dishId={dish.id}
-        service={service}
-      />
-      <p className="dish-page-note">
-        Giá, thành phần và giờ mở cửa có thể thay đổi. Nếu bạn có dị ứng, hãy
-        hỏi quán trước khi ăn.
-      </p>
     </div>
   );
 }
