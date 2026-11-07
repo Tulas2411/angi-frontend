@@ -26,8 +26,12 @@ import {
   gpsRouteMessages,
   groupByMeal,
   legEndpoints,
-  legsByTarget,
+  legKey,
   mealSlotLabels,
+  mixRoute,
+  travelModeOf,
+  travelModes,
+  type TravelMode,
   wantsDayRoute,
   type GpsProblem,
 } from "./roadmap-detail-rules";
@@ -43,6 +47,8 @@ import { roadmapDayTone } from "./roadmap-map-rules";
 import { recallDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
 import { RoadmapGenerateDialog } from "./roadmap-generate-dialog";
+import { useGenerationWatch } from "./roadmap-generation-watch";
+import { GenerationWorkerBadge } from "./generation-worker-badge";
 import { useItemDrag, type GripProps } from "./roadmap-item-drag";
 import {
   applyPatches,
@@ -55,6 +61,7 @@ import {
   type MoveTarget,
 } from "./roadmap-reorder-rules";
 import { RateItemButtons } from "./roadmap-rate-item";
+import { LegModePicker } from "./roadmap-leg-mode";
 import {
   ratedNotice,
   rateFailedNotice,
@@ -76,6 +83,7 @@ import type {
   RoadmapDayDto,
   RoadmapItemDto,
   RoadmapRouteDto,
+  RoadmapRouteLegDto,
   RoadmapSummaryDto,
 } from "./roadmap-types";
 
@@ -116,6 +124,13 @@ function routeKey(
   const dishes = day.items.map((item) => item.id).join(".");
   return `${day.dayId}:${dishes}:${latitude === undefined ? "-" : `${latitude},${longitude}`}`;
 }
+
+/** One RM-14 answer: a day's legs (routeKey) in one means of travel. */
+const profileKey = (key: string, mode: TravelMode) => `${key}|${mode}`;
+
+/** The means of travel chosen for a leg of a day (session only; driving when not chosen). */
+const legModeKey = (dayId: number, leg: RoadmapRouteLegDto) =>
+  `${dayId}:${legKey(leg)}`;
 
 function ItemCard({
   item,
@@ -261,6 +276,8 @@ function DayPanel({
   open,
   onToggle,
   route,
+  mixed,
+  onChangeMode,
   loading,
   onRetry,
   selectedItemId,
@@ -278,7 +295,12 @@ function DayPanel({
   overview: RoadmapSummaryDto;
   open: boolean;
   onToggle: () => void;
+  /** The driving answer: it fixes the legs, the notes and the error. */
   route: RouteState | undefined;
+  /** Each leg in its chosen means of travel, with the day total (null until driving is in). */
+  mixed: ReturnType<typeof mixRoute> | null;
+  /** The traveler picked another means of travel for a leg. */
+  onChangeMode: (leg: RoadmapRouteLegDto, mode: TravelMode) => void;
   loading: boolean;
   onRetry: () => void;
   selectedItemId: number | null;
@@ -324,18 +346,22 @@ function DayPanel({
     if (notice && !notice.quiet) noticeRef.current?.focus();
   }, [notice]);
   const maps = googleMapsDayLink(overview, day.items);
-  const legs = route?.status === "ready" ? legsByTarget(route.route) : null;
+  const legs = mixed
+    ? new Map(mixed.legs.map((entry) => [entry.leg.toItemId, entry]))
+    : null;
   const bodyId = `day-body-${day.dayNumber}`;
   // The day's route total, short ("35 phút, 8,98 km"), shown only while the day is folded.
   const total =
-    route?.status === "ready" && route.route.legs.length > 0 ? (
-      <span className="roadmap-route-total">
+    mixed && mixed.legs.length > 0 ? (
+      <span
+        className="roadmap-route-total"
+        aria-busy={mixed.pending || undefined}
+      >
         <span className="sr-only">Cả ngày: </span>
-        {routeSummary(
-          route.route.totalDistanceMeters,
-          route.route.totalDurationSeconds,
-        )}
-        {route.route.isEstimated && " (ước tính)"}
+        {mixed.pending
+          ? "Đang tính lại…"
+          : routeSummary(mixed.totalDistanceMeters, mixed.totalDurationSeconds)}
+        {!mixed.pending && mixed.isEstimated && " (ước tính)"}
       </span>
     ) : null;
   // A closed day stays drawn while it folds away, then leaves the page (so its calls stop too).
@@ -487,33 +513,53 @@ function DayPanel({
                   </div>
                   <ol className="roadmap-items">
                     {group.items.map((item) => {
-                      const leg = legs?.get(item.id);
+                      const entry = legs?.get(item.id);
+                      const endpoints = entry
+                        ? legEndpoints(
+                            entry.leg,
+                            day.items,
+                            overview.originLabel,
+                          )
+                        : "";
                       return (
                         <li key={item.id} data-item-id={item.id}>
-                          {leg && (
-                            <p className="roadmap-leg">
+                          {entry && (
+                            <div
+                              className="roadmap-leg"
+                              aria-busy={entry.pending || undefined}
+                            >
                               <span className="roadmap-leg-connector">
                                 <Icon name="connection" />
                               </span>
-                              <Icon name="motorcycle" />
+                              <LegModePicker
+                                mode={entry.mode}
+                                endpoints={endpoints}
+                                onChange={(mode) =>
+                                  onChangeMode(entry.leg, mode)
+                                }
+                              />
                               <span className="roadmap-leg-text">
-                                <span>
-                                  <strong>
-                                    {formatDistance(leg.distanceMeters)}
-                                  </strong>{" "}
-                                  · Khoảng {formatDuration(leg.durationSeconds)}
-                                </span>
+                                {entry.pending ? (
+                                  <span role="status">
+                                    Đang tính quãng đường{" "}
+                                    {travelModeOf(
+                                      entry.mode,
+                                    ).label.toLowerCase()}
+                                    …
+                                  </span>
+                                ) : (
+                                  <span>
+                                    <strong>
+                                      {formatDistance(entry.leg.distanceMeters)}
+                                    </strong>{" "}
+                                    · Khoảng{" "}
+                                    {formatDuration(entry.leg.durationSeconds)}
+                                  </span>
+                                )}
                                 {/* One line: a long origin or dish name fades out instead of wrapping. */}
-                                <FadingText
-                                  as="small"
-                                  text={legEndpoints(
-                                    leg,
-                                    day.items,
-                                    overview.originLabel,
-                                  )}
-                                />
+                                <FadingText as="small" text={endpoints} />
                               </span>
-                            </p>
+                            </div>
                           )}
                           <ItemCard
                             item={item}
@@ -651,6 +697,23 @@ export function RoadmapItinerary({
     scope: GenerationScope;
     dayNumber: number;
   } | null>(null);
+  // F-26 job follow-up: lives here so hiding the dialog keeps it running (worker badge).
+  const generation = useGenerationWatch({
+    roadmapId,
+    service,
+    onGenerated: onItemsGenerated,
+    // Success is a toast: the dialog closes by itself.
+    onSucceededInDialog: () => setGenerateTarget(null),
+  });
+  const lastGenerateTarget = useRef<{
+    scope: GenerationScope;
+    dayNumber: number;
+  } | null>(null);
+  const { setHidden: setGenerationHidden } = generation;
+  useEffect(() => {
+    setGenerationHidden(generateTarget === null);
+    if (generateTarget) lastGenerateTarget.current = generateTarget;
+  }, [generateTarget, setGenerationHidden]);
   // One removal at a time: a second press on the same dish must not send RM-09 twice.
   const removing = useRef(false);
   // Warnings of a day (a move, a rating or a removal that failed) stay in that day; the
@@ -663,6 +726,7 @@ export function RoadmapItinerary({
   } | null>(null);
   const [gps, setGps] = useState<GpsState>({ status: "idle" });
   const [routes, setRoutes] = useState<Record<string, RouteState>>({});
+  const [legModes, setLegModes] = useState<Record<string, TravelMode>>({});
   const [attempt, setAttempt] = useState(0);
   const started = useRef(new Set<string>());
   const mounted = useRef(true);
@@ -678,7 +742,9 @@ export function RoadmapItinerary({
   const keyOf = (day: RoadmapDayDto) =>
     routeKey(day, gpsLatitude, gpsLongitude);
   const mapDay = itinerary.find((day) => day.dayNumber === mapDayNumber);
-  const mapRouteState = mapDay ? routes[keyOf(mapDay)] : undefined;
+  const mapRouteState = mapDay
+    ? routes[profileKey(keyOf(mapDay), "driving")]
+    : undefined;
   useEffect(() => {
     onMapRouteChange(
       mapRouteState?.status === "ready" ? mapRouteState.route : null,
@@ -699,29 +765,57 @@ export function RoadmapItinerary({
       if (moved?.dayNumber === day.dayNumber) continue;
       if (!wantsDayRoute(overview, day.items, gpsOrigin !== undefined))
         continue;
-      const key = routeKey(day, gpsLatitude, gpsLongitude);
-      if (started.current.has(key)) continue;
-      started.current.add(key);
-      service
-        .dayRoute(roadmapId, day.dayId, gpsOrigin)
-        .then((route) => {
-          if (mounted.current)
-            setRoutes((previous) => ({
-              ...previous,
-              [key]: { status: "ready", route },
-            }));
-        })
-        .catch((caught) => {
-          // Keep failures cached until the explicit retry action; selecting a map
-          // stop or opening another day must not issue another provider request.
-          if (mounted.current)
+      const base = routeKey(day, gpsLatitude, gpsLongitude);
+      // Driving first, for every day; another means of travel only once a leg of the day uses
+      // it. Each (day, origin, means) is asked once.
+      const driving = routes[profileKey(base, "driving")];
+      const modes = new Set<TravelMode>(["driving"]);
+      if (driving?.status === "ready")
+        for (const leg of driving.route.legs)
+          modes.add(legModes[legModeKey(day.dayId, leg)] ?? "driving");
+      for (const mode of modes) {
+        const key = profileKey(base, mode);
+        if (started.current.has(key)) continue;
+        started.current.add(key);
+        service
+          .dayRoute(roadmapId, day.dayId, gpsOrigin, mode)
+          .then((route) => {
+            if (mounted.current)
+              setRoutes((previous) => ({
+                ...previous,
+                [key]: { status: "ready", route },
+              }));
+          })
+          .catch((caught) => {
+            if (!mounted.current) return;
+            if (mode !== "driving") {
+              // Another means failed: its legs go back to driving, and picking it asks again.
+              started.current.delete(key);
+              const prefix = `${day.dayId}:`;
+              setLegModes((previous) =>
+                Object.fromEntries(
+                  Object.entries(previous).filter(
+                    ([id, chosen]) => !id.startsWith(prefix) || chosen !== mode,
+                  ),
+                ),
+              );
+              notify.error(
+                `Chưa tính được quãng đường ${travelModeOf(mode).label.toLowerCase()}. Vui lòng thử lại.`,
+              );
+              return;
+            }
+            // Keep failures cached until the explicit retry action; selecting a map
+            // stop or opening another day must not issue another provider request.
             setRoutes((previous) => ({
               ...previous,
               [key]: { status: "error", message: getErrorMessage(caught) },
             }));
-        });
+          });
+      }
     }
   }, [
+    routes,
+    legModes,
     active,
     itinerary,
     moved,
@@ -922,12 +1016,13 @@ export function RoadmapItinerary({
   }
 
   function retry(key: string) {
-    started.current.delete(key);
-    setRoutes((previous) => {
-      const { [key]: removed, ...rest } = previous;
-      void removed;
-      return rest;
-    });
+    for (const mode of travelModes)
+      started.current.delete(profileKey(key, mode.id));
+    setRoutes((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) => !id.startsWith(`${key}|`)),
+      ),
+    );
     setAttempt((value) => value + 1);
   }
 
@@ -975,7 +1070,22 @@ export function RoadmapItinerary({
       {itinerary.map((day) => {
         const key = keyOf(day);
         const open = openDays.includes(day.dayNumber);
-        const route = routes[key];
+        const route = routes[profileKey(key, "driving")];
+        const byMode: Partial<Record<TravelMode, RoadmapRouteDto>> = {};
+        for (const mode of travelModes) {
+          const answer = routes[profileKey(key, mode.id)];
+          if (answer?.status === "ready") byMode[mode.id] = answer.route;
+        }
+        const modes: Record<string, TravelMode> = {};
+        if (route?.status === "ready")
+          for (const leg of route.route.legs) {
+            const chosen = legModes[legModeKey(day.dayId, leg)];
+            if (chosen) modes[legKey(leg)] = chosen;
+          }
+        const mixed =
+          route?.status === "ready"
+            ? mixRoute(route.route, modes, byMode)
+            : null;
         return (
           <DayPanel
             key={day.dayId}
@@ -984,6 +1094,13 @@ export function RoadmapItinerary({
             open={open}
             onToggle={() => onToggleDay(day.dayNumber)}
             route={route}
+            mixed={mixed}
+            onChangeMode={(leg, mode) =>
+              setLegModes((previous) => ({
+                ...previous,
+                [legModeKey(day.dayId, leg)]: mode,
+              }))
+            }
             loading={
               open &&
               !route &&
@@ -1046,10 +1163,30 @@ export function RoadmapItinerary({
               : { latitude: gpsLatitude, longitude: gpsLongitude }
           }
           service={service}
-          onGenerated={onItemsGenerated}
-          onClose={() => setGenerateTarget(null)}
+          watch={generation}
+          onHide={() => setGenerateTarget(null)}
+          onClose={() => {
+            // The end was seen in the dialog (or nothing was asked): back to the form next time.
+            if (generation.state.kind !== "running") generation.reset();
+            setGenerateTarget(null);
+          }}
         />
       )}
+      {!generateTarget &&
+        (generation.state.kind === "running" ||
+          generation.state.kind === "leaving") && (
+          <GenerationWorkerBadge
+            leaving={generation.state.kind === "leaving"}
+            onOpen={() =>
+              setGenerateTarget(
+                lastGenerateTarget.current ?? {
+                  scope: "full",
+                  dayNumber: itinerary[0]?.dayNumber ?? 1,
+                },
+              )
+            }
+          />
+        )}
       {addTarget && addDay && (
         <RoadmapAddItemDialog
           roadmapId={roadmapId}

@@ -966,6 +966,16 @@
   -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
   mask-image: linear-gradient(to right, #000 85%, transparent);
 }
+/*
+ * "Lưới chi tiết" of the dish list: the tags wrap onto at most two rows (a chip is 24px tall,
+ * rows 6px apart); a third row is cut off whole.
+ */
+.dish-results .dish-detail .dish-kinds {
+  flex-wrap: wrap;
+  max-height: calc(2 * 24px + 6px);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
 .dish-detail .dish-name {
   font-size: 22px;
 }

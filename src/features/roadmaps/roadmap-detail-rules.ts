@@ -294,3 +294,71 @@ export const gpsRouteMessages: Record<GpsProblem, string> = {
   timeout:
     "Quá thời gian chờ vị trí. Hãy thử lại. Các chặng giữa các quán vẫn được tính.",
 };
+
+/** A means of travel for one leg: the RM-14 `profile`. */
+export type TravelMode = RoadmapRouteDto["profile"];
+
+/**
+ * The choices beside each leg. Mapbox has no motorbike profile, so "Xe máy, ô tô" is its road
+ * (`driving`) profile, without live traffic: the default, and the only one asked up front.
+ */
+export const travelModes: readonly {
+  id: TravelMode;
+  label: string;
+  icon: "motorcycle" | "bicycle" | "walking";
+}[] = [
+  { id: "driving", label: "Xe máy, ô tô", icon: "motorcycle" },
+  { id: "cycling", label: "Xe đạp", icon: "bicycle" },
+  { id: "walking", label: "Đi bộ", icon: "walking" },
+];
+
+export const travelModeOf = (mode: TravelMode) =>
+  travelModes.find((entry) => entry.id === mode) ?? travelModes[0];
+
+/** A leg's identity across profiles and reloads: `origin-12`, `12-15`. */
+export const legKey = (leg: RoadmapRouteLegDto) =>
+  `${leg.fromItemId ?? "origin"}-${leg.toItemId}`;
+
+/** One leg as shown: the values of its chosen means of travel, or `pending` while asked. */
+export interface MixedLeg {
+  leg: RoadmapRouteLegDto;
+  mode: TravelMode;
+  pending: boolean;
+  isEstimated: boolean;
+}
+
+/**
+ * The day with each leg in its own means of travel. `base` is the driving answer, which fixes
+ * the legs; a leg whose profile is not answered yet keeps its driving values and is `pending`,
+ * and so is the total until every leg is known.
+ */
+export function mixRoute(
+  base: RoadmapRouteDto,
+  modes: Readonly<Record<string, TravelMode>>,
+  byMode: Partial<Record<TravelMode, RoadmapRouteDto>>,
+) {
+  const legs: MixedLeg[] = base.legs.map((leg) => {
+    const mode = modes[legKey(leg)] ?? "driving";
+    const answer = mode === "driving" ? base : byMode[mode];
+    const match = answer?.legs.find((entry) => legKey(entry) === legKey(leg));
+    return {
+      leg: match ?? leg,
+      mode,
+      pending: !match,
+      isEstimated: (match ? answer?.isEstimated : base.isEstimated) ?? false,
+    };
+  });
+  return {
+    legs,
+    totalDistanceMeters: legs.reduce(
+      (sum, { leg }) => sum + leg.distanceMeters,
+      0,
+    ),
+    totalDurationSeconds: legs.reduce(
+      (sum, { leg }) => sum + leg.durationSeconds,
+      0,
+    ),
+    pending: legs.some((entry) => entry.pending),
+    isEstimated: legs.some((entry) => entry.isEstimated),
+  };
+}

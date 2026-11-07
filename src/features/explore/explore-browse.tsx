@@ -266,15 +266,19 @@ export function BrowseHeading({
   title,
   section,
   description,
+  banner,
 }: {
   /** The h1, read by screen readers ("Khám phá quán ăn"). */
   title: string;
   /** Last breadcrumb step ("Quán ăn"). */
   section: string;
   description: string;
+  /** Promotional banner shown above the breadcrumb (PlanRoadmapBanner). */
+  banner?: ReactNode;
 }) {
   return (
     <div className="page-title explore-browse-title">
+      {banner}
       <nav className="explore-crumbs" aria-label="Đường dẫn trang">
         <ol>
           <li>Khám phá</li>

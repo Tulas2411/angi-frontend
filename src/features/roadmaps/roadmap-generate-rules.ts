@@ -300,6 +300,15 @@ export function createdItemCount(
   return job.createdItemIds.length;
 }
 
+/** What ANGI is doing, one line every few seconds while a job runs (decorative, not read aloud). */
+export const generationTips = [
+  "Đang đọc khẩu vị và ngân sách của bạn…",
+  "Đang tìm các quán ngon gần nhau…",
+  "Đang cân món cho bữa sáng, trưa và tối…",
+  "Đang so giá với ngân sách của chuyến đi…",
+  "Sắp xong, đang xếp món vào từng ngày…",
+] as const;
+
 /** The line shown once the job succeeded. */
 export function generationDoneText(count: number) {
   return count > 0

@@ -143,11 +143,15 @@ export function RoadmapDetailView({
   const [tab, setTab] = useState<DetailTab>(initialTab);
   // Every day starts folded, so the itinerary reads as a short list of days; the days unfolded
   // before a reload (`?open=`) open again.
-  const [openDays, setOpenDays] = useState<number[]>(() =>
-    initialOpenDays.filter((dayNumber) =>
+  // A link that asks for days the roadmap does not have (`?day=9`) opens day 1 instead.
+  const [openDays, setOpenDays] = useState<number[]>(() => {
+    const known = initialOpenDays.filter((dayNumber) =>
       itinerary.some((day) => day.dayNumber === dayNumber),
-    ),
-  );
+    );
+    return known.length || !initialOpenDays.length || !itinerary.length
+      ? known
+      : [itinerary[0].dayNumber];
+  });
   const [selectedDay, setActiveDay] = useState(
     firstDay?.dayNumber ?? itinerary[0]?.dayNumber ?? 1,
   );
@@ -243,6 +247,10 @@ export function RoadmapDetailView({
         : previous.filter((value) => value !== dayNumber),
     );
     if (opening) {
+      // The day just opened is the one being read: the scroll that brought its title under the
+      // pointer, and the page growing while it unfolds, must not hand the focus back to the day
+      // that happens to sit on the 30% line.
+      quietUntil.current = momentAfter(600);
       setActiveDay(dayNumber);
       setSelectedItemId(null);
     }

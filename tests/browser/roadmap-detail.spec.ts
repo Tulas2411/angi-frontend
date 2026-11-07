@@ -346,10 +346,22 @@ function routeFor(
         distanceMeters: 2450,
         durationSeconds: 420,
       },
-    ];
+    ].map((leg) =>
+      // On foot: a little shorter, five times as long.
+      query.get("profile") === "walking"
+        ? {
+            ...leg,
+            distanceMeters: leg.distanceMeters - 100,
+            durationSeconds: leg.durationSeconds * 5,
+          }
+        : leg,
+    );
     return {
       dayId,
-      profile: "driving",
+      profile:
+        query.get("profile") === "walking"
+          ? ("walking" as const)
+          : ("driving" as const),
       origin: gps
         ? gps
         : withOrigin
@@ -417,7 +429,8 @@ const roadmaps: StubHandler = (request, send) => {
   const match = /^\/api\/v1\/roadmaps\/88\/days\/(\d+)\/route$/.exec(path);
   if (!match) return false;
   routeCalls.push(`${match[1]}${parsed.search}`);
-  if (failRoute > 0) {
+  // Only day 1 (301) fails: days are asked in parallel, so "the first call" is not always 301.
+  if (failRoute > 0 && match[1] === "301") {
     failRoute -= 1;
     send(503, null, "SERVICE_UNAVAILABLE");
     return true;
@@ -622,6 +635,34 @@ test("RM-03 shows the hero, the day list, the first day with its legs and its to
   await page.getByRole("button", day1).click();
   await expect(page.locator("#day-1 .roadmap-route-total")).toContainText(
     "27 phút, 7,9 km",
+  );
+});
+
+test("each leg can go another way and the day total is added up again", async ({
+  page,
+}) => {
+  await open(page);
+  await expect(legs(page)).toHaveCount(3);
+  const second = legs(page).nth(1);
+  await expect(second).toContainText("3,1 km · Khoảng 11 phút");
+  await second
+    .getByRole("button", {
+      name: "Phương tiện chặng Bún bò Huế → Mì Quảng: Xe máy, ô tô. Đổi phương tiện",
+    })
+    .click();
+  await page.getByRole("button", { name: "Đi bộ" }).click();
+  // Only this day is asked again, on foot; the other legs keep driving.
+  await expect(second).toContainText("3 km · Khoảng 55 phút");
+  expect(routeCalls).toContain("301?profile=walking");
+  await expect(legs(page).nth(0)).toContainText("2,35 km · Khoảng 9 phút");
+  await expect(
+    second.getByRole("button", { name: /: Đi bộ\. Đổi phương tiện$/ }),
+  ).toBeVisible();
+  await expect(second.locator(".icon-walking")).toBeVisible();
+  // The folded day adds 540 + 3300 + 420 seconds and 2350 + 3000 + 2450 meters.
+  await page.getByRole("button", day1).click();
+  await expect(page.locator("#day-1 .roadmap-route-total")).toContainText(
+    "1 giờ 11 phút, 7,8 km",
   );
 });
 
@@ -850,7 +891,9 @@ test("a failed RM-14 call keeps the day readable and can be retried", async ({
   await main(page).getByRole("button", { name: "Thử lại" }).click();
   await expect(legs(page)).toHaveCount(3);
   await expect(main(page).locator(".alert-error")).toHaveCount(0);
-  expect(routeCalls).toEqual(["301", "303", "301"]);
+  // Days 1 and 3 in either order, then day 1 again for the retry.
+  expect(routeCalls.slice(0, 2).sort()).toEqual(["301", "303"]);
+  expect(routeCalls.slice(2)).toEqual(["301"]);
 });
 
 test("a gps roadmap asks the browser for the position, then sends it with RM-14", async ({

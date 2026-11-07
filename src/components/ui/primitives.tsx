@@ -35,6 +35,8 @@ export function Icon({
     | "warning"
     | "success"
     | "motorcycle"
+    | "bicycle"
+    | "walking"
     | "Plus"
     | "Minus"
     | "X"

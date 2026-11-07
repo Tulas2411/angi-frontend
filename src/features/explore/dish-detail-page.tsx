@@ -125,7 +125,6 @@ function DishStage({ dish }: { dish: DishDetailDto }) {
           open={zoomed}
           onClose={() => setZoomed(false)}
           title={dish.name}
-          wide
           className="dish-page-zoom"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}

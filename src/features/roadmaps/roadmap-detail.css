@@ -838,10 +838,82 @@ button.roadmap-hero-dates:focus-visible {
 .roadmap-leg strong {
   color: var(--ink);
 }
-.roadmap-detail .icon-motorcycle {
+.roadmap-detail .icon-motorcycle,
+.roadmap-detail .icon-bicycle,
+.roadmap-detail .icon-walking,
+.roadmap-leg-modes .icon {
   width: 20px;
   height: 20px;
   flex: 0 0 20px;
+}
+
+/* The leg's means of travel: its icon with a small caret, opening the three choices. */
+.roadmap-leg-mode {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+  min-height: 32px;
+  padding: 4px 2px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--duration-fast) ease;
+}
+.roadmap-leg-mode:hover,
+.roadmap-leg-mode[data-state="open"] {
+  color: var(--ink);
+}
+.roadmap-leg-mode:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.roadmap-leg-mode-caret {
+  width: 14px;
+  height: 14px;
+}
+
+.ui-popover-content.roadmap-leg-modes {
+  min-width: 180px;
+  padding: 4px;
+}
+.roadmap-leg-modes ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.roadmap-leg-modes button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+.roadmap-leg-modes button:hover,
+.roadmap-leg-modes button:focus-visible {
+  outline: none;
+  background: var(--control);
+}
+.roadmap-leg-modes button[aria-pressed="true"] {
+  font-weight: 700;
+}
+.roadmap-leg-modes-check {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  color: var(--coral);
 }
 .roadmap-leg-connector {
   position: absolute;
@@ -1700,16 +1772,31 @@ h3.roadmap-budget-label svg {
 .roadmap-map-pin[hidden] {
   display: none;
 }
+/*
+ * The starting point (pinned origin): the same drop as the dishes' pins (.roadmap-map-pin, 30 × 40,
+ * white outline, tip on the point), in ink, with a white dot in the head instead of a number. Its
+ * own class, so counting and selecting the dishes' pins never includes it.
+ */
 .roadmap-map-origin {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border: 3px solid var(--card);
-  border-radius: 50%;
-  background: var(--ink);
-  color: var(--card);
-  box-shadow: var(--shadow);
+  display: block;
+  width: 30px;
+  height: 40px;
+  color: var(--ink);
+  filter: drop-shadow(0 2px 3px rgb(34 34 34 / 0.22));
+}
+.roadmap-map-origin svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.roadmap-map-origin path {
+  fill: currentColor;
+  stroke: #fff;
+  stroke-width: 1.5;
+}
+.roadmap-map-origin circle {
+  fill: #fff;
 }
 .roadmap-map-stop-list {
   position: absolute;

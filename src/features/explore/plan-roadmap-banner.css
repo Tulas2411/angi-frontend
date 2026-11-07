@@ -1,0 +1,290 @@
+/*
+ * "Lên lịch ăn cho cả chuyến đi": promotional banner above the explore breadcrumb. Text and the
+ * call to action on the left; on the right a small itinerary of one day (three dish photos joined
+ * by a dashed route), drawn from the app's own dish pictures.
+ */
+.plan-banner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+  min-height: 188px;
+  margin-bottom: var(--space-6);
+  padding: var(--space-6) var(--space-8);
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(
+      120% 140% at 100% 0%,
+      rgb(255 94 98 / 0.16),
+      transparent 55%
+    ),
+    radial-gradient(
+      90% 120% at 0% 100%,
+      rgb(255 196 120 / 0.18),
+      transparent 60%
+    ),
+    var(--canvas);
+}
+
+.plan-banner-text {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.plan-banner h2 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 2.4vw, 32px);
+  line-height: 1.1;
+  text-wrap: balance;
+}
+
+.plan-banner-copy {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.plan-banner-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-2);
+}
+
+.plan-banner-cta {
+  gap: var(--space-2);
+}
+
+.plan-banner-cta svg {
+  width: 18px;
+  height: 18px;
+  transition: transform var(--duration-fast) ease;
+}
+
+.plan-banner-cta:hover svg {
+  transform: translateX(3px);
+}
+
+.plan-banner-note {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* ---------------------------------------------------------------- itinerary art */
+/*
+ * The mini map fills the right column beside the text, out to the middle of the banner (at most
+ * 720px). When the banner stacks it is a compact 460px block, centred, so the three stops stay
+ * close together instead of spreading over a wide row.
+ */
+.plan-banner-art {
+  position: relative;
+  justify-self: stretch;
+  align-self: stretch;
+  width: 100%;
+  max-width: 720px;
+  min-height: 220px;
+}
+
+/* The faint city map under the route, fading out towards its edges. */
+.plan-banner-map {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+  -webkit-mask-image: radial-gradient(closest-side, #000 62%, transparent);
+  mask-image: radial-gradient(closest-side, #000 62%, transparent);
+  opacity: 0.9;
+}
+
+.plan-banner-map-lake {
+  fill: #cfe5e1;
+}
+
+.plan-banner-map-park {
+  fill: #dfe8d2;
+}
+
+.plan-banner-map path {
+  vector-effect: non-scaling-stroke;
+}
+
+.plan-banner-map-streets path,
+.plan-banner-map-lanes path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.plan-banner-map-streets path {
+  stroke: #fff;
+  stroke-width: 9;
+}
+
+.plan-banner-map-lanes path {
+  stroke: rgb(255 255 255 / 0.75);
+  stroke-width: 4;
+}
+
+.plan-banner-route {
+  position: absolute;
+  inset: 8% 4% 4%;
+  width: 92%;
+  height: 88%;
+  overflow: visible;
+}
+
+.plan-banner-route path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-dasharray: 2 9;
+  stroke-linecap: round;
+  stroke-width: 2.5;
+  opacity: 0.35;
+  vector-effect: non-scaling-stroke;
+}
+
+.plan-banner-stop {
+  position: absolute;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
+
+.media.plan-banner-photo {
+  aspect-ratio: 1;
+  /* Larger on wide screens, where the map is wider. */
+  width: clamp(76px, 6vw, 96px);
+  height: clamp(76px, 6vw, 96px);
+  overflow: hidden;
+  border: 4px solid var(--card);
+  border-radius: 50%;
+  box-shadow: var(--shadow);
+}
+
+.plan-banner-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.plan-banner-stop figcaption {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  box-shadow: 0 2px 8px rgb(34 34 34 / 0.08);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.plan-banner-stop figcaption strong {
+  font-weight: 700;
+}
+
+/* Positions on the route of the 400×200 viewBox (start, middle, end). */
+.plan-banner-stop.is-stop-1 {
+  top: 66%;
+  left: 14%;
+}
+.plan-banner-stop.is-stop-2 {
+  top: 32%;
+  left: 50%;
+}
+.plan-banner-stop.is-stop-3 {
+  top: 40%;
+  left: 86%;
+}
+
+/* "3 bữa · 2,4 km · 155.000 ₫": what ANGI works out for the day, in the empty lower right. */
+.plan-banner-summary {
+  position: absolute;
+  right: 2%;
+  bottom: 4%;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  box-shadow: 0 2px 8px rgb(34 34 34 / 0.1);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.plan-banner-day {
+  position: absolute;
+  top: 6%;
+  left: 6%;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.plan-banner-pin {
+  position: absolute;
+  top: 6%;
+  right: 4%;
+  width: 28px;
+  height: 28px;
+  color: var(--coral);
+  filter: drop-shadow(0 4px 6px rgb(255 94 98 / 0.35));
+}
+
+/* The pictures arrive one after another, once. */
+@media (prefers-reduced-motion: no-preference) {
+  .plan-banner-stop {
+    animation: plan-banner-pop 480ms var(--ease-out) both;
+  }
+  .plan-banner-stop.is-stop-2 {
+    animation-delay: 120ms;
+  }
+  .plan-banner-stop.is-stop-3 {
+    animation-delay: 240ms;
+  }
+}
+
+@keyframes plan-banner-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(0.85);
+  }
+}
+
+@media (max-width: 900px) {
+  .plan-banner {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--space-5);
+  }
+  .plan-banner-art {
+    justify-self: center;
+    width: min(100%, 460px);
+    min-height: 184px;
+  }
+  .media.plan-banner-photo {
+    width: 76px;
+    height: 76px;
+  }
+}
+
+@media (max-width: 480px) {
+  .media.plan-banner-photo {
+    width: 60px;
+    height: 60px;
+  }
+  .plan-banner-stop figcaption {
+    font-size: 11px;
+  }
+}
