@@ -84,21 +84,25 @@
   right: var(--bleed);
   height: var(--wheel-h);
   border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  /*
+   * The board is a photographed walnut (walnut.webp, ambientCG Wood067, CC0, seamless), sliding
+   * sideways with the turn (--grain). Above it: a broad satin sheen from the upper left and the
+   * wood darkening towards the round edge, as on a turned, oiled board.
+   */
   background:
-    /* fine horizontal grain, drifting with the turn */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.003 0.11' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.06 0 0 0 0 0.03 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E")
-      var(--grain) 0 / 600px 300px repeat,
-    repeating-linear-gradient(
-      180deg,
-      rgb(255 255 255 / 0.03) 0 1px,
-      transparent 1px 6px
+    radial-gradient(
+      ellipse 55% 75% at 28% 8%,
+      rgb(255 236 214 / 0.16),
+      transparent 70%
     ),
-    linear-gradient(
-      155deg,
-      var(--walnut-light) 0%,
-      var(--walnut) 45%,
-      var(--walnut-deep) 100%
-    );
+    radial-gradient(
+      ellipse 75% 110% at 50% 0%,
+      transparent 58%,
+      rgb(20 9 3 / 0.28) 100%
+    ),
+    linear-gradient(155deg, rgb(122 74 44 / 0.08), rgb(30 14 5 / 0.16)),
+    url("/assets/textures/walnut.webp") var(--grain) 0 / 720px auto repeat,
+    var(--walnut);
   box-shadow:
     inset 0 -22px 34px rgb(0 0 0 / 0.38),
     0 26px 44px rgb(34 34 34 / 0.22);
