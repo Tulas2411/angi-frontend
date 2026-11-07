@@ -1,4 +1,8 @@
 "use client";
+import {
+  PlanRoadmapBanner,
+  type PlanBannerAudience,
+} from "./plan-roadmap-banner";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
@@ -168,8 +172,11 @@ function DishFilterFields({
  */
 export function DishListPage({
   service = exploreService,
+  planAudience = null,
 }: {
   service?: ExploreService;
+  /** Who is invited to plan a roadmap above the breadcrumb; null hides the banner. */
+  planAudience?: PlanBannerAudience | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -225,6 +232,7 @@ export function DishListPage({
 
   const heading = (
     <BrowseHeading
+      banner={planAudience && <PlanRoadmapBanner audience={planAudience} />}
       title="Khám phá món ăn"
       section="Món ăn"
       description="Tìm món hợp khẩu vị, xem quán bán món và thêm vào lộ trình của bạn."
@@ -306,7 +314,7 @@ export function DishListPage({
             </p>
             <DishViewSwitcher view={view} onChange={setView} />
           </div>
-          <ul className={`dish-items dish-items-${view}`}>
+          <ul className={`dish-items dish-items-${view} dish-results`}>
             {items.map((dish) => (
               <li key={dish.id}>
                 {view === "gallery" ? (

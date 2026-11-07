@@ -1,5 +1,9 @@
 "use client";
 import {
+  PlanRoadmapBanner,
+  type PlanBannerAudience,
+} from "./plan-roadmap-banner";
+import {
   useEffect,
   useId,
   useMemo,
@@ -121,8 +125,11 @@ function RestaurantFilterFields({
  */
 export function RestaurantListPage({
   service = exploreService,
+  planAudience = null,
 }: {
   service?: ExploreService;
+  /** Who is invited to plan a roadmap above the breadcrumb; null hides the banner. */
+  planAudience?: PlanBannerAudience | null;
 }) {
   const router = useRouter();
   const params = useSearchParams();
@@ -222,6 +229,7 @@ export function RestaurantListPage({
 
   const heading = (
     <BrowseHeading
+      banner={planAudience && <PlanRoadmapBanner audience={planAudience} />}
       title="Khám phá quán ăn"
       section="Quán ăn"
       description="Tìm quán theo tên, khu vực, mức giá và đánh giá của thực khách."
