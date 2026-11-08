@@ -1,7 +1,7 @@
 /**
- * A roadmap keeps no destination (RM-01), but RM-06 needs the province on every call. The
- * province typed when planning is remembered in this browser only, as a convenience; it is
- * never sent anywhere and the dialog also falls back to the provinces of the added dishes.
+ * The trip's province. Since 2026-11-08 the roadmap keeps it (`destinationProvince`, RM-01 /
+ * RM-04); roadmaps made before that only have the copy this browser remembered when planning.
+ * RM-06 needs the province on every call, and the map centres on it when nothing else is shown.
  */
 const key = (roadmapId: number) => `angi:roadmap-destination:${roadmapId}`;
 
@@ -21,4 +21,12 @@ export function recallDestination(roadmapId: number): string {
   } catch {
     return "";
   }
+}
+
+/** The saved destination of the roadmap, else the one this browser remembered for it. */
+export function roadmapDestination(overview: {
+  id: number;
+  destinationProvince?: string | null;
+}): string {
+  return overview.destinationProvince?.trim() || recallDestination(overview.id);
 }

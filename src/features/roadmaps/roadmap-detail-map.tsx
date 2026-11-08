@@ -177,6 +177,7 @@ export function RoadmapDetailMap({
   preview = null,
   agentPopupOpen = false,
   onOpenAgent,
+  fallbackCenter = null,
 }: {
   overview: RoadmapSummaryDto;
   itinerary: RoadmapDayDto[];
@@ -190,6 +191,11 @@ export function RoadmapDetailMap({
   agentPopupOpen?: boolean;
   /** Omitted while the assistant is open. */
   onOpenAgent?: () => void;
+  /**
+   * Where the map opens, and where "locate" goes, when there is nothing to show yet (no located
+   * dish, no pinned start): the centre of the destination city.
+   */
+  fallbackCenter?: { latitude: number; longitude: number } | null;
 }) {
   const token = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? "";
   const stops = useMemo(() => roadmapMapStops(itinerary), [itinerary]);
@@ -238,6 +244,7 @@ export function RoadmapDetailMap({
     origin,
     originSkipped,
     preview,
+    fallbackCenter,
   });
   const [status, setStatus] = useState<"loading" | "ready" | "error">(
     "loading",
@@ -261,6 +268,7 @@ export function RoadmapDetailMap({
       origin,
       originSkipped,
       preview,
+      fallbackCenter,
     };
   }, [
     overview,
@@ -272,6 +280,7 @@ export function RoadmapDetailMap({
     origin,
     originSkipped,
     preview,
+    fallbackCenter,
   ]);
 
   // New stops (a dish added, removed or moved) redraw the pins; the map itself stays.
@@ -426,18 +435,22 @@ export function RoadmapDetailMap({
                 current.overview.originLongitude,
               )
             : null;
-        // First a located stop, then the pinned origin, else the whole of Vietnam.
+        // First a located stop, then the pinned origin, then the destination city, else the
+        // whole of Vietnam.
         const located = roadmapMapPoints(
           current.stops,
           current.activeDay,
           current.origin,
           current.originSkipped,
         )[0];
+        const city = current.fallbackCenter;
         const initial =
           located ??
           (pinned
             ? ([pinned.longitude, pinned.latitude] as [number, number])
-            : null);
+            : city
+              ? ([city.longitude, city.latitude] as [number, number])
+              : null);
         instance = new mapboxgl.Map({
           container: element,
           accessToken: token,
@@ -528,7 +541,18 @@ export function RoadmapDetailMap({
           const hasSelection = current.preview
             ? current.preview.selectedKey !== ""
             : current.selectedItemId !== null;
-          if (!points.length) return;
+          if (!points.length) {
+            // Nothing to frame: "locate" goes to the destination city, if one is known.
+            const city = current.fallbackCenter;
+            if (!focus && city && !current.preview)
+              instance.easeTo({
+                center: [city.longitude, city.latitude],
+                zoom: 12,
+                padding: { top: 0, right: 0, bottom: 0, left: 0 },
+                duration: reducedMotion() ? 0 : 360,
+              });
+            return;
+          }
           const cardHeight =
             element.parentElement?.querySelector<HTMLElement>(
               ".roadmap-map-card",

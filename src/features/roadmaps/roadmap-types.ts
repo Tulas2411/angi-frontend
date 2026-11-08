@@ -15,6 +15,8 @@ export interface CreateRoadmapRequestDto {
   originLatitude?: number;
   originLongitude?: number;
   originLabel?: string;
+  /** The province or city of the trip, as picked from the catalog (or derived from the pin). */
+  destinationProvince?: string;
 }
 
 /** Omitted fields are left unchanged; `null` clears a nullable field. */
@@ -27,6 +29,7 @@ export interface UpdateRoadmapRequestDto {
   originLatitude?: number | null;
   originLongitude?: number | null;
   originLabel?: string | null;
+  destinationProvince?: string | null;
 }
 
 export interface RoadmapSummaryDto {
@@ -43,6 +46,8 @@ export interface RoadmapSummaryDto {
   originLatitude: number | null;
   originLongitude: number | null;
   originLabel: string | null;
+  /** RM-01/RM-04 since 2026-11-08; absent from older responses. */
+  destinationProvince?: string | null;
   createdAt: string;
   updatedAt: string;
 }

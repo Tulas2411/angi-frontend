@@ -1,4 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import {
+  rememberDestination,
+  roadmapDestination,
+} from "@/features/roadmaps/roadmap-destination";
 import { ApiError } from "@/shared/api/error";
 import {
   addDays,
@@ -119,6 +123,7 @@ describe("RM-01 plan form", () => {
       numDays: 3,
       budgetAmount: 1500000,
       originMode: "none",
+      destinationProvince: "Thành phố Đà Nẵng",
     });
     expect(
       buildCreateRoadmapRequest(
@@ -135,7 +140,12 @@ describe("RM-01 plan form", () => {
       title: "3 ngày ăn sập Đà Nẵng",
       numDays: 3,
       originMode: "gps",
+      destinationProvince: "Thành phố Đà Nẵng",
     });
+    // No province (not picked, not found from the pin): the field is left out.
+    expect(
+      buildCreateRoadmapRequest({ ...values, province: "  " }, hotel),
+    ).not.toHaveProperty("destinationProvince");
     expect(
       buildCreateRoadmapRequest(
         { ...values, originMode: "pinned", originLabel: " Khách sạn Sala " },
@@ -537,5 +547,30 @@ describe("new roadmap dialog, step 1 (where the traveler will be)", () => {
         originLabel: "",
       }),
     ).toBe("Lào Cai");
+  });
+});
+
+describe("roadmap destination", () => {
+  it("prefers the province saved on the roadmap, then the one this browser remembered", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+      },
+    });
+    try {
+      rememberDestination(7, "Tỉnh Gia Lai");
+      expect(
+        roadmapDestination({ id: 7, destinationProvince: " Thành phố Huế " }),
+      ).toBe("Thành phố Huế");
+      expect(roadmapDestination({ id: 7, destinationProvince: null })).toBe(
+        "Tỉnh Gia Lai",
+      );
+      expect(roadmapDestination({ id: 7 })).toBe("Tỉnh Gia Lai");
+      expect(roadmapDestination({ id: 8, destinationProvince: "" })).toBe("");
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

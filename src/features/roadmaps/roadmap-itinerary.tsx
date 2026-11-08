@@ -44,7 +44,7 @@ import {
 import { loadProvinceCatalog } from "@/shared/locations/province-service";
 import { SuggestedPlaces } from "./roadmap-suggested-places";
 import { roadmapDayTone } from "./roadmap-map-rules";
-import { recallDestination } from "./roadmap-destination";
+import { roadmapDestination } from "./roadmap-destination";
 import { vnd } from "./roadmap-list-rules";
 import { RoadmapGenerateDialog } from "./roadmap-generate-dialog";
 import { useGenerationWatch } from "./roadmap-generation-watch";
@@ -833,14 +833,15 @@ export function RoadmapItinerary({
   const generateDay = generateTarget
     ? itinerary.find((day) => day.dayNumber === generateTarget.dayNumber)
     : undefined;
-  /** The roadmap keeps no destination: reuse what the traveler typed, else the dishes' province. */
+  /** The roadmap's destination (saved, or this browser's copy), else the dishes' province. */
   const knownProvince = () =>
-    recallDestination(roadmapId) || mostCommonProvince(itinerary);
+    roadmapDestination(overview) || mostCommonProvince(itinerary);
   // Last resort for the suggestion strips: the province the title names ("Đi chơi Hà Nội").
   const [titleProvince, setTitleProvince] = useState("");
   const needsTitleProvince = active && !mostCommonProvince(itinerary);
+  const savedDestination = roadmapDestination(overview);
   useEffect(() => {
-    if (!needsTitleProvince || recallDestination(roadmapId)) return;
+    if (!needsTitleProvince || savedDestination) return;
     let ignore = false;
     loadProvinceCatalog()
       .then((catalog) => {
@@ -853,7 +854,7 @@ export function RoadmapItinerary({
     return () => {
       ignore = true;
     };
-  }, [needsTitleProvince, overview.title, roadmapId]);
+  }, [needsTitleProvince, savedDestination, overview.title]);
   const suggestionProvince = knownProvince() || titleProvince;
 
   /**

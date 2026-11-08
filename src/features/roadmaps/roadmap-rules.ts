@@ -143,6 +143,9 @@ export function buildCreateRoadmapRequest(
   if (values.startDate) request.startDate = values.startDate;
   const budget = parseBudget(values.budgetAmount);
   if (budget !== null) request.budgetAmount = budget;
+  // The destination: picked from the catalog, or filled from the pinned start / current position.
+  const province = values.province.trim();
+  if (province) request.destinationProvince = province;
   if (values.originMode === "pinned" && origin) {
     request.originLatitude = coordinate(origin.latitude);
     request.originLongitude = coordinate(origin.longitude);
