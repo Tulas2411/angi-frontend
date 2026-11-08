@@ -6,6 +6,13 @@ import { Avatar, TextArea } from "@/components/ui/primitives";
 import { AgentConstraintsDialog } from "./agent-constraints-dialog";
 import { AgentProposalPreview, AgentValidationNotice } from "./agent-proposal";
 import {
+  AgentDraftCollapse,
+  AgentDraftSheet,
+  AgentDraftTab,
+  agentDraftCollapseId,
+  agentDraftSheetId,
+} from "./agent-draft-dock";
+import {
   agentLocationProblem,
   agentLocationState,
   agentMessageError,
@@ -202,6 +209,42 @@ export function RoadmapAgentPanel({
       setReveal({ index: messageCount - 1, text: last.content, shown: 0 });
   }
   const revealing = reveal !== null;
+  // The draft lives in a card on the composer's top edge; open, it slides up over the chat.
+  const [draftOpen, setDraftOpen] = useState(false);
+  const draftKey = proposal
+    ? `${proposal.proposalId}:${proposal.version}`
+    : null;
+  const [seenDraft, setSeenDraft] = useState<string | null>(null);
+  if (!proposal && draftOpen) setDraftOpen(false);
+  if (draftOpen && draftKey !== seenDraft) setSeenDraft(draftKey);
+  // A pin picked on the map (or a dish named in a reply) opens the draft at that dish.
+  const [lastSelected, setLastSelected] = useState(selected);
+  if (selected !== lastSelected) {
+    setLastSelected(selected);
+    if (
+      selected &&
+      proposal?.snapshot.items.some((item) => item.itemKey === selected)
+    )
+      setDraftOpen(true);
+  }
+  const draftExpired = !!proposal && Date.parse(proposal.expiresAt) <= now;
+  /**
+   * The card hides while the draft is open, so the focus follows: to the collapse button on
+   * opening, back to the card on folding.
+   */
+  function showDraft(next: boolean) {
+    setDraftOpen(next);
+    requestAnimationFrame(() =>
+      root.current
+        ?.querySelector<HTMLElement>(
+          next
+            ? `#${agentDraftCollapseId}`
+            : `.agent-draft-tab[aria-controls="${agentDraftSheetId}"]`,
+        )
+        // The sheet is still sliding in: focusing must not scroll its frame to it.
+        ?.focus({ preventScroll: true }),
+    );
+  }
   const blocked =
     !conversation ||
     conversation.status !== "active" ||
@@ -370,6 +413,11 @@ export function RoadmapAgentPanel({
     <section
       ref={root}
       id="roadmap-agent-panel"
+      // Like .agent-body: the panel itself never scrolls, whatever is focused inside it.
+      onScroll={(event) => {
+        if (event.target === event.currentTarget)
+          event.currentTarget.scrollTop = 0;
+      }}
       className="roadmap-agent-panel"
       role="dialog"
       aria-modal="false"
@@ -386,7 +434,9 @@ export function RoadmapAgentPanel({
           !document.querySelector("dialog[open]")
         ) {
           event.preventDefault();
-          onClose();
+          // Escape folds the draft first, then closes the assistant.
+          if (draftOpen) showDraft(false);
+          else onClose();
         }
       }}
     >
@@ -415,49 +465,88 @@ export function RoadmapAgentPanel({
           </Button>
         </div>
       </header>
-      <div className="agent-scroll" ref={transcript}>
-        {empty && (
-          <div className="agent-welcome">
-            <p className="agent-disclaimer">
-              <Glyph name="info" />
-              <span>{disclaimer}</span>
-            </p>
-            <h3>Chưa biết ăn gì? Thử hỏi:</h3>
-            <div className="agent-prompts">
-              {agentPromptSuggestions(conversation?.state).map((prompt) => (
-                <Button
-                  key={prompt}
-                  variant="secondary"
-                  disabled={blocked}
-                  onClick={() => sendPrompt(prompt)}
-                >
-                  <Glyph name="suggestion" />
-                  {prompt}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-        {!conversation && !agent.error && (
-          <p role="status">Đang mở hội thoại…</p>
-        )}
-        {conversation && (
-          <>
-            {(conversation.messages.length > 0 || agent.outgoing) && (
-              <div
-                className="agent-transcript"
-                role="log"
-                aria-label="Lịch sử trao đổi"
-                aria-live="polite"
-                aria-relevant="additions"
-                aria-busy={revealing}
-              >
-                {conversation.messages.map((message, index) => (
-                  <article
-                    className={`agent-message agent-message-${message.role}`}
-                    key={`${index}-${message.role}`}
+      <div
+        className="agent-body"
+        // Only its children scroll; a focus or scrollIntoView that moves this frame is undone.
+        onScroll={(event) => {
+          event.currentTarget.scrollTop = 0;
+        }}
+      >
+        <div className="agent-scroll" ref={transcript}>
+          {empty && (
+            <div className="agent-welcome">
+              <p className="agent-disclaimer">
+                <Glyph name="info" />
+                <span>{disclaimer}</span>
+              </p>
+              <h3>Chưa biết ăn gì? Thử hỏi:</h3>
+              <div className="agent-prompts">
+                {agentPromptSuggestions(conversation?.state).map((prompt) => (
+                  <Button
+                    key={prompt}
+                    variant="secondary"
+                    disabled={blocked}
+                    onClick={() => sendPrompt(prompt)}
                   >
-                    {message.role === "user" ? (
+                    <Glyph name="suggestion" />
+                    {prompt}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {!conversation && !agent.error && (
+            <p role="status">Đang mở hội thoại…</p>
+          )}
+          {conversation && (
+            <>
+              {(conversation.messages.length > 0 || agent.outgoing) && (
+                <div
+                  className="agent-transcript"
+                  role="log"
+                  aria-label="Lịch sử trao đổi"
+                  aria-live="polite"
+                  aria-relevant="additions"
+                  aria-busy={revealing}
+                >
+                  {conversation.messages.map((message, index) => (
+                    <article
+                      className={`agent-message agent-message-${message.role}`}
+                      key={`${index}-${message.role}`}
+                    >
+                      {message.role === "user" ? (
+                        <span aria-hidden="true">
+                          <Avatar
+                            className="agent-avatar"
+                            name={userName}
+                            image={userAvatar}
+                          />
+                        </span>
+                      ) : (
+                        <AssistantMark />
+                      )}
+                      <div className="agent-message-body">
+                        <p className="agent-message-author sr-only">
+                          {message.role === "user" ? "Bạn" : "ANGI"}
+                        </p>
+                        {message.role === "user" ? (
+                          <p>{message.content}</p>
+                        ) : (
+                          <AssistantReply
+                            text={
+                              reveal?.index === index
+                                ? reveal.text.slice(0, reveal.shown)
+                                : message.content
+                            }
+                            items={replyItems}
+                            onSelect={onSelect}
+                          />
+                        )}
+                      </div>
+                    </article>
+                  ))}
+                  {agent.outgoing && (
+                    <article className="agent-message agent-message-user">
                       <span aria-hidden="true">
                         <Avatar
                           className="agent-avatar"
@@ -465,151 +554,150 @@ export function RoadmapAgentPanel({
                           image={userAvatar}
                         />
                       </span>
-                    ) : (
-                      <AssistantMark />
-                    )}
-                    <div className="agent-message-body">
-                      <p className="agent-message-author sr-only">
-                        {message.role === "user" ? "Bạn" : "ANGI"}
-                      </p>
-                      {message.role === "user" ? (
-                        <p>{message.content}</p>
-                      ) : (
-                        <AssistantReply
-                          text={
-                            reveal?.index === index
-                              ? reveal.text.slice(0, reveal.shown)
-                              : message.content
-                          }
-                          items={replyItems}
-                          onSelect={onSelect}
-                        />
-                      )}
-                    </div>
-                  </article>
-                ))}
-                {agent.outgoing && (
-                  <article className="agent-message agent-message-user">
-                    <span aria-hidden="true">
-                      <Avatar
-                        className="agent-avatar"
-                        name={userName}
-                        image={userAvatar}
-                      />
-                    </span>
-                    <div className="agent-message-body">
-                      <p className="agent-message-author sr-only">Bạn</p>
-                      <p>{agent.outgoing}</p>
-                    </div>
-                  </article>
+                      <div className="agent-message-body">
+                        <p className="agent-message-author sr-only">Bạn</p>
+                        <p>{agent.outgoing}</p>
+                      </div>
+                    </article>
+                  )}
+                </div>
+              )}
+              {thinking && (
+                <div className="agent-message agent-message-assistant">
+                  <AssistantMark />
+                  <p className="agent-thinking" role="status">
+                    <span className="sr-only">Trợ lý đang trả lời</span>
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" />
+                    <span aria-hidden="true" />
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+          {agent.error && (
+            <article
+              className="agent-message agent-message-assistant agent-message-error"
+              role="alert"
+            >
+              <AssistantMark />
+              <div className="agent-message-body">
+                <p className="agent-message-author sr-only">ANGI</p>
+                <p>{agent.error}</p>
+                {canRetry && (
+                  <Button
+                    variant="tertiary"
+                    onClick={() => {
+                      void agent.retry();
+                    }}
+                    disabled={!!work}
+                  >
+                    Thử lại
+                  </Button>
+                )}
+                {closed && (
+                  <Button
+                    variant="tertiary"
+                    onClick={agent.newConversation}
+                    disabled={!!work}
+                  >
+                    Mở hội thoại mới
+                  </Button>
                 )}
               </div>
-            )}
-            {thinking && (
-              <div className="agent-message agent-message-assistant">
-                <AssistantMark />
-                <p className="agent-thinking" role="status">
-                  <span className="sr-only">Trợ lý đang trả lời</span>
-                  <span aria-hidden="true" />
-                  <span aria-hidden="true" />
-                  <span aria-hidden="true" />
-                </p>
-              </div>
-            )}
-          </>
-        )}
-        {agent.error && (
-          <article
-            className="agent-message agent-message-assistant agent-message-error"
-            role="alert"
-          >
-            <AssistantMark />
-            <div className="agent-message-body">
-              <p className="agent-message-author sr-only">ANGI</p>
-              <p>{agent.error}</p>
-              {canRetry && (
-                <Button
-                  variant="tertiary"
-                  onClick={() => {
-                    void agent.retry();
-                  }}
-                  disabled={!!work}
+            </article>
+          )}
+          <AgentValidationNotice
+            validation={standaloneValidation(agent.validation, proposal)}
+          />
+          {conversation && conversation.status !== "active" && !agent.error && (
+            <Alert tone="warning">
+              Hội thoại đã đóng hoặc hết hạn; lộ trình đã lưu vẫn được giữ.
+              <Button variant="secondary" onClick={agent.newConversation}>
+                Mở hội thoại mới
+              </Button>
+            </Alert>
+          )}
+          {agent.saved && (
+            <div className="stack-sm">
+              <Alert tone="success">Đã lưu thay đổi vào lộ trình.</Alert>
+              {agent.reloadFailed ? (
+                <Alert tone="warning">
+                  Đã lưu thành công nhưng chưa tải lại được lộ trình.
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      void agent.retryRoadmap();
+                    }}
+                  >
+                    Tải lại lộ trình
+                  </Button>
+                </Alert>
+              ) : (
+                <Link
+                  className="text-link"
+                  href={roadmapDetailHref(agent.saved.roadmapId)}
                 >
-                  Thử lại
-                </Button>
-              )}
-              {closed && (
-                <Button
-                  variant="tertiary"
-                  onClick={agent.newConversation}
-                  disabled={!!work}
-                >
-                  Mở hội thoại mới
-                </Button>
+                  Mở lộ trình đã lưu
+                </Link>
               )}
             </div>
-          </article>
-        )}
-        <AgentValidationNotice
-          validation={standaloneValidation(agent.validation, proposal)}
-        />
-        {conversation && conversation.status !== "active" && !agent.error && (
-          <Alert tone="warning">
-            Hội thoại đã đóng hoặc hết hạn; lộ trình đã lưu vẫn được giữ.
-            <Button variant="secondary" onClick={agent.newConversation}>
-              Mở hội thoại mới
-            </Button>
-          </Alert>
-        )}
-        {proposal && !revealing && (
-          <AgentProposalPreview
+          )}
+        </div>
+        {/* The draft card at the foot of the conversation, on the composer's top edge. */}
+        {proposal && (
+          <AgentDraftTab
             proposal={proposal}
-            active={open}
-            selectedKey={selected}
-            day={previewDay}
-            onDay={onPreviewDay}
-            onShowMap={onShowMap}
-          >
-            {/* The draft is saved, changed and dropped in chat; these are the phrases the backend acts on without the model. */}
-            {!agent.saved &&
-              (Date.parse(proposal.expiresAt) <= now ? (
-                <p className="helper">
-                  Bản nháp đã hết hạn. Hãy yêu cầu phương án mới.
-                </p>
-              ) : (
-                proposal.status === "ready" && (
-                  <p className="helper">
-                    Chưa lưu. Nhắn “lưu lịch này” để lưu, “bỏ bản nháp” để bỏ,
-                    hoặc cứ nói món bạn muốn đổi.
-                  </p>
-                )
-              ))}
-          </AgentProposalPreview>
+            saved={!!agent.saved}
+            expired={draftExpired}
+            open={draftOpen}
+            unseen={!draftOpen && draftKey !== seenDraft}
+            onToggle={() => showDraft(!draftOpen)}
+          />
         )}
-        {agent.saved && (
-          <div className="stack-sm">
-            <Alert tone="success">Đã lưu thay đổi vào lộ trình.</Alert>
-            {agent.reloadFailed ? (
-              <Alert tone="warning">
-                Đã lưu thành công nhưng chưa tải lại được lộ trình.
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    void agent.retryRoadmap();
-                  }}
-                >
-                  Tải lại lộ trình
-                </Button>
-              </Alert>
-            ) : (
-              <Link
-                className="text-link"
-                href={roadmapDetailHref(agent.saved.roadmapId)}
-              >
-                Mở lộ trình đã lưu
-              </Link>
-            )}
-          </div>
+        {proposal && (
+          <AgentDraftSheet
+            open={draftOpen}
+            proposal={proposal}
+            expired={draftExpired}
+            saved={agent.saved}
+            reloadFailed={agent.reloadFailed}
+            confirming={work === "confirming"}
+            canConfirm={
+              conversation?.status === "active" &&
+              !conversation.processing &&
+              !work &&
+              !agent.stale &&
+              !agent.pending
+            }
+            error={agent.error}
+            needsDate={
+              !proposal.snapshot.state.startDate &&
+              !conversation?.state.startDate
+            }
+            onConfirm={(startDate) => {
+              void agent.confirm({
+                proposalId: proposal.proposalId,
+                proposalVersion: proposal.version,
+                ...(startDate ? { startDate } : {}),
+              });
+            }}
+            onRetryRoadmap={() => {
+              void agent.retryRoadmap();
+            }}
+          >
+            <AgentProposalPreview
+              proposal={proposal}
+              active={open && draftOpen}
+              selectedKey={selected}
+              day={previewDay}
+              onDay={onPreviewDay}
+              onShowMap={onShowMap}
+              headAction={
+                <AgentDraftCollapse onCollapse={() => showDraft(false)} />
+              }
+            />
+          </AgentDraftSheet>
         )}
       </div>
       <div className="agent-composer-area">
