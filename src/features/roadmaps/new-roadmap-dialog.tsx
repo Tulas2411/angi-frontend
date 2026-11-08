@@ -427,6 +427,8 @@ export function NewRoadmapDialog({
                 name="province"
                 value={values.province}
                 required
+                // The trip's destination is saved (RM-01): only a province of the catalog.
+                strict
                 maxLength={100}
                 error={errors.province}
                 helper={

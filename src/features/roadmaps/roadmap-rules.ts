@@ -11,6 +11,8 @@ import type {
 export const roadmapLimits = {
   title: 200,
   originLabel: 200,
+  /** roadmaps.destination_province (RM-01 destinationProvince); the field also takes typed text. */
+  province: 100,
   minDays: 1,
   /** Product limit of the app; RM-01 itself accepts 1..30 (API Design v1.8). */
   maxDays: 7,
@@ -102,6 +104,8 @@ export function validateRoadmapForm(
   const errors: Record<string, string> = {};
   if (requireProvince && !values.province.trim())
     errors.province = "Chọn tỉnh / thành phố bạn muốn đến.";
+  else if (values.province.trim().length > roadmapLimits.province)
+    errors.province = `Tên tỉnh / thành phố không được vượt quá ${roadmapLimits.province} ký tự.`;
   const title = values.title.trim();
   if (!title) errors.title = "Tên lộ trình là bắt buộc.";
   else if (title.length > roadmapLimits.title)
@@ -334,6 +338,7 @@ export function roadmapFieldErrors(
     originlatitude: "origin",
     originlongitude: "origin",
     originlabel: "originLabel",
+    destinationprovince: "province",
   };
   const fields: Record<string, string> = {};
   for (const [key, messages] of Object.entries(errors ?? {})) {

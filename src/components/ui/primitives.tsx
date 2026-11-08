@@ -775,6 +775,7 @@ export function Combobox({
   onClick,
   onFocus,
   onBlur,
+  strict = false,
   ...props
 }: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & {
   label: string;
@@ -783,13 +784,27 @@ export function Combobox({
   options: string[];
   helper?: string;
   error?: string;
+  /**
+   * Only an option can be the value: typing filters the list, a pick (click or Enter) sets it,
+   * and leaving with text that is not exactly an option puts the last value back. Clearing the
+   * text clears the value. Without any option (a catalog that failed to load) typing is free.
+   */
+  strict?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [active, setActive] = useState(0),
     generatedId = useId();
   const id = suppliedId ?? generatedId;
+  const onlyOptions = strict && options.length > 0;
+  // Strict: what is being typed, until it is picked or abandoned (null = shows the value).
+  const [typed, setTyped] = useState<string | null>(null);
+  const text = onlyOptions && typed !== null ? typed : value;
+  const pick = (option: string) => {
+    setTyped(null);
+    onChange(option);
+  };
   const matches = options.filter((o) =>
-    searchText(o).includes(searchText(value)),
+    searchText(o).includes(searchText(text)),
   );
   const expanded = open && matches.length > 0;
   const activeOption = useRef<HTMLLIElement>(null);
@@ -849,13 +864,19 @@ export function Combobox({
         }
         aria-invalid={!!error}
         aria-describedby={helper || error ? `${id}-help` : undefined}
-        value={value}
+        value={text}
         onClick={(event) => {
           setOpen(true);
           onClick?.(event);
         }}
         onChange={(e) => {
-          onChange(e.target.value);
+          const next = e.target.value;
+          if (!onlyOptions) onChange(next);
+          else {
+            setTyped(next);
+            // Emptying the field clears the choice; any other text waits for a pick.
+            if (!next.trim()) onChange("");
+          }
           setOpen(true);
           setActive(0);
         }}
@@ -865,6 +886,14 @@ export function Combobox({
         }}
         onBlur={(event) => {
           setOpen(false);
+          if (onlyOptions && typed !== null) {
+            // Text that names an option exactly (accents and case aside) counts as picking it.
+            const exact = options.find(
+              (option) => searchText(option) === searchText(typed.trim()),
+            );
+            if (exact && typed.trim()) pick(exact);
+            else setTyped(null);
+          }
           onBlur?.(event);
         }}
         onKeyDown={(e) => {
@@ -890,7 +919,7 @@ export function Combobox({
           if (e.key === "Enter" && open && matches[active]) {
             e.preventDefault();
             e.stopPropagation();
-            onChange(matches[active]);
+            pick(matches[active]);
             setOpen(false);
           }
           if (!e.defaultPrevented) onKeyDown?.(e);
@@ -916,7 +945,7 @@ export function Combobox({
                 type="button"
                 tabIndex={-1}
                 onClick={() => {
-                  onChange(o);
+                  pick(o);
                   setOpen(false);
                 }}
                 suppressHydrationWarning

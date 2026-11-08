@@ -157,6 +157,8 @@ function RoadmapFields({
             value={values.province}
             onChange={(value) => update("province", value)}
             required
+            // The trip's destination is saved (RM-01): only a province of the catalog.
+            strict
             maxLength={100}
             disabled={busy || !allowed}
             error={errors.province}

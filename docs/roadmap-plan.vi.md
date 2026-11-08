@@ -16,7 +16,7 @@ Hộp thoại hỏi trước: **"Bạn đã biết chính xác nơi mình sẽ �
 - Danh sách gợi ý tỉnh / thành phố trong hộp thoại nổi trên nội dung (`position: fixed` theo ô nhập, dùng chung cho mọi `Combobox` trong hộp thoại), không bị cắt bởi vùng cuộn; thiếu chỗ phía dưới thì mở lên trên.
 - Nút **Tiếp tục** chỉ sang bước 2 khi đủ: đã trả lời câu hỏi, có tỉnh / thành phố, và nếu "đã biết" thì có điểm đã chấm hoặc vị trí đã được cho phép. Thiếu thì báo lỗi ngay dưới phần thiếu và đưa focus tới đó.
 
-Tỉnh được gửi lên RM-01 thành `destinationProvince` (từ 2026-11-08; với điểm đã chấm hoặc vị trí hiện tại là tỉnh suy ra từ địa chỉ của điểm đó, không suy ra được thì bỏ trống), đồng thời gợi ý tên lộ trình (`Khám phá ẩm thực Đà Nẵng`). FE vẫn nhớ một bản trong trình duyệt (`rememberDestination`) cho lộ trình tạo trước khi backend lưu tỉnh.
+Tỉnh được gửi lên RM-01 thành `destinationProvince` (từ 2026-11-08; với điểm đã chấm hoặc vị trí hiện tại là tỉnh suy ra từ địa chỉ của điểm đó, không suy ra được thì bỏ trống), đồng thời gợi ý tên lộ trình (`Khám phá ẩm thực Đà Nẵng`). FE vẫn nhớ một bản trong trình duyệt (`rememberDestination`) cho lộ trình tạo trước khi backend lưu tỉnh. Ô tỉnh chỉ nhận tỉnh chọn từ danh sách (`ProvinceField strict`, 2026-11-08): gõ chỉ để lọc, giá trị được ghi khi bấm hoặc Enter một mục; rời ô với chữ không trùng đúng một tỉnh thì ô trả lại giá trị cũ (gõ đủ tên, không phân biệt dấu và hoa thường, được tính là chọn), xóa trắng thì bỏ chọn. Danh mục tỉnh tải lỗi thì tạm cho gõ tự do để không bị kẹt.
 
 ### Bước 2: Thời gian và ngân sách
 

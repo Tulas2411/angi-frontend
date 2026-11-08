@@ -27,7 +27,7 @@ Ví dụ body hợp lệ:
 }
 ```
 
-Từ 2026-11-08 RM-01 lưu tỉnh/thành đến: form gửi `destinationProvince` (tỉnh đã chọn, qua `buildCreateRoadmapRequest`), nên mọi thiết bị đều biết thành phố của lộ trình. FE vẫn ghi một bản trong localStorage (`rememberDestination`) cho các lộ trình tạo trước đó. Không gửi ngân sách hoặc tọa độ ngoài hợp đồng.
+Từ 2026-11-08 RM-01 lưu tỉnh/thành đến: form gửi `destinationProvince` (tỉnh đã chọn, qua `buildCreateRoadmapRequest`), nên mọi thiết bị đều biết thành phố của lộ trình. FE vẫn ghi một bản trong localStorage (`rememberDestination`) cho các lộ trình tạo trước đó. Không gửi ngân sách hoặc tọa độ ngoài hợp đồng. Ô tỉnh chỉ nhận tỉnh chọn từ danh sách (`ProvinceField strict`, 2026-11-08): gõ chỉ để lọc, giá trị được ghi khi bấm hoặc Enter một mục; rời ô với chữ không trùng đúng một tỉnh thì ô trả lại giá trị cũ (gõ đủ tên, không phân biệt dấu và hoa thường, được tính là chọn), xóa trắng thì bỏ chọn. Danh mục tỉnh tải lỗi thì tạm cho gõ tự do để không bị kẹt.
 
 RM-01 tạo các ngày rỗng. Người dùng tiếp tục chọn món/tạo lịch trong trang chi tiết; form này không tự gọi RM-10, RM-14, Agent hoặc Mapbox. Các ví dụ khẩu vị, lịch trình và bộ sưu tập cảm hứng phía dưới vẫn là nội dung minh họa, không được thay bằng kết quả AI giả.
 

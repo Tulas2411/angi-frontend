@@ -115,7 +115,9 @@ async function fill(page: Page) {
   await page
     .getByRole("option", { name: "Thành phố Đà Nẵng", exact: true })
     .click();
-  await form(page).getByLabel("Ngày bắt đầu").fill("2026-11-06");
+  await form(page)
+    .getByRole("textbox", { name: "Ngày bắt đầu" })
+    .fill("2026-11-06");
   await form(page).getByLabel("Số ngày").fill("3");
 }
 
@@ -168,7 +170,9 @@ test("a guest draft survives login and creates only after explicit submission as
     "Thành phố Đà Nẵng",
   );
   // The day is shown the Vietnamese way; the API still receives 2026-11-06.
-  await expect(form(page).getByLabel("Ngày bắt đầu")).toHaveValue("06/11/2026");
+  await expect(
+    form(page).getByRole("textbox", { name: "Ngày bắt đầu" }),
+  ).toHaveValue("06/11/2026");
   expect(creates).toEqual([]);
   await form(page).getByRole("button", { name: "Tạo lộ trình ngay" }).click();
   await expect(page).toHaveURL(/\/roadmaps\/88$/);
@@ -178,6 +182,7 @@ test("a guest draft survives login and creates only after explicit submission as
       startDate: "2026-11-06",
       numDays: 3,
       originMode: "none",
+      destinationProvince: "Thành phố Đà Nẵng",
     },
   ]);
   expect(
