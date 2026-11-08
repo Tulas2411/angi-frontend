@@ -111,6 +111,8 @@ export function AgentConstraintsDialog({
           label="Tỉnh/thành muốn khám phá"
           value={province}
           onChange={setProvince}
+          // Saved on the roadmap when the draft is: only a province of the catalog.
+          strict
         />
         <Field
           placeholder="Ví dụ: 3"

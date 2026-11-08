@@ -223,6 +223,32 @@ test("step 1 asks where the traveler will be before anything else", async ({
   expect(creates).toEqual([]);
 });
 
+test("the destination takes only a province picked from the list", async ({
+  page,
+}) => {
+  await open(page);
+  await knowledge(page, "unknown").click();
+  const field = planner(page).getByLabel(/^Bạn sẽ đến tỉnh \/ thành phố nào\?/);
+  // Text that is not a province is dropped when the field is left.
+  await field.fill("Hà");
+  await expect(planner(page).getByRole("option").first()).toBeVisible();
+  await field.press("Tab");
+  await expect(field).toHaveValue("");
+  await next(page).click();
+  await expect(planner(page)).toContainText(
+    "Chọn tỉnh / thành phố bạn muốn đến.",
+  );
+  // A pick from the list is kept.
+  await field.fill("Hà Nội");
+  await planner(page).getByRole("option", { name: "Thành phố Hà Nội" }).click();
+  await expect(field).toHaveValue("Thành phố Hà Nội");
+  // A later partial edit that is abandoned puts the picked province back.
+  await field.fill("Thành phố H");
+  await field.press("Tab");
+  await expect(field).toHaveValue("Thành phố Hà Nội");
+  expect(creates).toEqual([]);
+});
+
 test("city only: step 2 creates the roadmap with the documented body and opens it", async ({
   page,
 }) => {

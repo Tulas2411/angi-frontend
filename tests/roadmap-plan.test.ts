@@ -102,6 +102,18 @@ describe("RM-01 plan form", () => {
       {},
     );
   });
+  it("keeps the typed province within the destination column (100 characters)", () => {
+    expect(
+      validateRoadmapForm({ ...values, province: "a".repeat(100) }, null),
+    ).toEqual({});
+    expect(
+      validateRoadmapForm({ ...values, province: "a".repeat(101) }, null),
+    ).toHaveProperty("province");
+    // A backend refusal of the field lands on the province input.
+    expect(roadmapFieldErrors({ DestinationProvince: ["Quá dài."] })).toEqual({
+      province: "Quá dài.",
+    });
+  });
   it("needs a valid point only for a pinned origin", () => {
     const pinned = { ...values, originMode: "pinned" as const };
     expect(validateRoadmapForm(pinned, null)).toHaveProperty("origin");
