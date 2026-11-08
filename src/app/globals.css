@@ -1248,10 +1248,11 @@ select.input {
   letter-spacing: -0.7px;
   white-space: nowrap;
 }
+/* The wordmark picture (800 × 219): its height sets the size, the width follows. */
 .brand > img {
-  width: 24px;
-  height: 29px;
-  object-fit: contain;
+  display: block;
+  width: auto;
+  height: 40px;
 }
 .site-nav,
 .site-actions {
@@ -1917,6 +1918,9 @@ select.input {
   .brand {
     font-size: 24px;
     gap: var(--space-1);
+  }
+  .brand > img {
+    height: 34px;
   }
   .site-actions {
     gap: 10px;
