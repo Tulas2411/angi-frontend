@@ -33,6 +33,8 @@ let abortedMessages = 0;
 let replyText = "Mình đề xuất món Mì Quảng.";
 let messageCalls: AgentMessageRequest[] = [];
 let confirmCalls: AgentConfirmRequest[] = [];
+/** What AGENT-04 confirm answers; null keeps the 404 that fails any unexpected save. */
+let confirmCommit: AgentCommit | null = null;
 let impressions: { requestId: string; dishIds: number[] }[] = [];
 let openCalls = 0,
   getCalls = 0,
@@ -148,9 +150,10 @@ const handler: StubHandler = ({ method, url, body, onAbort }, send) => {
     return true;
   }
   if (path === "/api/v1/agent/conversations/7/confirm" && method === "POST") {
-    // The panel saves through chat; a call here fails the assertions on confirmCalls.
+    // "Thêm vào lịch trình" saves here; a chat phrase still saves through the message turn.
     confirmCalls.push(structuredClone(body as AgentConfirmRequest));
-    send(404, null, "ROUTE_NOT_FOUND");
+    if (confirmCommit) send(200, confirmCommit);
+    else send(404, null, "ROUTE_NOT_FOUND");
     return true;
   }
   return false;
@@ -168,6 +171,7 @@ test.beforeEach(async ({ page, context }) => {
   replyText = "Mình đề xuất món Mì Quảng.";
   messageCalls = [];
   confirmCalls = [];
+  confirmCommit = null;
   impressions = [];
   openCalls = 0;
   getCalls = 0;
@@ -211,6 +215,17 @@ async function open(page: Page) {
     .click();
   await expect(panel(page)).toBeVisible();
 }
+/** The draft card on the composer's edge; the draft itself shows once the card is opened. */
+const draftCard = (page: Page) => panel(page).locator(".agent-draft-tab");
+async function openDraft(page: Page) {
+  // Open already (the card then hides), or folded in its card.
+  await expect(draftCard(page)).toHaveCount(1);
+  if ((await draftCard(page).getAttribute("aria-expanded")) !== "true")
+    await draftCard(page).click();
+  await expect(
+    panel(page).getByRole("region", { name: "Lịch nháp của trợ lý" }),
+  ).toBeVisible();
+}
 async function chat(page: Page, text = "Gợi ý món ăn ở Đà Nẵng") {
   await panel(page).getByLabel("Yêu cầu với trợ lý món ăn").fill(text);
   await panel(page).getByRole("button", { name: "Gửi", exact: true }).click();
@@ -253,37 +268,197 @@ test("the sidebar button opens the full panel beside the map, lazily, and Escape
   expect(openCalls).toBe(1);
 });
 
-test("a draft is read in the panel and changed and saved only by chatting", async ({
+test("a draft sits folded in a card, opens over the chat and is saved with its button", async ({
   page,
 }) => {
   await open(page);
   await chat(page);
+  // Folded: only the card on the composer's edge, the draft is out of reach.
+  await expect(draftCard(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(draftCard(page)).toContainText("Lịch nháp");
+  await expect(draftCard(page)).toContainText("mới");
+  await expect(
+    panel(page).getByRole("region", { name: "Lịch nháp của trợ lý" }),
+  ).toBeHidden();
+  await openDraft(page);
+  await expect(draftCard(page)).toHaveAttribute("aria-expanded", "true");
+  await expect(draftCard(page)).not.toContainText("mới");
+  // Open, the card steps aside: the draft's title row holds the collapse button, which has the focus.
+  await expect(draftCard(page)).toBeHidden();
+  const collapse = panel(page).getByRole("button", {
+    name: "Thu gọn lịch nháp",
+  });
+  await expect(collapse).toBeFocused();
+  await collapse.click();
+  await expect(draftCard(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(draftCard(page)).toBeFocused();
+  await openDraft(page);
   await expect(dish(page, "r123")).toContainText("Mì Quảng");
   await expect(
     panel(page)
       .getByText("Thời gian di chuyển chỉ là ước tính.", { exact: true })
       .first(),
   ).toBeVisible();
-  // The draft offers no actions of its own, and its dishes are not controls.
-  for (const name of ["Thêm vào lộ trình", "Đổi món khác", "Bỏ bản nháp"])
+  // One action at the end of the draft; its dishes are not controls; no save phrase to type.
+  const add = panel(page).getByRole("button", { name: "Thêm vào lịch trình" });
+  await expect(add).toBeEnabled();
+  // The trip already has its first day, so no date is asked for.
+  await expect(
+    panel(page).getByRole("textbox", { name: "Ngày bắt đầu" }),
+  ).toHaveCount(0);
+  for (const name of ["Đổi món khác", "Bỏ bản nháp"])
     await expect(panel(page).getByRole("button", { name })).toHaveCount(0);
   await expect(dish(page, "r123").getByRole("button")).toHaveCount(0);
   await expect(dish(page, "r123")).not.toHaveRole("button");
-  await expect(panel(page)).toContainText("lưu lịch này");
+  await expect(panel(page)).not.toContainText("lưu lịch này");
   expect(detailCalls).toBe(1);
 
+  // Changing a dish is still done by chatting.
   await chat(page, "Đổi sang món khác");
   await expect.poll(() => messageCalls.length).toBe(2);
   expect(messageCalls[1].selectedItemKey).toBeUndefined();
   expect(messageCalls[1].expectedConversationVersion).toBe(3);
 
-  chatCommit = committed;
-  await chat(page, "lưu lịch này");
+  // Escape folds the draft before it closes the assistant (the send button, which had the
+  // focus, is disabled while the reply comes, so the focus goes back to the composer first).
+  await panel(page).getByLabel("Yêu cầu với trợ lý món ăn").focus();
+  await page.keyboard.press("Escape");
+  await expect(draftCard(page)).toHaveAttribute("aria-expanded", "false");
+  await expect(panel(page)).toBeVisible();
+
+  confirmCommit = committed;
+  await openDraft(page);
+  await add.click();
+  await expect.poll(() => confirmCalls.length).toBe(1);
+  expect(confirmCalls[0]).toMatchObject({ proposalId: 91 });
+  expect(confirmCalls[0].startDate).toBeUndefined();
   await expect(
-    panel(page).getByText("Đã lưu thay đổi vào lộ trình.", { exact: true }),
+    panel(page).getByText("Đã thêm vào lịch trình.", { exact: false }),
   ).toBeVisible();
+  await expect(draftCard(page)).toContainText("Đã thêm");
+  await expect(add).toHaveCount(0);
   await expect.poll(() => detailCalls).toBe(2);
-  expect(confirmCalls).toHaveLength(0);
+});
+
+test("an open draft stays in place under a long conversation, in both panel sizes", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1840, height: 940 });
+  conversation = {
+    ...conversation,
+    currentProposal: twoDayProposal(),
+    messages: Array.from({ length: 12 }, (_, index) => ({
+      role: index % 2 ? ("assistant" as const) : ("user" as const),
+      content: "Một tin nhắn khá dài để làm đầy khung trò chuyện. ".repeat(4),
+    })),
+  };
+  // Focusing the collapse button while the sheet slid in used to scroll its frame by ~200px.
+  const offsets = () =>
+    page.evaluate(() => {
+      const top = (selector: string) =>
+        Math.round(
+          document.querySelector(selector)!.getBoundingClientRect().top,
+        );
+      return {
+        body: top(".agent-body"),
+        scroll: top(".agent-scroll"),
+        sheetGap: top(".agent-draft-sheet") - top(".agent-body"),
+        bodyScroll: document.querySelector(".agent-body")!.scrollTop,
+        panelScroll: document.querySelector("#roadmap-agent-panel")!.scrollTop,
+      };
+    });
+  for (const opener of ["Trợ lý món ăn", "Mở trợ lý món ăn"]) {
+    await page.getByRole("button", { name: opener, exact: true }).click();
+    await openDraft(page);
+    await page.waitForTimeout(500);
+    const box = await offsets();
+    expect(box.bodyScroll).toBe(0);
+    expect(box.panelScroll).toBe(0);
+    expect(box.scroll).toBe(box.body);
+    expect(box.sheetGap).toBe(8);
+    // Scrolled to its end, the draft keeps its header (title, total, day chips) at the top.
+    const stuck = await page.evaluate(() => {
+      const scroller = document.querySelector(".agent-draft-sheet-scroll")!;
+      scroller.scrollTop = scroller.scrollHeight;
+      return {
+        scrolled: scroller.scrollTop > 0,
+        gap: Math.round(
+          document.querySelector(".agent-proposal-top")!.getBoundingClientRect()
+            .top - scroller.getBoundingClientRect().top,
+        ),
+      };
+    });
+    if (stuck.scrolled) expect(stuck.gap).toBe(0);
+    // A pin chosen on the map scrolls only the draft itself. (The large popup covers that part
+    // of the map, so the pin gets its click directly.)
+    await page
+      .getByRole("region", { name: "Bản đồ lộ trình" })
+      .getByRole("button", { name: "Xem vị trí Bún chả cá" })
+      .dispatchEvent("click");
+    await page.waitForTimeout(300);
+    expect((await offsets()).bodyScroll).toBe(0);
+    await panel(page)
+      .getByRole("button", { name: "Đóng trợ lý món ăn" })
+      .click();
+  }
+});
+
+test("without a start date the draft offers one beside its button and sends it", async ({
+  page,
+}) => {
+  const proposal = agentProposal();
+  proposal.snapshot.state = { ...proposal.snapshot.state, startDate: null };
+  conversation = {
+    ...conversation,
+    state: { ...conversation.state, startDate: null },
+    currentProposal: proposal,
+  };
+  confirmCommit = committed;
+  await open(page);
+  await openDraft(page);
+  const date = panel(page).getByRole("textbox", { name: "Ngày bắt đầu" });
+  await expect(date).toBeVisible();
+  // At the foot of the fixed panel the calendar opens above the field, fully on screen.
+  await panel(page)
+    .getByRole("button", { name: "Chọn ngày: Ngày bắt đầu (không bắt buộc)" })
+    .click();
+  const calendar = page.getByRole("dialog", {
+    name: "Chọn ngày: Ngày bắt đầu (không bắt buộc)",
+  });
+  await expect(calendar).toBeVisible();
+  const field = (await date.boundingBox())!;
+  const popup = (await calendar.boundingBox())!;
+  expect(popup.y + popup.height).toBeLessThanOrEqual(field.y);
+  expect(popup.y).toBeGreaterThanOrEqual(0);
+  await page.keyboard.press("Escape");
+  await expect(calendar).toBeHidden();
+  // In the popup, against the right edge of the window, it slides left to stay on screen.
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await panel(page).getByRole("button", { name: "Thu về cửa sổ nhỏ" }).click();
+  await expect(panel(page)).toHaveAttribute("data-mode", "popup");
+  await panel(page)
+    .getByRole("button", { name: "Chọn ngày: Ngày bắt đầu (không bắt buộc)" })
+    .click();
+  await expect(calendar).toBeVisible();
+  const inPopup = (await calendar.boundingBox())!;
+  expect(inPopup.x).toBeGreaterThanOrEqual(0);
+  expect(inPopup.x + inPopup.width).toBeLessThanOrEqual(1440);
+  expect(inPopup.y).toBeGreaterThanOrEqual(0);
+  expect(inPopup.y + inPopup.height).toBeLessThanOrEqual(
+    (await date.boundingBox())!.y,
+  );
+  await page.keyboard.press("Escape");
+  await expect(panel(page)).toContainText("Ngày bắt đầu (không bắt buộc)");
+  await date.fill("2099-12-01");
+  await expect(date).toHaveValue("01/12/2099");
+  await panel(page)
+    .getByRole("button", { name: "Thêm vào lịch trình" })
+    .click();
+  await expect.poll(() => confirmCalls.length).toBe(1);
+  expect(confirmCalls[0]).toMatchObject({
+    proposalId: 91,
+    startDate: "2099-12-01",
+  });
 });
 
 test("202 processing is preserved, polls GET and never repeats the message POST", async ({
@@ -320,6 +495,7 @@ test("closing during processing resumes with GET and leaves the composer usable 
     currentProposal: agentProposal(),
   };
   await open(page);
+  await openDraft(page);
   await expect(dish(page, "r123")).toBeVisible();
   await panel(page).getByLabel("Yêu cầu với trợ lý món ăn").fill("Câu tiếp");
   await expect(
@@ -370,7 +546,8 @@ test("the composer empties on send and a failure needs no extra step", async ({
   await panel(page).getByRole("button", { name: "Gửi", exact: true }).click();
   await expect(input).toHaveValue("");
   await expect(panel(page).getByRole("alert")).toHaveCount(0);
-  expect(messageCalls).toHaveLength(2);
+  // The second request may still be on its way when the composer empties.
+  await expect.poll(() => messageCalls.length).toBe(2);
   expect(messageCalls[1].clientMessageId).not.toBe(
     messageCalls[0].clientMessageId,
   );
@@ -515,6 +692,7 @@ test("a replay loads the current state instead of overwriting it with an old pro
   mode = "replay";
   await open(page);
   await chat(page);
+  await openDraft(page);
   await expect(
     panel(page).locator('.agent-proposal[data-version="2"]'),
   ).toBeVisible();
@@ -615,6 +793,10 @@ test("only visible recommended items generate grouped impressions and null reque
     ],
   };
   await open(page);
+  // Folded, the draft is not seen, so nothing is reported.
+  await page.waitForTimeout(3000);
+  expect(impressions).toHaveLength(0);
+  await openDraft(page);
   await expect(dish(page, "r123")).toBeVisible();
   await dish(page, "r123").scrollIntoViewIfNeeded();
   await expect.poll(() => impressions.length, { timeout: 10000 }).toBe(1);
@@ -658,7 +840,7 @@ test("the map's bubble opens the small popup, which stays small until the travel
       const box = (await panel(page).boundingBox())!;
       return [box.x + box.width, box.y + box.height, box.width, box.height];
     })
-    .toEqual([1424, 984, 480, 560]);
+    .toEqual([1424, 984, 720, 840]);
   await expect(page.locator(".roadmap-detail-main")).not.toHaveAttribute(
     "inert",
   );
@@ -675,8 +857,12 @@ test("the map's bubble opens the small popup, which stays small until the travel
     content: prompts[0],
     command: "chat",
   });
+  await openDraft(page);
   await expect(dish(page, "r123")).toBeVisible();
   await expect(panel(page)).toHaveAttribute("data-mode", "popup");
+  // Escape folds the draft first; the next Escape (below) closes the popup.
+  await page.keyboard.press("Escape");
+  await expect(draftCard(page)).toHaveAttribute("aria-expanded", "false");
 
   await panel(page).getByRole("button", { name: "Mở rộng trợ lý" }).click();
   await expect(panel(page)).toHaveAttribute("data-mode", "expanded");
@@ -757,6 +943,7 @@ test("a new reply appears word by word and the stop button shows the rest at onc
   await expect(
     panel(page).getByRole("button", { name: "Gửi", exact: true }),
   ).toBeVisible();
+  await openDraft(page);
   await expect(dish(page, "r123")).toBeVisible();
   // Stopping a reply that already exists asks nothing more of the backend.
   expect(messageCalls).toHaveLength(1);
@@ -850,12 +1037,17 @@ test("an expired preview stays visible and says it can no longer be saved", asyn
     expiresAt: "2020-01-01T00:00:00Z",
   });
   await open(page);
+  await expect(draftCard(page)).toContainText("Đã hết hạn");
+  await openDraft(page);
   await expect(
-    panel(page).getByText("Bản nháp đã hết hạn. Hãy yêu cầu phương án mới.", {
-      exact: true,
-    }),
+    panel(page).getByText(
+      "Bản nháp đã hết hạn. Hãy nhắn để trợ lý lập phương án mới.",
+      { exact: true },
+    ),
   ).toBeVisible();
-  await expect(panel(page)).not.toContainText("lưu lịch này");
+  await expect(
+    panel(page).getByRole("button", { name: "Thêm vào lịch trình" }),
+  ).toHaveCount(0);
   expect(confirmCalls).toHaveLength(0);
 });
 
@@ -986,6 +1178,7 @@ test("a short reply and the card show the plan once", async ({ page }) => {
     messages: [{ role: "assistant", content: "Xong rồi! Bạn xem nhé." }],
   };
   await open(page);
+  await openDraft(page);
   await expect(
     panel(page).getByRole("region", { name: "Bản nháp của trợ lý" }),
   ).toHaveCount(1);
@@ -997,6 +1190,7 @@ test("a draft without messages shows the draft instead of the opening suggestion
 }) => {
   conversation = { ...conversation, currentProposal: agentProposal() };
   await open(page);
+  await openDraft(page);
   await expect(
     panel(page).getByRole("region", { name: "Bản nháp của trợ lý" }),
   ).toBeVisible();
@@ -1037,6 +1231,7 @@ test("day chips, the card and the map stay in step, and new dishes are marked", 
 }) => {
   conversation = { ...conversation, currentProposal: twoDayProposal() };
   await open(page);
+  await openDraft(page);
   const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
   // A new preview opens on the day it changed.
   const dishOnDay2 = dish(page, "r200");
@@ -1069,6 +1264,7 @@ test("on a phone the panel steps aside to reveal the map and comes back with foc
   await page.setViewportSize({ width: 390, height: 844 });
   conversation = { ...conversation, currentProposal: twoDayProposal() };
   await open(page);
+  await openDraft(page);
   const map = page.getByRole("region", { name: "Bản đồ lộ trình" });
   const toggle = panel(page).getByRole("button", { name: "Xem trên bản đồ" });
   await toggle.click();

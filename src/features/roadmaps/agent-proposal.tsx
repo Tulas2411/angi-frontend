@@ -78,6 +78,7 @@ export function AgentProposalPreview({
   day,
   onDay,
   onShowMap,
+  headAction,
   children,
 }: {
   proposal: AgentProposal;
@@ -89,6 +90,8 @@ export function AgentProposalPreview({
   onDay: (day: number) => void;
   /** Reveals the map on screens where this panel covers it. */
   onShowMap: () => void;
+  /** At the end of the title row (the draft sheet's collapse button). */
+  headAction?: ReactNode;
   /** What the traveler can do next, at the end of the card. */
   children?: ReactNode;
 }) {
@@ -185,39 +188,43 @@ export function AgentProposalPreview({
       aria-label="Bản nháp của trợ lý"
       data-version={proposal.version}
     >
-      <div className="agent-proposal-head">
-        <h3>{proposal.snapshot.state.title}</h3>
-        <span className="agent-proposal-status" data-status={proposal.status}>
-          {statuses[proposal.status]}
-        </span>
-      </div>
-      <p className="agent-proposal-total">
-        <span className="helper">Tổng dự chi</span>
-        <strong>{vnd(proposal.validation.totalCost)}</strong>
-        {budgetAmount !== null && !budgetUnrestricted && (
-          <span className="helper">Ngân sách {vnd(budgetAmount)}</span>
-        )}
-      </p>
-      <AgentValidationNotice validation={proposal.validation} />
-      {days.length > 1 && (
-        <div
-          className="agent-proposal-days"
-          role="group"
-          aria-label="Chọn ngày trong bản nháp"
-        >
-          {days.map((value) => (
-            <button
-              key={value}
-              type="button"
-              data-tone={roadmapDayTone(value)}
-              aria-pressed={value === day}
-              onClick={() => onDay(value)}
-            >
-              Ngày {value}
-            </button>
-          ))}
+      {/* Title, status, total and day chips: one header that stays at the top while the day scrolls. */}
+      <header className="agent-proposal-top">
+        <div className="agent-proposal-head">
+          <h3>{proposal.snapshot.state.title}</h3>
+          <span className="agent-proposal-status" data-status={proposal.status}>
+            {statuses[proposal.status]}
+          </span>
+          {headAction}
         </div>
-      )}
+        <p className="agent-proposal-total">
+          <span className="helper">Tổng dự chi</span>
+          <strong>{vnd(proposal.validation.totalCost)}</strong>
+          {budgetAmount !== null && !budgetUnrestricted && (
+            <span className="helper">Ngân sách {vnd(budgetAmount)}</span>
+          )}
+        </p>
+        {days.length > 1 && (
+          <div
+            className="agent-proposal-days"
+            role="group"
+            aria-label="Chọn ngày trong bản nháp"
+          >
+            {days.map((value) => (
+              <button
+                key={value}
+                type="button"
+                data-tone={roadmapDayTone(value)}
+                aria-pressed={value === day}
+                onClick={() => onDay(value)}
+              >
+                Ngày {value}
+              </button>
+            ))}
+          </div>
+        )}
+      </header>
+      <AgentValidationNotice validation={proposal.validation} />
       <Button
         variant="secondary"
         className="agent-map-toggle"

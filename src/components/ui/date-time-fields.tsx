@@ -59,8 +59,9 @@ const clockIcon = (
 );
 
 /**
- * Pickers always open below their field. When the bottom of the window (or of the open dialog)
- * leaves too little room, the page scrolls just enough to show the whole picker.
+ * Pickers open below their field. When the bottom of the window (or of the open dialog) leaves too
+ * little room, the page scrolls just enough to show the whole picker. A field pinned to the bottom
+ * of a fixed panel, which no scroll can lift, opens its picker above instead (`pickerSide`).
  */
 function useRoomBelow(open: boolean) {
   const anchor = useRef<HTMLDivElement>(null);
@@ -91,12 +92,17 @@ function useRoomBelow(open: boolean) {
 function DatePickerInput({
   min,
   max,
+  side = "bottom",
   ...props
-}: PickerInputProps & { min?: string; max?: string }) {
+}: PickerInputProps & {
+  min?: string;
+  max?: string;
+  side?: "top" | "bottom";
+}) {
   const { id, value, onChange } = props;
   const [open, setOpen] = useState(false);
   const [text, setText] = useTypedText(value, isoToDisplay);
-  const [roomAnchor, roomContent] = useRoomBelow(open);
+  const [roomAnchor, roomContent] = useRoomBelow(open && side === "bottom");
   const selected = isoToDate(value) ?? undefined;
   const minDate = min ? (isoToDate(min) ?? undefined) : undefined;
   const maxDate = max ? (isoToDate(max) ?? undefined) : undefined;
@@ -141,8 +147,11 @@ function DatePickerInput({
       </div>
       <PopoverContent
         ref={roomContent}
-        side="bottom"
-        avoidCollisions={false}
+        side={side}
+        // Below, the page scrolls to make room (useRoomBelow). Above, in a fixed panel nothing can
+        // scroll, so the calendar slides sideways to stay on screen instead.
+        avoidCollisions={side === "top"}
+        collisionPadding={8}
         aria-label={props.pickerLabel}
       >
         <Calendar
@@ -343,6 +352,7 @@ export function DateField({
   onChange,
   min,
   max,
+  pickerSide = "bottom",
   ...shell
 }: FieldShell & {
   value?: string;
@@ -350,6 +360,8 @@ export function DateField({
   onChange?: (value: string) => void;
   min?: string;
   max?: string;
+  /** "top" for a field at the foot of a fixed panel, where nothing can scroll the picker into view. */
+  pickerSide?: "top" | "bottom";
 }) {
   const generated = useId();
   const id = shell.id ?? generated;
@@ -362,6 +374,7 @@ export function DateField({
         onChange={change}
         min={min}
         max={max}
+        side={pickerSide}
         pickerLabel={`Chọn ngày: ${shell.label}`}
         placeholder={shell.placeholder}
         required={shell.required}
