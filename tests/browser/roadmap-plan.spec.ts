@@ -244,8 +244,14 @@ test("city only: step 2 creates the roadmap with the documented body and opens i
     page.getByText("Đã tạo lộ trình.", { exact: false }),
   ).toBeVisible();
   await expect(page).toHaveURL(/\/roadmaps\/88$/);
+  // The city picked in step 1 is saved as the roadmap's destination.
   expect(creates).toEqual([
-    { title: "Khám phá ẩm thực Hà Nội", numDays: 2, originMode: "none" },
+    {
+      title: "Khám phá ẩm thực Hà Nội",
+      numDays: 2,
+      originMode: "none",
+      destinationProvince: "Thành phố Hà Nội",
+    },
   ]);
 });
 
@@ -317,6 +323,7 @@ test("current location: the browser is asked, no coordinates are sent", async ({
       numDays: 3,
       budgetAmount: 1500000,
       originMode: "gps",
+      destinationProvince: "Thành phố Đà Nẵng",
     },
   ]);
 });
@@ -377,6 +384,7 @@ test("the budget is shown as Vietnamese currency while typing and sends plain di
       numDays: 3,
       budgetAmount: 2000000,
       originMode: "none",
+      destinationProvince: "Thành phố Hà Nội",
     },
   ]);
 });
@@ -443,6 +451,8 @@ test("a pinned point from typed coordinates is sent with its label", async ({
     originLatitude: 16.061204,
     originLongitude: 108.227531,
     originLabel: "Khách sạn Sala Đà Nẵng",
+    // A pinned roadmap keeps its city too.
+    destinationProvince: "Thành phố Đà Nẵng",
   });
   expect(providerCalls).toEqual([]);
 });

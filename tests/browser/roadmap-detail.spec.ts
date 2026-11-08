@@ -27,6 +27,8 @@ let failRoute = 0;
 let failDetail = 0;
 let placeCalls: string[] = [];
 let addCalls: { dayId: string; body: unknown }[] = [];
+/** RM-04 bodies (the destination backfill). */
+let patchCalls: unknown[] = [];
 
 // DISH-02 / REST-02 / REST-04 / RM-06 answers, shaped like the API Design JSON samples.
 const dishDetail = {
@@ -403,6 +405,15 @@ function routeFor(
 const roadmaps: StubHandler = (request, send) => {
   if (places(request, send)) return true;
   const { method, url } = request;
+  if (method === "PATCH" && url === "/api/v1/roadmaps/88") {
+    // RM-04: only the destination is patched here; the stored detail keeps it.
+    patchCalls.push(request.body);
+    const body = request.body as { destinationProvince?: string | null };
+    if ("destinationProvince" in body)
+      detail.overview.destinationProvince = body.destinationProvince ?? null;
+    send(200, detail);
+    return true;
+  }
   if (method !== "GET") return false;
   const parsed = new URL(url, "http://stub");
   const path = parsed.pathname;
@@ -457,6 +468,7 @@ test.beforeEach(async ({ context }) => {
   failDetail = 0;
   placeCalls = [];
   addCalls = [];
+  patchCalls = [];
   await context.route("**/*", (route) => {
     const host = new URL(route.request().url()).hostname;
     return ["localhost", "127.0.0.1"].includes(host)
@@ -1303,6 +1315,44 @@ test("a stop without coordinates keeps its details selectable and is omitted fro
   await everyDayAsked();
 });
 
+test("an older roadmap gets the destination this browser remembered, saved once", async ({
+  page,
+}) => {
+  // Made before RM-01 kept the destination: only this browser knows the city.
+  detail.overview.destinationProvince = null;
+  await page.addInitScript(() =>
+    window.localStorage.setItem(
+      "angi:roadmap-destination:88",
+      "Thành phố Đà Nẵng",
+    ),
+  );
+  await open(page);
+  await expect
+    .poll(() => patchCalls)
+    .toEqual([{ destinationProvince: "Thành phố Đà Nẵng" }]);
+  // Saved now: another visit sends nothing more.
+  await page.reload();
+  await expect(items(page).first()).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(patchCalls).toHaveLength(1);
+});
+
+test("a roadmap that already keeps its destination is never patched on open", async ({
+  page,
+}) => {
+  detail.overview.destinationProvince = "Thành phố Huế";
+  await page.addInitScript(() =>
+    window.localStorage.setItem(
+      "angi:roadmap-destination:88",
+      "Thành phố Đà Nẵng",
+    ),
+  );
+  await open(page);
+  await expect(items(page).first()).toBeVisible();
+  await page.waitForTimeout(500);
+  expect(patchCalls).toEqual([]);
+});
+
 test.describe("offline Mapbox roadmap rendering", () => {
   test.skip(
     process.env.ANGI_TEST_MAPBOX_OFFLINE !== "1",
@@ -1351,6 +1401,18 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await expect(map.locator(".roadmap-map-pin")).toHaveCount(0);
     await expect(map).toContainText("Lộ trình chưa có địa điểm để hiển thị.");
     await expect(map.locator(".roadmap-map-stop-list")).toHaveCount(0);
+    // The pinned start is drawn at once, before any dish (RM-14 is not asked for empty days).
+    await expect(
+      map.getByRole("img", { name: "Khách sạn Sala Đà Nẵng" }),
+    ).toBeVisible();
+    await expect(map.locator(".roadmap-map-origin")).toHaveCount(1);
+    expect(routeCalls).toEqual([]);
+    // "Locate" frames that pin; the map stays ready and keeps it.
+    await map
+      .getByRole("button", { name: "Xem ngày đang chọn trên bản đồ" })
+      .click();
+    await expect(map).toHaveAttribute("data-ready", "true");
+    await expect(map.locator(".roadmap-map-origin")).toHaveCount(1);
   });
 
   test("numbered pins and keyboard selection stay synchronized with the center cards", async ({

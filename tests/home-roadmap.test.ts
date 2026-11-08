@@ -36,12 +36,13 @@ describe("homepage roadmap creation", () => {
       {},
     );
   });
-  it("keeps the existing contract: province suggests the title, not an invented wire field", () => {
+  it("sends the province as the roadmap's destination (RM-01 destinationProvince, 2026-11-08)", () => {
     expect(homeRoadmapRequest(values)).toEqual({
       title: "Khám phá ẩm thực Đà Nẵng",
       startDate: "2026-11-06",
       numDays: 3,
       originMode: "none",
+      destinationProvince: "Thành phố Đà Nẵng",
     });
     expect(values.province).toBe("Thành phố Đà Nẵng");
     expect(

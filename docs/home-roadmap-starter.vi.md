@@ -27,7 +27,7 @@ Ví dụ body hợp lệ:
 }
 ```
 
-RM-01 không có trường tỉnh/thành và không lưu điểm đến. FE ghi nhớ tỉnh/thành theo ID bằng `rememberDestination` hiện có trong localStorage; đây không phải dữ liệu điểm đến được backend lưu, nên không đồng bộ sang thiết bị khác. Không gửi thêm province, ngân sách hoặc tọa độ ngoài hợp đồng.
+Từ 2026-11-08 RM-01 lưu tỉnh/thành đến: form gửi `destinationProvince` (tỉnh đã chọn, qua `buildCreateRoadmapRequest`), nên mọi thiết bị đều biết thành phố của lộ trình. FE vẫn ghi một bản trong localStorage (`rememberDestination`) cho các lộ trình tạo trước đó. Không gửi ngân sách hoặc tọa độ ngoài hợp đồng.
 
 RM-01 tạo các ngày rỗng. Người dùng tiếp tục chọn món/tạo lịch trong trang chi tiết; form này không tự gọi RM-10, RM-14, Agent hoặc Mapbox. Các ví dụ khẩu vị, lịch trình và bộ sưu tập cảm hứng phía dưới vẫn là nội dung minh họa, không được thay bằng kết quả AI giả.
 

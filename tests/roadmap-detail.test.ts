@@ -25,6 +25,7 @@ import {
   roadmapHeroImages,
 } from "@/features/roadmaps/roadmap-detail-rules";
 import { roadmapDetailIdOf } from "@/components/site/header-nav";
+import { provinceCenter } from "@/shared/locations/province-centers";
 import { roadmapDetailHref } from "@/features/roadmaps/routes";
 import type {
   RoadmapBudgetDto,
@@ -467,5 +468,27 @@ describe("travel mode per leg", () => {
     expect(
       mixRoute(driving, {}, { driving, walking: estimated }).isEstimated,
     ).toBe(false);
+  });
+});
+
+describe("province centres for the map", () => {
+  it("finds a province however it is written, among the 34 of the V2 catalog", () => {
+    const hanoi = { latitude: 21.0285, longitude: 105.8542 };
+    expect(provinceCenter("Thành phố Hà Nội")).toEqual(hanoi);
+    expect(provinceCenter("Hà Nội")).toEqual(hanoi);
+    expect(provinceCenter("  thanh pho ha noi ")).toEqual(hanoi);
+    expect(provinceCenter("Tỉnh Gia Lai")).toEqual({
+      latitude: 13.782,
+      longitude: 109.2192,
+    });
+    expect(provinceCenter("Thành phố Hồ Chí Minh")?.latitude).toBeCloseTo(
+      10.78,
+      1,
+    );
+  });
+  it("knows nothing outside the catalog, and nothing for an empty name", () => {
+    expect(provinceCenter("Quận 1")).toBeNull();
+    expect(provinceCenter("")).toBeNull();
+    expect(provinceCenter(null)).toBeNull();
   });
 });

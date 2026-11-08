@@ -42,6 +42,9 @@ import {
 } from "./roadmap-detail-rules";
 import { RoadmapItinerary } from "./roadmap-itinerary";
 import { RoadmapDetailMap } from "./roadmap-detail-map";
+import { recallDestination, roadmapDestination } from "./roadmap-destination";
+import { mostCommonProvince } from "./roadmap-add-item-rules";
+import { provinceCenter } from "@/shared/locations/province-centers";
 import {
   isOverBudget,
   roadmapDateRange,
@@ -227,6 +230,48 @@ export function RoadmapDetailView({
     (day) => day.dayNumber === activeDay,
   )?.dayId;
   const effectiveRoute = mapRoute?.dayId === activeDayId ? mapRoute : null;
+  // The pinned start is on the map from the start: RM-14 (which also returns it) is only asked
+  // for days with dishes, so a new roadmap would show no pin until its first dish.
+  const pinnedOrigin = useMemo<RoadmapRouteDto["origin"]>(
+    () =>
+      overview.originMode === "pinned" &&
+      overview.originLatitude !== null &&
+      overview.originLongitude !== null
+        ? {
+            latitude: overview.originLatitude,
+            longitude: overview.originLongitude,
+            label: overview.originLabel,
+            source: "pinned",
+          }
+        : null,
+    [
+      overview.originMode,
+      overview.originLatitude,
+      overview.originLongitude,
+      overview.originLabel,
+    ],
+  );
+  // Without a pin, the map's "locate" button goes to the destination city: the roadmap's saved
+  // province (or this browser's copy for older roadmaps), else the one most dishes are in.
+  const destinationCenter = useMemo(
+    () =>
+      provinceCenter(roadmapDestination(overview)) ??
+      provinceCenter(mostCommonProvince(itinerary)),
+    [overview, itinerary],
+  );
+  // A roadmap made before the backend kept its destination: save the copy this browser
+  // remembered, once per visit (RM-04 with that field only). A failure changes nothing.
+  const backfilled = useRef(false);
+  useEffect(() => {
+    if (backfilled.current || overview.destinationProvince?.trim()) return;
+    const remembered = recallDestination(overview.id);
+    if (!remembered) return;
+    backfilled.current = true;
+    service
+      .update(overview.id, { destinationProvince: remembered })
+      .then(onRoadmapUpdated)
+      .catch(() => {});
+  }, [overview, service, onRoadmapUpdated]);
 
   // The URL follows the tab, the day being read and the unfolded days, so a reload keeps them.
   useEffect(() => {
@@ -635,8 +680,9 @@ export function RoadmapDetailView({
         activeDay={activeDay}
         selectedItemId={selectedItemId}
         onSelectItem={selectItem}
-        origin={effectiveRoute?.origin ?? null}
+        origin={effectiveRoute ? effectiveRoute.origin : pinnedOrigin}
         originSkipped={effectiveRoute?.originSkipped ?? false}
+        fallbackCenter={destinationCenter}
         preview={
           previewOnMap && previewStops
             ? {
