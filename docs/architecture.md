@@ -4,23 +4,23 @@ Canonical architecture and sources of truth are in [the frontend project rules](
 
 The repository is Next.js App Router, React, strict TypeScript and npm. The encrypted session, refresh coordination, server guards and the backend proxy allowlist are the foundation for every screen. Playwright and Prettier are development dependencies; simple components use React and native HTML rather than form or query libraries.
 
-| Area                               | Responsibility                                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `src/styles/theme/tokens.css`      | Palette, typography, spacing, radii, shadows, page width, gutter, header height, motion     |
-| `src/app/globals.css`              | Base styles, layout, controls, site header/footer/account menu, dialogs, responsive rules   |
-| `public/assets`                    | Local fonts, homepage photos, logo and licenses (manifest: `docs/assets.json`)              |
-| `src/shared/ui`                    | Button, Input, Card, Alert, Badge primitives and typed variants                             |
-| `src/components/ui/primitives.tsx` | Fields, password field, combobox, tabs, dialog and confirm dialog, upload, skeleton, avatar |
-| `src/components/site`              | `SiteHeader`, `SiteNav`, `AccountMenu`, `SiteFooter` shared by the homepage and the app     |
-| `src/components/app-shell.tsx`     | Authenticated shell: skip link, header, owner navigation, footer                            |
-| `src/components/domain`            | Map location dialog and interactive map, province and ward fields                           |
-| `src/features/auth`                | Session, roles and landing pages, login/register/recovery forms, server helpers             |
-| `src/features/account`             | Account page, rules and service for ME-01/02/03                                             |
-| `src/features/discovery`           | Public homepage and its local content                                                       |
-| `src/features/explore`             | Public dishes and restaurants (DISH, REST, REV-01, REP-01): pages, DTOs, rules, service     |
-| `src/features/blogs`               | Blogs (BLOG-01..11, REP-02): list, detail, my blogs, editor, safe content renderer          |
-| `src/features/owner`               | Owner pages, services, rules and DTOs for OWN-01..18                                        |
-| `src/shared/api`                   | Browser client, error model, server HTTP helpers, owner-menu proxy rules                    |
+| Area                               | Responsibility                                                                                                                         |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/styles/theme/tokens.css`      | Palette, typography, spacing, radii, shadows, page width, gutter, header height, motion                                                |
+| `src/app/globals.css`              | Base styles, layout, controls, site header/footer/account menu, dialogs, responsive rules                                              |
+| `public/assets`                    | Local fonts, homepage photos and licenses (manifest: `docs/assets.json`); the ANGI wordmark is `assets/brand/angi-logo.webp` (`Brand`) |
+| `src/shared/ui`                    | Button, Input, Card, Alert, Badge primitives and typed variants                                                                        |
+| `src/components/ui/primitives.tsx` | Fields, password field, combobox, tabs, dialog and confirm dialog, upload, skeleton, avatar                                            |
+| `src/components/site`              | `SiteHeader`, `SiteNav`, `AccountMenu`, `SiteFooter` shared by the homepage and the app                                                |
+| `src/components/app-shell.tsx`     | Authenticated shell: skip link, header, owner navigation, footer                                                                       |
+| `src/components/domain`            | Map location dialog and interactive map, province and ward fields                                                                      |
+| `src/features/auth`                | Session, roles and landing pages, login/register/recovery forms, server helpers                                                        |
+| `src/features/account`             | Account page, rules and service for ME-01/02/03                                                                                        |
+| `src/features/discovery`           | Public homepage and its local content                                                                                                  |
+| `src/features/explore`             | Public dishes and restaurants (DISH, REST, REV-01, REP-01): pages, DTOs, rules, service                                                |
+| `src/features/blogs`               | Blogs (BLOG-01..11, REP-02): list, detail, my blogs, editor, safe content renderer                                                     |
+| `src/features/owner`               | Owner pages, services, rules and DTOs for OWN-01..18                                                                                   |
+| `src/shared/api`                   | Browser client, error model, server HTTP helpers, owner-menu proxy rules                                                               |
 
 ## Earlier workspace screens
 

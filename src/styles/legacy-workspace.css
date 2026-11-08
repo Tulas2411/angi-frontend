@@ -1150,13 +1150,13 @@
   white-space: nowrap;
 }
 & .brand > img {
-  width: 28px;
-  height: 34px;
-  object-fit: contain;
+  display: block;
+  width: auto;
+  height: 38px;
 }
 & .header-staff .brand > img {
-  width: 45px;
-  height: 56px;
+  width: auto;
+  height: 48px;
 }
 & .header-links {
   display: flex;
