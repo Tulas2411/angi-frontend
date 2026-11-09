@@ -1,0 +1,43 @@
+# Routes and implementation status
+
+Which routes exist, who can open them and which backend operations they use. Per-screen data sources and the proxy allowlist: [screen and endpoint inventory](scope-inventory.md). Checked against `src/app` on 2026-11-09.
+
+Every screen outside `/demo` uses real API services: a failed call shows an error with a retry, never sample data. Two shells coexist: the shared site shell (`AppShell`, site header and footer) and the earlier workspace shell (`LegacyAppShell`, its own `legacy-ui` styles) still used by moderation, administration and some owner pages.
+
+## Routes
+
+| Route                                                                                                               | Access                  | Purpose and backend operations                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/`                                                                                                                 | Public                  | Homepage: editorial dish collection, quick roadmap creation (RM-01) and the nearest province. Owners are redirected to `/restaurant`, moderators to `/moderation` |
+| `/login`, `/register`, `/verify-email`, `/verify-success`, `/forgot-password`, `/reset-password`, `/setup-password` | Public                  | Account entry and recovery (AUTH-01..09); `/setup-password` finishes an invitation                                                                                |
+| `/account`                                                                                                          | Any signed-in role      | Profile and password (ME-01..03)                                                                                                                                  |
+| `/notifications`                                                                                                    | Any signed-in role      | Inbox, unread count and mark as read (NOTI-01..03)                                                                                                                |
+| `/dishes`, `/dishes/{id}`, `/restaurants`, `/restaurants/{id}`                                                      | Public; Travelers write | Browse and detail (DISH-01/02, REST-01..04, CAT-02); reviews and reports (REV-01, REP-01)                                                                         |
+| `/guides`, `/guides/{blogId}`                                                                                       | Public; Travelers write | Food guides: read, like, comment, report (BLOG-01..11, REP-02)                                                                                                    |
+| `/guides/new`, `/guides/mine`, `/guides/{blogId}/edit`                                                              | `TRAVELER`              | Write and manage own guides                                                                                                                                       |
+| `/survey`                                                                                                           | `TRAVELER`              | Taste survey (PREF-02, PREF-03)                                                                                                                                   |
+| `/roll`                                                                                                             | `TRAVELER`              | Dish roll (DISH-03)                                                                                                                                               |
+| `/roadmaps`                                                                                                         | `TRAVELER`              | My roadmaps, paged, with delete (RM-02, RM-05)                                                                                                                    |
+| `/roadmaps/new`                                                                                                     | `TRAVELER`              | Plan a new roadmap (RM-01) and edit its overview (RM-04)                                                                                                          |
+| `/roadmaps/{roadmapId}`                                                                                             | `TRAVELER`              | Detail and editing (RM-03, RM-04, RM-06..11, RM-13, RM-14) and the food assistant (AGENT-01..04)                                                                  |
+| `/roadmaps/start`                                                                                                   | `TRAVELER`              | Redirect: the roadmap list, or the planner when the Traveler has no roadmap yet (RM-02)                                                                           |
+| `/restaurant`, `/restaurant/register`, `/restaurant/profile`, `/restaurant/verification`, `/restaurant/menu`        | `RESTAURANT_OWNER`      | Owner workspace (OWN-01..18, MEDIA-01, CAT-02)                                                                                                                    |
+| `/restaurant/reviews`                                                                                               | `RESTAURANT_OWNER`      | Reviews and replies (OWN-19, OWN-20), workspace shell                                                                                                             |
+| `/moderation`, `/moderation/*`                                                                                      | `MOD`, `ADMIN`          | Reports, users, community, restaurants, verifications, menus, reviews (MOD-*), workspace shell                                                                    |
+| `/administration`, `/administration/*`                                                                              | `ADMIN`                 | Dashboard and outbox (ADM-D1..D3, OPS-01), moderators (ADM-M1..M4), permissions (ADM-P1..P4), workspace shell                                                     |
+| `/demo`, `/demo/{role}/*`                                                                                           | Public preview          | Role previews on demo fixtures; served only when `NEXT_PUBLIC_ENABLE_DEMO=true`, no session is created                                                            |
+| `/dev/components`, `/dev/scenarios`                                                                                 | Development             | Component gallery; outside development only with `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY=true`                                                                      |
+| Anything else                                                                                                       | —                       | 404                                                                                                                                                               |
+
+Landing page after sign-in: Traveler `/`, Owner `/restaurant`, Moderator `/moderation`, Administrator `/administration`. Visiting `/` later keeps Travelers and Administrators on the homepage and sends owners and moderators back to their workspace. Missing sessions redirect to `/login`; a role mismatch redirects to the role's landing page. Hidden navigation never authorizes a request; the backend decides.
+
+Owner screens: `/restaurant/profile?tab=hours|status|photos` selects an editor tab and `/restaurant/verification?tab=status` opens the history. Roadmap detail: `?tab=` selects overview, itinerary or budget and `?day=` opens a day.
+
+## Known gaps
+
+- Account: no avatar upload.
+- Google sign-in: rendered only when `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is set.
+- Homepage taste and roadmap examples are editorial: never saved, no backend call.
+- `/administration/audit` has no backend operation: it reports the data as unavailable.
+
+Behavior of each feature (Vietnamese): one note per feature in `docs/*.vi.md`, for example [roadmap detail](roadmap-detail.vi.md), [food assistant](roadmap-agent.vi.md), [explore](explore-dishes-restaurants.vi.md), [blogs](blogs.vi.md), [notifications](notifications.vi.md), [menu](restaurant-menu.vi.md) and [menu approval](menu-approval.vi.md).

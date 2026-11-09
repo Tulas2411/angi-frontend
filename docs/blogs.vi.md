@@ -77,7 +77,7 @@ Các màn blog được dựng lại theo quy trình "app screen" của taste-sk
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
 
 - Sheet "Backend API": BLOG-01..BLOG-11 (r46..r56), REP-02 (r57), MEDIA-01.
 - Sheet "Chi tiết Request-Response": BLOG-01 (r205), BLOG-02 (r210), BLOG-03 (r211), BLOG-04 (r216..r221), BLOG-05 (r222), BLOG-06 (r227..r232), BLOG-07 (r233), BLOG-08 (r234), BLOG-09 (r236), BLOG-10 (r238..r239), BLOG-11 (r240), REP-02 (r241..r245).

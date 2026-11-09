@@ -2,7 +2,6 @@
 
 > **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
 
-
 ## Cách mở
 
 - Đăng nhập bằng tài khoản Restaurant Owner, vào **Xác minh nhà hàng** → **Trạng thái xác minh**.
@@ -99,8 +98,8 @@ try {
 
 Bộ này đăng nhập thật, tạo nhà hàng bằng API trên tài khoản mới, upload một PDF kiểm thử riêng tư lên Cloudinary, nộp qua popup F-47 rồi xem lịch sử F-48. Có kiểm tra reload, lỗi 400/409, thiếu nhà hàng, quyền 401/403 ở cả proxy/BE và cách ly Owner. Cần tài khoản mới cho mỗi lượt; không tự retry để tránh tạo upload dư. Cleanup xóa asset của đúng Owner kiểm thử; giữ metadata trong database local.
 
-Mapbox bị tắt ở cấu hình FE kiểm thử; không mở bản đồ hoặc dò token. Bộ kiểm tra có một lượt tải tài liệu tổng hợp từ Cloudinary để kiểm tra URL riêng tư. Trace, video và ảnh tự động đều tắt để tránh ghi thông tin đăng nhập/URL có chữ ký. Kết quả an toàn được ghi trong `artifacts/verification-live-evidence.json`; xem [báo cáo kiểm thử thật](verification-live.vi.md) để phân biệt phần đã chạy với phần còn thiếu.
+Mapbox bị tắt ở cấu hình FE kiểm thử; không mở bản đồ hoặc dò token. Bộ kiểm tra có một lượt tải tài liệu tổng hợp từ Cloudinary để kiểm tra URL riêng tư. Trace, video và ảnh tự động đều tắt để tránh ghi thông tin đăng nhập/URL có chữ ký. Kết quả an toàn được ghi trong `artifacts/verification-live-evidence.json`.
 
 ## Phạm vi kiểm chứng
 
-Code đã nối OWN-07 và có mock theo cấu trúc API Design. Bộ stub kiểm tra đầy đủ trạng thái/phản hồi; bộ live kiểm tra dữ liệu và dịch vụ thật trong phạm vi [báo cáo kiểm thử BE](verification-live.vi.md). Chưa kiểm được luồng duyệt từ Moderator do BE chưa cung cấp endpoint tương ứng. Không gọi Mapbox hoặc kiểm tra/thay token. Chi tiết nguồn hợp đồng: [báo cáo F-48](verification-status-evidence.md).
+Code đã nối OWN-07 và có mock theo cấu trúc API Design. Bộ stub kiểm tra đầy đủ trạng thái/phản hồi; bộ live kiểm tra dữ liệu và dịch vụ thật. Chưa kiểm được luồng duyệt từ Moderator do BE chưa cung cấp endpoint tương ứng. Không gọi Mapbox hoặc kiểm tra/thay token.

@@ -76,7 +76,7 @@ Màn `/roadmaps/{roadmapId}` (chỉ `TRAVELER`) gọi thật RM-03 `GET /api/v1/
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, nội dung trích lại sau khi code giống hệt bản đầu task).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, nội dung trích lại sau khi code giống hệt bản đầu task).
 
 - Sheet "Tổng quan": ghi chú "Vị trí và lộ trình" và "Endpoint mới RM-14".
 - Sheet "Backend API": RM-03 (r33), RM-14 (r44).
@@ -105,7 +105,7 @@ Hai nhóm browser có tổng cộng **25 test khác nhau đạt**. Test GL dùng
 
 Ảnh kiểm tra nằm trong thư mục cục bộ `artifacts/roadmap-detail/`: `figma-layout-1713.png`, `desktop-1440.png`, `tablet-768.png`, `mobile-390.png`, `mobile-320.png`, cùng ảnh riêng cột nội dung và thẻ địa điểm. Nền bản đồ trong ảnh kiểm tra là style cục bộ trống để không dùng quota; khi chạy dự án, component vẫn dùng Mapbox streets và dữ liệu tọa độ thật.
 
-Sau khi hoàn tất code và các lần kiểm tra cuối, đã mở lại `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx`: **778.879 byte**, sửa lúc **2026-10-24 15:48:52**, SHA-256 `6A886210D9EB540C9479AEFFF34B222B0C11216A6F909B30E4DFABC793A29A86`. Nội dung không đổi so với bản đã đối chiếu đầu đợt sửa. Đã đọc lại các vùng:
+Sau khi hoàn tất code và các lần kiểm tra cuối, đã mở lại `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx`: **778.879 byte**, sửa lúc **2026-10-24 15:48:52**, SHA-256 `6A886210D9EB540C9479AEFFF34B222B0C11216A6F909B30E4DFABC793A29A86`. Nội dung không đổi so với bản đã đối chiếu đầu đợt sửa. Đã đọc lại các vùng:
 
 - `Backend API`: r33 và r44.
 - `Chi tiết Request-Response`: r125, r185–r200.
@@ -124,7 +124,7 @@ RM-03/RM-14 vẫn khớp. Bản đồ không gọi thêm endpoint và không gi�
 | Prettier (bỏ qua CRLF của working tree)                | Đạt cho các file đã sửa                                                                                        |
 | Playwright, `npm run build`, backend thật              | Chưa chạy                                                                                                      |
 
-Đối chiếu sau khi code với `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-11-04 00:11): sheet "Backend API" r34 (RM-04 `PATCH /api/v1/roadmaps/{roadmapId}`, `budgetAmount?: decimal(≥0) | null`, 200 `RoadmapDetail`, 404 `ROADMAP_NOT_FOUND`, 409 `DAY_NOT_EMPTY`), "Chi tiết Request-Response" r126, "JSON mẫu" r988, "UC ↔ API" r18. Code backend: `UpdateRoadmapRequestDto` (cờ `*Specified` phân biệt bỏ trống với `null`), `UpdateRoadmapRequestDtoValidator` (`budgetAmount ≥ 0`), `UpdateRoadmapUseCase`. Proxy đã cho phép `PATCH roadmaps/{id}` từ trước; không thêm endpoint hay mã lỗi mới.
+Đối chiếu sau khi code với `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-11-04 00:11): sheet "Backend API" r34 (RM-04 `PATCH /api/v1/roadmaps/{roadmapId}`, `budgetAmount?: decimal(≥0) | null`, 200 `RoadmapDetail`, 404 `ROADMAP_NOT_FOUND`, 409 `DAY_NOT_EMPTY`), "Chi tiết Request-Response" r126, "JSON mẫu" r988, "UC ↔ API" r18. Code backend: `UpdateRoadmapRequestDto` (cờ `*Specified` phân biệt bỏ trống với `null`), `UpdateRoadmapRequestDtoValidator` (`budgetAmount ≥ 0`), `UpdateRoadmapUseCase`. Proxy đã cho phép `PATCH roadmaps/{id}` từ trước; không thêm endpoint hay mã lỗi mới.
 
 ## Sửa tên và ngày tại chỗ trên đầu trang (2026-11-04)
 

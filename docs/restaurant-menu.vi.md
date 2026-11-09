@@ -2,7 +2,6 @@
 
 > **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
 
-
 Phần bên dưới ghi phạm vi và kết quả tại mốc F-50. Chức năng gửi duyệt OWN-17 hiện được bổ sung riêng ở [F-51 / ANGI-86](menu-approval.vi.md); các câu mô tả OWN-17 chưa được triển khai ở bản F-50 là thông tin lịch sử của lượt đó.
 
 Nhánh FE: `feat/ANGI-80-manage-restaurant-menu`, tạo từ `origin/dev` tại `80600a5f9cccf19c0bd37874b76e15161f04f45f`. Thay đổi để nguyên chưa stage/commit/push.
@@ -42,7 +41,6 @@ OWN-17 `/menu-submissions/{id}/submit` có trong BE nhưng thuộc **F-51 Submit
 
 Tên được trim và giới hạn 1–200 ký tự; mô tả mới/thay đổi 30–2000 ký tự; giá nguyên VND 0–999.999.999.999; `dishForm=soup|dry|other`; thứ tự nguyên 0–32767; tag ID dương, không trùng. Mô tả cũ null/ngắn được giữ khi không chỉnh trường đó. BE vẫn quyết định validation, trạng thái và quyền sở hữu cuối cùng.
 
-
 ## Lệnh kiểm thử
 
 ```powershell
@@ -78,7 +76,7 @@ Cleanup chỉ xóa asset của owner test đó, giữ metadata DB làm bằng ch
 
 ## Đối chiếu API Design
 
-Nguồn: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx`, SHA256 `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`.
+Nguồn: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx`, SHA256 `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`.
 
 Đã mở lại workbook từ đĩa sau code và các lượt kiểm thử ngày **17/10/2026** (giờ Việt Nam); không có bản mới hơn trong thư mục BE và hash không đổi. Đối chiếu `Backend API` 66–75; `Chi tiết Request-Response` 302–338; `DTO` 63–66, 143–163, 317–319; `JSON mẫu` 2123–2392; `Mã lỗi` 28/42 và lỗi dùng chung; các mục CAT-02/MEDIA-01. OWN-17 được đọc để xác định ranh giới, không triển khai trong FE F-50. Giá nguyên VND và giới hạn smallint đối chiếu thêm Data Dictionary v1.2, sheet `Core` và validator BE.
 

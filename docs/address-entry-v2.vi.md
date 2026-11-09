@@ -17,6 +17,6 @@ Yêu cầu ngày 16/10/2026 thay thế việc bắt buộc nhập quận/huyện
 
 Khi đăng ký mới, FE không gửi `district`. Khi chỉnh tỉnh/thành hoặc phường/xã của hồ sơ cũ, FE gửi `district: null`; sửa các thông tin khác không tự xóa địa chỉ cũ. Phường/xã vẫn là trường tùy chọn theo hợp đồng hiện có.
 
-API Design v1.8 hiện còn đánh dấu `district` bắt buộc ở OWN-01 và không cho null trong mô tả OWN-03. Đây là chênh lệch tài liệu cần cập nhật theo yêu cầu mới, không được che bằng cách điền giả quận/huyện. Chi tiết đối chiếu và kết quả kiểm thử nằm trong [verification.md](verification.md).
+API Design v1.8 hiện còn đánh dấu `district` bắt buộc ở OWN-01 và không cho null trong mô tả OWN-03. Đây là chênh lệch tài liệu cần cập nhật theo yêu cầu mới, không được che bằng cách điền giả quận/huyện.
 
 Sau khi lấy thay đổi, khởi động lại FE và backend để dùng cùng hợp đồng mới. Nếu dùng Docker local, chạy lại dịch vụ API theo cấu hình local của bạn; dữ liệu địa chỉ cũ được giữ nguyên.

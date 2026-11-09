@@ -2,7 +2,6 @@
 
 > **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
 
-
 Màn hình F-45 được sửa theo ảnh do chủ dự án cung cấp ngày 17/10/2026. Nhánh riêng: `fix/ANGI-48-redesign-business-hours`, tạo từ `origin/dev`, không đặt upstream là `dev`/`main`. Thay đổi để chủ dự án tự review, commit và publish.
 
 ## Cách sử dụng
@@ -42,7 +41,7 @@ OWN-02 `GET /api/v1/owner/restaurant` đọc `businessHours`. OWN-04 `PUT /api/v
 
 BE trả `VALIDATION_FAILED` cho dữ liệu sai và `INVALID_BUSINESS_HOURS` cho chồng lấn. `RESTAURANT_NOT_FOUND` đưa người dùng tới hướng đăng ký nhà hàng. Cập nhật giờ không sửa operating/verification/moderation status, ảnh hay thông tin hồ sơ.
 
-Nguồn đối chiếu: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx`, sheet **Backend API** hàng 59/61 (OWN-02/04), **DTO** hàng 90–92 (BusinessHour), **JSON mẫu** hàng 1980–2003 (OWN-04), **Mã lỗi** hàng 10/14 (`VALIDATION_FAILED`/`INVALID_BUSINESS_HOURS`). BE được đọc tại `BusinessHourDtoValidator`, `UpdateBusinessHoursRequestDtoValidator`, `BusinessHourRules` và `UpdateBusinessHoursUseCase`.
+Nguồn đối chiếu: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx`, sheet **Backend API** hàng 59/61 (OWN-02/04), **DTO** hàng 90–92 (BusinessHour), **JSON mẫu** hàng 1980–2003 (OWN-04), **Mã lỗi** hàng 10/14 (`VALIDATION_FAILED`/`INVALID_BUSINESS_HOURS`). BE được đọc tại `BusinessHourDtoValidator`, `UpdateBusinessHoursRequestDtoValidator`, `BusinessHourRules` và `UpdateBusinessHoursUseCase`.
 
 Workbook mô tả lỗi chồng nhau “trong cùng ngày”; implementation BE kiểm tra cả phần qua đêm và ranh giới tuần. FE theo quy tắc thực thi của BE để ngăn lịch mà API sẽ từ chối. Workbook không có sheet riêng tên “Validation Rules”; validation lấy từ ràng buộc DTO và các validator thực tế.
 

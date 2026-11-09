@@ -114,7 +114,7 @@ After these checks, reopened the latest workbook from disk once more: backend `A
 
 ## Final API Design reconciliation
 
-After implementation and checks, reopened `../angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` from disk and compared the available workbook versions. The backend copy is the newest available (778,867 bytes, modified 2026-10-15); SHA-256: `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`. It was unchanged during this task.
+After implementation and checks, reopened `../angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` from disk and compared the available workbook versions. The backend copy is the newest available (778,867 bytes, modified 2026-10-15); SHA-256: `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`. It was unchanged during this task.
 
 Inspected `Tổng quan` rows 91, 95, 109–110; `Backend API` rows 18–20; `UC ↔ API` rows 8 and 15; `Chi tiết Request-Response` rows 54–61; parsed the HOME-01 sample in `JSON mẫu` rows 293–400; reviewed `Mã lỗi` row 10 (`VALIDATION_FAILED`).
 

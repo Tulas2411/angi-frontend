@@ -63,7 +63,7 @@ Kiểm tra giao diện ở 1440px và 390px: bố cục hai cột theo Figma "Pl
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, không đổi trong suốt task; bản trích lại giống hệt bản lúc bắt đầu).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, không đổi trong suốt task; bản trích lại giống hệt bản lúc bắt đầu).
 
 - Sheet "Backend API": dòng r31 (RM-01), r34 (RM-04).
 - Sheet "Chi tiết Request-Response": r111–r134.

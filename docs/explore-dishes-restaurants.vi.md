@@ -87,7 +87,7 @@ Trên cả `/dishes` và `/restaurants`, phía trên breadcrumb "Khám phá › 
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (781341 byte, sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (781341 byte, sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
 
 - Sheet "Backend API": DISH-01 (r20), DISH-02 (r21), REST-01 (r23), REST-02 (r24), REST-03 (r25), REST-04 (r26), REV-01 (r27), REP-01 (r28), CAT-02 (r18).
 - Sheet "Chi tiết Request-Response": DISH-01 (r61..r63), DISH-02 (r64), REST-01 (r77..r81), REST-02 (r82), REST-03 (r83..r84), REST-04 (r85..), REV-01 (r93..r97), REP-01 (r98..r102), MEDIA-01 (r51..r53), CAT-02 (r54).
@@ -95,4 +95,4 @@ Trên cả `/dishes` và `/restaurants`, phía trên breadcrumb "Khám phá › 
 
 Đối chiếu code backend: `DishesController` (`GET dishes`, `GET dishes/{dishId:int}`), `RestaurantsController` (`GET`, `GET {id}`, `GET {id}/menu`, `GET {id}/reviews`, `POST {id}/reviews` với `[Authorize(Roles = "TRAVELER,Traveler")]`, trả `201`), `RestaurantReportsController` (`POST api/v1/restaurants/{id}/reports`, `201`), `TagsController` (`[AllowAnonymous]`) và các DTO `DishCardDto`, `DishDetailDto`, `RestaurantMiniDto`, `RestaurantCardDto`, `RestaurantDetailDto`, `ReviewDto`, `ReviewReplyDto`, `RestaurantReviewsDto`, `CreateRestaurantReviewRequestDto`, `CreateRestaurantReportRequestDto`. Method, đường dẫn, tên và kiểu trường, enum, mã trạng thái và mã lỗi khớp với FE.
 
-Đối chiếu lại cho bố cục chi tiết món mới (2026-11-04), sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (1023625 byte, sửa lần cuối 2026-11-04 00:11; không có bản mới hơn). Sheet "Backend API" DISH-02 (r21) và REST-03 (r25: public, `includeUnavailable` mặc định `true`, trả `restaurantId`, `dishes: DishCard[]`, `404 RESTAURANT_NOT_FOUND`); sheet "DTO" DishCard (r74..r84: `id`, `name`, `price`, `coverUrl` có thể null, `isAvailable`) và DishDetail (r85..). Trang chỉ đọc các trường này, không thêm trường hay endpoint mới. Ảnh dùng URL `media_files.url` (Cloudinary) và chỉ thêm tham số biến đổi khi hiển thị.
+Đối chiếu lại cho bố cục chi tiết món mới (2026-11-04), sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (1023625 byte, sửa lần cuối 2026-11-04 00:11; không có bản mới hơn). Sheet "Backend API" DISH-02 (r21) và REST-03 (r25: public, `includeUnavailable` mặc định `true`, trả `restaurantId`, `dishes: DishCard[]`, `404 RESTAURANT_NOT_FOUND`); sheet "DTO" DishCard (r74..r84: `id`, `name`, `price`, `coverUrl` có thể null, `isAvailable`) và DishDetail (r85..). Trang chỉ đọc các trường này, không thêm trường hay endpoint mới. Ảnh dùng URL `media_files.url` (Cloudinary) và chỉ thêm tham số biến đổi khi hiển thị.

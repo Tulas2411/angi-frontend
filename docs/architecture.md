@@ -19,12 +19,12 @@ The repository is Next.js App Router, React, strict TypeScript and npm. The encr
 | `src/features/discovery`           | Public homepage and its local content                                                                                                  |
 | `src/features/explore`             | Public dishes and restaurants (DISH, REST, REV-01, REP-01): pages, DTOs, rules, service                                                |
 | `src/features/blogs`               | Blogs (BLOG-01..11, REP-02): list, detail, my blogs, editor, safe content renderer                                                     |
-| `src/features/owner`               | Owner pages, services, rules and DTOs for OWN-01..18                                                                                   |
+| `src/features/owner`               | Owner pages, services, rules and DTOs for OWN-01..20                                                                                   |
 | `src/shared/api`                   | Browser client, error model, server HTTP helpers, owner-menu proxy rules                                                               |
 
 ## Earlier workspace screens
 
-Screens built before the shared shell (`/demo/*`, owner reviews, moderation, administration) keep `PlatformProvider`, `src/mocks` and `WorkspaceShell`. Their stylesheet is `src/styles/legacy-workspace.css`, generated from the previous global CSS and scoped under `.legacy-ui` (`LegacyScope`), so it cannot change the integrated screens.
+Moderation, administration and owner reviews render in the earlier workspace shell: `LegacyAppShell` → `WorkspaceShell` → `PlatformProvider` in `live` mode, wrapped in `LegacyScope`. They load through typed services and the proxy like every other screen; a screen of that shell without a backend operation reports its data as unavailable (today only `/administration/audit`). Only `/demo/*` renders these screens in `demo` mode on `src/mocks`, when `NEXT_PUBLIC_ENABLE_DEMO=true`. Their stylesheet is `src/styles/legacy-workspace.css`, generated from the previous global CSS and scoped under `.legacy-ui` (`LegacyScope`), so it cannot change the integrated screens.
 
 ## Data boundary
 
@@ -36,4 +36,4 @@ Native form controls have labels, helper and error text and accessible names. Na
 
 ## Contracts
 
-The canonical API Design workbook is maintained in the backend repository (`angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` at the time of writing). Figma constraints never establish server DTOs. See the [scope inventory](scope-inventory.md) for which operations are integrated.
+The canonical API Design workbook is maintained in the backend repository (`angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` at the time of writing). Figma constraints never establish server DTOs. See the [scope inventory](scope-inventory.md) for which operations are integrated.

@@ -82,7 +82,7 @@ Theo yêu cầu trực tiếp, nguồn của bốn endpoint mới là `C:\Users\
 - `Mã lỗi`: r55–r65.
 - `Enum`: r36–r40.
 
-Bản cùng tên V1.8 trong `angi-backend/.docs/` có nội dung khác và chưa liệt kê bốn API Agent; đã tìm trong Controllers/DTOs của checkout BE và chưa thấy implementation. Không suy diễn rằng cùng số version nghĩa là cùng hợp đồng. Cần BE triển khai theo file mới, giữ nguyên envelope, thời hạn, idempotency và kiểm tra version trước khi nghiệm thu live.
+Bản cùng tên V1.8 trong `angi-backend/docs/` có nội dung khác và chưa liệt kê bốn API Agent; đã tìm trong Controllers/DTOs của checkout BE và chưa thấy implementation. Không suy diễn rằng cùng số version nghĩa là cùng hợp đồng. Cần BE triển khai theo file mới, giữ nguyên envelope, thời hạn, idempotency và kiểm tra version trước khi nghiệm thu live.
 
 ## Kiểm thử
 

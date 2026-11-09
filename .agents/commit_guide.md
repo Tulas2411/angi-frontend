@@ -1,6 +1,6 @@
 # ANGI — Git, Commits and Pull Requests
 
-Rules for branches, commits and pull requests in `angi-frontend`. Every feature or fix traces back to its assigned Jira task (for example, `ANGI-F-17`, from the team tracker and `angi-backend/.docs/ANGI_Jira_Plan_Ver*.xlsx`). Commit messages, pull request titles and descriptions are in English.
+Rules for branches, commits and pull requests in `angi-frontend`. Every feature or fix traces back to its assigned Jira task (for example, `ANGI-F-17`, from the team tracker and `angi-backend/docs/ANGI_Jira_Plan_Ver*.xlsx`). Commit messages, pull request titles and descriptions are in English.
 
 ## 0. Mandatory assistant restriction
 
@@ -73,8 +73,8 @@ Refs: ANGI-F-17
 
 Optional. A change that belongs to one feature uses the module, even across layers; a purely technical change uses the layer or area.
 
-| Repo          | Module scopes                                                                                   | Layer / area scopes                                                |
-| ------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Repo          | Module scopes                           | Layer / area scopes                                                |
+| ------------- | --------------------------------------- | ------------------------------------------------------------------ |
 | angi-frontend | `auth`, `account`, `discovery`, `owner` | `ui`, `api`, `layout`, `styles`, `test`, `deps`, `.agents`, `docs` |
 
 Use the existing frontend feature names; do not rename them to backend modules just to match a scope.

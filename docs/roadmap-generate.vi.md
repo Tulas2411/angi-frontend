@@ -60,7 +60,7 @@ Lý do: form dài, phải cuộn mới thấy ô "Thay các món đã có" (xóa
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (bản sửa 2026-10-25 07:57, đã thêm ghi chú triển khai RM-10 và mã `404 DAY_NOT_FOUND`; nội dung không đổi giữa hai lần). Bản trích đầu tiên trong ngày thiếu các thay đổi đó, nên đã trích lại trước khi code.
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (bản sửa 2026-10-25 07:57, đã thêm ghi chú triển khai RM-10 và mã `404 DAY_NOT_FOUND`; nội dung không đổi giữa hai lần). Bản trích đầu tiên trong ngày thiếu các thay đổi đó, nên đã trích lại trước khi code.
 
 - Sheet "Tổng quan": quy ước phản hồi (chỉ RM-10 và IMP-01 trả 202 Accepted có data, r61) và các dòng ghi chú RM-10 / RM-13 mới (r112, r113).
 - Sheet "Backend API": RM-10 (r40), RM-11 (r41), CAT-02 (r18).

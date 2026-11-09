@@ -2,7 +2,6 @@
 
 > **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
 
-
 ## Phạm vi đã triển khai
 
 - Mở `/restaurant/verification` sau khi đăng nhập bằng tài khoản Restaurant Owner.
@@ -51,7 +50,6 @@ Các lỗi trạng thái `VERIFICATION_ALREADY_PENDING`, `RESTAURANT_ALREADY_VER
 7. Thử tài khoản chưa có nhà hàng, nhà hàng đã xác minh/đang chờ/bị từ chối; không được tạo hồ sơ lần đầu trái trạng thái.
 8. Thử ngắt BE khi tải/gửi rồi khôi phục: thấy lỗi, dữ liệu đang soạn không mất, thử lại được. Thử trên màn hình điện thoại và điều khiển bằng Tab/Enter/Escape.
 
-
 Bộ kiểm tra tự động riêng, dùng FE 3001/API stub 5164, chạy lần lượt với các bộ Owner khác:
 
 ```powershell
@@ -63,6 +61,4 @@ Config để trống Mapbox token và chặn các request trình duyệt ra ngo�
 
 ## Giới hạn
 
-F-47 nộp hồ sơ lần đầu; F-48 bổ sung trạng thái và toàn bộ lịch sử qua OWN-07 tại thẻ Trạng thái xác minh. Xem [hướng dẫn F-48](verification-status.vi.md). F-49 đã nối OWN-08 để gửi lại hồ sơ mới nhất bị từ chối/cần bổ sung, giữ hoặc thay bộ tài liệu; xem [hướng dẫn và bằng chứng F-49](verification-resubmission.vi.md). Kết quả kiểm thử Cloudinary, URL riêng tư và dữ liệu lưu trên BE của F-47/F-48 được ghi riêng trong [báo cáo kiểm thử thật](verification-live.vi.md); bộ stub ở trên không chứng minh dịch vụ thật hoạt động. Cách chạy bộ live và cleanup nằm trong từng hướng dẫn.
-
-Kết quả kiểm tra và lần đối chiếu API Design cuối cùng được ghi trong [báo cáo kỹ thuật F-47](restaurant-verification-evidence.md).
+F-47 nộp hồ sơ lần đầu; F-48 bổ sung trạng thái và toàn bộ lịch sử qua OWN-07 tại thẻ Trạng thái xác minh. Xem [hướng dẫn F-48](verification-status.vi.md). F-49 đã nối OWN-08 để gửi lại hồ sơ mới nhất bị từ chối/cần bổ sung, giữ hoặc thay bộ tài liệu; xem [hướng dẫn và bằng chứng F-49](verification-resubmission.vi.md). Bộ stub ở trên không chứng minh dịch vụ thật hoạt động; kiểm thử với BE thật: [live backend verification](live-backend-verification.vi.md). Cách chạy bộ live và cleanup nằm trong từng hướng dẫn.

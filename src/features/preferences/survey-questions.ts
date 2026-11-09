@@ -1,7 +1,7 @@
 /**
  * F-17 preference survey questions (API Design v1.8: "câu hỏi hardcode ở frontend").
  *
- * Source of truth: `angi-reco/.docs/Preference_Survey_Ver1.0.md`, whose option codes are the rows of
+ * Source of truth: `angi-reco/docs/Preference_Survey_Ver1.0.md`, whose option codes are the rows of
  * `recommendation.survey_option_vectors` (reco migration `0002`). Every question is single choice; each
  * also offers "Không quan trọng", which sends no answer. `scaleValue` is not used by this version.
  * A code reco does not know is answered with 400 UNKNOWN_OPTION_CODE, so change codes only with reco.

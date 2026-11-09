@@ -2,7 +2,6 @@
 
 > **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
 
-
 Nhánh riêng: `feat/ANGI-86-submit-menu-for-approval`, tạo bằng `--no-track` từ `origin/dev` tại `237e8c01946d4fceacb7d9b9f00e5a7bc55f6881`. Nhánh không theo dõi `origin/dev` hay `origin/main`. Code để nguyên chưa stage/commit/push; chủ dự án tự review và merge.
 
 ## Nhánh và hướng merge
@@ -42,7 +41,7 @@ Mở `/restaurant/menu`, mở một bản nháp có thay đổi rồi chọn **G
 | Lỗi               | 400 `MENU_EMPTY`, `MENU_UNCHANGED`, `VALIDATION_FAILED`; 404 `SUBMISSION_NOT_FOUND`; 409 `SUBMISSION_NOT_EDITABLE`; lỗi auth/role dùng chung |
 | Proxy FE          | Chính xác POST với ID số dương, có body JSON, trả 200, kiểm Origin và Owner; không mở các method hay đường dẫn khác                          |
 
-Nguồn API Design: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx`; SHA256 ban đầu `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`. Mục cần đối chiếu: `Backend API` dòng 74; `Chi tiết Request-Response` 336–337; `DTO` 143–151; `JSON mẫu` 2358–2376; `Mã lỗi` 10, 13, 42 và lỗi dùng chung.
+Nguồn API Design: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx`; SHA256 ban đầu `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`. Mục cần đối chiếu: `Backend API` dòng 74; `Chi tiết Request-Response` 336–337; `DTO` 143–151; `JSON mẫu` 2358–2376; `Mã lỗi` 10, 13, 42 và lỗi dùng chung.
 
 **Chênh lệch ví dụ:** JSON mẫu trả 200 nhưng còn `status=draft`, `ownerNote=null`, `submittedAt=null`. Mô tả operation và BE thực tế xác định trạng thái sau gửi là `pending`. FE giữ đúng shape DTO và dùng giá trị BE trả về; mock trả pending với ngày nộp và ghi chú hợp lệ. Không sửa workbook hoặc ép response mẫu sai vào live.
 
