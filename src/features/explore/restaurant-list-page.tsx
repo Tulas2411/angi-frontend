@@ -42,7 +42,6 @@ import {
   RestaurantRow,
   RestaurantTile,
 } from "./restaurant-views";
-import { useRestaurantDescriptions } from "./use-dish-descriptions";
 import { useRemote } from "./use-remote";
 import {
   BrowseHeading,
@@ -138,7 +137,7 @@ export function RestaurantListPage({
   const key = restaurantFiltersHref(filters);
   const [view, setView] = useRestaurantView();
   const [first, retry] = useRemote(
-    () => service.browseRestaurants(restaurantApiQuery(filters)),
+    (signal) => service.browseRestaurants(restaurantApiQuery(filters), signal),
     key,
   );
   /** Pages after the first, for the search they were loaded for. */
@@ -168,11 +167,6 @@ export function RestaurantListPage({
   const totalPages =
     extra?.totalPages ?? (first.status === "ready" ? first.data.totalPages : 0);
   const hasNext = first.status === "ready" && loadedPage < totalPages;
-  const { describe, retry: retryDescription } = useRestaurantDescriptions(
-    service,
-    items.map((restaurant) => restaurant.id),
-    view !== "gallery",
-  );
   // Each pick is a new URL (Back steps through the searches); the page keeps its scroll.
   const apply = (next: RestaurantFilters) =>
     router.push(restaurantFiltersHref(next), { scroll: false });
@@ -312,17 +306,9 @@ export function RestaurantListPage({
                 {view === "gallery" ? (
                   <RestaurantTile restaurant={restaurant} />
                 ) : view === "list" ? (
-                  <RestaurantRow
-                    restaurant={restaurant}
-                    description={describe(restaurant.id)}
-                    onRetry={() => retryDescription(restaurant.id)}
-                  />
+                  <RestaurantRow restaurant={restaurant} />
                 ) : (
-                  <RestaurantDetailCard
-                    restaurant={restaurant}
-                    description={describe(restaurant.id)}
-                    onRetry={() => retryDescription(restaurant.id)}
-                  />
+                  <RestaurantDetailCard restaurant={restaurant} />
                 )}
               </li>
             ))}

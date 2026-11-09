@@ -9,8 +9,16 @@ import { Alert, Button, Input } from "@/shared/ui";
  * (`.explore-browse-page`, `.dish-browse`, `.dish-filter-*`).
  */
 
-/** How a change applies: at once (chips, menus, boxes), after a pause (typed place), or on Enter. */
+/**
+ * How a change applies: a pick (chips, menus, boxes) after a short pause, so several quick picks are
+ * one search (one request); a typed place after a longer pause; the search text on Enter.
+ */
 export type ChangeMode = "now" | "typing" | "draft";
+
+/** Pause after a pick before its search is sent. */
+export const pickDelayMs = 300;
+/** Pause after the last key typed in the place box. */
+export const typingDelayMs = 500;
 
 /**
  * Filters applied as they are picked (no "Áp dụng" button). The URL keeps the applied search; our
@@ -73,9 +81,10 @@ export function useInstantFilters<F extends object>(
     setDraft(merged);
     setProblem("");
     if (timer.current) clearTimeout(timer.current);
-    if (mode === "now") commit(merged);
+    if (mode === "now")
+      timer.current = setTimeout(() => commit(latest.current), pickDelayMs);
     else if (mode === "typing")
-      timer.current = setTimeout(() => commit(latest.current), 500);
+      timer.current = setTimeout(() => commit(latest.current), typingDelayMs);
   }
   /** Enter in the search box: applies the text with everything chosen. */
   function submitSearch() {

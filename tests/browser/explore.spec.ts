@@ -48,6 +48,15 @@ const mini = (id: number, name: string) => ({
   longitude: 105.8542,
   ratingAvg: 4.6,
 });
+/** Dish descriptions, on the cards (DishCard) since 2026-11-09: one long enough to be cut, one dish without any. */
+const descriptions: Record<number, string> = {
+  101: "Nước dùng hầm xương 8 tiếng, sả và mắm ruốc",
+  102: "Bánh mì giòn rụm, pate gan nhà làm, chả lụa, dưa leo và rau mùi. ".repeat(
+    10,
+  ),
+  103: "Phở bò tái chín, nước dùng trong.",
+  105: "Chả nướng than hoa ăn kèm bún và nước mắm chua ngọt.",
+};
 const dish = (
   id: number,
   name: string,
@@ -58,6 +67,7 @@ const dish = (
 ): DishCardDto => ({
   id,
   name,
+  description: descriptions[id] ?? null,
   price,
   coverUrl: null,
   dishForm,
@@ -78,15 +88,6 @@ const dishes: DishCardDto[] = [
   dish(104, "Cà phê trứng", 35000, "other", []),
   dish(105, "Bún chả", 55000, "dry", [1], 8),
 ];
-/** DISH-02 descriptions: one long enough to be cut, one dish without any. */
-const descriptions: Record<number, string> = {
-  101: "Nước dùng hầm xương 8 tiếng, sả và mắm ruốc",
-  102: "Bánh mì giòn rụm, pate gan nhà làm, chả lụa, dưa leo và rau mùi. ".repeat(
-    10,
-  ),
-  103: "Phở bò tái chín, nước dùng trong.",
-  105: "Chả nướng than hoa ăn kèm bún và nước mắm chua ngọt.",
-};
 const restaurantCard = (
   id: number,
   name: string,
@@ -97,6 +98,7 @@ const restaurantCard = (
   id,
   name,
   slug: name.toLowerCase().replace(/\s+/g, "-"),
+  description: "Quán bún bò gia truyền 30 năm",
   coverUrl: null,
   addressLine: `${id} Lê Duẩn`,
   district: "Quận Hoàn Kiếm",
@@ -756,11 +758,15 @@ test.describe("dishes", () => {
     expect(callsTo("GET", "dishes")).toHaveLength(before);
   });
 
-  test("descriptions come from the dish detail; a long one scrolls in its box and fades out", async ({
+  test("descriptions come from the dish cards; a long one scrolls in its box and fades out", async ({
     page,
   }) => {
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
+    // DISH-01 carries them: no DISH-02 per card (12 extra requests a page before 2026-11-09).
+    expect(calls.filter((entry) => /^dishes\/\d+$/.test(entry.path))).toEqual(
+      [],
+    );
     await expect(dishOf(page, "Cà phê trứng")).toContainText(
       "Món này chưa có mô tả.",
     );
@@ -830,11 +836,11 @@ test.describe("dishes", () => {
     // Every row has the same height, whatever the length of its text.
     expect(new Set(await rowHeights(page)).size).toBe(1);
     expect(await squeezedParts(dishOf(page, "Bánh mì pate"))).toEqual([]);
-    // Each dish is read once, also after switching layouts.
+    // Still no DISH-02 after switching layouts.
     const reads = calls.filter(
       (call) => call.method === "GET" && /^dishes\/\d+$/.test(call.path),
     );
-    expect(reads).toHaveLength(5);
+    expect(reads).toHaveLength(0);
   });
 
   test("a dish card shows the likes at the right of the name, then the type line; a long name fades out", async ({

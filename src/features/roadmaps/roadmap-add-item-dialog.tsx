@@ -37,11 +37,6 @@ import { VndField } from "./vnd-field";
 import { MealChips } from "./roadmap-meal-chips";
 import { useDishView } from "@/features/explore/dish-view-mode";
 import {
-  exploreService,
-  type ExploreService,
-} from "@/features/explore/explore-service";
-import { useDishDescriptions } from "@/features/explore/use-dish-descriptions";
-import {
   DishDetailCard,
   DishRow,
   DishTile,
@@ -90,7 +85,6 @@ function Panel({
   defaultProvince,
   gpsOrigin,
   service,
-  dishes = exploreService,
   onAdded,
 }: {
   roadmapId: number;
@@ -101,8 +95,6 @@ function Panel({
   defaultProvince: string;
   gpsOrigin?: { latitude: number; longitude: number };
   service: RoadmapItemService;
-  /** DISH-02, read for the descriptions of the list layout. */
-  dishes?: ExploreService;
   onAdded: () => Promise<void>;
 }) {
   const [filters, setFilters] = useState<SuggestionFilters>({
@@ -131,14 +123,9 @@ function Panel({
   const mounted = useRef(true);
   const [first] = useState(() => ({ filters, gpsOrigin }));
   // The suggestions use the cards of "Khám phá món ăn" in the same three layouts (the choice is
-  // shared with that page). A row shows the dish's description (DISH-02, read only for the rows on
-  // screen) where the other layouts show the restaurant.
+  // shared with that page). A row shows the dish's description (on the RM-06 card) where the other
+  // layouts show the restaurant.
   const [view, setView] = useDishView();
-  const { describe, retry: retryDescription } = useDishDescriptions(
-    dishes,
-    list.status === "ready" ? list.items.map((dish) => dish.id) : [],
-    view === "list",
-  );
   latest.current.filters = filters;
   useEffect(() => {
     mounted.current = true;
@@ -532,8 +519,7 @@ function Panel({
                     ) : view === "list" ? (
                       <DishRow
                         dish={dish}
-                        description={describe(dish.id)}
-                        onRetry={() => retryDescription(dish.id)}
+                        showDescription
                         priceInHead
                         actions={actions}
                         newTab

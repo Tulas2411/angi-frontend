@@ -75,6 +75,8 @@ export interface RoadmapRestaurantDto {
 export interface DishCardDto {
   id: number;
   name: string;
+  /** dishes.description, on every dish card since 2026-11-09. */
+  description?: string | null;
   price: number;
   coverUrl: string | null;
   dishForm: "soup" | "dry" | "other";

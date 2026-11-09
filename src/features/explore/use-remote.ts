@@ -9,9 +9,11 @@ export type Remote<T> =
 /**
  * Loads once per `key` (and again on `retry`). While the key changed and the new answer has not
  * arrived the state is `loading`, so a filter change never shows the previous result as current.
+ * A load that is no longer wanted (the key changed, the page closed) is cancelled through `signal`,
+ * so a quick series of searches does not keep every older request running.
  */
 export function useRemote<T>(
-  load: () => Promise<T>,
+  load: (signal: AbortSignal) => Promise<T>,
   key: string,
 ): [Remote<T>, () => void] {
   const [attempt, setAttempt] = useState(0);
@@ -26,8 +28,9 @@ export function useRemote<T>(
   const id = `${key}#${attempt}`;
   useEffect(() => {
     let ignore = false;
+    const controller = new AbortController();
     loader
-      .current()
+      .current(controller.signal)
       .then((data) => {
         if (!ignore) setAnswer({ id, result: { data } });
       })
@@ -36,6 +39,7 @@ export function useRemote<T>(
       });
     return () => {
       ignore = true;
+      controller.abort();
     };
   }, [id]);
   const state: Remote<T> =

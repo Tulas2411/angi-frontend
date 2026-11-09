@@ -27,7 +27,6 @@ import {
   DishTile,
   DishViewSwitcher,
 } from "./dish-views";
-import { useDishDescriptions } from "./use-dish-descriptions";
 import { MenuWheel } from "./menu-wheel";
 import {
   businessHoursByDay,
@@ -297,12 +296,6 @@ function MenuTab({
   // The same three layouts as the dish list, with the layout chosen there.
   const [view, setView] = useDishView();
   const dishes = state.status === "ready" ? state.data.dishes : [];
-  const { describe, retry: retryDescription } = useDishDescriptions(
-    service,
-    dishes.map((dish) => dish.id),
-    // The wheel shows the description of the dish on its plate, whatever the layout below.
-    true,
-  );
   if (state.status === "loading") return <Skeleton rows={3} />;
   if (state.status === "error")
     return (
@@ -321,11 +314,7 @@ function MenuTab({
   const items = dishes.map((dish) => ({ ...dish, restaurant: undefined }));
   return (
     <>
-      <MenuWheel
-        restaurantName={restaurantName}
-        dishes={dishes}
-        describe={describe}
-      />
+      <MenuWheel restaurantName={restaurantName} dishes={dishes} />
       <section className="dish-results" aria-label="Thực đơn của quán">
         <div className="dish-results-bar">
           <p className="helper" role="status">
@@ -339,17 +328,9 @@ function MenuTab({
               {view === "gallery" ? (
                 <DishTile dish={dish} />
               ) : view === "list" ? (
-                <DishRow
-                  dish={dish}
-                  description={describe(dish.id)}
-                  onRetry={() => retryDescription(dish.id)}
-                />
+                <DishRow dish={dish} showDescription />
               ) : (
-                <DishDetailCard
-                  dish={dish}
-                  description={describe(dish.id)}
-                  onRetry={() => retryDescription(dish.id)}
-                />
+                <DishDetailCard dish={dish} showDescription />
               )}
             </li>
           ))}
@@ -696,7 +677,9 @@ export function RestaurantDetailPage({
           onSent={(already) => {
             setReportOpen(false);
             if (already)
-              notify.info("Báo cáo trước đó của bạn về quán này đang chờ xử lý.");
+              notify.info(
+                "Báo cáo trước đó của bạn về quán này đang chờ xử lý.",
+              );
             else
               notify.success("Đã gửi báo cáo. Đội kiểm duyệt sẽ xem xét sớm.");
           }}

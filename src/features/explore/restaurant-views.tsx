@@ -10,7 +10,6 @@ import {
 } from "./explore-rules";
 import type { RestaurantCardDto } from "./explore-types";
 import { CardName, DescriptionText } from "./dish-views";
-import type { DishDescription } from "./use-dish-descriptions";
 
 /**
  * The score as a tag hung in the card's top-right corner (on the photo in the gallery); a
@@ -102,15 +101,7 @@ function RestaurantName({
   );
 }
 
-function RestaurantBody({
-  restaurant,
-  description,
-  onRetry,
-}: {
-  restaurant: RestaurantCardDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+function RestaurantBody({ restaurant }: { restaurant: RestaurantCardDto }) {
   return (
     <div className="dish-body">
       {/* The tag sits in the name's row, so a long name gives way to it instead of running under. */}
@@ -121,8 +112,7 @@ function RestaurantBody({
       <RestaurantKinds restaurant={restaurant} />
       <DescriptionText
         id={`restaurant-description-${restaurant.id}`}
-        description={description}
-        onRetry={onRetry}
+        text={restaurant.description}
         emptyText="Quán chưa có mô tả."
       />
       <RestaurantPlace restaurant={restaurant} />
@@ -131,11 +121,7 @@ function RestaurantBody({
 }
 
 /** Mode 1: one restaurant per row across the width, the photo filling its left edge. */
-export function RestaurantRow(props: {
-  restaurant: RestaurantCardDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+export function RestaurantRow(props: { restaurant: RestaurantCardDto }) {
   const { restaurant } = props;
   return (
     <article
@@ -153,11 +139,7 @@ export function RestaurantRow(props: {
 }
 
 /** Mode 2: two cards a row, a large photo on the left and every detail beside it. */
-export function RestaurantDetailCard(props: {
-  restaurant: RestaurantCardDto;
-  description: DishDescription;
-  onRetry: () => void;
-}) {
+export function RestaurantDetailCard(props: { restaurant: RestaurantCardDto }) {
   const { restaurant } = props;
   return (
     <article
