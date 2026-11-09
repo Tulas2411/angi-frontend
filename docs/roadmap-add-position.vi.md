@@ -33,7 +33,7 @@ F-24 (ANGI-130, `docs/roadmap-add-item.vi.md`) đã làm hộp thoại duyệt g
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
 
 - Sheet "Backend API": RM-06 (r36, "Dùng cho cả Add Roadmap Item Manually và Edit Roadmap Item", loại các món đã có trong roadmap), RM-07 (r37), RM-08 (r38).
 - Sheet "Chi tiết Request-Response": RM-06 (r136–r138), RM-07 (r139–r143: `sortOrder` smallint, "Thứ tự trong bữa; bỏ trống = cuối danh sách"), RM-08 (r144–r149: `sortOrder` "Thứ tự mới").

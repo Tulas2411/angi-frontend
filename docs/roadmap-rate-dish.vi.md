@@ -31,7 +31,7 @@ Mã nguồn nằm trong `src/features/roadmaps/`: `roadmap-rate-item.tsx` (hai n
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-26 18:28, nội dung không đổi giữa hai lần).
 
 - Sheet "Tổng quan": ghi chú RM-13 đánh giá món (r112: chỉ chủ roadmap chưa xóa, món đã ẩn hoặc quán đóng vẫn đánh giá được, khóa dòng item và unique index cho 409).
 - Sheet "Backend API": RM-13 (r43) `POST /api/v1/roadmaps/{roadmapId}/items/{itemId}/feedback`, TRAVELER, body `value*: like | dislike`, `201 Created`, lỗi `404 ROADMAP_ITEM_NOT_FOUND` / `409 FEEDBACK_ALREADY_EXISTS`, ghi chú "Không sửa/xóa được".

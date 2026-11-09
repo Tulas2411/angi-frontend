@@ -1,6 +1,6 @@
 # Setup
 
-The short version lives in the [README](../README.md#local-setup). This page adds the details that do not fit there. For a complete Vietnamese walkthrough of the backend, local accounts and manual owner checks, see the [local run and test guide](local-run-and-test-guide.vi.md).
+The short version lives in the [README](../README.md#getting-started). This page adds the details that do not fit there. For a complete Vietnamese walkthrough of the backend, local accounts and manual owner checks, see the [local run and test guide](local-run-and-test-guide.vi.md).
 
 Use Node.js 22 or newer (24 recommended) and npm. Run commands inside `angi-frontend`.
 
@@ -19,7 +19,7 @@ node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
 npm run dev
 ```
 
-Open <http://localhost:3000/>. The public homepage uses local editorial content and needs no backend. Sign in, register and every other screen need the backend running at `API_BASE_URL`. There is no demo or preview mode: routes such as `/demo`, `/dev/components`, `/dishes` or `/restaurants` do not exist.
+Open <http://localhost:3000/>. The public homepage uses local editorial content and needs no backend. Sign in, register and every other screen need the backend running at `API_BASE_URL`. `/demo/*` (role previews on demo fixtures) is served only with `NEXT_PUBLIC_ENABLE_DEMO=true`; `/dev/components` and `/dev/scenarios` in development, or with `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY=true`.
 
 ## Environment variables
 
@@ -70,3 +70,16 @@ Screenshots, manifests and browser reports go into the ignored `artifacts/`, `pl
 ## Feature notes
 
 Detailed behavior, exact contracts and manual checks for each owner feature are in the Vietnamese notes: [business hours](business-hours.vi.md), [verification](restaurant-verification.vi.md), [status and history](verification-status.vi.md), [resubmission](verification-resubmission.vi.md), [menu](restaurant-menu.vi.md) and [menu approval](menu-approval.vi.md). The contract summary and routes are in the [scope inventory](scope-inventory.md).
+
+## Troubleshooting
+
+| Symptom                                         | Check                                                                                                                        |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `/login` reports a session key error            | Set `SESSION_PASSWORD` (≥ 32 characters) and restart                                                                         |
+| Login cannot connect                            | Backend running? `API_BASE_URL` includes `/api/v1` and uses `127.0.0.1`                                                      |
+| Mutation returns `FORBIDDEN`                    | Browser origin/port must match `APP_URL`; do not disable Origin validation                                                   |
+| A page I remember is a 404                      | Check the route table and `docs/scope-inventory.md`; earlier screens live under `/demo`, `/dishes`, `/restaurant/*` (legacy) |
+| No Google button on `/login`                    | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is empty; set it and rebuild                                                                  |
+| Typecheck reports missing generated route types | Run `npm run build` before a standalone typecheck on a fresh checkout                                                        |
+| Browser tests cannot find Chromium              | Install it with the same `PLAYWRIGHT_BROWSERS_PATH` used by the test process                                                 |
+| Browser suite cannot bind port 3001 / 5164      | Another suite or preview is running; stop it and rerun                                                                       |

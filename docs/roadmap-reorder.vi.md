@@ -39,7 +39,7 @@ Mã nguồn nằm trong `src/features/roadmaps/`: `roadmap-reorder-rules.ts` (t�
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (bản sửa 2026-10-26 18:28; so với bản trích đầu ngày 2026-10-25 chỉ đổi mô tả điện thoại của OWN-01, OWN-03 và DTO nhà hàng, không động tới RM-01, RM-04, RM-08).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (bản sửa 2026-10-26 18:28; so với bản trích đầu ngày 2026-10-25 chỉ đổi mô tả điện thoại của OWN-01, OWN-03 và DTO nhà hàng, không động tới RM-01, RM-04, RM-08).
 
 - Sheet "Tổng quan": ghi chú đổi món RM-08 (r66: đổi `dishId` tạo item mới, id mới) và quy ước phản hồi.
 - Sheet "Backend API": RM-08 (r38) `PATCH /api/v1/roadmaps/{roadmapId}/items/{itemId}`, "Đổi món (quán đổi theo), hoặc đổi ngày, bữa, thứ tự của item", lỗi `404 ROADMAP_ITEM_NOT_FOUND` / `400 DISH_NOT_AVAILABLE`; RM-01 (r31) và RM-04 (r34) với `numDays` 1..30.

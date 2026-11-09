@@ -35,7 +35,7 @@ Từ trang chi tiết `/roadmaps/{roadmapId}` (F-21), Traveler mở hộp thoạ
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, nội dung trích lại sau khi code giống hệt bản đầu task).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, nội dung trích lại sau khi code giống hệt bản đầu task).
 
 - Sheet "Tổng quan": quy ước phân trang cursor cho danh sách đi qua reco, ghi chú "Lọc quán gần" và "Thứ tự món bằng điểm".
 - Sheet "Backend API": RM-06 (r36), RM-07 (r37).

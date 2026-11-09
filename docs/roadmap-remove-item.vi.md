@@ -30,7 +30,7 @@ Từ trang chi tiết `/roadmaps/{roadmapId}` (F-21), Traveler xóa một món k
 
 ## Đối chiếu API Design
 
-Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, nội dung không đổi giữa hai lần).
+Đối chiếu trước khi code và mở lại sau khi code: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx` (sửa lần cuối 2026-10-24 15:48, nội dung không đổi giữa hai lần).
 
 - Sheet "Tổng quan": quy ước 200 OK với `data = null` cho RM-09 (r76).
 - Sheet "Backend API": RM-09 (r39): `DELETE /api/v1/roadmaps/{roadmapId}/items/{itemId}`, actor TRAVELER, không body, `200 OK / data: null`, lỗi `404 ROADMAP_ITEM_NOT_FOUND`, bảng `roadmap_items`, ghi chú feedback giữ lại.

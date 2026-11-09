@@ -2,7 +2,6 @@
 
 > **Cập nhật 10/2026:** các lệnh dưới đây đã được gộp. Dùng `npm run test:browser` (trang chủ, auth, tài khoản), `npm run test:owner` (giờ mở cửa, trạng thái, xác minh, thực đơn), `npm run test:map` (đăng ký, hồ sơ, bản đồ, tỉnh/phường) và `npm run test:live` (backend thật, xem [live-backend-verification.md](live-backend-verification.md)). Các script `prepare-live-tests.ps1` và `cleanup-live-tests.ps1` đã bị xóa cùng bộ live cũ.
 
-
 Nhánh `feat/ANGI-68-resubmit-verification` được tạo trước khi sửa code, từ `origin/dev` mới nhất `032595a12a765ba3680e53d741d909a6bf7a68f1` (đã gồm F-47/F-48). Code được để nguyên chưa stage/commit/push; không tạo PR thay chủ dự án.
 
 ## Cách sử dụng
@@ -46,7 +45,7 @@ Request là thông tin đầy đủ, không phải PATCH. Chỉ gửi các trư�
 
 ## Đối chiếu tài liệu
 
-Nguồn chính: `angi-backend/.docs/ANGI_API_Design_Ver1.8.xlsx`, sửa lần cuối 15/10/2026 15:48:43, 778.867 byte, SHA-256 `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`. Bản trong thư mục `docs` gốc cũ hơn nên không dùng làm hợp đồng.
+Nguồn chính: `angi-backend/docs/ANGI_API_Design_Ver1.8.xlsx`, sửa lần cuối 15/10/2026 15:48:43, 778.867 byte, SHA-256 `4899E6D319904575D4A47289CECF8FA93229A867A53110701DEDA5E15786186C`. Bản trong thư mục `docs` gốc cũ hơn nên không dùng làm hợp đồng.
 
 | Nguồn                                                 | Nội dung đối chiếu                                                                                                |
 | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
