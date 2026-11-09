@@ -335,7 +335,8 @@ test("only the card follows the pointer; the connection lines stay and are worke
   expect(cardWhile.y).toBeLessThan(cardBefore.y - 100);
   // …while the connection line of the first dish did not move.
   const legWhile = (await legs.first().boundingBox())!;
-  expect(legWhile.y).toBe(legBefore.y);
+  // (A pixel or two of layout settling is not the line following the card, which moved 100+.)
+  expect(Math.abs(legWhile.y - legBefore.y)).toBeLessThanOrEqual(2);
   await expect(row(page, "Chả cá").locator(".roadmap-item")).toHaveClass(
     /is-dragging/,
   );

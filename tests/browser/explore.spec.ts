@@ -380,7 +380,8 @@ test.beforeEach(async ({ page }) => {
 
 const callsTo = (method: string, path: string) =>
   calls.filter((entry) => entry.method === method && entry.path === path);
-const cards = (page: Page) => page.locator(".explore-card");
+/** Restaurant rows: the list reuses the dish rows (`dish-item`) since #108. */
+const cards = (page: Page) => page.locator(".dish-items .dish-item");
 /** Heights of the list rows on the page. */
 const rowHeights = (page: Page) =>
   page
@@ -426,7 +427,9 @@ test.describe("dishes", () => {
       mainNav(page).getByRole("link", { name: "Món ăn" }),
     ).toHaveAttribute("aria-current", "page");
     // A guest sees the login buttons, not an account menu, and no token goes to the backend.
-    await expect(page.getByRole("link", { name: "Đăng nhập" })).toBeVisible();
+    await expect(
+      page.getByRole("banner").getByRole("link", { name: "Đăng nhập" }),
+    ).toBeVisible();
     expect(callsTo("GET", "dishes")).toHaveLength(1);
     expect(callsTo("GET", "dishes")[0].authorized).toBe(false);
     expect(callsTo("GET", "dishes")[0].query.get("limit")).toBe("12");
@@ -985,23 +988,31 @@ test.describe("dishes", () => {
 });
 
 test.describe("restaurants", () => {
-  test("the list is paged in the URL and the filters reach REST-01", async ({
+  test("the list loads 12 restaurants, the next ones as its end nears, and the filters reach REST-01", async ({
     page,
   }) => {
     await page.goto("/restaurants");
-    await expect(cards(page)).toHaveCount(12);
+    await expect(cards(page).first()).toBeVisible();
+    expect(callsTo("GET", "restaurants")[0].query.get("page")).toBe("1");
+    expect(callsTo("GET", "restaurants")[0].query.get("pageSize")).toBe("12");
     await expect(cardOf(page, "Phở Gia Truyền")).toContainText(
       "Ngoài giờ mở cửa",
     );
     await expect(cardOf(page, "Bún Bò Bà Diệu")).toContainText("Đang mở cửa");
-    await page.getByRole("button", { name: "Trang sau" }).click();
-    await expect(page).toHaveURL(/page=2/);
-    await expect(cards(page)).toHaveCount(4);
+    // No page buttons: the end of the list brings the last 4 of the 16 restaurants.
+    await expect(page.getByRole("button", { name: "Trang sau" })).toHaveCount(
+      0,
+    );
+    await page.locator(".explore-lazy").scrollIntoViewIfNeeded();
+    await expect(cards(page)).toHaveCount(16);
+    expect(
+      callsTo("GET", "restaurants").map((call) => call.query.get("page")),
+    ).toEqual(["1", "2"]);
     // Wide screen: the filters are a sidebar and each pick applies at once (no "Áp dụng").
     await expect(
       page.getByRole("complementary", { name: "Bộ lọc quán ăn" }),
     ).toBeVisible();
-    await chooseOption(page.getByLabel("Mức giá"), "1");
+    await chooseOption(page.getByRole("combobox", { name: "Mức giá" }), "1");
     await expect(page).toHaveURL(/price=1/);
     await page.getByLabel("Chỉ quán đang mở cửa").check();
     await expect(page).toHaveURL(/price=1/);
@@ -1013,10 +1024,12 @@ test.describe("restaurants", () => {
     expect(last.query.get("page")).toBe("1");
   });
 
-  test("a page past the end falls back to the last page", async ({ page }) => {
+  test("an old ?page= link opens the list from its start", async ({ page }) => {
+    // Paged links from before the lazy list still work: the page number is ignored.
     await page.goto("/restaurants?page=9");
-    await expect(page).toHaveURL(/page=2/);
-    await expect(cards(page)).toHaveCount(4);
+    await expect(cards(page).first()).toBeVisible();
+    expect(callsTo("GET", "restaurants")[0].query.get("page")).toBe("1");
+    await expect(cardOf(page, "Bún Bò Bà Diệu")).toBeVisible();
   });
 
   test("a card hangs its score in its top-right corner beside the name, then the type line; a long name fades out", async ({

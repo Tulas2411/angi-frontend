@@ -252,7 +252,8 @@ test("other signed-in roles cannot submit a Traveler roadmap from the homepage",
 }) => {
   await page.request.post("/api/auth/login", {
     headers: { Origin: "http://localhost:3001" },
-    data: { email: "mod@test.local", password: "TestPassword123" },
+    // An Administrator stays on the homepage (a moderator is sent to /moderation).
+    data: { email: "admin@test.local", password: "TestPassword123" },
   });
   await page.goto("/");
   await expect(

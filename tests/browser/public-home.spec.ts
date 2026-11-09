@@ -306,11 +306,12 @@ for (const role of Object.keys(HOME_BY_ROLE) as RoleCode[]) {
     expect(login.status()).toBe(200);
     const home = await request.get("/", { maxRedirects: 0 });
     const body = await home.text();
-    if (role === "RESTAURANT_OWNER") {
+    // Owners and moderators are sent to their workspace (src/app/page.tsx).
+    if (role === "RESTAURANT_OWNER" || role === "MOD") {
       expect(home.headers().location ?? body).toContain(HOME_BY_ROLE[role]);
       expect(body).not.toContain('id="home-title"');
     } else {
-      // Roles without a backend-integrated workspace see the homepage in its signed-in state.
+      // Travelers and Administrators see the homepage in its signed-in state.
       expect(home.status()).toBe(200);
       expect(body).toContain('id="home-title"');
       expect(body).toContain("Homepage test");

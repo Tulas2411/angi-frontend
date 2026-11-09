@@ -466,7 +466,7 @@ test("a meal's button opens the dialog on that meal with the province already fi
     "Mì Quảng ếch",
   );
   await expect(box.locator(".roadmap-suggestion").first()).toContainText(
-    "30.000 VND",
+    "30.000 ₫",
   );
   await expect(box.locator(".roadmap-suggestion").first()).toContainText(
     // The card of "Khám phá món ăn": price, then the restaurant and its place.
@@ -503,7 +503,7 @@ test("adding a dish sends RM-07, reloads the roadmap and keeps the dialog for th
     },
   ]);
   await expect(box.getByRole("status")).toContainText(
-    "Đã thêm Mì Quảng ếch vào bữa trưa của Thứ Bảy, 10 tháng 10.",
+    "Đã thêm Mì Quảng ếch vào cuối bữa trưa của Thứ Bảy, 10 tháng 10.",
   );
 
   // RM-03 was read again behind the dialog: the day, its total and the budget follow the server.
