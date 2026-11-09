@@ -7,7 +7,6 @@ import { dishHref } from "./explore-routes";
 import { dishFormLabels, locationText, vnd } from "./explore-rules";
 import type { MenuDishDto } from "./explore-types";
 import { dishViews, type DishView } from "./dish-view-mode";
-import type { DishDescription } from "./use-dish-descriptions";
 
 const viewIcons: Record<DishView, ReactNode> = {
   list: (
@@ -163,38 +162,21 @@ function LongDescription({ id, text }: { id: string; text: string }) {
 }
 
 /**
- * The description of a list card (dish or restaurant): a placeholder while it loads, a retry when
- * it failed, `emptyText` when there is none, else the cut text. `id` names the paragraph.
+ * The description of a list card (dish or restaurant), read from the card itself (DishCard,
+ * RestaurantCard): `emptyText` when there is none, else the cut text. `id` names the paragraph.
  */
 export function DescriptionText({
   id,
-  description,
-  onRetry,
+  text,
   emptyText = "Món này chưa có mô tả.",
 }: {
   id: string;
-  description: DishDescription;
-  onRetry: () => void;
+  text: string | null | undefined;
   emptyText?: string;
 }) {
-  if (description.status === "loading")
-    return (
-      <p className="dish-description is-loading" aria-busy="true">
-        <span className="sr-only">Đang tải mô tả…</span>
-      </p>
-    );
-  if (description.status === "error")
-    return (
-      <p className="dish-description is-muted">
-        Chưa tải được mô tả.{" "}
-        <button type="button" className="dish-text-button" onClick={onRetry}>
-          Tải lại
-        </button>
-      </p>
-    );
-  if (!description.text)
-    return <p className="dish-description is-muted">{emptyText}</p>;
-  return <LongDescription id={id} text={description.text} />;
+  const shown = text?.trim();
+  if (!shown) return <p className="dish-description is-muted">{emptyText}</p>;
+  return <LongDescription id={id} text={shown} />;
 }
 
 /**
@@ -285,15 +267,14 @@ interface CardExtras {
 /** Mode 1: one dish per row across the width, the photo filling its left edge. */
 export function DishRow({
   dish,
-  description,
-  onRetry,
+  showDescription = false,
   actions,
   newTab,
   priceInHead = false,
 }: {
   dish: MenuDishDto;
-  description?: DishDescription;
-  onRetry?: () => void;
+  /** The card's description under its kinds (the lists in "detailed" and "list" layouts). */
+  showDescription?: boolean;
   /**
    * The price on the name's line and no restaurant line (the roadmap dialog, whose rows show the
    * description instead of the restaurant).
@@ -316,11 +297,10 @@ export function DishRow({
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
-        {description && (
+        {showDescription && (
           <DescriptionText
             id={`dish-description-${dish.id}`}
-            description={description}
-            onRetry={onRetry ?? (() => undefined)}
+            text={dish.description}
           />
         )}
         {!priceInHead && <DishPlace dish={dish} />}
@@ -333,15 +313,13 @@ export function DishRow({
 /** Mode 2: two cards a row, a large photo on the left and every detail beside it. */
 export function DishDetailCard({
   dish,
-  description,
-  onRetry,
+  showDescription = false,
   actions,
   newTab,
 }: {
   dish: MenuDishDto;
-  /** Left out where a list shows no descriptions (the roadmap dialog). */
-  description?: DishDescription;
-  onRetry?: () => void;
+  /** False where a list shows no descriptions. */
+  showDescription?: boolean;
 } & CardExtras) {
   return (
     <article
@@ -359,11 +337,10 @@ export function DishDetailCard({
           <LikeCount count={dish.likeCount} />
         </div>
         <DishKinds dish={dish} />
-        {description && (
+        {showDescription && (
           <DescriptionText
             id={`dish-description-${dish.id}`}
-            description={description}
-            onRetry={onRetry ?? (() => undefined)}
+            text={dish.description}
           />
         )}
         <DishPlace dish={dish} />

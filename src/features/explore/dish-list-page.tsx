@@ -30,7 +30,6 @@ import {
   DishTile,
   DishViewSwitcher,
 } from "./dish-views";
-import { useDishDescriptions } from "./use-dish-descriptions";
 import { useRemote } from "./use-remote";
 import {
   BrowseHeading,
@@ -184,10 +183,10 @@ export function DishListPage({
   const filters = useMemo(() => dishQueryFromParams(params), [params]);
   const [view, setView] = useDishView();
   const [first, retry] = useRemote(
-    () => service.browseDishes(dishApiQuery(filters)),
+    (signal) => service.browseDishes(dishApiQuery(filters), signal),
     key,
   );
-  const [tags] = useRemote(() => service.tags(), "tags");
+  const [tags] = useRemote((signal) => service.tags(signal), "tags");
   const [more, setMore] = useState<{
     key: string;
     items: DishCardDto[];
@@ -200,11 +199,6 @@ export function DishListPage({
     first.status === "ready"
       ? [...first.data.items, ...(extra?.items ?? [])]
       : [];
-  const { describe, retry: retryDescription } = useDishDescriptions(
-    service,
-    items.map((dish) => dish.id),
-    view !== "gallery",
-  );
   // Each pick is a new URL (Back steps through the searches); the page keeps its scroll.
   const apply = (next: DishFilters) =>
     router.push(dishFiltersHref(next), { scroll: false });
@@ -320,17 +314,9 @@ export function DishListPage({
                 {view === "gallery" ? (
                   <DishTile dish={dish} />
                 ) : view === "list" ? (
-                  <DishRow
-                    dish={dish}
-                    description={describe(dish.id)}
-                    onRetry={() => retryDescription(dish.id)}
-                  />
+                  <DishRow dish={dish} showDescription />
                 ) : (
-                  <DishDetailCard
-                    dish={dish}
-                    description={describe(dish.id)}
-                    onRetry={() => retryDescription(dish.id)}
-                  />
+                  <DishDetailCard dish={dish} showDescription />
                 )}
               </li>
             ))}

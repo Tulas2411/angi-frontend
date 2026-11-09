@@ -24,7 +24,6 @@ import {
   wheelCounter,
   wheelStep,
 } from "./menu-wheel-rules";
-import type { DishDescription } from "./use-dish-descriptions";
 import "./wood-plate.css";
 import "./menu-wheel.css";
 
@@ -77,11 +76,9 @@ function Rolling({
 /** Name, description, price and kind of the dish on the plate (prompt §2.6, §3.2). */
 function DishInfo({
   dish,
-  description,
   leaving = false,
 }: {
   dish: MenuDishDto;
-  description: DishDescription;
   leaving?: boolean;
 }) {
   const tags = dish.tags.filter(
@@ -97,11 +94,7 @@ function DishInfo({
       </p>
       <h3 aria-live={leaving ? undefined : "polite"}>{dish.name}</h3>
       <p className="menu-wheel-description">
-        {description.status === "ready"
-          ? (description.text ?? "Quán chưa viết mô tả cho món này.")
-          : description.status === "error"
-            ? "Chưa tải được mô tả món."
-            : " "}
+        {dish.description?.trim() || "Quán chưa viết mô tả cho món này."}
       </p>
       <p className="menu-wheel-meta">
         {leaving ? (
@@ -139,16 +132,14 @@ function DishInfo({
  * "Thực đơn" as a turning wooden wheel (angi-menu-wheel-prompt.md): the dish on the plate at the
  * bottom of a walnut half-disc, the others on the same endless wheel. Choosing a dish turns the
  * wheel along its arc; pressing the plate turns it into the dish's card. Everything shown comes
- * from REST-03 (and DISH-02 for the description); nothing is invented for the effect.
+ * from REST-03 (the description is on each dish card); nothing is invented for the effect.
  */
 export function MenuWheel({
   restaurantName,
   dishes,
-  describe,
 }: {
   restaurantName: string;
   dishes: readonly MenuDishDto[];
-  describe: (dishId: number) => DishDescription;
 }) {
   const n = dishes.length;
   const [turn, setTurn] = useState(0);
@@ -388,7 +379,6 @@ export function MenuWheel({
   }
 
   if (!dish) return null;
-  const description = describe(dish.id);
   const position = turn + (drag ?? 0);
   const plates =
     drag === null
@@ -484,14 +474,9 @@ export function MenuWheel({
 
       <div className="menu-wheel-copy">
         {leavingDish && (
-          <DishInfo
-            key={`leaving-${leaving}`}
-            dish={leavingDish}
-            description={describe(leavingDish.id)}
-            leaving
-          />
+          <DishInfo key={`leaving-${leaving}`} dish={leavingDish} leaving />
         )}
-        <DishInfo key={`dish-${turn}`} dish={dish} description={description} />
+        <DishInfo key={`dish-${turn}`} dish={dish} />
       </div>
 
       {n > 1 && (
@@ -562,11 +547,7 @@ export function MenuWheel({
             Chi tiết · Hương vị &amp; đặc điểm
           </p>
           <p className="menu-dish-row menu-dish-description">
-            {description.status === "ready"
-              ? (description.text ?? "Quán chưa viết mô tả cho món này.")
-              : description.status === "error"
-                ? "Chưa tải được mô tả món."
-                : "Đang tải mô tả…"}
+            {dish.description?.trim() || "Quán chưa viết mô tả cho món này."}
           </p>
           {dish.tags.length > 0 && (
             <div className="menu-dish-row">

@@ -34,6 +34,7 @@ let failSuggestions = 0;
 let failAdd: { status: number; errorCode: string } | null = null;
 let failDetailReads = 0;
 let detailReads = 0;
+let dishDetailReads = 0;
 let expireNextCursor = false;
 let deleteCalls: number[] = [];
 let failDelete: { status: number; errorCode: string } | null = null;
@@ -53,6 +54,8 @@ const restaurant = (name: string, latitude: number, longitude: number) => ({
 const catalog: DishCardDto[] = Array.from({ length: 30 }, (_, index) => ({
   id: 200 + index,
   name: index === 0 ? "Mì Quảng ếch" : `Món gợi ý ${index + 1}`,
+  // On the RM-06 card since 2026-11-09: the list layout reads it, no DISH-02 per dish.
+  description: `Mô tả món số ${200 + index}`,
   price: 30000 + index * 5000,
   coverUrl: null,
   dishForm: "soup" as const,
@@ -219,10 +222,10 @@ function deleteItem(itemId: number) {
 const roadmaps: StubHandler = ({ method, url, body }, send) => {
   const parsed = new URL(url, "http://stub");
   const path = parsed.pathname;
-  // DISH-02: the list layout reads each dish's description.
-  const dish = path.match(/^\/api\/v1\/dishes\/(\d+)$/);
-  if (method === "GET" && dish) {
-    send(200, { id: Number(dish[1]), description: `Mô tả món số ${dish[1]}` });
+  // DISH-02 is never needed: the RM-06 cards carry their description.
+  if (method === "GET" && /^\/api\/v1\/dishes\/\d+$/.test(path)) {
+    dishDetailReads += 1;
+    send(404, null, "DISH_NOT_FOUND");
     return true;
   }
   if (method === "GET" && path === "/api/v1/roadmaps/88") {
@@ -845,6 +848,7 @@ test("the suggestion cards keep one height in each layout; long parts fade inste
   await switcher.getByRole("button", { name: "Danh sách" }).click();
   const row = box.locator(".roadmap-suggestion .dish-row").first();
   await expect(row.locator(".dish-description")).toContainText("Mô tả món số");
+  expect(dishDetailReads).toBe(0);
   await expect(row.locator(".dish-place")).toHaveCount(0);
   await expect(row.locator(".dish-head .dish-price")).toBeVisible();
   // The tags keep one row and the restaurant one line; what does not fit fades at the end.

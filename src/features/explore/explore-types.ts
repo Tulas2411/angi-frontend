@@ -25,6 +25,8 @@ export interface RestaurantMiniDto {
 export interface DishCardDto {
   id: number;
   name: string;
+  /** dishes.description; on the card since 2026-11-09, so a list needs no DISH-02 per dish. */
+  description?: string | null;
   price: number;
   coverUrl: string | null;
   dishForm: DishForm;
@@ -51,6 +53,8 @@ export interface RestaurantCardDto {
   id: number;
   name: string;
   slug: string;
+  /** restaurants.description; on the card since 2026-11-09, so a list needs no REST-02 per restaurant. */
+  description?: string | null;
   coverUrl: string | null;
   addressLine: string;
   district: string | null;

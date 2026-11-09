@@ -1,4 +1,5 @@
 import { api } from "@/shared/api/client";
+import { cachedRead } from "@/shared/api/read-cache";
 import type {
   BrowseDishesQuery,
   BrowseDishesResponseDto,
@@ -31,15 +32,25 @@ export function queryString(query: object) {
   return text ? `?${text}` : "";
 }
 
+/** How long a list page (DISH-01, REST-01) is reused for the same URL: a refresh or Back. */
+export const listCacheMs = 30_000;
+/** Tags (CAT-02) change rarely. */
+export const tagCacheMs = 10 * 60_000;
+
 /**
  * Reads are public: a guest is not sent to the login page when they fail. Writes (REV-01, REP-01,
- * MEDIA-01) need a Traveler session and use the redirecting client calls.
+ * MEDIA-01) need a Traveler session and use the redirecting client calls. List pages and tags are
+ * reused for a short while (`cachedRead`) and can be cancelled by a newer search (`signal`).
  */
 export interface ExploreService {
-  browseDishes(query: BrowseDishesQuery): Promise<BrowseDishesResponseDto>;
+  browseDishes(
+    query: BrowseDishesQuery,
+    signal?: AbortSignal,
+  ): Promise<BrowseDishesResponseDto>;
   dish(dishId: number): Promise<DishDetailDto>;
   browseRestaurants(
     query: BrowseRestaurantsQuery,
+    signal?: AbortSignal,
   ): Promise<PagedDto<RestaurantCardDto>>;
   restaurant(restaurantId: number): Promise<RestaurantDetailDto>;
   menu(restaurantId: number): Promise<RestaurantMenuDto>;
@@ -47,7 +58,7 @@ export interface ExploreService {
     restaurantId: number,
     query: ReviewsQuery,
   ): Promise<RestaurantReviewsDto>;
-  tags(): Promise<TagDto[]>;
+  tags(signal?: AbortSignal): Promise<TagDto[]>;
   createReview(
     restaurantId: number,
     request: CreateReviewRequestDto,
@@ -63,15 +74,21 @@ export interface ExploreService {
 }
 
 export const exploreService: ExploreService = {
-  browseDishes: (query) => api.getOptional(`dishes${queryString(query)}`),
+  browseDishes: (query, signal) => {
+    const path = `dishes${queryString(query)}`;
+    return cachedRead(path, listCacheMs, () => api.getOptional(path, signal));
+  },
   dish: (dishId) => api.getOptional(`dishes/${dishId}`),
-  browseRestaurants: (query) =>
-    api.getOptional(`restaurants${queryString(query)}`),
+  browseRestaurants: (query, signal) => {
+    const path = `restaurants${queryString(query)}`;
+    return cachedRead(path, listCacheMs, () => api.getOptional(path, signal));
+  },
   restaurant: (restaurantId) => api.getOptional(`restaurants/${restaurantId}`),
   menu: (restaurantId) => api.getOptional(`restaurants/${restaurantId}/menu`),
   reviews: (restaurantId, query) =>
     api.getOptional(`restaurants/${restaurantId}/reviews${queryString(query)}`),
-  tags: () => api.getOptional("tags"),
+  tags: (signal) =>
+    cachedRead("tags", tagCacheMs, () => api.getOptional("tags", signal)),
   createReview: (restaurantId, request) =>
     api.post(`restaurants/${restaurantId}/reviews`, request),
   reportRestaurant: (restaurantId, request) =>
