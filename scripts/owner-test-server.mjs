@@ -2,7 +2,10 @@ import {
   cp,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
+  rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -14,6 +17,21 @@ import { fileURLToPath } from "node:url";
 const workspace = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const cache = join(workspace, ".cache");
 await mkdir(cache, { recursive: true });
+// Snapshots of earlier runs are never removed on exit (Playwright kills the whole process tree on
+// Windows, so no exit handler runs) and each is about 100 MB: drop the ones older than six hours.
+// A server running beside this one is younger. fs.rm unlinks the node_modules junction inside a
+// snapshot without following it.
+const staleBefore = Date.now() - 6 * 60 * 60 * 1000;
+for (const name of await readdir(cache)) {
+  if (!name.startsWith("owner-test-")) continue;
+  const dir = join(cache, name);
+  try {
+    if ((await stat(dir)).mtimeMs < staleBefore)
+      await rm(dir, { recursive: true, force: true });
+  } catch {
+    // Another server may be removing it at the same moment.
+  }
+}
 const preview = await mkdtemp(join(cache, "owner-test-"));
 const sourceRef = process.env.ANGI_TEST_SOURCE_REF;
 if (sourceRef && sourceRef !== "dev")

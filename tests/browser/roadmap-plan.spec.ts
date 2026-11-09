@@ -150,9 +150,12 @@ async function open(page: Page) {
   await expect(planner(page)).toContainText("Bước 1 / 2");
 }
 
+/** The field only takes a province of the catalog: type, then pick it from the list. */
 async function chooseProvince(page: Page, label: RegExp, name: string) {
   await planner(page).getByLabel(label).fill(name);
-  await page.keyboard.press("Escape");
+  // Escape before the list opens would close the whole dialog; picking the option is certain.
+  await page.getByRole("option", { name, exact: true }).click();
+  await expect(planner(page).getByLabel(label)).toHaveValue(name);
 }
 
 /** Step 1 with only the city, then step 2. */

@@ -438,7 +438,11 @@ test("one day or one meal sends its ids, the constraints and the tags as documen
     "aria-selected",
     "true",
   );
-  await expect(box.getByLabel("Ngày")).toHaveValue("301");
+  // The day picker is a SelectField: its value is on the trigger.
+  await expect(box.getByRole("combobox", { name: "Ngày" })).toHaveAttribute(
+    "data-value",
+    "301",
+  );
   await expect(
     box.getByText(/ANGI ưu tiên quán quanh Khách sạn Sala Hà Nội/),
   ).toBeVisible();
@@ -514,8 +518,12 @@ test("an empty province or no meal is explained and nothing is sent", async ({
   await expect(
     box.getByText("Chọn tỉnh / thành phố bạn muốn ANGI lấy món."),
   ).toBeVisible();
+  // The meal error is the fieldset's alert; the plan line under the form says it too.
   await expect(
-    box.getByText("Chọn ít nhất một bữa để ANGI tạo."),
+    box
+      .locator(".roadmap-generate-meals")
+      .getByRole("alert")
+      .filter({ hasText: "Chọn ít nhất một bữa để ANGI tạo." }),
   ).toBeVisible();
   expect(generateCalls).toEqual([]);
 });

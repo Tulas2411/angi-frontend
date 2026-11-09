@@ -72,7 +72,7 @@ $env:PLAYWRIGHT_BROWSERS_PATH='.cache/browsers'
 npx playwright install chromium
 ```
 
-Các bộ browser tạo snapshot trong `.cache/owner-test-*`, dùng cổng 3001 (frontend) và 5164 (API stub) nên **chạy từng bộ một**. Đặt `ANGI_TEST_DEV=1` để chạy snapshot bằng `next dev` thay vì build. Nếu máy thiếu bộ nhớ (build hoặc Chromium bị dừng đột ngột), đóng bớt ứng dụng, tắt extension tự gắn vào Node (ví dụ Console Ninja) và chạy từng nhóm nhỏ.
+Các bộ browser tạo snapshot trong `.cache/owner-test-*`, dùng cổng 3001 (frontend) và 5164 (API stub) nên **chạy từng bộ một**. Đặt `ANGI_TEST_DEV=1` để chạy snapshot bằng `next dev` thay vì build. Mỗi snapshot khoảng 100 MB và không tự xóa khi Playwright dừng server (trên Windows cả cây tiến trình bị dừng nên không handler nào chạy); vì vậy mỗi lần khởi động, `scripts/owner-test-server.mjs` xóa các `.cache/owner-test-*` cũ hơn 6 giờ (thư mục `node_modules` bên trong chỉ là junction, bị gỡ chứ không xóa theo). Nếu máy thiếu bộ nhớ (build hoặc Chromium bị dừng đột ngột), đóng bớt ứng dụng, tắt extension tự gắn vào Node (ví dụ Console Ninja) và chạy từng nhóm nhỏ.
 
 ## 6. Xử lý sự cố
 

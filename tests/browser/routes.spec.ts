@@ -71,10 +71,15 @@ for (const [role, label] of [
     await expect(page).toHaveURL(
       new RegExp(`${HOME_BY_ROLE[label].replace("/", "\\/")}$`),
     );
-    // A second navigation to "/" must settle on the same landing page.
+    // A second navigation to "/" must settle without a loop: owners and moderators are sent to
+    // their workspace (src/app/page.tsx), Travelers and Administrators stay on the homepage.
     await page.goto("/");
     await expect(page).toHaveURL(
-      role === "owner" ? /\/restaurant$/ : /localhost:3001\/$/,
+      role === "owner"
+        ? /\/restaurant$/
+        : role === "mod"
+          ? /\/moderation$/
+          : /localhost:3001\/$/,
     );
     await page.goto("/account");
     await expect(page).toHaveURL(/\/account$/);

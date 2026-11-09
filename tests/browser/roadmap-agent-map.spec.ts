@@ -185,7 +185,8 @@ test.describe("offline Mapbox assistant preview", () => {
     const fill = (name: RegExp) =>
       map
         .getByRole("button", { name })
-        .evaluate((pin) => getComputedStyle(pin, "::before").backgroundColor);
+        // The pin is an SVG drop filled with currentColor: the day colour is the button's color.
+        .evaluate((pin) => getComputedStyle(pin).color);
     const dayOne = await fill(/ngày 1: Bún chả cá 1, món mới$/);
     expect(await fill(/ngày 1: Mì Quảng$/)).toBe(dayOne);
     const colors = [
@@ -199,6 +200,13 @@ test.describe("offline Mapbox assistant preview", () => {
     });
 
     const panel = page.getByRole("dialog", { name: "Trợ lý món ăn" });
+    // The draft sits folded in its card at the foot of the chat (#118): open it to switch days.
+    const draftCard = panel.locator(".agent-draft-tab");
+    if ((await draftCard.getAttribute("aria-expanded")) !== "true")
+      await draftCard.click();
+    await expect(
+      panel.getByRole("region", { name: "Lịch nháp của trợ lý" }),
+    ).toBeVisible();
     await panel.getByRole("button", { name: "Ngày 3", exact: true }).click();
     await expect(
       panel.getByRole("button", { name: "Ngày 3", exact: true }),

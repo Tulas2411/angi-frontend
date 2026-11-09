@@ -1011,7 +1011,10 @@ test("a missing roadmap and a failed load are told apart", async ({ page }) => {
 test("a card of the list opens its detail page", async ({ page }) => {
   await loginAs(page, "traveler");
   await page.goto("/roadmaps");
-  await page.getByRole("link", { name: "3 ngày ăn sập Đà Nẵng" }).click();
+  // The card also has "Chia sẻ lộ trình …", whose name contains the title: match the title only.
+  await page
+    .getByRole("link", { name: "3 ngày ăn sập Đà Nẵng", exact: true })
+    .click();
   await expect(page).toHaveURL(/\/roadmaps\/88$/);
   await expect(
     page.getByRole("heading", { name: "3 ngày ăn sập Đà Nẵng", level: 1 }),
@@ -1210,10 +1213,15 @@ test("the selected stop shows its dish, its restaurant and the restaurant's revi
   await cardTab("Ảnh").click();
   const photos = card.getByRole("tabpanel", { name: "Ảnh" });
   await expect(photos.locator(".roadmap-place-photos li")).toHaveCount(3);
-  await expect(photos.getByRole("link").first()).toHaveAttribute(
-    "href",
+  // A photo opens the lightbox (#108; no longer a link to the file), the dish photo first.
+  await photos.getByRole("button", { name: /^Xem lớn .*\(1\/3\)$/ }).click();
+  const lightbox = page.locator("dialog.photo-lightbox[open]");
+  await expect(lightbox.locator("img")).toHaveAttribute(
+    "src",
     "/assets/figma/dish-0.png",
   );
+  await lightbox.getByRole("button", { name: "Đóng ảnh" }).click();
+  await expect(lightbox).toHaveCount(0);
   // Each tab asked once; coming back to a tab keeps its answer.
   await cardTab("Món ăn").click();
   await cardTab("Quán hàng").click();
@@ -1447,12 +1455,20 @@ test.describe("offline Mapbox roadmap rendering", () => {
     await expect(map.locator(".roadmap-map-card")).toContainText(
       "Quán Mì Quảng",
     );
+    // Selecting a stop zooms in on it (zoom 16, docs/roadmap-detail.vi.md), which takes the other
+    // pins out of the frame; the locate button frames the whole day again.
+    const frameDay = () =>
+      map
+        .getByRole("button", { name: "Xem ngày đang chọn trên bản đồ" })
+        .click();
     // Northern/eastern and lowest pins must remain clickable outside the map
     // toolbar and the selected-place card, not merely keyboard-accessible.
+    await frameDay();
     await map
       .getByRole("button", { name: "Điểm 3, ngày 1: Bánh xèo", exact: true })
       .click();
     await expect(items(page).nth(2)).toHaveAttribute("data-selected", "true");
+    await frameDay();
     await first.click();
     await expect(items(page).first()).toHaveAttribute("data-selected", "true");
     const centerChoice = main(page).getByRole("button", {
@@ -1543,7 +1559,10 @@ test.describe("offline Mapbox roadmap rendering", () => {
     );
     await open(page);
     const map = mapPanel(page);
-    await expect(map).toContainText("Chưa tải được bản đồ");
+    // A refused key (401/403) is named as such; other failures read "Chưa tải được bản đồ".
+    await expect(map).toContainText(
+      "Dịch vụ bản đồ từ chối khóa truy cập (lỗi 401)",
+    );
     await expect(map).toHaveAttribute("data-ready", "false");
     await expect(map.locator(".mapboxgl-canvas")).toHaveCount(0);
     await expect(items(page)).toHaveCount(3);
@@ -1649,7 +1668,8 @@ test.describe("offline Mapbox roadmap rendering", () => {
       const photos = main(page).locator(
         ".roadmap-item-media img, img.roadmap-hero-banner",
       );
-      await expect(photos).toHaveCount(5);
+      // The banner and day 1's three dishes: day 3 (the fourth dish) stays folded.
+      await expect(photos).toHaveCount(4);
       expect(
         await photos.evaluateAll((images) =>
           images.every((image) => {
@@ -1745,6 +1765,9 @@ test("the detail page has no horizontal overflow from 320px to 1440px", async ({
   detail.overview.title = "Một tên lộ trình rất dài ".repeat(6);
   await loginAs(page, "traveler");
   await page.goto("/roadmaps/88");
+  // Days open folded: open day 1 so its long dish and restaurant names are on the page.
+  await expect(page.locator("#day-1 .roadmap-day-toggle")).toBeVisible();
+  await openFirstDay(page);
   await expect(page.locator(".roadmap-item").first()).toBeVisible();
   await expect(legs(page).first()).toBeVisible();
   for (const width of [320, 390, 768, 1024, 1440]) {
