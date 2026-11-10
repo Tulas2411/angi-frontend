@@ -5,6 +5,7 @@ import { MapPinIcon } from "@heroicons/react/20/solid";
 import { Alert, Button } from "@/shared/ui";
 import { Dialog, Field } from "@/components/ui/primitives";
 import { DateField } from "@/components/ui/date-time-fields";
+import { dateToIso } from "@/components/ui/date-time-rules";
 import { ProvinceField } from "@/components/domain/province-field";
 import { ApiError } from "@/shared/api/error";
 import { dateLabel } from "@/shared/format";
@@ -493,6 +494,8 @@ export function NewRoadmapDialog({
                   label="Ngày bắt đầu"
                   name="startDate"
                   value={values.startDate}
+                  // A new trip cannot start in the past: earlier days are greyed out and not pickable.
+                  min={dateToIso(new Date())}
                   helper="Không bắt buộc."
                   error={errors.startDate}
                   onChange={(value) => update("startDate", value)}

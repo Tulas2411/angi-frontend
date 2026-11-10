@@ -29,6 +29,7 @@ import {
 } from "./home-roadmap-rules";
 
 import { DateField } from "@/components/ui/date-time-fields";
+import { dateToIso } from "@/components/ui/date-time-rules";
 function subscribeDraft(listener: () => void) {
   window.addEventListener("storage", listener);
   window.addEventListener("pageshow", listener);
@@ -168,6 +169,8 @@ function RoadmapFields({
         <DateField
           label="Ngày bắt đầu"
           value={values.startDate}
+          // A new trip cannot start in the past: earlier days are greyed out and not pickable.
+          min={dateToIso(new Date())}
           onChange={(value) => update("startDate", value)}
           required
           disabled={busy || !allowed}

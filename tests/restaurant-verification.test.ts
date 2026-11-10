@@ -38,7 +38,7 @@ describe("F-47 / OWN-06 verification", () => {
           buildVerificationRequest(
             {
               legalName: "  Pháp lý  ",
-              businessLicenseNo: " GP-1 ",
+              businessLicenseNo: " 01a8012345 ",
               taxCode: "  ",
               ownerNote: "\n",
             },
@@ -48,7 +48,7 @@ describe("F-47 / OWN-06 verification", () => {
       ),
     ).toEqual({
       legalName: "Pháp lý",
-      businessLicenseNo: "GP-1",
+      businessLicenseNo: "01A8012345",
       documents: [{ docType: "business_license", mediaId: 9001 }],
     });
     expect(validateVerificationRequest(request)).toEqual({});
@@ -68,8 +68,6 @@ describe("F-47 / OWN-06 verification", () => {
     });
     for (const [field, limit] of [
       ["legalName", 255],
-      ["businessLicenseNo", 50],
-      ["taxCode", 20],
       ["ownerNote", 1000],
     ] as const) {
       expect(

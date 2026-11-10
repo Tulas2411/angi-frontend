@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Calendar } from "@/components/ui/shadcn/calendar";
 import {
   Popover,
@@ -88,6 +95,65 @@ function useRoomBelow(open: boolean) {
   return [anchor, content] as const;
 }
 
+/** The first day of the month `step` months after `date`. */
+export function shiftMonth(date: Date, step: number) {
+  return new Date(date.getFullYear(), date.getMonth() + step, 1);
+}
+
+/** `month` moved by `step`, or `month` itself when that leaves the min..max months. */
+export function clampedMonth(
+  month: Date,
+  step: number,
+  min?: Date,
+  max?: Date,
+) {
+  const next = shiftMonth(month, step);
+  if (min && next < shiftMonth(min, 0)) return month;
+  if (max && next > shiftMonth(max, 0)) return month;
+  return next;
+}
+
+/**
+ * The mouse wheel over the calendar turns the month: down = next, up = previous. A trackpad sends
+ * many small deltas, so deltas add up to one step and a step locks the wheel briefly. The listener
+ * is not passive, so the page behind the open calendar does not scroll.
+ */
+function useWheelMonths(
+  setMonth: (update: (month: Date) => Date) => void,
+  min?: Date,
+  max?: Date,
+) {
+  const bounds = useRef({ min, max });
+  useEffect(() => {
+    bounds.current = { min, max };
+  });
+  const cleanup = useRef<(() => void) | null>(null);
+  return useCallback(
+    (node: HTMLDivElement | null) => {
+      cleanup.current?.();
+      cleanup.current = null;
+      if (!node) return;
+      let total = 0;
+      let lockedUntil = 0;
+      const onWheel = (event: WheelEvent) => {
+        event.preventDefault();
+        if (event.timeStamp < lockedUntil) return;
+        total += event.deltaY || event.deltaX;
+        if (Math.abs(total) < 40) return;
+        const step = total > 0 ? 1 : -1;
+        total = 0;
+        lockedUntil = event.timeStamp + 220;
+        setMonth((month) =>
+          clampedMonth(month, step, bounds.current.min, bounds.current.max),
+        );
+      };
+      node.addEventListener("wheel", onWheel, { passive: false });
+      cleanup.current = () => node.removeEventListener("wheel", onWheel);
+    },
+    [setMonth],
+  );
+}
+
 /** A day: typed as dd/mm/yyyy, or picked on the shadcn Calendar in a rounded popover. */
 function DatePickerInput({
   min,
@@ -107,8 +173,18 @@ function DatePickerInput({
   const minDate = min ? (isoToDate(min) ?? undefined) : undefined;
   const maxDate = max ? (isoToDate(max) ?? undefined) : undefined;
   const today = new Date();
+  const firstMonth = () => shiftMonth(selected ?? minDate ?? today, 0);
+  const [month, setMonth] = useState(firstMonth);
+  const wheelRef = useWheelMonths(setMonth, minDate, maxDate);
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        // Reopening shows the chosen day's month again, wherever the wheel left it.
+        if (next) setMonth(firstMonth());
+        setOpen(next);
+      }}
+    >
       <div className="ui-picker-input" ref={roomAnchor}>
         <input
           className="input"
@@ -154,22 +230,25 @@ function DatePickerInput({
         collisionPadding={8}
         aria-label={props.pickerLabel}
       >
-        <Calendar
-          mode="single"
-          selected={selected}
-          defaultMonth={selected ?? minDate ?? today}
-          startMonth={minDate}
-          endMonth={maxDate}
-          disabled={[
-            ...(minDate ? [{ before: minDate }] : []),
-            ...(maxDate ? [{ after: maxDate }] : []),
-          ]}
-          onSelect={(day) => {
-            if (!day) return;
-            onChange(dateToIso(day));
-            setOpen(false);
-          }}
-        />
+        <div ref={wheelRef}>
+          <Calendar
+            mode="single"
+            selected={selected}
+            month={month}
+            onMonthChange={setMonth}
+            startMonth={minDate}
+            endMonth={maxDate}
+            disabled={[
+              ...(minDate ? [{ before: minDate }] : []),
+              ...(maxDate ? [{ after: maxDate }] : []),
+            ]}
+            onSelect={(day) => {
+              if (!day) return;
+              onChange(dateToIso(day));
+              setOpen(false);
+            }}
+          />
+        </div>
         <div className="ui-picker-footer">
           <button
             type="button"

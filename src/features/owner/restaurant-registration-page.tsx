@@ -26,7 +26,10 @@ import {
 import { restaurantService } from "./restaurant-service";
 import { RestaurantImageUpload } from "./restaurant-image-upload";
 import { RestaurantLocationPicker } from "./restaurant-location-picker";
-import { fillRestaurantFromPlace } from "./restaurant-location-rules";
+import {
+  fillRestaurantFromPlace,
+  catalogAddress,
+} from "./restaurant-location-rules";
 import type {
   MediaFileDto,
   OwnerRestaurantDto,
@@ -384,6 +387,30 @@ export function RestaurantRegistrationPage() {
                   {location ? "Đổi vị trí" : "Chọn vị trí trên bản đồ *"}
                 </Button>
               </div>
+              {/* Province and ward first (picked from the catalog only), then the street address. */}
+              <div className="grid-2 address-areas">
+                <ProvinceField
+                  label="Tỉnh / thành phố"
+                  name="provinceName"
+                  value={values.provinceName}
+                  required
+                  strict
+                  maxLength={100}
+                  error={errors.provinceName}
+                  onChange={(value) => update("provinceName", value)}
+                />
+                <WardField
+                  label="Phường / xã"
+                  name="ward"
+                  provinceName={values.provinceName}
+                  value={values.ward}
+                  strict
+                  disabled={!values.provinceName}
+                  maxLength={100}
+                  error={errors.ward}
+                  onChange={(value) => update("ward", value)}
+                />
+              </div>
               <Field
                 label="Địa chỉ"
                 name="addressLine"
@@ -395,26 +422,6 @@ export function RestaurantRegistrationPage() {
                 error={errors.addressLine}
                 onChange={(event) => update("addressLine", event.target.value)}
               />
-              <div className="grid-2 address-areas">
-                <ProvinceField
-                  label="Tỉnh / thành phố"
-                  name="provinceName"
-                  value={values.provinceName}
-                  required
-                  maxLength={100}
-                  error={errors.provinceName}
-                  onChange={(value) => update("provinceName", value)}
-                />
-                <WardField
-                  label="Phường / xã"
-                  name="ward"
-                  provinceName={values.provinceName}
-                  value={values.ward}
-                  maxLength={100}
-                  error={errors.ward}
-                  onChange={(value) => update("ward", value)}
-                />
-              </div>
             </div>
           </section>
           <section
@@ -496,6 +503,28 @@ export function RestaurantRegistrationPage() {
           onSelect={(point) => {
             setLocation(point);
             setValues((current) => fillRestaurantFromPlace(current, point));
+            const details = point.addressDetails;
+            if (details?.provinceName) {
+              const filled = {
+                provinceName: details.provinceName,
+                ward: details.ward ?? "",
+              };
+              // The address fields take catalog names only: rename (or drop) what the map gave,
+              // unless the owner changed the fields meanwhile.
+              void catalogAddress(filled.provinceName, filled.ward).then(
+                (match) =>
+                  setValues((current) =>
+                    current.provinceName === filled.provinceName &&
+                    (current.ward === filled.ward || !details.ward)
+                      ? {
+                          ...current,
+                          ...match,
+                          ward: details.ward ? match.ward : current.ward,
+                        }
+                      : current,
+                  ),
+              );
+            }
             setErrors((previous) => ({
               ...previous,
               location: "",

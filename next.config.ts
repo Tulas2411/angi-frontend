@@ -1,3 +1,4 @@
+import { networkInterfaces } from "node:os";
 import type { NextConfig } from "next";
 
 /**
@@ -27,7 +28,26 @@ const securityHeaders = [
   },
 ];
 
+/**
+ * Hosts that may open the dev server from another device (`next dev` only; ignored by builds).
+ * Next.js blocks cross-origin dev requests, the HMR WebSocket included, so a phone or a second PC
+ * on the LAN gets "WebSocket connection to ws://<ip>:3000/_next/hmr failed". This machine's own LAN
+ * IPv4 addresses are allowed automatically; add others (a hostname, a tunnel) with
+ * DEV_ALLOWED_ORIGINS="host-a,host-b".
+ */
+const allowedDevOrigins = [
+  ...Object.values(networkInterfaces())
+    .flat()
+    .filter((address) => address?.family === "IPv4" && !address.internal)
+    .map((address) => address!.address),
+  ...(process.env.DEV_ALLOWED_ORIGINS ?? "")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean),
+];
+
 const nextConfig: NextConfig = {
+  allowedDevOrigins,
   cacheComponents: false,
   poweredByHeader: false,
   experimental: {
