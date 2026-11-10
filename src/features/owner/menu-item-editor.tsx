@@ -1,5 +1,10 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import {
+  ArrowUpTrayIcon,
+  PhotoIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { Alert, Button } from "@/shared/ui";
 import {
   Choice,
@@ -23,6 +28,23 @@ import {
 import type { RestaurantMenuService } from "./menu-service";
 import type { DishForm, MenuItemDto, MenuTagDto } from "./menu-types";
 import "./restaurant-image-upload.css";
+import "./menu-item-editor.css";
+
+const tagTypeTitles: Record<MenuTagDto["tagType"], string> = {
+  meal_time: "Bữa ăn",
+  category: "Kiểu món",
+  dietary: "Chế độ ăn",
+};
+
+/** Tags split by type (meal, kind, diet) in a fixed order, each group keeping the API order. */
+function tagGroups(tags: MenuTagDto[]): [string, MenuTagDto[]][] {
+  return (["meal_time", "category", "dietary"] as const)
+    .map((type): [string, MenuTagDto[]] => [
+      tagTypeTitles[type],
+      tags.filter((tag) => tag.tagType === type),
+    ])
+    .filter(([, group]) => group.length > 0);
+}
 
 export function MenuItemEditor({
   item,
@@ -58,7 +80,9 @@ export function MenuItemEditor({
   }, []);
   useEffect(() => {
     const frame = requestAnimationFrame(() =>
-      formRef.current?.querySelector<HTMLInputElement>("input")?.focus(),
+      formRef.current
+        ?.querySelector<HTMLInputElement>("input:not([type=file])")
+        ?.focus(),
     );
     return () => cancelAnimationFrame(frame);
   }, []);
@@ -164,6 +188,7 @@ export function MenuItemEditor({
       <Dialog
         open
         wide
+        className="mie-dialog"
         title={item ? "Sửa món trong bản nháp" : "Thêm món vào bản nháp"}
         onClose={close}
         footer={
@@ -193,6 +218,81 @@ export function MenuItemEditor({
           }}
         >
           {problem && <Alert tone="error">{problem}</Alert>}
+          <div className="mie-grid">
+          <div className="mie-photo">
+            <span id="menu-image-label" className="mie-label">
+              Ảnh món ăn
+            </span>
+            {values.coverUrl ? (
+              <div className="mie-photo-frame">
+                <Media src={values.coverUrl} alt="Ảnh món ăn" />
+                <div className="mie-photo-actions">
+                  <label className="mie-photo-replace">
+                    <ArrowUpTrayIcon aria-hidden /> Đổi ảnh
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      aria-label="Đổi ảnh món ăn"
+                      aria-describedby="menu-image-help menu-image-error"
+                      disabled={disabled}
+                      onChange={(event) => {
+                        void upload(event.target.files?.[0]);
+                        event.target.value = "";
+                      }}
+                    />
+                  </label>
+                  <Button
+                    variant="icon"
+                    aria-label="Bỏ ảnh món ăn"
+                    disabled={disabled}
+                    onClick={() => setConfirm("image")}
+                  >
+                    <TrashIcon aria-hidden />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="mie-photo-empty"
+                data-invalid={!!errors.coverMediaId || undefined}
+              >
+                <PhotoIcon aria-hidden />
+                <strong>Thêm ảnh món</strong>
+                <span>Bấm để chọn ảnh</span>
+                <input
+                  className="registration-image-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  aria-labelledby="menu-image-label"
+                  aria-describedby="menu-image-help menu-image-error"
+                  aria-invalid={!!errors.coverMediaId}
+                  disabled={disabled}
+                  onChange={(event) => {
+                    void upload(event.target.files?.[0]);
+                    event.target.value = "";
+                  }}
+                />
+              </div>
+            )}
+            {uploading ? (
+              <p role="status" className="helper">
+                Đang tải ảnh…
+              </p>
+            ) : (
+              <p id="menu-image-help" className="helper">
+                JPG, PNG hoặc WEBP · Tối đa 5 MB. Ảnh ngang, chụp rõ món sẽ
+                hiển thị đẹp nhất.
+              </p>
+            )}
+            <p
+              id="menu-image-error"
+              role={errors.coverMediaId ? "alert" : undefined}
+              className="field-error"
+            >
+              {errors.coverMediaId}
+            </p>
+          </div>
+          <div className="mie-main">
           <Field
             placeholder="Ví dụ: Bún bò Huế"
             label="Tên món"
@@ -219,7 +319,7 @@ export function MenuItemEditor({
               setValues({ ...values, description: event.target.value })
             }
           />
-          <div className="grid-2">
+          <div className="mie-numbers">
             <Field
               placeholder="Ví dụ: 45000"
               label="Giá (VND)"
@@ -248,7 +348,6 @@ export function MenuItemEditor({
                 setValues({ ...values, dishForm: value as DishForm })
               }
             />
-          </div>
           <Field
             placeholder="Ví dụ: 1"
             label="Thứ tự hiển thị"
@@ -268,8 +367,14 @@ export function MenuItemEditor({
               setValues({ ...values, sortOrder: event.target.value })
             }
           />
-          <fieldset disabled={disabled} className="stack-sm">
+          </div>
+          </div>
+          </div>
+          <fieldset disabled={disabled} className="mie-tags">
             <legend>Nhãn món ăn</legend>
+            <p className="helper">
+              Chọn bữa ăn, kiểu món và chế độ ăn để khách tìm thấy món dễ hơn.
+            </p>
             {tagsLoading && <p role="status">Đang tải nhãn…</p>}
             {tagProblem && (
               <>
@@ -284,23 +389,28 @@ export function MenuItemEditor({
             {!tagsLoading && !tagProblem && !tags.length && (
               <p>Chưa có nhãn để chọn.</p>
             )}
-            <div className="menu-tags">
-              {tags.map((tag) => (
-                <Choice
-                  key={tag.id}
-                  label={tag.name}
-                  checked={values.tagIds.includes(tag.id)}
-                  onChange={(checked) =>
-                    setValues((previous) => ({
-                      ...previous,
-                      tagIds: checked
-                        ? [...previous.tagIds, tag.id]
-                        : previous.tagIds.filter((id) => id !== tag.id),
-                    }))
-                  }
-                />
-              ))}
-            </div>
+            {tagGroups(tags).map(([title, group]) => (
+              <div className="mie-tag-group" key={title}>
+                <span className="mie-tag-title">{title}</span>
+                <div className="mie-tag-list">
+                  {group.map((tag) => (
+                    <Choice
+                      key={tag.id}
+                      label={tag.name}
+                      checked={values.tagIds.includes(tag.id)}
+                      onChange={(checked) =>
+                        setValues((previous) => ({
+                          ...previous,
+                          tagIds: checked
+                            ? [...previous.tagIds, tag.id]
+                            : previous.tagIds.filter((id) => id !== tag.id),
+                        }))
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
             {values.tagIds
               .filter((id) => !tags.some((tag) => tag.id === id))
               .map((id) => (
@@ -322,52 +432,6 @@ export function MenuItemEditor({
               </p>
             )}
           </fieldset>
-          <div className="registration-image-upload stack-sm">
-            <span id="menu-image-label">Ảnh món ăn</span>
-            <p id="menu-image-help" className="helper">
-              JPG, PNG hoặc WEBP · Tối đa 5 MB.
-            </p>
-            <div className="upload-grid">
-              {values.coverUrl ? (
-                <div className="upload-tile">
-                  <Media src={values.coverUrl} alt="Ảnh món ăn" />
-                  <Button
-                    variant="icon"
-                    aria-label="Bỏ ảnh món ăn"
-                    disabled={disabled}
-                    onClick={() => setConfirm("image")}
-                  >
-                    ×
-                  </Button>
-                </div>
-              ) : (
-                <div className="registration-image-add">
-                  <span aria-hidden>+</span>
-                  <input
-                    className="registration-image-input"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    aria-labelledby="menu-image-label"
-                    aria-describedby="menu-image-help menu-image-error"
-                    aria-invalid={!!errors.coverMediaId}
-                    disabled={disabled}
-                    onChange={(event) => {
-                      void upload(event.target.files?.[0]);
-                      event.target.value = "";
-                    }}
-                  />
-                </div>
-              )}
-            </div>
-            {uploading && <p role="status">Đang tải ảnh…</p>}
-            <p
-              id="menu-image-error"
-              role={errors.coverMediaId ? "alert" : undefined}
-              className="field-error"
-            >
-              {errors.coverMediaId}
-            </p>
-          </div>
         </form>
       </Dialog>
       <ConfirmDialog

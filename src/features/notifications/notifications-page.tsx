@@ -2,6 +2,7 @@
 import { notify } from "@/shared/ui/notify";
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { CheckIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button } from "@/shared/ui";
 import { EmptyState, Tabs } from "@/components/ui/primitives";
@@ -290,9 +291,29 @@ export function NotificationsPage({
                           {notificationTime(notification.createdAt)}
                         </time>
                       </div>
-                      {isUnread && (
-                        <span className="notification-dot" aria-hidden />
-                      )}
+                      <div className="notification-row-side">
+                        {isUnread && (
+                          <span className="notification-dot" aria-hidden />
+                        )}
+                        {isUnread && (
+                          <button
+                            type="button"
+                            className="notification-mark-read"
+                            disabled={busy}
+                            aria-label={`Đánh dấu đã đọc: ${notification.title}`}
+                            title="Đánh dấu đã đọc"
+                            onClick={() => void markRead([notification.id])}
+                          >
+                            <CheckIcon aria-hidden />
+                          </button>
+                        )}
+                        {href && (
+                          <ChevronRightIcon
+                            className="notification-row-chevron"
+                            aria-hidden
+                          />
+                        )}
+                      </div>
                     </li>
                   );
                 })}

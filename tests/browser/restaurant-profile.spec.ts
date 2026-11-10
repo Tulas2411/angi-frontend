@@ -299,7 +299,7 @@ test("cover removal and photo-by-photo gallery edits send explicit null and the 
   page,
 }) => {
   await openProfile(page);
-  await page.getByRole("tab", { name: "Hình ảnh", exact: true }).click();
+  await page.getByRole("button", { name: "Hình ảnh", exact: true }).click();
   await page
     .locator(".cover-field")
     .getByRole("button", { name: "Bỏ ảnh bìa", exact: true })
@@ -368,7 +368,7 @@ test("the cover is one 4:1 slot: pick, restore the saved cover, then save the ne
   page,
 }) => {
   await openProfile(page);
-  await page.getByRole("tab", { name: "Hình ảnh", exact: true }).click();
+  await page.getByRole("button", { name: "Hình ảnh", exact: true }).click();
   const field = page.locator(".cover-field");
   const frame = field.locator(".cover-field-frame");
   const box = await frame.boundingBox();

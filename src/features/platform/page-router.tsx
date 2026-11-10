@@ -241,7 +241,11 @@ export function PageRouter({
   if (mode === "live" && role === "MOD" && !area) return <ModerationHomePage />;
 
   // ME-01..ME-03 đã nối API: tài khoản của Mod (hồ sơ, đổi mật khẩu, quyền hiệu lực).
-  if (mode === "live" && role === "MOD" && area === "account")
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "RESTAURANT_OWNER") &&
+    area === "account"
+  )
     return <LiveAccountPage />;
 
   // MOD-F1..MOD-F3 đã nối API: kiểm duyệt đánh giá quán và phản hồi của chủ quán (Mod và Admin).

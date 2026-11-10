@@ -8,9 +8,9 @@ import {
   ConfirmDialog,
   EmptyState,
   Skeleton,
-  Tabs,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
+import { PencilSquareIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { RestaurantProfileHeader } from "./restaurant-profile-header";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { ownerProfileHref, ownerRoutes, type OwnerProfileTab } from "./routes";
 import {
@@ -252,21 +252,11 @@ function BusinessHoursEditor({
     } else void persist();
   }
   return (
-    <div className="stack form-page business-hours-page">
-      <PageHeading
-        eyebrow="Nhà hàng của tôi"
-        title="Giờ mở cửa"
-        description="Lưu toàn bộ lịch trong tuần theo giờ Việt Nam. Một ngày có thể có nhiều khoảng phục vụ."
-      />
-      <Tabs
-        value="hours"
-        onChange={changeTab}
-        items={[
-          { value: "information", label: "Thông tin" },
-          { value: "photos", label: "Hình ảnh" },
-          { value: "hours", label: "Giờ mở cửa" },
-          { value: "status", label: "Trạng thái" },
-        ]}
+    <div className="stack form-page business-hours-page rp-page">
+      <RestaurantProfileHeader
+        restaurant={restaurant}
+        tab="hours"
+        onTab={changeTab}
       />
       {error && (
         <div ref={feedback} tabIndex={-1}>
@@ -300,6 +290,9 @@ function BusinessHoursEditor({
                   <li
                     key={day.dayOfWeek}
                     className="business-hours-day"
+                    data-today={
+                      day.dayOfWeek === new Date().getDay() || undefined
+                    }
                     aria-labelledby={`business-day-${day.dayOfWeek}`}
                   >
                     <span
@@ -333,7 +326,9 @@ function BusinessHoursEditor({
                             ))}
                         </>
                       ) : (
-                        <p>Chưa khai báo giờ</p>
+                        <p className="business-hours-empty">
+                          Chưa khai báo giờ
+                        </p>
                       )}
                       {!!messages.length && (
                         <p className="field-error" id={errorId}>
@@ -343,20 +338,20 @@ function BusinessHoursEditor({
                     </div>
                     <div className="business-hours-day-actions">
                       <Button
-                        variant="secondary"
+                        variant="tertiary"
                         name={`edit-day-${day.dayOfWeek}`}
                         aria-label={`Chỉnh giờ · ${day.label}`}
                         aria-describedby={messages.length ? errorId : undefined}
                         onClick={() => setEditingDay({ day, add: false })}
                       >
-                        Chỉnh giờ
+                        <PencilSquareIcon aria-hidden /> Chỉnh giờ
                       </Button>
                       <Button
-                        variant="secondary"
+                        variant="tertiary"
                         aria-label={`Thêm khoảng · ${day.label}`}
                         onClick={() => setEditingDay({ day, add: true })}
                       >
-                        Thêm khoảng
+                        <PlusIcon aria-hidden /> Thêm khoảng
                       </Button>
                     </div>
                   </li>
@@ -374,25 +369,32 @@ function BusinessHoursEditor({
               lịch không đồng nghĩa với đóng cửa cả tuần.
             </p>
           </aside>
-          <div className="business-hours-week-actions">
-            <Button type="submit" loading={busy} disabled={!dirty}>
-              Lưu cả tuần
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!dirty || busy}
-              onClick={() =>
-                setConfirmation({
-                  title: "Bỏ thay đổi giờ mở cửa chưa lưu?",
-                  label: "Bỏ thay đổi",
-                  description:
-                    "Lịch tuần sẽ được khôi phục về lần lưu gần nhất.",
-                  action: () => restore(saved),
-                })
-              }
-            >
-              Hủy
-            </Button>
+          <div className="rp-savebar" data-dirty={dirty || undefined}>
+            <p>
+              {dirty
+                ? "Lịch tuần có thay đổi chưa lưu."
+                : "Bấm Chỉnh giờ hoặc Thêm khoảng ở từng ngày, rồi lưu cả tuần."}
+            </p>
+            <div className="actions">
+              <Button
+                variant="secondary"
+                disabled={!dirty || busy}
+                onClick={() =>
+                  setConfirmation({
+                    title: "Bỏ thay đổi giờ mở cửa chưa lưu?",
+                    label: "Bỏ thay đổi",
+                    description:
+                      "Lịch tuần sẽ được khôi phục về lần lưu gần nhất.",
+                    action: () => restore(saved),
+                  })
+                }
+              >
+                Hủy
+              </Button>
+              <Button type="submit" loading={busy} disabled={!dirty}>
+                Lưu cả tuần
+              </Button>
+            </div>
           </div>
         </Card>
       </form>

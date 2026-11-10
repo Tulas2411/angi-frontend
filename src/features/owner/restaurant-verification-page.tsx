@@ -8,7 +8,8 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { Alert, Badge, Button, Card } from "@/shared/ui";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import { Alert, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   ConfirmDialog,
@@ -18,10 +19,9 @@ import {
   Tabs,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { ownerRoutes } from "./routes";
-import { verificationLabels } from "./status-labels";
+import { VerificationChecklist, VerificationHero } from "./verification-overview";
 import { VerificationDocumentUpload } from "./verification-document-upload";
 import { VerificationHistory } from "./verification-history";
 import {
@@ -368,45 +368,39 @@ function VerificationEditor({
   }
   return (
     <div className="stack form-page restaurant-verification-page">
-      <PageHeading
-        eyebrow="Nhà hàng của tôi"
-        title="Xác minh nhà hàng"
-        description="Gửi thông tin pháp lý và tài liệu để yêu cầu xác minh nhà hàng."
+      <VerificationHero
+        restaurant={restaurant}
+        reload={
+          <Button
+            variant="tertiary"
+            disabled={blocked}
+            onClick={() =>
+              dirty ? setConfirmation({ kind: "reload" }) : onReload()
+            }
+          >
+            <ArrowPathIcon aria-hidden /> Tải lại trạng thái
+          </Button>
+        }
       />
-      <div className="between verification-summary">
-        <div>
-          <strong>{restaurant.name}</strong>
-          <p>
-            Trạng thái nhà hàng:{" "}
-            <Badge>{verificationLabels[restaurant.verificationStatus]}</Badge>
-          </p>
-        </div>
-        <Button
-          variant="secondary"
-          disabled={blocked}
-          onClick={() =>
-            dirty ? setConfirmation({ kind: "reload" }) : onReload()
-          }
-        >
-          Tải lại trạng thái
-        </Button>
-      </div>
       <div ref={feedback} tabIndex={-1} className="stack-sm">
         {error && <Alert>{error}</Alert>}
       </div>
-      <Tabs
-        value={tab}
-        onChange={(value) => {
-          if (!blocked) setTab(value);
-        }}
-        items={[
-          { value: "status", label: "Trạng thái xác minh" },
-          {
-            value: "new",
-            label: resubmission ? "Gửi lại hồ sơ" : "Hồ sơ xác minh",
-          },
-        ]}
-      />
+      <div className="owner-tabs">
+        <Tabs
+          label="Xác minh nhà hàng"
+          value={tab}
+          onChange={(value) => {
+            if (!blocked) setTab(value);
+          }}
+          items={[
+            { value: "status", label: "Trạng thái xác minh" },
+            {
+              value: "new",
+              label: resubmission ? "Gửi lại hồ sơ" : "Hồ sơ xác minh",
+            },
+          ]}
+        />
+      </div>
       {tab === "status" ? (
         <VerificationHistory
           service={service}
@@ -421,7 +415,9 @@ function VerificationEditor({
       ) : stateBlock ? (
         <Alert tone="info">{stateBlock}</Alert>
       ) : (
+        <div className="vf-form-layout">
         <Card
+          className="vf-form-card"
           title={resubmission ? "Gửi lại hồ sơ xác minh" : "Hồ sơ xác minh"}
         >
           {resubmission && (
@@ -437,6 +433,9 @@ function VerificationEditor({
             </div>
           )}
           <form ref={form} className="stack" onSubmit={prepare} noValidate>
+            <h3 className="vf-step">
+              <span aria-hidden>1</span> Thông tin pháp lý
+            </h3>
             <div className="grid-2">
               <Field
                 placeholder="Tên trên giấy phép kinh doanh"
@@ -484,8 +483,10 @@ function VerificationEditor({
                 change("taxCode", cleanTaxCode(event.target.value))
               }
             />
-            <div>
-              <h3>Tài liệu xác minh</h3>
+            <div className="stack-sm">
+              <h3 className="vf-step">
+                <span aria-hidden>2</span> Tài liệu xác minh
+              </h3>
               <VerificationDocumentUpload
                 key={uploadRevision}
                 documents={documents}
@@ -504,6 +505,9 @@ function VerificationEditor({
                 }}
               />
             </div>
+            <h3 className="vf-step">
+              <span aria-hidden>3</span> Gửi người duyệt
+            </h3>
             <TextArea
               placeholder="Thông tin thêm cho người duyệt…"
               label="Ghi chú gửi người duyệt (không bắt buộc)"
@@ -532,6 +536,12 @@ function VerificationEditor({
             </div>
           </form>
         </Card>
+        <VerificationChecklist
+          values={values}
+          documents={documents}
+          mode={resubmission ? "resubmit" : "initial"}
+        />
+        </div>
       )}
       <ConfirmDialog
         open={!!confirmation}

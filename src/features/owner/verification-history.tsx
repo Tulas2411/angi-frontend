@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/primitives";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { ownerRoutes } from "./routes";
-import { verificationLabels } from "./status-labels";
 import {
   VerificationDetails,
   verificationDateLabel,
+  verificationStatusTone,
 } from "./verification-details";
 import {
   resubmittableVerification,
@@ -101,72 +101,82 @@ export function VerificationHistory({
   });
   const selected = items.find((item) => item.id === selectedId);
   return (
-    <div className="stack verification-history">
-      <div className="between verification-summary">
-        <p>
-          Trạng thái xác minh nhà hàng:{" "}
-          <Badge>{verificationLabels[verificationStatus]}</Badge>
-        </p>
-        <Button variant="secondary" onClick={reload}>
-          Tải lại lịch sử
-        </Button>
-      </div>
-      <Card title="Hồ sơ gần nhất">
-        {latest ? (
-          <VerificationDetails verification={latest} />
-        ) : (
-          <EmptyState title="Chưa có hồ sơ xác minh">
-            Nhà hàng chưa có hồ sơ trong lịch sử.
-          </EmptyState>
-        )}
-        {verificationStatus === "pending" && (
-          <Alert tone="info">
-            Hồ sơ đang chờ duyệt. Bạn có thể tải lại để xem phản hồi mới.
-          </Alert>
-        )}
-        {verificationStatus === "verified" && (
-          <Alert tone="success">Nhà hàng đã được xác minh.</Alert>
-        )}
-        {verificationStatus === "rejected" && (
-          <Alert tone="warning">
-            Xem phản hồi của người duyệt để biết nội dung cần chỉnh sửa hoặc bổ
-            sung.
-          </Alert>
-        )}
-        {resubmittable && (
-          <Button onClick={() => onResubmit(resubmittable)}>
-            Gửi lại hồ sơ
-          </Button>
-        )}
-        {verificationStatus === "unverified" && (
-          <Button onClick={onPrepare}>Chuẩn bị hồ sơ</Button>
-        )}
-      </Card>
-      {!!items.length && (
-        <Card title="Lịch sử hồ sơ">
-          <p className="helper">{items.length} hồ sơ · Mới nhất trước</p>
-          <ol className="verification-history-list">
-            {items.map((item, index) => (
-              <li key={item.id} className="verification-history-item">
-                <div>
-                  <strong>
-                    Hồ sơ #{item.id}
-                    {index === 0 ? " · Mới nhất" : ""}
-                  </strong>
-                  <p>Ngày gửi: {verificationDateLabel(item.submittedAt)}</p>
-                  <Badge>{verificationStatusLabels[item.status]}</Badge>
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => setSelectedId(item.id)}
-                >
-                  Xem hồ sơ #{item.id}
+    <div className="verification-history">
+      <div className="vf-status-grid">
+        <section className="card vf-latest">
+          <div className="vf-card-head">
+            <h2>Hồ sơ gần nhất</h2>
+            <Button variant="tertiary" onClick={reload}>
+              Tải lại lịch sử
+            </Button>
+          </div>
+          {latest ? (
+            <VerificationDetails verification={latest} />
+          ) : (
+            <EmptyState title="Chưa có hồ sơ xác minh">
+              Nhà hàng chưa có hồ sơ trong lịch sử.
+            </EmptyState>
+          )}
+          {verificationStatus === "pending" && (
+            <Alert tone="info">
+              Hồ sơ đang chờ duyệt. Bạn có thể tải lại để xem phản hồi mới.
+            </Alert>
+          )}
+          {verificationStatus === "verified" && (
+            <Alert tone="success">Nhà hàng đã được xác minh.</Alert>
+          )}
+          {verificationStatus === "rejected" && (
+            <Alert tone="warning">
+              Xem phản hồi của người duyệt để biết nội dung cần chỉnh sửa hoặc
+              bổ sung.
+            </Alert>
+          )}
+          {(resubmittable || verificationStatus === "unverified") && (
+            <div className="actions">
+              {resubmittable && (
+                <Button onClick={() => onResubmit(resubmittable)}>
+                  Gửi lại hồ sơ
                 </Button>
-              </li>
-            ))}
-          </ol>
-        </Card>
-      )}
+              )}
+              {verificationStatus === "unverified" && (
+                <Button onClick={onPrepare}>Chuẩn bị hồ sơ</Button>
+              )}
+            </div>
+          )}
+        </section>
+        {!!items.length && (
+          <section className="card vf-timeline-card">
+            <h2>Lịch sử hồ sơ</h2>
+            <p className="helper">{items.length} hồ sơ · Mới nhất trước</p>
+            <ol className="verification-history-list">
+              {items.map((item, index) => (
+                <li
+                  key={item.id}
+                  className="verification-history-item"
+                  data-tone={verificationStatusTone[item.status]}
+                >
+                  <div>
+                    <strong>
+                      Hồ sơ #{item.id}
+                      {index === 0 ? " · Mới nhất" : ""}
+                    </strong>
+                    <span>{verificationDateLabel(item.submittedAt)}</span>
+                    <Badge tone={verificationStatusTone[item.status]}>
+                      {verificationStatusLabels[item.status]}
+                    </Badge>
+                  </div>
+                  <Button
+                    variant="tertiary"
+                    onClick={() => setSelectedId(item.id)}
+                  >
+                    Xem hồ sơ #{item.id}
+                  </Button>
+                </li>
+              ))}
+            </ol>
+          </section>
+        )}
+      </div>
       <Dialog
         open={!!selected}
         title={selected ? `Chi tiết hồ sơ #${selected.id}` : "Chi tiết hồ sơ"}

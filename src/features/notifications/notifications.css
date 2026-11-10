@@ -110,7 +110,7 @@
 .notification-row {
   position: relative;
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 10px;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: start;
   padding: 9px var(--space-4);
@@ -560,7 +560,7 @@
     justify-content: center;
   }
   .notification-row {
-    grid-template-columns: 28px minmax(0, 1fr) 10px;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
     gap: var(--space-2);
     padding: 9px var(--space-3);
   }
@@ -571,5 +571,247 @@
   .notification-row .notification-glyph svg {
     width: 15px;
     height: 15px;
+  }
+}
+
+/* ---------------------------------------------- dashboard sidebar bell */
+.notification-bell-wrap[data-variant="sidebar"] {
+  position: static;
+  display: block;
+}
+.notification-bell-wrap[data-variant="sidebar"] > .admin-sidebar-bell {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.notification-bell-wrap[data-variant="sidebar"] > .admin-sidebar-bell:hover,
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell[aria-expanded="true"] {
+  background: var(--control);
+}
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* The panel opens to the right of the sidebar, its foot level with the bell. */
+.notification-dropdown.notification-dropdown-sidebar {
+  position: fixed;
+  top: auto;
+  right: auto;
+  bottom: 96px;
+  left: calc(var(--admin-sidebar, 264px) + 12px);
+  z-index: 60;
+  width: 400px;
+  max-height: min(640px, calc(100dvh - 120px));
+  animation-name: notification-sidebar-in;
+}
+.notification-dropdown-sidebar .notification-dropdown-body {
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+@keyframes notification-sidebar-in {
+  from {
+    opacity: 0;
+    translate: -8px 0;
+  }
+}
+@media (max-width: 960px) {
+  /* The sidebar is a drawer here: the panel becomes a sheet over the page. */
+  .notification-dropdown.notification-dropdown-sidebar {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - 24px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-dropdown.notification-dropdown-sidebar {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------- row side: dot, read, go */
+.notification-row-side {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-2);
+}
+/* Sits above the row's stretched link so it marks the row read without opening it. */
+.notification-mark-read {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+.notification-mark-read svg {
+  width: 16px;
+  height: 16px;
+}
+.notification-row:hover .notification-mark-read,
+.notification-mark-read:focus-visible {
+  opacity: 1;
+}
+.notification-mark-read:hover {
+  color: var(--success-ink);
+}
+.notification-mark-read:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+@media (hover: none) {
+  .notification-mark-read {
+    opacity: 1;
+  }
+}
+.notification-row-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  transition: transform var(--duration-fast) ease;
+}
+.notification-row:hover .notification-row-chevron {
+  transform: translateX(2px);
+}
+
+/* ------------------------------------------- inside a dashboard (owner, admin) */
+.admin-shell .notifications-page {
+  width: min(100%, 1120px);
+  margin-inline: 0;
+  gap: var(--space-5);
+}
+.admin-shell .notifications-heading {
+  align-items: center;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgb(34 34 34 / 0.04),
+    0 12px 36px rgb(34 34 34 / 0.07);
+}
+.admin-shell .notifications-heading h1 {
+  font-size: clamp(26px, 2.6vw, 34px);
+}
+.admin-shell .notifications-heading-actions .button {
+  min-height: 40px;
+}
+.admin-shell .notifications-toolbar {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.admin-shell .notifications-toolbar .tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.admin-shell .notifications-toolbar .chip {
+  min-height: 38px;
+  padding: 8px 18px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.admin-shell .notifications-toolbar .chip:hover {
+  color: var(--ink);
+}
+.admin-shell .notifications-toolbar .chip.selected {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(34 34 34 / 0.12);
+}
+.admin-shell .notifications-groups {
+  gap: var(--space-6);
+}
+.admin-shell .notifications-list {
+  border: 0;
+  box-shadow:
+    0 1px 2px rgb(34 34 34 / 0.04),
+    0 6px 20px rgb(34 34 34 / 0.06);
+}
+.admin-shell .notification-row {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+.admin-shell .notification-row .notification-glyph {
+  width: 40px;
+  height: 40px;
+}
+.admin-shell .notification-row .notification-glyph svg {
+  width: 20px;
+  height: 20px;
+}
+.admin-shell .notification-row[data-unread] {
+  background: linear-gradient(
+    90deg,
+    rgb(255 90 95 / 0.07),
+    transparent 60%
+  );
+  box-shadow: inset 3px 0 0 var(--coral);
+}
+.admin-shell .notification-row:hover,
+.admin-shell .notification-row:focus-within {
+  background: var(--control);
+}
+.admin-shell .notification-text h3 {
+  font-size: 15px;
+}
+.admin-shell .notification-body {
+  font-size: 14px;
+}
+
+/* The sidebar bell on the notifications page itself keeps the dark "current page" pill. */
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell[aria-current="page"] {
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell[aria-current="page"]
+  svg {
+  color: var(--card);
+}
+@media (max-width: 600px) {
+  .admin-shell .notifications-heading {
+    padding: var(--space-5);
+  }
+  .admin-shell .notification-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .admin-shell .notification-row .notification-glyph {
+    width: 32px;
+    height: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-mark-read,
+  .notification-row-chevron {
+    transition: none;
   }
 }

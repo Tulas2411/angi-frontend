@@ -2,6 +2,7 @@
 import { notify } from "@/shared/ui/notify";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ArrowPathIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
@@ -28,11 +29,13 @@ import {
   dishFormLabels,
   menuErrorMessage,
   menuStatusLabels,
+  menuStatusTone,
   openMenuId,
 } from "./menu-rules";
 import { MenuItemEditor } from "./menu-item-editor";
 import { MenuHistory } from "./menu-history";
 import { MenuApprovalSubmit } from "./menu-approval-submit";
+import "./restaurant-profile.css";
 import "./restaurant-menu.css";
 
 type Confirmation =
@@ -224,11 +227,13 @@ export function RestaurantMenuPage() {
   const editable = detail?.status === "draft";
   return (
     <div className="stack form-page menu-workspace">
-      <PageHeading
-        eyebrow="Nhà hàng của tôi"
-        title="Quản lý thực đơn"
-        description="Quản lý món đang bán và chuẩn bị thay đổi trong bản nháp riêng."
-      />
+      {!(menu && restaurant) && (
+        <PageHeading
+          eyebrow="Nhà hàng của tôi"
+          title="Quản lý thực đơn"
+          description="Quản lý món đang bán và chuẩn bị thay đổi trong bản nháp riêng."
+        />
+      )}
       {state.loading ? (
         <Skeleton />
       ) : state.error ? (
@@ -262,10 +267,36 @@ export function RestaurantMenuPage() {
                 Mở bản thực đơn hiện có
               </Button>
             )}
-            <div className="between menu-pagination">
-              <strong>{restaurant.name}</strong>
+            <header className="mn-head">
+              <div className="mn-head-copy">
+                <p className="rp-eyebrow">Thực đơn · {restaurant.name}</p>
+                <h1>Quản lý thực đơn</h1>
+                <p>
+                  Món đang bán thay đổi ngay khi bạn bật tắt còn món. Thêm,
+                  sửa, xóa món thì làm trong bản nháp và gửi duyệt.
+                </p>
+              </div>
+              <dl className="mn-stats">
+                <div>
+                  <dt>Món đang bán</dt>
+                  <dd>{menu.dishes.length}</dd>
+                </div>
+                <div data-tone="success">
+                  <dt>Còn phục vụ</dt>
+                  <dd>
+                    {menu.dishes.filter((dish) => dish.isAvailable).length}
+                  </dd>
+                </div>
+                <div data-tone="warning">
+                  <dt>Tạm hết</dt>
+                  <dd>
+                    {menu.dishes.filter((dish) => !dish.isAvailable).length}
+                  </dd>
+                </div>
+              </dl>
               <Button
-                variant="secondary"
+                variant="tertiary"
+                className="owner-ghost mn-reload"
                 disabled={disabled}
                 onClick={() => {
                   void load();
@@ -273,9 +304,9 @@ export function RestaurantMenuPage() {
                   setHistoryVersion((value) => value + 1);
                 }}
               >
-                Tải lại dữ liệu
+                <ArrowPathIcon aria-hidden /> Tải lại dữ liệu
               </Button>
-            </div>
+            </header>
             {restaurant.verificationStatus !== "verified" && (
               <Alert tone="warning">
                 Nhà hàng cần được xác minh trước khi tạo bản nháp thực đơn.{" "}
@@ -284,35 +315,46 @@ export function RestaurantMenuPage() {
                 </Link>
               </Alert>
             )}
-            <Tabs
-              label="Quản lý thực đơn"
-              value={tab}
-              onChange={(value) => {
-                if (!disabled) setTab(value);
-              }}
-              items={[
-                { value: "current", label: "Đang bán" },
-                { value: "draft", label: "Bản thực đơn" },
-                { value: "history", label: "Lịch sử" },
-              ]}
-            />
+            <div className="owner-tabs">
+              <Tabs
+                label="Quản lý thực đơn"
+                value={tab}
+                onChange={(value) => {
+                  if (!disabled) setTab(value);
+                }}
+                items={[
+                  { value: "current", label: "Đang bán" },
+                  { value: "draft", label: "Bản thực đơn" },
+                  { value: "history", label: "Lịch sử" },
+                ]}
+              />
+            </div>
             {tab === "current" && (
-              <Card title={`Thực đơn đang bán · ${menu.dishes.length} món`}>
-                <div className="stack">
+              <>
+                <div className="mn-draft-bar" data-open={!!menu.openSubmission || undefined}>
+                  <DocumentTextIcon aria-hidden />
                   {menu.openSubmission ? (
-                    <div className="between menu-pagination">
-                      <p>
+                    <p>
+                      <strong>
                         {menuStatusLabels[menu.openSubmission.status]} #
-                        {menu.openSubmission.id}. Bạn chỉ có thể mở một bản thực
-                        đơn tại một thời điểm.
-                      </p>
-                      <Button
-                        disabled={disabled}
-                        onClick={() => void open(menu.openSubmission!.id)}
-                      >
-                        Mở bản thực đơn
-                      </Button>
-                    </div>
+                        {menu.openSubmission.id}
+                      </strong>{" "}
+                      đang mở. Bạn chỉ có thể mở một bản thực đơn tại một thời
+                      điểm.
+                    </p>
+                  ) : (
+                    <p>
+                      Muốn thêm, sửa hoặc bỏ món? Tạo bản nháp từ thực đơn hiện
+                      tại rồi gửi kiểm duyệt.
+                    </p>
+                  )}
+                  {menu.openSubmission ? (
+                    <Button
+                      disabled={disabled}
+                      onClick={() => void open(menu.openSubmission!.id)}
+                    >
+                      Mở bản thực đơn
+                    </Button>
                   ) : (
                     <Button
                       disabled={
@@ -324,39 +366,55 @@ export function RestaurantMenuPage() {
                       Tạo bản nháp
                     </Button>
                   )}
+                </div>
+                <section className="mn-section" aria-labelledby="mn-live-title">
+                  <h2 id="mn-live-title">
+                    Thực đơn đang bán · {menu.dishes.length} món
+                  </h2>
                   {!menu.dishes.length ? (
                     <EmptyState title="Thực đơn đang bán chưa có món">
                       Tạo bản nháp để chuẩn bị các món ăn của nhà hàng.
                     </EmptyState>
                   ) : (
-                    <ul className="menu-list">
+                    <ul className="mn-dish-grid">
                       {menu.dishes.map((dish) => (
-                        <li className="menu-dish-row" key={dish.id}>
-                          <Media
-                            src={dish.coverUrl ?? undefined}
-                            alt={dish.name}
-                          />
-                          <div className="menu-dish-copy">
-                            <h3>{dish.name}</h3>
-                            <p>
-                              {money(dish.price)} ·{" "}
-                              {dishFormLabels[dish.dishForm]}
-                            </p>
-                            <p>
-                              {dish.tags.map((tag) => tag.name).join(" · ")}
-                            </p>
-                            <div className="actions">
-                              <Badge>
+                        <li
+                          className="mn-dish"
+                          key={dish.id}
+                          data-unavailable={!dish.isAvailable || undefined}
+                        >
+                          <div className="mn-dish-photo">
+                            <Media
+                              src={dish.coverUrl ?? undefined}
+                              alt={dish.name}
+                            />
+                            <div className="mn-dish-flags">
+                              <Badge
+                                tone={dish.isAvailable ? "success" : "warning"}
+                              >
                                 {dish.isAvailable ? "Còn món" : "Hết món"}
                               </Badge>
                               {dish.status === "hidden" && (
-                                <Badge>Đang ẩn</Badge>
+                                <Badge tone="error">Đang ẩn</Badge>
                               )}
                             </div>
                           </div>
-                          <div className="actions">
+                          <div className="mn-dish-body">
+                            <h3>{dish.name}</h3>
+                            <p className="mn-dish-price">
+                              {money(dish.price)}
+                              <span>{dishFormLabels[dish.dishForm]}</span>
+                            </p>
+                            {!!dish.tags.length && (
+                              <ul className="mn-tags">
+                                {dish.tags.map((tag) => (
+                                  <li key={tag.id}>{tag.name}</li>
+                                ))}
+                              </ul>
+                            )}
                             <Button
                               variant="secondary"
+                              className="mn-toggle"
                               disabled={disabled}
                               aria-label={`${dish.isAvailable ? "Đánh dấu hết món" : "Đánh dấu còn món"}: ${dish.name}`}
                               onClick={() =>
@@ -372,8 +430,8 @@ export function RestaurantMenuPage() {
                       ))}
                     </ul>
                   )}
-                </div>
-              </Card>
+                </section>
+              </>
             )}
             {tab === "history" && (
               <MenuHistory
@@ -385,6 +443,7 @@ export function RestaurantMenuPage() {
             )}
             {tab === "draft" && (
               <Card
+                className="mn-draft"
                 title={detail ? `Bản thực đơn #${detail.id}` : "Bản thực đơn"}
               >
                 <div className="stack">
@@ -403,8 +462,15 @@ export function RestaurantMenuPage() {
                     </>
                   ) : detail ? (
                     <>
-                      <div className="between menu-pagination">
-                        <Badge>{menuStatusLabels[detail.status]}</Badge>
+                      <div className="mn-draft-head">
+                        <Badge tone={menuStatusTone[detail.status]}>
+                          {menuStatusLabels[detail.status]}
+                        </Badge>
+                        <span className="helper">
+                          {detail.items.length} món
+                          {!!detail.removedDishes.length &&
+                            ` · bỏ ${detail.removedDishes.length} món`}
+                        </span>
                         <div className="actions">
                           {editable && (
                             <Button
@@ -521,22 +587,36 @@ export function RestaurantMenuPage() {
                                   alt={item.name}
                                 />
                                 <div className="menu-dish-copy">
-                                  <h3>{item.name}</h3>
-                                  <p>
-                                    {money(item.price)} ·{" "}
-                                    {dishFormLabels[item.dishForm]} · Thứ tự{" "}
-                                    {item.sortOrder}
-                                  </p>
-                                  <Badge>
-                                    {
+                                  <div className="mn-row-title">
+                                    <h3>{item.name}</h3>
+                                    <Badge
+                                      tone={
+                                        item.change === "new"
+                                          ? "success"
+                                          : item.change === "edited"
+                                            ? "warning"
+                                            : "neutral"
+                                      }
+                                    >
                                       {
-                                        new: "Món mới",
-                                        edited: "Đã sửa",
-                                        unchanged: "Không đổi",
-                                      }[item.change]
-                                    }
-                                  </Badge>
-                                  <p>{item.description ?? "Chưa có mô tả"}</p>
+                                        {
+                                          new: "Món mới",
+                                          edited: "Đã sửa",
+                                          unchanged: "Không đổi",
+                                        }[item.change]
+                                      }
+                                    </Badge>
+                                  </div>
+                                  <p className="mn-row-kinds">
+                                    <span>{dishFormLabels[item.dishForm]}</span>
+                                    <small>Thứ tự {item.sortOrder}</small>
+                                  </p>
+                                  <p className="mn-row-description">
+                                    {item.description ?? "Chưa có mô tả"}
+                                  </p>
+                                  <strong className="mn-row-price">
+                                    {money(item.price)}
+                                  </strong>
                                 </div>
                                 {editable && (
                                   <div className="actions">
@@ -573,7 +653,7 @@ export function RestaurantMenuPage() {
                         </ul>
                       )}
                       {!!detail.removedDishes.length && (
-                        <section className="stack-sm">
+                        <section className="stack-sm mn-removed">
                           <h3>Món đã bỏ so với thực đơn đang bán</h3>
                           <ul>
                             {detail.removedDishes.map((dish) => (

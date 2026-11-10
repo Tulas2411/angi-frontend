@@ -13,6 +13,16 @@ export const menuStatusLabels: Record<MenuStatus, string> = {
   rejected: "Bị từ chối",
   cancelled: "Đã hủy",
 };
+export const menuStatusTone: Record<
+  MenuStatus,
+  "neutral" | "success" | "warning" | "error"
+> = {
+  draft: "neutral",
+  pending: "warning",
+  approved: "success",
+  rejected: "error",
+  cancelled: "neutral",
+};
 export const dishFormLabels = {
   soup: "Món nước",
   dry: "Món khô",
