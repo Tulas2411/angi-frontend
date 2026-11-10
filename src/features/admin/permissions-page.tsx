@@ -403,7 +403,8 @@ function ModEditor({
     setProblem("");
     try {
       const result = await service.replaceModPermissions(mod.id, body);
-      setSeen(result);
+      // `seen` stays the ADM-P2 answer: replacing it with this one made the next render take
+      // the older ADM-P2 overrides for a fresh answer and put them back on screen.
       setSaved(result.overrides);
       setDraft(result.overrides);
       setDone(

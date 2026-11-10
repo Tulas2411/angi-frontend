@@ -260,8 +260,9 @@ function AccountEditor({
       {profile.permissions.length > 0 && (
         <Card title="Quyền của bạn" className="account-permissions">
           <p className="helper">
-            Các thao tác tài khoản này được làm, do Quản trị viên cấp. Thiếu
-            quyền nào thì liên hệ Quản trị viên.
+            {profile.role === "ADMIN"
+              ? "Quản trị viên có mọi quyền kiểm duyệt cùng các quyền quản trị hệ thống. Quyền này gắn với vai trò, không chỉnh riêng được."
+              : "Các thao tác tài khoản này được làm, do Quản trị viên cấp. Thiếu quyền nào thì liên hệ Quản trị viên."}
           </p>
           <ul>
             {profile.permissions.map((code) => (

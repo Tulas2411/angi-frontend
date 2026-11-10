@@ -473,8 +473,9 @@ function AdminWorkspace({
   const { user } = useWorkspace();
   const mod = user?.role === "MOD";
   const owner = user?.role === "RESTAURANT_OWNER";
-  // The backend sends a Mod no notification yet, so the Mod sidebar has no bell to count for.
-  const unread = useUnreadCount(mod ? null : user);
+  // Only the owner sidebar has a bell: the Mod gets no notification from the backend yet and
+  // the Admin sidebar keeps its foot to the account.
+  const unread = useUnreadCount(owner ? user : null);
   if (!user) return null;
   return (
     <AdminShell
@@ -482,7 +483,7 @@ function AdminWorkspace({
       base={base}
       demo={demo}
       unread={unread}
-      notifications={!mod}
+      notifications={owner}
       label={mod ? "kiểm duyệt" : owner ? "chủ quán" : "quản trị"}
       groups={
         owner
