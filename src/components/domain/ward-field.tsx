@@ -26,7 +26,11 @@ type WardFieldProps = Omit<ComponentProps<typeof Combobox>, "options"> & {
   provinceName: string;
 };
 
-/** Names stay editable; suggestions always belong to the current V2 province. */
+/**
+ * Suggestions always belong to the current V2 province. Free typing by default; `strict` (an
+ * address that is saved, like a restaurant's) only takes a ward picked from the list, and text
+ * left unpicked is cleared when the field loses focus.
+ */
 export function WardField({ provinceName, ...props }: WardFieldProps) {
   const provinces = useSyncExternalStore(
     subscribeProvinceCatalog,
@@ -53,17 +57,23 @@ export function WardField({ provinceName, ...props }: WardFieldProps) {
   }, [code]);
   const helper =
     code === undefined
-      ? "Chọn tỉnh/thành để xem gợi ý phường/xã. Bạn vẫn có thể nhập tên đầy đủ."
+      ? props.strict
+        ? "Chọn tỉnh / thành phố trước, rồi chọn phường / xã trong danh sách."
+        : "Chọn tỉnh/thành để xem gợi ý phường/xã. Bạn vẫn có thể nhập tên đầy đủ."
       : status === "loading"
         ? "Đang tải danh sách phường/xã…"
         : status === "error"
           ? "Chưa tải được gợi ý phường/xã. Bạn có thể nhập tên đầy đủ."
-          : "Nhập hoặc chọn phường/xã trực thuộc tỉnh/thành đã chọn.";
+          : props.strict
+            ? "Gõ để tìm rồi chọn phường / xã trong danh sách."
+            : "Nhập hoặc chọn phường/xã trực thuộc tỉnh/thành đã chọn.";
   return (
     <div className="province-field">
       <Combobox
         autoComplete="address-level2"
-        placeholder="Nhập hoặc chọn phường / xã"
+        placeholder={
+          props.strict ? "Gõ để tìm phường / xã" : "Nhập hoặc chọn phường / xã"
+        }
         {...props}
         options={items.map((item) => item.name)}
         helper={helper}

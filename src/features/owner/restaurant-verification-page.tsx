@@ -26,6 +26,8 @@ import { VerificationDocumentUpload } from "./verification-document-upload";
 import { VerificationHistory } from "./verification-history";
 import {
   buildVerificationRequest,
+  cleanBusinessLicense,
+  cleanTaxCode,
   emptyVerificationForm,
   validateVerificationRequest,
   verificationErrorMessage,
@@ -448,16 +450,22 @@ function VerificationEditor({
                 onChange={(event) => change("legalName", event.target.value)}
               />
               <Field
-                placeholder="Ví dụ: 0101234567"
+                placeholder="Ví dụ: 0101234567 hoặc 01A8012345"
                 label="Số giấy phép kinh doanh"
                 name="businessLicenseNo"
                 required
-                maxLength={50}
+                maxLength={11}
+                autoComplete="off"
+                spellCheck={false}
                 value={values.businessLicenseNo}
                 disabled={blocked}
                 error={errors.businessLicenseNo}
+                helper="10 chữ số (doanh nghiệp) hoặc mã hộ kinh doanh như 01A8012345."
                 onChange={(event) =>
-                  change("businessLicenseNo", event.target.value)
+                  change(
+                    "businessLicenseNo",
+                    cleanBusinessLicense(event.target.value),
+                  )
                 }
               />
             </div>
@@ -465,11 +473,16 @@ function VerificationEditor({
               placeholder="Ví dụ: 0101234567"
               label="Mã số thuế (không bắt buộc)"
               name="taxCode"
-              maxLength={20}
+              maxLength={14}
+              inputMode="numeric"
+              autoComplete="off"
               value={values.taxCode}
               disabled={blocked}
               error={errors.taxCode}
-              onChange={(event) => change("taxCode", event.target.value)}
+              helper="10 chữ số; chi nhánh thêm 3 số sau dấu gạch, như 0101234567-001."
+              onChange={(event) =>
+                change("taxCode", cleanTaxCode(event.target.value))
+              }
             />
             <div>
               <h3>Tài liệu xác minh</h3>

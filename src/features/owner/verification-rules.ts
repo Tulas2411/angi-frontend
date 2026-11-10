@@ -123,14 +123,33 @@ export function validateVerificationFile(
   return "";
 }
 
+/**
+ * Số giấy phép kinh doanh: a company's 10-digit enterprise code (the same as its tax code), or a
+ * household business code: 2-digit province code, one letter, 7 or 8 digits (e.g. 01A8012345,
+ * the API Design sample 32A8012345).
+ */
+export const businessLicensePattern = /^(\d{10}|\d{2}[A-Z]\d{7,8})$/;
+/** Mã số thuế: 10 digits, or a branch / dependent unit's 10 digits + "-" + 3 digits. */
+export const taxCodePattern = /^\d{10}(-\d{3})?$/;
+
+/** What an owner may type: letters upper-cased, anything but letters and digits dropped. */
+export const cleanBusinessLicense = (value: string) =>
+  value
+    .toUpperCase()
+    .replace(/[^0-9A-Z]/g, "")
+    .slice(0, 11);
+/** What an owner may type: digits and one dash, at most 14 characters (0101234567-001). */
+export const cleanTaxCode = (value: string) =>
+  value.replace(/[^0-9-]/g, "").slice(0, 14);
+
 export function buildVerificationRequest(
   values: VerificationFormValues,
   documents: VerificationDocumentSelection[],
 ): SubmitVerificationRequestDto {
   return {
     legalName: values.legalName.trim(),
-    businessLicenseNo: values.businessLicenseNo.trim(),
-    taxCode: values.taxCode.trim() || undefined,
+    businessLicenseNo: cleanBusinessLicense(values.businessLicenseNo),
+    taxCode: cleanTaxCode(values.taxCode) || undefined,
     ownerNote: values.ownerNote.trim() || undefined,
     documents: documents.map((document) => ({
       docType: document.docType,
@@ -155,6 +174,18 @@ export function validateVerificationRequest(
     else if (value.length > limit)
       errors[key] = `${label} không được vượt quá ${limit} ký tự.`;
   }
+  const license = request.businessLicenseNo?.trim() ?? "";
+  if (
+    !errors.businessLicenseNo &&
+    license &&
+    !businessLicensePattern.test(license)
+  )
+    errors.businessLicenseNo =
+      "Số giấy phép kinh doanh gồm 10 chữ số (doanh nghiệp) hoặc dạng hộ kinh doanh như 01A8012345.";
+  const taxCode = request.taxCode?.trim() ?? "";
+  if (!errors.taxCode && taxCode && !taxCodePattern.test(taxCode))
+    errors.taxCode =
+      "Mã số thuế gồm 10 chữ số, hoặc 10 chữ số kèm 3 số chi nhánh như 0101234567-001.";
   if (!request.documents.length)
     errors.documents =
       mode === "resubmit"

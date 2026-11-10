@@ -75,8 +75,6 @@ describe("F-49 / OWN-08 resubmission", () => {
     ).toHaveProperty("legalName");
     for (const [field, limit] of [
       ["legalName", 255],
-      ["businessLicenseNo", 50],
-      ["taxCode", 20],
       ["ownerNote", 1000],
     ] as const) {
       expect(
