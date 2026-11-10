@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { NotificationBell } from "@/features/notifications/notification-bell";
 import { usePathname } from "next/navigation";
 import {
   useEffect,
@@ -45,6 +46,8 @@ const icons: Record<string, HeroIcon> = {
   sync: ArrowPathIcon,
   users: UsersIcon,
   restaurants: BuildingStorefrontIcon,
+  profile: BuildingStorefrontIcon,
+  menu: BookOpenIcon,
   verification: CheckBadgeIcon,
   menus: BookOpenIcon,
   reports: FlagIcon,
@@ -143,7 +146,13 @@ export function AdminShell({
     <div
       className="admin-shell"
       data-drawer={open || undefined}
-      data-workspace={label === "kiểm duyệt" ? "mod" : "admin"}
+      data-workspace={
+        label === "kiểm duyệt"
+          ? "mod"
+          : label === "chủ quán"
+            ? "owner"
+            : "admin"
+      }
     >
       <div className="admin-topbar">
         <Brand href={base || "/"} />
@@ -175,7 +184,9 @@ export function AdminShell({
         </div>
         <SidebarNav groups={groups} label={label} />
         <div className="admin-sidebar-foot">
-          {notifications && (
+          {notifications && label === "chủ quán" ? (
+            <NotificationBell role="RESTAURANT_OWNER" variant="sidebar" />
+          ) : notifications && (
             <Link
               href={notificationsHref}
               className="admin-sidebar-bell"

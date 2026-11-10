@@ -481,7 +481,7 @@ test("applied day drafts require a modal before switching profile tabs", async (
   await editDay(page);
   await opening(page).fill("07:30");
   await applyDay(page);
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
+  await page.getByRole("button", { name: "Thông tin", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Bỏ thay đổi giờ mở cửa chưa lưu?" }),
   ).toBeVisible();
@@ -489,7 +489,7 @@ test("applied day drafts require a modal before switching profile tabs", async (
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
   await expect(dayRow(page)).toContainText("07:30–13:30");
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
+  await page.getByRole("button", { name: "Thông tin", exact: true }).click();
   await page
     .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })
     .click();

@@ -9,10 +9,9 @@ import {
   EmptyState,
   SelectField,
   Skeleton,
-  Tabs,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
+import { RestaurantProfileHeader } from "./restaurant-profile-header";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { ownerProfileHref, ownerRoutes, type OwnerProfileTab } from "./routes";
 import { RestaurantStatusGrid } from "./status-labels";
@@ -230,29 +229,12 @@ function OperatingStatusEditor({
     }
   }
   return (
-    <div className="stack form-page">
-      <PageHeading
-        eyebrow="Nhà hàng của tôi"
-        title={restaurant.name}
-        description="Quản lý trạng thái hoạt động của nhà hàng."
+    <div className="stack form-page rp-page">
+      <RestaurantProfileHeader
+        restaurant={restaurant}
+        tab="status"
+        onTab={changeTab}
       />
-      <Tabs
-        value="status"
-        onChange={changeTab}
-        items={[
-          { value: "information", label: "Thông tin" },
-          { value: "photos", label: "Hình ảnh" },
-          { value: "hours", label: "Giờ mở cửa" },
-          { value: "status", label: "Trạng thái" },
-        ]}
-      />
-      <Card title="Trạng thái hiện tại">
-        <RestaurantStatusGrid restaurant={restaurant} />
-        <p className="helper">
-          Trạng thái hoạt động được quản lý độc lập với giờ mở cửa, xác minh và
-          kiểm duyệt.
-        </p>
-      </Card>
       {restaurant.moderationStatus === "suspended" && (
         <Alert tone="warning">
           Nhà hàng đang bị đình chỉ. Bạn vẫn có thể tạm đóng hoặc đóng cửa vĩnh
@@ -264,73 +246,82 @@ function OperatingStatusEditor({
           <Alert>{error}</Alert>
         </div>
       )}
-      <form
-        className="stack"
-        ref={form}
-        noValidate
-        onSubmit={review}
-        aria-busy={busy}
-      >
-        <fieldset className="registration-fields" disabled={busy}>
-          <Card title="Cập nhật trạng thái hoạt động" className="stack">
-            <SelectField
-              label="Trạng thái mới"
-              name="operatingStatus"
-              value={selected}
-              error={errors.operatingStatus}
-              onChange={(value) => {
-                if (isOperatingStatus(value)) {
-                  setSelected(value);
+      <div className="rp-status-grid">
+        <Card title="Trạng thái hiện tại">
+          <RestaurantStatusGrid restaurant={restaurant} />
+          <p className="helper">
+            Trạng thái hoạt động được quản lý độc lập với giờ mở cửa, xác minh
+            và kiểm duyệt.
+          </p>
+        </Card>
+        <form
+          className="stack"
+          ref={form}
+          noValidate
+          onSubmit={review}
+          aria-busy={busy}
+        >
+          <fieldset className="registration-fields" disabled={busy}>
+            <Card title="Cập nhật trạng thái hoạt động" className="stack">
+              <SelectField
+                label="Trạng thái mới"
+                name="operatingStatus"
+                value={selected}
+                error={errors.operatingStatus}
+                onChange={(value) => {
+                  if (isOperatingStatus(value)) {
+                    setSelected(value);
+                    edited();
+                  }
+                }}
+                options={operatingStatuses.map((status) => ({
+                  value: status,
+                  label: operatingStatusLabels[status],
+                }))}
+              />
+              <TextArea
+                placeholder="Ví dụ: Nghỉ Tết từ 28 đến mùng 5"
+                label="Lý do (không bắt buộc)"
+                name="note"
+                maxLength={500}
+                value={note}
+                error={errors.note}
+                onChange={(event) => {
+                  setNote(event.target.value);
                   edited();
-                }
-              }}
-              options={operatingStatuses.map((status) => ({
-                value: status,
-                label: operatingStatusLabels[status],
-              }))}
-            />
-            <TextArea
-              placeholder="Ví dụ: Nghỉ Tết từ 28 đến mùng 5"
-              label="Lý do (không bắt buộc)"
-              name="note"
-              maxLength={500}
-              value={note}
-              error={errors.note}
-              onChange={(event) => {
-                setNote(event.target.value);
-                edited();
-              }}
-              helper="Lý do đi kèm lần đổi trạng thái này."
-            />
-            {!changedStatus && (
-              <p className="helper">
-                Chọn trạng thái khác để cập nhật. Lý do không được lưu riêng khi
-                trạng thái giữ nguyên.
-              </p>
-            )}
-          </Card>
-        </fieldset>
-        <div className="actions registration-actions">
-          <Button type="submit" disabled={!changedStatus || busy}>
-            Cập nhật trạng thái
-          </Button>
-          <Button
-            variant="secondary"
-            disabled={!dirty || busy}
-            onClick={() =>
-              setDiscard({
-                title: "Bỏ thay đổi trạng thái chưa lưu?",
-                label: "Bỏ thay đổi",
-                description:
-                  "Thông tin sẽ được khôi phục về trạng thái đã lưu gần nhất.",
-                action: reset,
-              })
-            }
-          >
-            Hủy thay đổi
-          </Button>
-        </div>
-      </form>
+                }}
+                helper="Lý do đi kèm lần đổi trạng thái này."
+              />
+              {!changedStatus && (
+                <p className="helper">
+                  Chọn trạng thái khác để cập nhật. Lý do không được lưu riêng
+                  khi trạng thái giữ nguyên.
+                </p>
+              )}
+            </Card>
+          </fieldset>
+          <div className="actions registration-actions">
+            <Button type="submit" disabled={!changedStatus || busy}>
+              Cập nhật trạng thái
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!dirty || busy}
+              onClick={() =>
+                setDiscard({
+                  title: "Bỏ thay đổi trạng thái chưa lưu?",
+                  label: "Bỏ thay đổi",
+                  description:
+                    "Thông tin sẽ được khôi phục về trạng thái đã lưu gần nhất.",
+                  action: reset,
+                })
+              }
+            >
+              Hủy thay đổi
+            </Button>
+          </div>
+        </form>
+      </div>
       <ConfirmDialog
         open={!!request}
         title={

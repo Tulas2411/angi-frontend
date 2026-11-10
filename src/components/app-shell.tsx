@@ -6,6 +6,7 @@ import { SiteHeader } from "@/components/site/site-header";
 import { navigationFor } from "@/components/site/navigation";
 import { HeaderNav, HeaderRoadmapShare } from "@/components/site/header-nav";
 import { HOME_BY_ROLE } from "@/features/auth/roles";
+import { OwnerDashboard } from "@/components/layout/workspace";
 
 export default function AppShell({
   user,
@@ -14,6 +15,9 @@ export default function AppShell({
   user: AuthUserDto;
   children: ReactNode;
 }) {
+  // A Restaurant Owner works in the dashboard shell, like the Mod and Admin workspaces.
+  if (user.role === "RESTAURANT_OWNER")
+    return <OwnerDashboard user={user}>{children}</OwnerDashboard>;
   const menu = navigationFor(user.role);
   return (
     <div className="app-shell">

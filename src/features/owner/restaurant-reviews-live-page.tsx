@@ -1,10 +1,20 @@
 "use client";
 import { notify } from "@/shared/ui/notify";
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+import {
+  BuildingStorefrontIcon,
+  ChatBubbleLeftIcon,
+  PencilSquareIcon,
+} from "@heroicons/react/24/outline";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   Avatar,
-  Dialog,
   EmptyState,
   Pagination,
   SelectField,
@@ -12,6 +22,7 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { PageHeading } from "@/components/layout/workspace";
+import { PhotoLightbox } from "@/components/ui/photo-lightbox";
 import { getErrorMessage } from "@/shared/api/error";
 import {
   ownerReviewsService,
@@ -127,9 +138,15 @@ function RatingSummary({ reviews }: { reviews: OwnerReviewDto[] }) {
 function ReviewItem({
   review,
   onReply,
+  onPhoto,
+  composer,
 }: {
   review: OwnerReviewDto;
   onReply: (review: OwnerReviewDto) => void;
+  /** The open reply box for this review, shown in place of the reply (or under the review). */
+  composer?: ReactNode;
+  /** Opens the review's photos large, starting at `index`. */
+  onPhoto: (review: OwnerReviewDto, index: number) => void;
 }) {
   const visible = review.status === "visible";
   return (
@@ -164,20 +181,28 @@ function ReviewItem({
         <ul className="owner-review-images">
           {review.images.map((image, index) => (
             <li key={image}>
-              <img
-                className="owner-review-image"
-                src={image}
-                alt={`Ảnh thực khách đăng kèm, ảnh ${index + 1}`}
-              />
+              <button
+                type="button"
+                className="owner-review-image-button"
+                aria-label={`Xem ảnh ${index + 1} của ${review.user.displayName}`}
+                onClick={() => onPhoto(review, index)}
+              >
+                <img
+                  className="owner-review-image"
+                  src={image}
+                  alt={`Ảnh thực khách đăng kèm, ảnh ${index + 1}`}
+                />
+              </button>
             </li>
           ))}
         </ul>
       )}
 
-      {review.reply && (
+      {composer}
+      {review.reply && !composer && (
         <div className="owner-review-reply">
           <div className="owner-review-reply-head">
-            <strong>Phản hồi của Bếp Nhà</strong>
+            <strong>Phản hồi của quán</strong>
             {review.reply.status === "visible" ? (
               <Badge tone="success">Đang hiển thị</Badge>
             ) : (
@@ -193,19 +218,106 @@ function ReviewItem({
           )}
         </div>
       )}
-      <div className="owner-review-actions">
-        <Button
-          variant={review.reply ? "secondary" : "primary"}
-          disabled={!visible}
-          onClick={() => onReply(review)}
-        >
-          {review.reply ? "Sửa phản hồi" : "Phản hồi"}
-        </Button>
-        {!visible && (
-          <span className="helper">Chỉ phản hồi đánh giá đang hiển thị.</span>
-        )}
-      </div>
+      {!composer && (
+        <div className="owner-review-actions">
+          <Button
+            variant="tertiary"
+            className="owner-review-reply-toggle"
+            disabled={!visible}
+            onClick={() => onReply(review)}
+          >
+            {review.reply ? (
+              <PencilSquareIcon aria-hidden />
+            ) : (
+              <ChatBubbleLeftIcon aria-hidden />
+            )}
+            {review.reply ? "Sửa phản hồi" : "Phản hồi"}
+          </Button>
+          {!visible && (
+            <span className="helper">Chỉ phản hồi đánh giá đang hiển thị.</span>
+          )}
+        </div>
+      )}
     </li>
+  );
+}
+
+/**
+ * The reply box under a review, opened in place like a comment reply: Escape cancels,
+ * Ctrl/⌘+Enter sends. It edits the existing reply in its own spot when there is one.
+ */
+function ReplyComposer({
+  review,
+  text,
+  error,
+  busy,
+  onText,
+  onCancel,
+  onSubmit,
+}: {
+  review: OwnerReviewDto;
+  text: string;
+  error: string;
+  busy: boolean;
+  onText: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+
+  useEffect(() => {
+    const element = document.getElementById(REPLY_FIELD_ID);
+    if (!(element instanceof HTMLTextAreaElement)) return;
+    element.focus();
+    element.setSelectionRange(element.value.length, element.value.length);
+    element.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, []);
+  return (
+    <form
+      className="owner-reply-composer"
+      onSubmit={onSubmit}
+      noValidate
+      aria-label={`Phản hồi ${review.user.displayName}`}
+    >
+      <span className="owner-reply-avatar" aria-hidden>
+        <BuildingStorefrontIcon />
+      </span>
+      <div className="owner-reply-box">
+        <TextArea
+          id={REPLY_FIELD_ID}
+          label="Phản hồi của nhà hàng"
+          placeholder={`Trả lời ${review.user.displayName}…`}
+          value={text}
+          rows={3}
+          maxLength={REPLY_MAX}
+          required
+          disabled={busy}
+          error={error}
+          helper="Phản hồi hiển thị dưới tên quán sau khi người kiểm duyệt của ANGI duyệt."
+          onChange={(event) => onText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              onCancel();
+            } else if (
+              event.key === "Enter" &&
+              (event.ctrlKey || event.metaKey)
+            ) {
+              event.preventDefault();
+              event.currentTarget.form?.requestSubmit();
+            }
+          }}
+        />
+        <div className="owner-reply-foot">
+          <span className="helper">Ctrl + Enter để gửi · Esc để hủy</span>
+          <Button variant="tertiary" disabled={busy} onClick={onCancel}>
+            Hủy
+          </Button>
+          <Button type="submit" loading={busy}>
+            {review.reply ? "Lưu phản hồi" : "Gửi phản hồi"}
+          </Button>
+        </div>
+      </div>
+    </form>
   );
 }
 
@@ -224,6 +336,10 @@ export function RestaurantReviewsLivePage() {
   const [text, setText] = useState("");
   const [fieldError, setFieldError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [photos, setPhotos] = useState<{
+    review: OwnerReviewDto;
+    index: number;
+  } | null>(null);
 
   /** "unanswered" là `replied=false`; "answered" là `replied=true`; "all" thì không lọc. */
   const replied =
@@ -385,7 +501,28 @@ export function RestaurantReviewsLivePage() {
         ) : (
           <ul className="owner-reviews-list">
             {rows.map((review) => (
-              <ReviewItem key={review.id} review={review} onReply={openReply} />
+              <ReviewItem
+                key={review.id}
+                review={review}
+                onReply={openReply}
+                onPhoto={(item, index) => setPhotos({ review: item, index })}
+                composer={
+                  editing?.id === review.id ? (
+                    <ReplyComposer
+                      review={review}
+                      text={text}
+                      error={fieldError}
+                      busy={busy}
+                      onText={(value) => {
+                        setText(value);
+                        if (fieldError) setFieldError("");
+                      }}
+                      onCancel={closeReply}
+                      onSubmit={submitReply}
+                    />
+                  ) : null
+                }
+              />
             ))}
           </ul>
         )}
@@ -400,48 +537,18 @@ export function RestaurantReviewsLivePage() {
         />
       )}
 
-      <Dialog
-        open={!!editing}
-        onClose={closeReply}
-        title={`Phản hồi ${editing?.user.displayName ?? ""}`}
-        footer={
-          <>
-            <Button variant="secondary" onClick={closeReply}>
-              Hủy
-            </Button>
-            <Button type="submit" form="owner-reply-form" loading={busy}>
-              Lưu phản hồi
-            </Button>
-          </>
+
+      <PhotoLightbox
+        photos={(photos?.review.images ?? []).map((url, index) => ({
+          url,
+          alt: `Ảnh ${index + 1} trong đánh giá của ${photos?.review.user.displayName}`,
+        }))}
+        index={photos?.index ?? null}
+        onIndexChange={(index) =>
+          setPhotos((current) => (current ? { ...current, index } : current))
         }
-      >
-        <form
-          id="owner-reply-form"
-          className="owner-reviews-dialog-form"
-          onSubmit={submitReply}
-        >
-          <p className="owner-reviews-dialog-note">
-            Phản hồi hiển thị dưới tên <strong>Bếp Nhà</strong> và được người
-            kiểm duyệt của ANGI duyệt trước khi hiện với thực khách. Hãy tránh
-            thông tin cá nhân và giữ giọng điệu lịch sự.
-          </p>
-          <TextArea
-            placeholder="Cảm ơn thực khách và phản hồi góp ý…"
-            id={REPLY_FIELD_ID}
-            label="Phản hồi của nhà hàng"
-            value={text}
-            onChange={(event) => {
-              setText(event.target.value);
-              if (fieldError) setFieldError("");
-            }}
-            error={fieldError}
-            helper="Cảm ơn thực khách và cho biết bước tiếp theo bạn sẽ làm."
-            maxLength={REPLY_MAX}
-            rows={6}
-            required
-          />
-        </form>
-      </Dialog>
+        onClose={() => setPhotos(null)}
+      />
     </div>
   );
 }

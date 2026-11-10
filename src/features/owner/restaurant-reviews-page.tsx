@@ -167,7 +167,7 @@ function ReviewItem({
       {review.reply && (
         <div className="owner-review-reply">
           <div className="owner-review-reply-head">
-            <strong>Phản hồi của Bếp Nhà</strong>
+            <strong>Phản hồi của quán</strong>
             {review.replyPending ? (
               <Badge tone="warning">Đang chờ kiểm duyệt</Badge>
             ) : (
@@ -420,7 +420,7 @@ export function RestaurantReviewsPage() {
           onSubmit={submitReply}
         >
           <p className="owner-reviews-dialog-note">
-            Phản hồi hiển thị dưới tên <strong>Bếp Nhà</strong> và được người
+            Phản hồi hiển thị dưới tên <strong>quán của bạn</strong> và được người
             kiểm duyệt của ANGI duyệt trước khi hiện với thực khách. Hãy tránh
             thông tin cá nhân và giữ giọng điệu lịch sự.
           </p>
@@ -452,7 +452,7 @@ export function RestaurantReviewsPage() {
         onConfirm={() => removing && removeReply(removing)}
       >
         <p>
-          Phản hồi của Bếp Nhà cho {removing?.author ?? ""} sẽ bị gỡ khỏi đánh
+          Phản hồi của quán cho {removing?.author ?? ""} sẽ bị gỡ khỏi đánh
           giá này. Thực khách sẽ không còn thấy phản hồi của nhà hàng.
         </p>
       </ConfirmDialog>

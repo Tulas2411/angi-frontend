@@ -406,7 +406,7 @@ test("profile/status dirty tab exits require modals before either editor is unmo
   await openStatus(page);
   await chooseOption(selected(page), "temporarily_closed");
   await reason(page).fill("Chưa lưu");
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
+  await page.getByRole("button", { name: "Thông tin", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Bỏ thay đổi trạng thái chưa lưu?" }),
   ).toBeVisible();
@@ -414,12 +414,12 @@ test("profile/status dirty tab exits require modals before either editor is unmo
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
   await expect(reason(page)).toHaveValue("Chưa lưu");
-  await page.getByRole("tab", { name: "Thông tin", exact: true }).click();
+  await page.getByRole("button", { name: "Thông tin", exact: true }).click();
   await page
     .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })
     .click();
   await page.getByLabel("Tên nhà hàng").fill("Chưa lưu tên");
-  await page.getByRole("tab", { name: "Trạng thái", exact: true }).click();
+  await page.getByRole("button", { name: "Trạng thái", exact: true }).click();
   await expect(
     page.getByRole("dialog", { name: "Bỏ thay đổi chưa lưu?" }),
   ).toBeVisible();
@@ -427,7 +427,7 @@ test("profile/status dirty tab exits require modals before either editor is unmo
     .getByRole("button", { name: "Tiếp tục chỉnh sửa", exact: true })
     .click();
   await expect(page.getByLabel("Tên nhà hàng")).toHaveValue("Chưa lưu tên");
-  await page.getByRole("tab", { name: "Trạng thái", exact: true }).click();
+  await page.getByRole("button", { name: "Trạng thái", exact: true }).click();
   await page
     .getByRole("button", { name: "Bỏ thay đổi và chuyển thẻ", exact: true })
     .click();

@@ -217,7 +217,7 @@ export function ReviewContent({
       </p>
       {review.reply && (
         <div className="review-reply">
-          <strong>Phản hồi của Bếp Nhà</strong>
+          <strong>Phản hồi của quán</strong>
           <p>
             {review.replyModeration === "hidden" && !showHidden
               ? "Phản hồi bị ẩn."

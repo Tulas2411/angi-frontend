@@ -105,3 +105,202 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Hours range slider: presets, the chosen range, and a 00:00 → 06:00 (next day) track. */
+.business-hours-slot {
+  display: grid;
+  gap: var(--space-3);
+}
+.hours-slider {
+  --thumb: 22px;
+  display: grid;
+  gap: var(--space-2);
+}
+.hours-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hours-presets button {
+  display: inline-grid;
+  justify-items: center;
+  gap: 0;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: background var(--duration) ease;
+}
+.hours-presets button small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.hours-presets button:hover {
+  background: var(--control-hover);
+}
+.hours-presets button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.hours-presets button[aria-pressed="true"] small {
+  color: rgb(255 255 255 / 0.75);
+}
+.hours-presets button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.hours-slider-value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+.hours-slider-value strong {
+  font-family: var(--font-heading);
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.hours-slider-value span {
+  color: var(--muted);
+  font-size: 13px;
+}
+.hours-slider-value strong + span {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+  font-weight: 700;
+}
+
+/* Two range inputs share one track; only their thumbs take the pointer. */
+.hours-track {
+  position: relative;
+  height: var(--thumb);
+  margin: var(--space-1) calc(var(--thumb) / 2) 0;
+}
+.hours-track::before,
+.hours-track-next,
+.hours-track-fill {
+  position: absolute;
+  top: 50%;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  transform: translateY(-50%);
+  content: "";
+}
+.hours-track::before {
+  right: 0;
+  left: 0;
+  background: var(--control);
+}
+.hours-track-next {
+  right: 0;
+  left: var(--midnight);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--control) 0 4px,
+    var(--control-hover) 4px 8px
+  );
+}
+.hours-track-fill {
+  left: var(--from);
+  width: calc(var(--to) - var(--from));
+  background: var(--success-ink);
+}
+.hours-slider[data-empty] .hours-track-fill {
+  background: var(--line-strong);
+}
+.hours-track input {
+  position: absolute;
+  inset: 0 calc(var(--thumb) / -2);
+  width: calc(100% + var(--thumb));
+  height: 100%;
+  margin: 0;
+  background: none;
+  pointer-events: none;
+  appearance: none;
+}
+.hours-track input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: none;
+}
+.hours-track input::-moz-range-track {
+  background: none;
+}
+.hours-track input::-webkit-slider-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 3px solid var(--success-ink);
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 2px 6px rgb(34 34 34 / 0.2);
+  cursor: grab;
+  pointer-events: auto;
+  appearance: none;
+}
+.hours-track input::-moz-range-thumb {
+  width: var(--thumb);
+  height: var(--thumb);
+  border: 3px solid var(--success-ink);
+  border-radius: 50%;
+  background: var(--card);
+  box-shadow: 0 2px 6px rgb(34 34 34 / 0.2);
+  cursor: grab;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+.hours-slider[data-empty] .hours-track input::-webkit-slider-thumb {
+  border-color: var(--line-strong);
+}
+.hours-slider[data-empty] .hours-track input::-moz-range-thumb {
+  border-color: var(--line-strong);
+}
+.hours-track input:focus-visible {
+  outline: none;
+}
+.hours-track input:focus-visible::-webkit-slider-thumb {
+  box-shadow: var(--focus-ring);
+}
+.hours-track input:focus-visible::-moz-range-thumb {
+  box-shadow: var(--focus-ring);
+}
+.hours-ticks {
+  position: relative;
+  height: 18px;
+  margin: 0 calc(var(--thumb) / 2);
+  padding: 0;
+  list-style: none;
+}
+.hours-ticks li {
+  position: absolute;
+  top: 0;
+  color: var(--muted);
+  font-size: 11px;
+  transform: translateX(-50%);
+}
+.hours-ticks-note {
+  display: grid;
+  grid-template-columns: 80fr 20fr;
+  margin: 0 calc(var(--thumb) / 2);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.hours-ticks-note span + span {
+  padding-left: 6px;
+  border-left: 1px dashed var(--line-strong);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hours-presets button {
+    transition: none;
+  }
+}

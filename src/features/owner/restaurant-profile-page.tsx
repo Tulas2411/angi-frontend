@@ -10,10 +10,9 @@ import {
   Field,
   SelectField,
   Skeleton,
-  Tabs,
   TextArea,
 } from "@/components/ui/primitives";
-import { PageHeading } from "@/components/layout/page-heading";
+import { RestaurantProfileHeader } from "./restaurant-profile-header";
 import { ProvinceField } from "@/components/domain/province-field";
 import { WardField } from "@/components/domain/ward-field";
 import { provinceNameKey } from "@/shared/locations/provinces";
@@ -304,21 +303,11 @@ function RestaurantProfileEditor({
     }
   }
   return (
-    <div className="stack form-page">
-      <PageHeading
-        eyebrow="Nhà hàng của tôi"
-        title={restaurant.name}
-        description="Chỉ các thông tin bạn thay đổi mới được lưu."
-      />
-      <Tabs
-        value={tab}
-        onChange={changeTab}
-        items={[
-          { value: "information", label: "Thông tin" },
-          { value: "photos", label: "Hình ảnh" },
-          { value: "hours", label: "Giờ mở cửa" },
-          { value: "status", label: "Trạng thái" },
-        ]}
+    <div className="stack form-page rp-page">
+      <RestaurantProfileHeader
+        restaurant={restaurant}
+        tab={tab === "photos" ? "photos" : "information"}
+        onTab={changeTab}
       />
       {error && (
         <div ref={errorRef} tabIndex={-1}>
@@ -335,127 +324,136 @@ function RestaurantProfileEditor({
         >
           <fieldset className="registration-fields stack" disabled={blocked}>
             {tab === "information" ? (
-              <Card title="Thông tin nhà hàng" className="stack">
-                <Field
-                  placeholder="Ví dụ: Bún Bò Bà Diệu"
-                  label="Tên nhà hàng"
-                  name="name"
-                  required
-                  maxLength={200}
-                  value={values.name}
-                  error={errors.name}
-                  onChange={(event) => change("name", event.target.value)}
-                />
-                <div className="grid-2">
+              <div className="rp-grid">
+                <Card title="Giới thiệu & liên hệ" className="stack">
                   <Field
-                    placeholder="Ví dụ: 0236 3812 345"
-                    label="Số điện thoại nhà hàng"
-                    name="phone"
-                    type="tel"
-                    maxLength={20}
-                    value={values.phone}
-                    error={errors.phone}
-                    onChange={(event) => change("phone", event.target.value)}
+                    placeholder="Ví dụ: Bún Bò Bà Diệu"
+                    label="Tên nhà hàng"
+                    name="name"
+                    required
+                    maxLength={200}
+                    value={values.name}
+                    error={errors.name}
+                    onChange={(event) => change("name", event.target.value)}
                   />
+                  <TextArea
+                    placeholder="Món đặc trưng, không gian, điều làm quán khác biệt…"
+                    label="Mô tả"
+                    name="description"
+                    maxLength={2000}
+                    value={values.description}
+                    error={errors.description}
+                    onChange={(event) =>
+                      change("description", event.target.value)
+                    }
+                  />
+                  <div className="grid-2">
+                    <Field
+                      placeholder="Ví dụ: 0236 3812 345"
+                      label="Số điện thoại nhà hàng"
+                      name="phone"
+                      type="tel"
+                      maxLength={20}
+                      value={values.phone}
+                      error={errors.phone}
+                      onChange={(event) => change("phone", event.target.value)}
+                    />
+                    <Field
+                      placeholder="lienhe@nhahang.vn"
+                      label="Email nhà hàng"
+                      name="email"
+                      type="email"
+                      value={values.email}
+                      error={errors.email}
+                      onChange={(event) => change("email", event.target.value)}
+                    />
+                  </div>
                   <Field
-                    placeholder="lienhe@nhahang.vn"
-                    label="Email nhà hàng"
-                    name="email"
-                    type="email"
-                    value={values.email}
-                    error={errors.email}
-                    onChange={(event) => change("email", event.target.value)}
+                    label="Website"
+                    name="website"
+                    type="url"
+                    placeholder="https://"
+                    value={values.website}
+                    error={errors.website}
+                    onChange={(event) => change("website", event.target.value)}
                   />
-                </div>
-                <Field
-                  label="Website"
-                  name="website"
-                  type="url"
-                  placeholder="https://"
-                  value={values.website}
-                  error={errors.website}
-                  onChange={(event) => change("website", event.target.value)}
-                />
-                <TextArea
-                  placeholder="Món đặc trưng, không gian, điều làm quán khác biệt…"
-                  label="Mô tả"
-                  name="description"
-                  maxLength={2000}
-                  value={values.description}
-                  error={errors.description}
-                  onChange={(event) =>
-                    change("description", event.target.value)
-                  }
-                />
-                <Field
-                  placeholder="Số nhà, tên đường"
-                  label="Địa chỉ"
-                  name="addressLine"
-                  required
-                  maxLength={255}
-                  value={values.addressLine}
-                  error={errors.addressLine}
-                  onChange={(event) =>
-                    change("addressLine", event.target.value)
-                  }
-                />
-                <div className="grid-2">
-                  <ProvinceField
-                    label="Tỉnh / thành phố"
-                    name="provinceName"
-                    maxLength={100}
-                    value={values.provinceName}
-                    error={errors.provinceName}
-                    onChange={(value) => change("provinceName", value)}
+                  <SelectField
+                    label="Mức giá (không bắt buộc)"
+                    name="priceLevel"
+                    error={errors.priceLevel}
+                    value={values.priceLevel}
+                    onChange={(value) => change("priceLevel", value)}
+                    options={[
+                      { value: "", label: "Chưa chọn" },
+                      ...[1, 2, 3, 4].map((level) => ({
+                        value: String(level),
+                        label: `Mức giá ${level} · ${"₫".repeat(level)}`,
+                      })),
+                    ]}
                   />
-                  <WardField
-                    label="Phường / xã"
-                    name="ward"
-                    provinceName={values.provinceName}
-                    maxLength={100}
-                    value={values.ward}
-                    error={errors.ward}
-                    onChange={(value) => change("ward", value)}
+                </Card>
+                <Card title="Địa chỉ & vị trí" className="stack">
+                  <div className="grid-2">
+                    <ProvinceField
+                      label="Tỉnh / thành phố"
+                      name="provinceName"
+                      maxLength={100}
+                      value={values.provinceName}
+                      error={errors.provinceName}
+                      onChange={(value) => change("provinceName", value)}
+                    />
+                    <WardField
+                      label="Phường / xã"
+                      name="ward"
+                      provinceName={values.provinceName}
+                      maxLength={100}
+                      value={values.ward}
+                      error={errors.ward}
+                      onChange={(value) => change("ward", value)}
+                    />
+                  </div>
+                  <Field
+                    placeholder="Số nhà, tên đường"
+                    label="Địa chỉ"
+                    name="addressLine"
+                    required
+                    maxLength={255}
+                    value={values.addressLine}
+                    error={errors.addressLine}
+                    onChange={(event) =>
+                      change("addressLine", event.target.value)
+                    }
                   />
-                </div>
-                <Button
-                  name="location"
-                  variant="secondary"
-                  aria-invalid={!!errors.location}
-                  aria-describedby="profile-location-help"
-                  onClick={() => setMapOpen(true)}
-                >
-                  Chọn vị trí trên bản đồ
-                </Button>
-                <p
-                  id="profile-location-help"
-                  className={errors.location ? "field-error" : "helper"}
-                >
-                  {errors.location ||
-                    (location
-                      ? `Tọa độ: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
-                      : "Chưa có tọa độ. Bạn có thể chọn vị trí trên bản đồ.")}
-                </p>
-                {location?.addressNotice && (
-                  <p className="helper" role="status">
-                    {location.addressNotice}
-                  </p>
-                )}
-                <SelectField
-                  label="Mức giá (không bắt buộc)"
-                  name="priceLevel"
-                  error={errors.priceLevel}
-                  value={values.priceLevel}
-                  onChange={(value) => change("priceLevel", value)}
-                  options={[
-                    { value: "", label: "Chưa chọn" },
-                    ...[1, 2, 3, 4].map((level) => ({
-                      value: String(level),
-                      label: `Mức giá ${level} · ${"₫".repeat(level)}`,
-                    })),
-                  ]}
-                />
-              </Card>
+                  <div className="rp-location">
+                    <strong>Vị trí trên bản đồ</strong>
+                    <p
+                      id="profile-location-help"
+                      className={errors.location ? "field-error" : "helper"}
+                    >
+                      {errors.location ||
+                        (location
+                          ? `Tọa độ: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+                          : "Chưa có tọa độ. Bạn có thể chọn vị trí trên bản đồ.")}
+                    </p>
+                    {location?.addressNotice && (
+                      <p className="helper" role="status">
+                        {location.addressNotice}
+                      </p>
+                    )}
+                    <Button
+                      name="location"
+                      variant="secondary"
+                      aria-invalid={!!errors.location}
+                      aria-describedby="profile-location-help"
+                      onClick={() => setMapOpen(true)}
+                    >
+                      {location
+                        ? "Đổi vị trí trên bản đồ"
+                        : "Chọn vị trí trên bản đồ"}
+                    </Button>
+                  </div>
+                </Card>
+              </div>
             ) : (
               <Card title="Hình ảnh nhà hàng" className="stack">
                 <section
@@ -561,29 +559,36 @@ function RestaurantProfileEditor({
               </Card>
             )}
           </fieldset>
-          <div className="actions registration-actions">
-            <Button
-              type="submit"
-              loading={saving}
-              disabled={!dirty || coverPending || galleryPending}
-            >
-              Lưu thay đổi
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={!dirty || blocked}
-              onClick={() =>
-                setConfirmation({
-                  title: "Bỏ thay đổi chưa lưu?",
-                  description:
-                    "Thông tin và ảnh bạn đang chỉnh sửa sẽ được khôi phục về lần lưu gần nhất.",
-                  label: "Bỏ thay đổi",
-                  action: resetDraft,
-                })
-              }
-            >
-              Hủy thay đổi
-            </Button>
+          <div className="rp-savebar" data-dirty={dirty || undefined}>
+            <p>
+              {dirty
+                ? "Bạn có thay đổi chưa lưu."
+                : "Chỉ các thông tin bạn thay đổi mới được lưu."}
+            </p>
+            <div className="actions">
+              <Button
+                variant="secondary"
+                disabled={!dirty || blocked}
+                onClick={() =>
+                  setConfirmation({
+                    title: "Bỏ thay đổi chưa lưu?",
+                    description:
+                      "Thông tin và ảnh bạn đang chỉnh sửa sẽ được khôi phục về lần lưu gần nhất.",
+                    label: "Bỏ thay đổi",
+                    action: resetDraft,
+                  })
+                }
+              >
+                Hủy thay đổi
+              </Button>
+              <Button
+                type="submit"
+                loading={saving}
+                disabled={!dirty || coverPending || galleryPending}
+              >
+                Lưu thay đổi
+              </Button>
+            </div>
           </div>
         </form>
       ) : null}

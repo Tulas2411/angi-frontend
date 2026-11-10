@@ -4,6 +4,7 @@ import { Alert, Button } from "@/shared/ui";
 import { ConfirmDialog, Dialog } from "@/components/ui/primitives";
 import { TimeField } from "@/components/ui/date-time-fields";
 import { businessDays, validateBusinessHours } from "./business-hours-rules";
+import { HoursRangeSlider } from "./hours-range-slider";
 import type { BusinessHourDto } from "./restaurant-types";
 type DaySlot = BusinessHourDto & { id: string };
 
@@ -73,7 +74,10 @@ export function BusinessHoursDayDialog({
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      const inputs = form.current?.querySelectorAll("input");
+      // The typed time fields, not the slider handles that come first in each range.
+      const inputs = form.current?.querySelectorAll<HTMLInputElement>(
+        ".business-hours-slot-fields input",
+      );
       const index = add ? original.length * 2 : 0;
       inputs?.[index]?.focus();
     });
@@ -165,6 +169,20 @@ export function BusinessHoursDayDialog({
               key={slot.id}
             >
               <legend>Khoảng {index + 1}</legend>
+              <HoursRangeSlider
+                label={`${day.label} · khoảng ${index + 1}`}
+                openTime={slot.openTime}
+                closeTime={slot.closeTime}
+                onChange={(openTime, closeTime) =>
+                  edited(
+                    slots.map((entry) =>
+                      entry.id === slot.id
+                        ? { ...entry, openTime, closeTime }
+                        : entry,
+                    ),
+                  )
+                }
+              />
               <div className="business-hours-slot-fields">
                 <TimeField
                   label={`Giờ mở · ${day.label} · khoảng ${index + 1}`}

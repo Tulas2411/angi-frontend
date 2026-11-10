@@ -1,9 +1,14 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Alert, Button, Card } from "@/shared/ui";
+import { ChevronRightIcon } from "@heroicons/react/20/solid";
+import { Alert, Badge, Button, Card } from "@/shared/ui";
 import { EmptyState, SelectField, Skeleton } from "@/components/ui/primitives";
 import { dateLabel } from "@/shared/format";
-import { menuErrorMessage, menuStatusLabels } from "./menu-rules";
+import {
+  menuErrorMessage,
+  menuStatusLabels,
+  menuStatusTone,
+} from "./menu-rules";
 import type { RestaurantMenuService } from "./menu-service";
 import type { MenuHistoryDto, MenuStatus } from "./menu-types";
 export function MenuHistory({
@@ -45,8 +50,9 @@ export function MenuHistory({
     };
   }, [service, page, status, retry]);
   return (
-    <Card title="Lịch sử thực đơn">
+    <Card title="Lịch sử thực đơn" className="mn-history">
       <div className="stack">
+        <div className="mn-history-filter">
         <SelectField
           label="Lọc trạng thái"
           value={status}
@@ -62,6 +68,7 @@ export function MenuHistory({
             })),
           ]}
         />
+        </div>
         {state.loading ? (
           <Skeleton />
         ) : state.error ? (
@@ -79,26 +86,37 @@ export function MenuHistory({
               ) : (
                 <ul className="menu-list">
                   {state.data.items.map((item) => (
-                    <li className="menu-history-row" key={item.id}>
+                    <li
+                      className="menu-history-row"
+                      key={item.id}
+                      data-tone={menuStatusTone[item.status]}
+                    >
                       <div>
-                        <strong>
-                          Bản thực đơn #{item.id} ·{" "}
-                          {menuStatusLabels[item.status]}
-                        </strong>
+                        <div className="mn-row-title">
+                          <strong>Bản thực đơn #{item.id}</strong>
+                          <Badge tone={menuStatusTone[item.status]}>
+                            {menuStatusLabels[item.status]}
+                          </Badge>
+                        </div>
                         <p className="helper">
                           Tạo: {dateLabel(item.createdAt)} · Nộp:{" "}
                           {item.submittedAt
                             ? dateLabel(item.submittedAt)
                             : "Chưa nộp"}
                         </p>
-                        {item.reviewNote && <p>Phản hồi: {item.reviewNote}</p>}
+                        {item.reviewNote && (
+                          <p className="mn-history-note">
+                            Phản hồi: {item.reviewNote}
+                          </p>
+                        )}
                       </div>
                       <Button
-                        variant="secondary"
+                        variant="tertiary"
+                        className="owner-ghost mn-history-open"
                         disabled={disabled}
                         onClick={() => onOpen(item.id)}
                       >
-                        Xem bản #{item.id}
+                        Xem bản #{item.id} <ChevronRightIcon aria-hidden />
                       </Button>
                     </li>
                   ))}

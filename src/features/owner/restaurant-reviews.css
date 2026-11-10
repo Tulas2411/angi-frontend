@@ -277,3 +277,124 @@
     width: 100%;
   }
 }
+/* Each review photo opens the shared photo viewer. */
+.owner-review-image-button {
+  display: block;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: zoom-in;
+}
+.owner-review-image-button .owner-review-image {
+  display: block;
+  transition:
+    transform var(--duration) ease,
+    filter var(--duration) ease;
+}
+.owner-review-image-button:hover .owner-review-image {
+  filter: brightness(0.92);
+  transform: scale(1.05);
+}
+.owner-review-image-button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .owner-review-image-button .owner-review-image {
+    transition: none;
+  }
+}
+
+/* Reply box opened in place under the review, like a comment reply. */
+.owner-review-reply-toggle.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 14px;
+  text-decoration: none;
+}
+.owner-review-reply-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+.owner-reply-composer {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  animation: owner-reply-in var(--duration) ease;
+}
+.owner-reply-avatar {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--card);
+}
+.owner-reply-avatar svg {
+  width: 20px;
+  height: 20px;
+}
+.owner-reply-box {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--control);
+}
+.owner-reply-box .field > label {
+  font-size: 13px;
+  font-weight: 700;
+}
+.owner-reply-box .textarea {
+  min-height: 84px;
+  background: var(--card);
+  resize: vertical;
+}
+.owner-reply-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+.owner-reply-foot > .helper {
+  margin-right: auto;
+}
+.owner-reply-foot .button {
+  min-height: 38px;
+  padding: 6px 16px;
+  font-size: 14px;
+}
+.owner-reply-foot .button-tertiary {
+  text-decoration: none;
+}
+@keyframes owner-reply-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (max-width: 600px) {
+  .owner-reply-composer {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .owner-reply-avatar {
+    display: none;
+  }
+  .owner-reply-foot > .helper {
+    width: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .owner-reply-composer {
+    animation: none;
+  }
+}

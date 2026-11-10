@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { BellIcon } from "@heroicons/react/24/outline";
 import type { RoleCode } from "@/features/auth/types";
 import {
@@ -24,7 +25,17 @@ import "./notifications.css";
  * NOTI-02: the bell shows how many notifications are unread. Clicking it opens a dropdown
  * with the latest news and a "Xem tất cả" link that leads to the full list.
  */
-export function NotificationBell({ role }: { role: RoleCode }) {
+export function NotificationBell({
+  role,
+  variant = "header",
+}: {
+  role: RoleCode;
+  /**
+   * "header": the round bell of the site header. "sidebar": a row of the dashboard sidebar
+   * (icon, label, count) whose panel opens beside the sidebar, above every page.
+   */
+  variant?: "header" | "sidebar";
+}) {
   const path = usePathname();
   const router = useRouter();
   const [count, setCount] = useState(0);
@@ -90,7 +101,12 @@ export function NotificationBell({ role }: { role: RoleCode }) {
   useEffect(() => {
     if (!isOpen) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!panel.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (
+        !panel.current?.contains(target) &&
+        !trigger.current?.contains(target)
+      )
+        setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -126,30 +142,44 @@ export function NotificationBell({ role }: { role: RoleCode }) {
     if (href) router.push(href);
   }
 
+  const sidebar = variant === "sidebar";
+  // The sidebar scrolls and turns into a sliding drawer on a phone, so its panel lives on
+  // <body>; the header panel stays next to the bell.
+  const place = (node: ReactNode) =>
+    sidebar && typeof document !== "undefined"
+      ? createPortal(node, document.body)
+      : node;
+
   return (
-    <div className="notification-bell-wrap">
+    <div className="notification-bell-wrap" data-variant={variant}>
       <button
         ref={trigger}
         type="button"
-        className="notification-bell"
+        className={sidebar ? "admin-sidebar-bell" : "notification-bell"}
         aria-label={label}
-        title={label}
+        title={sidebar ? undefined : label}
         aria-expanded={isOpen}
         aria-haspopup="true"
         aria-current={path === "/notifications" ? "page" : undefined}
         onClick={toggle}
       >
         <BellIcon aria-hidden />
+        {sidebar && <span aria-hidden>Thông báo</span>}
         {count > 0 && (
-          <span className="notification-bell-count" aria-hidden>
+          <span
+            className={
+              sidebar ? "admin-sidebar-badge" : "notification-bell-count"
+            }
+            aria-hidden
+          >
             {unreadBadge(count)}
           </span>
         )}
       </button>
-      {isOpen && (
+      {isOpen && place(
         <div
           ref={panel}
-          className="notification-dropdown"
+          className={`notification-dropdown${sidebar ? " notification-dropdown-sidebar" : ""}`}
           role="dialog"
           aria-label="Thông báo mới nhất"
         >
@@ -224,7 +254,7 @@ export function NotificationBell({ role }: { role: RoleCode }) {
               Xem tất cả thông báo
             </Link>
           </div>
-        </div>
+        </div>,
       )}
     </div>
   );

@@ -367,7 +367,9 @@ export function WorkspaceShell({
           <a className="skip-link" href="#main-content">
             Đến nội dung chính
           </a>
-          {user?.role === "ADMIN" || user?.role === "MOD" ? (
+          {user?.role === "ADMIN" ||
+          user?.role === "MOD" ||
+          user?.role === "RESTAURANT_OWNER" ? (
             <AdminWorkspace base={base} demo={demo}>
               {children}
             </AdminWorkspace>
@@ -413,6 +415,51 @@ export function WorkspaceShell({
  * The staff workspaces in the sidebar shell: the Admin gets the Admin and moderation sections,
  * a Mod the moderation section (notifications and account sit at the sidebar's foot).
  */
+/** The owner workspace in the sidebar shell: the restaurant sections (notifications and account at the foot). */
+function ownerSidebarGroups(base: string) {
+  return [
+    {
+      title: "Nhà hàng",
+      base,
+      items: navigation.RESTAURANT_OWNER.filter(
+        ([slug]) => slug !== "notifications" && slug !== "account",
+      ),
+    },
+  ];
+}
+
+/**
+ * The Restaurant Owner dashboard for the backend-integrated owner screens (app route group): the
+ * same sidebar shell as the Mod and Admin workspaces instead of the site header and footer.
+ */
+export function OwnerDashboard({
+  user,
+  children,
+}: {
+  user: AuthUserDto;
+  children: ReactNode;
+}) {
+  const base = "/restaurant";
+  const unread = useUnreadCount(user);
+  return (
+    <WorkspaceContext.Provider value={{ user, base, demo: false }}>
+      <a className="skip-link" href="#main-content">
+        Đến nội dung chính
+      </a>
+      <AdminShell
+        user={user}
+        base={base}
+        demo={false}
+        unread={unread}
+        label="chủ quán"
+        groups={ownerSidebarGroups(base)}
+      >
+        {children}
+      </AdminShell>
+    </WorkspaceContext.Provider>
+  );
+}
+
 function AdminWorkspace({
   base,
   demo,
@@ -425,6 +472,7 @@ function AdminWorkspace({
   // ProfileIdentity has resolved the user (demo name and avatar included).
   const { user } = useWorkspace();
   const mod = user?.role === "MOD";
+  const owner = user?.role === "RESTAURANT_OWNER";
   // The backend sends a Mod no notification yet, so the Mod sidebar has no bell to count for.
   const unread = useUnreadCount(mod ? null : user);
   if (!user) return null;
@@ -435,26 +483,28 @@ function AdminWorkspace({
       demo={demo}
       unread={unread}
       notifications={!mod}
-      label={mod ? "kiểm duyệt" : "quản trị"}
+      label={mod ? "kiểm duyệt" : owner ? "chủ quán" : "quản trị"}
       groups={
-        mod
-          ? [
-              {
-                title: "Kiểm duyệt",
-                base,
-                items: navigation.MOD.filter(
-                  ([slug]) => slug !== "notifications" && slug !== "account",
-                ),
-              },
-            ]
-          : [
-              { title: "Quản trị", base, items: navigation.ADMIN },
-              {
-                title: "Kiểm duyệt",
-                base: demo ? base + "/moderation" : "/moderation",
-                items: navigation.MOD.slice(1, 8),
-              },
-            ]
+        owner
+          ? ownerSidebarGroups(base)
+          : mod
+            ? [
+                {
+                  title: "Kiểm duyệt",
+                  base,
+                  items: navigation.MOD.filter(
+                    ([slug]) => slug !== "notifications" && slug !== "account",
+                  ),
+                },
+              ]
+            : [
+                { title: "Quản trị", base, items: navigation.ADMIN },
+                {
+                  title: "Kiểm duyệt",
+                  base: demo ? base + "/moderation" : "/moderation",
+                  items: navigation.MOD.slice(1, 8),
+                },
+              ]
       }
     >
       {children}
