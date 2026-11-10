@@ -58,3 +58,15 @@ export function adminDashboardOperation(method: string, endpoint: string) {
     return { body: false, status: 200 };
   return null;
 }
+
+/**
+ * F-64 View System Audit Logs: ADM-A1 `GET admin/audit-logs` (filters in the query string) and
+ * ADM-A2 `GET admin/audit-logs/{auditLogId}`. Read only; `auditLogId` is a positive `long`.
+ */
+export function adminAuditOperation(method: string, endpoint: string) {
+  if (method !== "GET") return null;
+  if (endpoint === "admin/audit-logs") return { body: false, status: 200 };
+  if (/^admin\/audit-logs\/[1-9]\d{0,17}$/.test(endpoint))
+    return { body: false, status: 200 };
+  return null;
+}

@@ -12,6 +12,7 @@ import { ownerReviewsOperation } from "@/shared/api/owner-reviews-proxy";
 import { publicOperation } from "@/shared/api/public-proxy";
 import { agentOperation } from "@/shared/api/agent-proxy";
 import {
+  adminAuditOperation,
   adminDashboardOperation,
   adminModsOperation,
   adminPermissionsOperation,
@@ -83,7 +84,8 @@ async function handle(request: Request, context: Context) {
     const adminPermissions =
       adminPermissionsOperation(request.method, endpoint) ??
       adminModsOperation(request.method, endpoint) ??
-      adminDashboardOperation(request.method, endpoint);
+      adminDashboardOperation(request.method, endpoint) ??
+      adminAuditOperation(request.method, endpoint);
     const resubmission =
       request.method === "POST" &&
       /^owner\/restaurant\/verifications\/[1-9]\d*\/resubmit$/.test(endpoint);

@@ -53,6 +53,7 @@ import { PermissionsPage } from "@/features/admin/permissions-page";
 import { ModDetailPage, ModsPage } from "@/features/admin/mods-page";
 import { AdminDashboardPage } from "@/features/admin/dashboard-page";
 import { OutboxPage } from "@/features/admin/outbox-page";
+import { AuditLogPage } from "@/features/admin/audit-page";
 import {
   VerificationQueuePage,
   VerificationReviewPage,
@@ -240,10 +241,10 @@ export function PageRouter({
   // Trang "Công việc kiểm duyệt": tổng hợp các hàng đợi thật (MOD-V1, MOD-M1, MOD-RP1, MOD-R1).
   if (mode === "live" && role === "MOD" && !area) return <ModerationHomePage />;
 
-  // ME-01..ME-03 đã nối API: tài khoản của Mod (hồ sơ, đổi mật khẩu, quyền hiệu lực).
+  // ME-01..ME-03 đã nối API: tài khoản của Mod, chủ quán và Admin (hồ sơ, đổi mật khẩu, quyền hiệu lực).
   if (
     mode === "live" &&
-    (role === "MOD" || role === "RESTAURANT_OWNER") &&
+    (role === "MOD" || role === "RESTAURANT_OWNER" || role === "ADMIN") &&
     area === "account"
   )
     return <LiveAccountPage />;
@@ -307,6 +308,9 @@ export function PageRouter({
   // F-63 ADM-D1..ADM-D3 và OPS-01 đã nối API: tổng quan và đồng bộ gợi ý đọc số liệu thật.
   if (mode === "live" && role === "ADMIN" && !area)
     return <AdminDashboardPage />;
+  // F-64 ADM-A1, ADM-A2 đã nối API: nhật ký hệ thống chỉ đọc, chi tiết mở trong drawer.
+  if (mode === "live" && role === "ADMIN" && area === "audit")
+    return <AuditLogPage />;
   if (mode === "live" && role === "ADMIN" && area === "sync")
     return <OutboxPage />;
 
