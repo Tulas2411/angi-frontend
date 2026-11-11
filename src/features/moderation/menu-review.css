@@ -1,0 +1,284 @@
+/* F-58 Review Pending Menu Submission: what differs from verification-review.css. */
+.mr-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.mr-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mr-counts span {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+}
+.mr-counts [data-change="new"] {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.mr-counts [data-change="edited"] {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
+.mr-counts [data-change="removed"] {
+  background: var(--error-bg);
+  color: var(--error-ink);
+}
+.mr-note {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mr-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.mr-filter {
+  justify-self: start;
+}
+.mr-items {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mr-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.mr-item::before {
+  content: "";
+  position: absolute;
+  inset: 10px auto 10px 0;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--line-strong);
+}
+.mr-item[data-change="new"]::before {
+  background: var(--success-ink);
+}
+.mr-item[data-change="edited"]::before {
+  background: var(--warning-ink);
+}
+.mr-item[data-change="removed"]::before {
+  background: var(--error-ink);
+}
+.mr-item[data-change="removed"] .mr-item-body,
+.mr-item[data-change="removed"] .mr-photo {
+  opacity: 0.7;
+}
+.mr-item[data-change="removed"] .mr-item-head > strong,
+.mr-item[data-change="removed"] .mr-item-meta {
+  text-decoration: line-through;
+  text-decoration-color: var(--error-ink);
+  text-decoration-thickness: 1.5px;
+}
+.mr-item[data-change="unchanged"] {
+  background: rgb(34 34 34 / 0.015);
+}
+.mr-photos {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.mr-photos > svg {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.mr-photo {
+  width: 88px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.mr-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mr-photo.is-before {
+  opacity: 0.6;
+  filter: grayscale(0.4);
+}
+.mr-item-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.mr-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.mr-item-head strong {
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.mr-item-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.mr-item-meta strong {
+  color: var(--ink);
+}
+.mr-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.mr-tags span {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: 11px;
+  font-weight: 600;
+}
+.mr-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+.mr-changes {
+  display: grid;
+  gap: 4px;
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xs);
+  background: var(--warning-bg);
+  font-size: 13px;
+}
+.mr-changes > div {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.mr-changes dt {
+  color: var(--muted);
+}
+.mr-changes dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.mr-changes dd svg {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+}
+.mr-changes del {
+  color: var(--muted);
+}
+.mr-changes ins {
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+/*
+ * Review cards: the dish photo fills the left of the card at full height, like the dish cards of
+ * the Traveler pages. A changed photo splits that column: the old one above, the new one below.
+ */
+.mr-items > .mr-item {
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0;
+  min-height: 180px;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.mr-items > .mr-item::before {
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 4px;
+  border-radius: 0;
+}
+.mr-items > .mr-item > .mr-photos {
+  display: grid;
+  align-items: stretch;
+  gap: 2px;
+  background: var(--card);
+}
+.mr-items > .mr-item .mr-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.mr-items > .mr-item .mr-photos[data-compare] {
+  grid-template-rows: 1fr 1fr;
+}
+.mr-items > .mr-item .mr-photos[data-compare] .mr-photo {
+  min-height: 130px;
+}
+.mr-photo-frame {
+  position: relative;
+  margin: 0;
+  overflow: hidden;
+}
+.mr-photo-frame figcaption {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: rgb(34 34 34 / 0.72);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.mr-photo-frame figcaption[data-new] {
+  background: var(--warning-ink);
+}
+.mr-items > .mr-item > .mr-item-body {
+  align-content: start;
+  padding: var(--space-5) var(--space-5) var(--space-5) var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .mr-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mr-items > .mr-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mr-items > .mr-item .mr-photo {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+  .mr-items > .mr-item .mr-photos[data-compare] {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: none;
+  }
+  .mr-items > .mr-item .mr-photos[data-compare] .mr-photo {
+    min-height: 0;
+    aspect-ratio: 4 / 3;
+  }
+  .mr-items > .mr-item > .mr-item-body {
+    padding: var(--space-4);
+  }
+  .mr-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .mr-changes > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

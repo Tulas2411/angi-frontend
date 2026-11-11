@@ -1,0 +1,596 @@
+/* F-26 "ANGI lên lịch giúp bạn": AI generation dialog (opened from a day's "ANGI thêm giúp bạn"). */
+
+.roadmap-generate {
+  padding-top: var(--space-2);
+}
+
+/*
+ * Scope tabs and the day picker on one row, the picker right after "Một bữa"; it drops below on
+ * narrow dialogs. The picker keeps its "Ngày" label for screen readers only.
+ */
+.roadmap-generate-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.roadmap-generate-day {
+  flex: 0 1 260px;
+  min-width: 200px;
+}
+.roadmap-generate-day .field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Where ANGI looks (origin) under the province/price bar. */
+.roadmap-generate-origin {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 0;
+}
+.roadmap-generate-origin svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+}
+
+/*
+ * The note: its "0 / 500" counter sits on the label line, at the right; an error stays under the
+ * field. The counter row is TextArea's helper row, laid out in place with display: contents.
+ */
+.roadmap-generate .field:has(> .roadmap-generate-note) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px var(--space-3);
+}
+.roadmap-generate .field:has(> .roadmap-generate-note) > label {
+  grid-column: 1;
+  grid-row: 1;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .roadmap-generate-note {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+.roadmap-generate .field:has(> .roadmap-generate-note) > .between {
+  display: contents;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .between
+  > span:last-child {
+  grid-column: 2;
+  grid-row: 1;
+  font-variant-numeric: tabular-nums;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .between
+  > span:first-child {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}
+.roadmap-generate
+  .field:has(> .roadmap-generate-note)
+  > .between
+  > span:first-child:empty {
+  display: none;
+}
+
+/* The note starts two lines high and grows with its text, up to about six lines. */
+.roadmap-generate .textarea.roadmap-generate-note {
+  min-height: 0;
+  max-height: 168px;
+  field-sizing: content;
+}
+
+.roadmap-generate-meals {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.roadmap-generate-meals > .field-error {
+  margin-top: var(--space-2);
+}
+
+.roadmap-generate-meals legend,
+.roadmap-generate-legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.roadmap-generate-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+/* Tag chips are real buttons: wrap, keep a comfortable target. */
+.roadmap-generate-tags .roadmap-generate-chips {
+  gap: var(--space-2);
+}
+
+.roadmap-generate-more {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+}
+
+.roadmap-generate-more > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.roadmap-generate-more > summary .helper {
+  font-weight: 400;
+}
+
+.roadmap-generate-more[open] > summary {
+  margin-bottom: var(--space-4);
+}
+
+/*
+ * Footer of the form: the replace switch and what the request will do, left of the buttons and
+ * always in sight. Deleting dishes turns the line into a warning, as the button turns red.
+ */
+.roadmap-generate-plan {
+  display: grid;
+  flex: 1 1 280px;
+  gap: 2px;
+  min-width: 0;
+  margin-right: auto;
+}
+.roadmap-generate-plan .choice {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.roadmap-generate-plan-text {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+.roadmap-generate-plan-text[data-tone="warning"] {
+  color: var(--error-ink);
+  font-weight: 600;
+}
+
+/*
+ * While ANGI works (RM-11 running): the chef robot at the centre, the status (read aloud), a line
+ * of what it is doing that changes every few seconds, and the three steps on one line.
+ */
+.roadmap-generate-run {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0 var(--space-2);
+  text-align: center;
+}
+
+.roadmap-generate-run-status {
+  margin: 0;
+  font-size: 17px;
+}
+
+.roadmap-generate-run-tip {
+  min-height: 1.5em;
+  margin: 0;
+  color: var(--muted);
+}
+
+.roadmap-generate-run-tip > span {
+  display: inline-block;
+  animation: roadmap-generate-tip 2800ms ease both;
+}
+
+@keyframes roadmap-generate-tip {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  12%,
+  88% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Three steps on one line, joined by a track that fills as they finish. */
+.roadmap-generate-run-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: min(560px, 100%);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap-generate-run-steps li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+/* The track between this step's dot and the previous one's. */
+.roadmap-generate-run-steps li + li::before {
+  position: absolute;
+  top: 7px;
+  right: 50%;
+  left: -50%;
+  height: 2px;
+  background: var(--line);
+  content: "";
+}
+
+.roadmap-generate-run-steps li[data-state="done"] + li::before,
+.roadmap-generate-run-steps li[data-state="active"]::before {
+  background: var(--ink);
+}
+
+.roadmap-generate-run-dot {
+  position: relative;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--card);
+}
+
+.roadmap-generate-run-steps li[data-state="active"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.roadmap-generate-run-steps li[data-state="active"] .roadmap-generate-run-dot {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 4px rgb(255 94 98 / 0.18);
+  animation: roadmap-generate-pulse 1.4s ease-in-out infinite;
+}
+
+.roadmap-generate-run-steps li[data-state="done"] {
+  color: var(--success-ink);
+}
+
+.roadmap-generate-run-steps li[data-state="done"] .roadmap-generate-run-dot {
+  border-color: var(--success-ink);
+  background: var(--success-ink);
+}
+
+@keyframes roadmap-generate-pulse {
+  50% {
+    box-shadow: 0 0 0 8px rgb(255 94 98 / 0.08);
+  }
+}
+
+/* A stall ("Kiểm tra lại"): ANGI rests. */
+.roadmap-generate-run.is-stalled .angi-worker * {
+  animation-play-state: paused;
+}
+
+/* ------------------------------------------------------------- the chef robot */
+.angi-worker {
+  display: block;
+  overflow: visible;
+}
+
+.angi-worker.is-large {
+  width: 132px;
+  height: 132px;
+}
+
+.angi-worker.is-small {
+  width: 52px;
+  height: 52px;
+}
+
+.angi-worker-halo {
+  fill: rgb(255 94 98 / 0.12);
+}
+
+.angi-worker-sparkles path {
+  fill: var(--coral);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: angi-worker-twinkle 1.8s ease-in-out infinite;
+}
+
+.angi-worker-sparkles path:nth-child(2) {
+  animation-delay: 0.6s;
+}
+
+.angi-worker-sparkles path:nth-child(3) {
+  animation-delay: 1.2s;
+}
+
+.angi-worker-body {
+  animation: angi-worker-bob 1.6s ease-in-out infinite;
+}
+
+.angi-worker-hat {
+  fill: var(--card);
+  stroke: var(--ink);
+  stroke-width: 2.5;
+}
+
+.angi-worker-head {
+  fill: var(--ink);
+}
+
+.angi-worker-screen {
+  fill: #3a3a3a;
+}
+
+.angi-worker-eyes rect {
+  fill: #7ff0c4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: angi-worker-blink 3.2s infinite;
+}
+
+.angi-worker-smile,
+.angi-worker-arm,
+.angi-worker-antenna {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+
+.angi-worker-smile {
+  stroke: #7ff0c4;
+  stroke-width: 2.5;
+}
+
+.angi-worker-arm,
+.angi-worker-antenna {
+  stroke: var(--ink);
+}
+
+.angi-worker-led {
+  fill: var(--coral);
+  animation: angi-worker-led 1.2s ease-in-out infinite;
+}
+
+.angi-worker-pan {
+  fill: #4a4a4a;
+}
+
+.angi-worker-dish {
+  fill: #f4a300;
+  animation: angi-worker-toss 1.6s cubic-bezier(0.3, 0, 0.3, 1) infinite;
+}
+
+.angi-worker-apron {
+  fill: var(--coral);
+}
+
+@keyframes angi-worker-bob {
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes angi-worker-blink {
+  0%,
+  92%,
+  100% {
+    transform: scaleY(1);
+  }
+  95% {
+    transform: scaleY(0.1);
+  }
+}
+
+@keyframes angi-worker-toss {
+  0%,
+  100% {
+    transform: translateY(6px);
+  }
+  45% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes angi-worker-twinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.6);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes angi-worker-led {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------------------------------------------- the worker at the screen edge */
+/*
+ * Shown after "Ẩn, ANGI vẫn tạo ở nền": ANGI's head peeks in from the right edge, half way down
+ * (clear of the header and of the assistant button at the bottom right), tilted, leaning in and
+ * out now and then, with a speech bubble of three typing dots above it. Hovering brings it out a
+ * little more. When the job ends it slides back behind the edge and fades (`is-leaving`) while a
+ * toast tells the result.
+ */
+.generation-worker {
+  position: fixed;
+  top: 50%;
+  right: -30px;
+  z-index: 40;
+  display: block;
+  width: 96px;
+  height: 120px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transform: translateY(-50%);
+  animation: generation-worker-in 520ms var(--ease-out) backwards;
+  transition:
+    opacity var(--worker-fade, 400ms) ease,
+    transform var(--worker-fade, 400ms) ease,
+    right var(--duration-fast) ease;
+}
+
+.generation-worker:hover {
+  right: -18px;
+}
+
+.generation-worker:focus-visible {
+  outline: none;
+}
+
+.generation-worker:focus-visible .angi-peek {
+  filter: drop-shadow(0 0 0 var(--coral))
+    drop-shadow(0 0 6px rgb(255 94 98 / 0.7));
+}
+
+.generation-worker.is-leaving {
+  opacity: 0;
+  transform: translate(80px, -50%);
+  cursor: default;
+}
+
+/* The head, tilted towards the page and pivoting on the edge. */
+.generation-worker .angi-peek {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 88px;
+  height: 98px;
+  overflow: visible;
+  filter: drop-shadow(0 6px 10px rgb(34 34 34 / 0.18));
+  transform: rotate(-16deg);
+  transform-origin: 100% 100%;
+  animation: generation-worker-peek 3.4s ease-in-out infinite;
+}
+
+/* "…" in a speech bubble above the head, its tail pointing at it. */
+.generation-worker-bubble {
+  position: absolute;
+  top: 14px;
+  left: -10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 10px;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 4px 12px rgb(34 34 34 / 0.14);
+}
+
+.generation-worker-bubble::after {
+  position: absolute;
+  bottom: -5px;
+  right: 14px;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--card);
+  transform: rotate(45deg);
+  content: "";
+}
+
+.generation-worker-bubble i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+  animation: generation-worker-dot 1.2s ease-in-out infinite;
+}
+
+.generation-worker-bubble i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.generation-worker-bubble i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes generation-worker-in {
+  from {
+    opacity: 0;
+    transform: translate(80px, -50%);
+  }
+}
+
+/* Leans out to look, then back, as if checking on the page. */
+@keyframes generation-worker-peek {
+  0%,
+  100% {
+    transform: rotate(-16deg);
+  }
+  40% {
+    transform: rotate(-24deg) translateX(-4px);
+  }
+  55% {
+    transform: rotate(-22deg) translateX(-4px);
+  }
+}
+
+@keyframes generation-worker-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 700px) {
+  .roadmap-generate-day {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+  .roadmap-generate-plan {
+    flex-basis: 100%;
+  }
+  .roadmap-generate-run-steps li {
+    font-size: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .angi-worker *,
+  .roadmap-generate-run-tip > span,
+  .roadmap-generate-run-dot,
+  .generation-worker,
+  .generation-worker .angi-peek,
+  .generation-worker-bubble i {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,164 @@
+/*
+ * A light grey band across the whole window; its content keeps the page column (the padding is
+ * the gutter, or the room left beside --page-width on wide screens).
+ */
+.site-footer {
+  --footer-surface: #ecebe9;
+  width: 100%;
+  margin: var(--space-12) 0 0;
+  padding-inline: max(var(--gutter), calc((100% - var(--page-width)) / 2));
+  background: var(--footer-surface);
+  color: var(--ink);
+}
+
+.site-footer-directory {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.65fr);
+  gap: var(--space-16);
+  padding-block: 56px var(--space-8);
+}
+.site-footer-about > p:first-of-type {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.site-footer-about > p:nth-of-type(2) {
+  max-width: 310px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  line-height: 1.85;
+}
+.site-footer-signature {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  color: var(--muted);
+  font-size: 11px;
+}
+.site-footer-signature > span {
+  color: var(--coral);
+}
+.site-footer-navigation {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+.site-footer-link-group h3 {
+  margin-bottom: var(--space-4);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: normal;
+}
+.site-footer-link-group ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.site-footer-link-group a {
+  display: inline-block;
+  padding-block: 9px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+  text-decoration: none;
+  text-underline-offset: 4px;
+  transition: color var(--duration-fast) ease;
+}
+.site-footer-link-group a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-decoration-color: var(--coral);
+}
+.site-footer-wordmark {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-6);
+  padding-block: var(--space-2) var(--space-5);
+  border-bottom: 1px solid var(--line-strong);
+}
+.site-footer-wordmark > span:first-child {
+  font-family: var(--font-heading);
+  font-size: clamp(56px, 8vw, 104px);
+  font-weight: 900;
+  line-height: 0.85;
+  letter-spacing: -0.04em;
+  /* A quiet signature, not a headline: ink at low strength so it never outweighs the links above. */
+  color: rgb(34 34 34 / 0.14);
+}
+.site-footer-wordmark > span:last-child {
+  padding-right: var(--space-4);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.8;
+  text-align: right;
+}
+.site-footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding-block: var(--space-6) var(--space-8);
+  color: var(--muted);
+  font-size: 10px;
+}
+.site-footer-bottom small {
+  font-size: inherit;
+}
+.site-footer-bottom > span span {
+  color: var(--coral);
+}
+.site-footer-bottom a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 36px;
+  font-weight: 600;
+  color: var(--ink);
+}
+@media (max-width: 1000px) {
+  .site-footer-directory {
+    gap: var(--space-8);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  }
+}
+@media (max-width: 700px) {
+  .site-footer {
+    margin-top: var(--space-8);
+  }
+
+  .site-footer-directory {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-8);
+    padding-top: var(--space-8);
+  }
+  .site-footer-about > p:nth-of-type(2) {
+    max-width: 440px;
+  }
+  .site-footer-navigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-6);
+  }
+  .site-footer-wordmark > span:first-child {
+    font-size: clamp(48px, 16vw, 72px);
+  }
+  .site-footer-wordmark > span:last-child {
+    padding: 0;
+    font-size: 10px;
+  }
+  .site-footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+}
+@media (max-width: 360px) {
+  .site-footer-wordmark > span:last-child {
+    display: none;
+  }
+}

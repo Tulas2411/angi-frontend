@@ -1,0 +1,817 @@
+/* NOTI-01..03: a calm inbox. Rows are grouped by day, each row leads with a small
+   line icon, and the unread ones carry a coral dot on the right. */
+.notifications-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: min(100%, 900px);
+  margin-inline: auto;
+}
+
+/* ------------------------------------------------------------------ heading */
+.notifications-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-6);
+}
+.notifications-heading-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.notifications-heading h1 {
+  font-size: clamp(28px, 3.4vw, 38px);
+  line-height: 1.1;
+}
+.notifications-line {
+  max-width: 46ch;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.notifications-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* ----------------------------------------------------------------- toolbar */
+.notifications-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--line);
+}
+.notifications-toolbar-count {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------- groups */
+.notifications-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.notifications-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.notifications-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.notifications-group-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+/* --------------------------------------------------------------------- rows */
+.notifications-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+.notification-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: 9px var(--space-4);
+  border-top: 1px solid var(--line);
+  transition: background var(--duration-fast) ease;
+}
+.notification-row:first-child {
+  border-top: 0;
+}
+.notification-row:hover,
+.notification-row:focus-within {
+  background: var(--control);
+}
+
+/* The round line icon that names the kind of news. */
+.notification-glyph {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+}
+.notification-glyph svg {
+  width: 16px;
+  height: 16px;
+}
+.notification-row[data-unread] .notification-glyph {
+  background: color-mix(in srgb, var(--coral) 13%, var(--card));
+  color: color-mix(in srgb, var(--coral) 78%, var(--ink));
+}
+
+.notification-text {
+  min-width: 0;
+  /* Mọi thẻ thông báo cao bằng nhau: tiêu đề một dòng, nội dung tối đa hai
+     dòng rồi cắt bằng dấu "…". */
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.notification-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+.notification-text h3 {
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  /* Tiêu đề dài cũng chỉ hiện một dòng để mọi thẻ cao bằng nhau. */
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.notification-row[data-unread] .notification-text h3 {
+  font-weight: 700;
+}
+.notification-text h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+/* The whole row opens the notification; the read button stays on top of it. */
+.notification-text h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.notification-row:has(a) {
+  cursor: pointer;
+}
+.notification-text h3 a:focus-visible {
+  outline: none;
+}
+.notification-text h3 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+.notification-text p {
+  margin-top: 1px;
+  max-width: 62ch;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+/* Nội dung dài chỉ hiện một dòng rồi cắt bằng dấu "…". */
+.notification-body {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 1.4em;
+}
+/* Ngày nằm dưới nội dung thông báo. */
+.notification-time {
+  margin-top: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+.notification-kind {
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+.notification-row[data-unread] .notification-kind {
+  background: color-mix(in srgb, var(--coral) 10%, var(--card));
+  color: color-mix(in srgb, var(--coral) 72%, var(--ink));
+}
+
+/* The unread marker sits at the far right of the row, like a big red dot. */
+.notification-row .notification-dot {
+  align-self: center;
+  width: 10px;
+  height: 10px;
+}
+
+/* Wave and colour: shared skeleton rule in globals.css. */
+.notifications-skeleton {
+  height: 50px;
+  border-radius: 12px;
+}
+.notifications-problem {
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.notifications-problem h2 {
+  font-size: 18px;
+}
+
+/* ---------------------------------------------------------------- pagination */
+.notifications-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-top: var(--space-2);
+}
+.notifications-pagination-info {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.notifications-pagination-range {
+  color: var(--ink);
+  font-weight: 600;
+}
+.notifications-pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.notifications-pagination-number,
+.notifications-pagination-step {
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.notifications-pagination-number:hover:not([aria-current="page"]),
+.notifications-pagination-step:hover:not(:disabled) {
+  background: var(--control);
+}
+.notifications-pagination-number:focus-visible,
+.notifications-pagination-step:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.notifications-pagination-number[aria-current="page"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--card);
+}
+.notifications-pagination-step {
+  border-color: var(--line);
+  color: var(--muted);
+}
+.notifications-pagination-step svg {
+  width: 18px;
+  height: 18px;
+}
+.notifications-pagination-step:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.notifications-pagination-gap {
+  min-width: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 38px;
+}
+
+/* --------------------------------------------------- header bell + dropdown */
+.notification-bell-wrap {
+  position: relative;
+}
+.notification-bell {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease;
+}
+.notification-bell:hover,
+.notification-bell[aria-expanded="true"],
+.notification-bell[aria-current="page"] {
+  background: var(--control);
+}
+.notification-bell:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* 24px outline glyph, centered like the header's home and menu icons. */
+.notification-bell > svg {
+  width: 24px;
+  height: 24px;
+}
+.notification-bell-count {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--canvas);
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.notification-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + var(--space-2));
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 2 * var(--gutter)));
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+  animation: notification-dropdown-in var(--duration) var(--ease-out);
+}
+@keyframes notification-dropdown-in {
+  from {
+    opacity: 0;
+    translate: 0 -8px;
+  }
+}
+.notification-dropdown-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--line);
+}
+.notification-dropdown-head strong {
+  font-family: var(--font-heading);
+  font-size: 16px;
+}
+.notification-dropdown-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.notification-dropdown-body {
+  max-height: 380px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.notification-dropdown-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.notification-dropdown-item {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 8px;
+  gap: var(--space-3);
+  align-items: start;
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.notification-dropdown-item:last-child {
+  border-bottom: 0;
+}
+.notification-dropdown-item:hover,
+.notification-dropdown-item:focus-visible {
+  background: var(--control);
+  outline: none;
+}
+.notification-dropdown-item[data-unread] {
+  background: color-mix(in srgb, var(--coral) 5%, var(--card));
+}
+.notification-dropdown-item[data-unread]:hover,
+.notification-dropdown-item[data-unread]:focus-visible {
+  background: color-mix(in srgb, var(--coral) 9%, var(--card));
+}
+.notification-dropdown-glyph {
+  width: 36px;
+  height: 36px;
+}
+.notification-dropdown-glyph svg {
+  width: 19px;
+  height: 19px;
+}
+.notification-dropdown-item[data-unread] .notification-dropdown-glyph {
+  background: color-mix(in srgb, var(--coral) 13%, var(--card));
+  color: color-mix(in srgb, var(--coral) 78%, var(--ink));
+}
+.notification-dropdown-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.notification-dropdown-title {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.notification-dropdown-body-text {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.notification-dropdown-meta {
+  color: var(--muted);
+  font-size: 11px;
+}
+.notification-dropdown-item .notification-dot {
+  margin-top: 7px;
+}
+.notification-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+}
+.notification-dropdown-item .notification-dot {
+  width: 7px;
+  height: 7px;
+}
+.notification-dropdown-empty {
+  padding: var(--space-6) var(--space-4);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+}
+.notification-dropdown-skeleton {
+  height: 220px;
+}
+.notification-dropdown-foot {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--line);
+  background: var(--card);
+  text-align: center;
+}
+.notification-dropdown-all {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+}
+.notification-dropdown-all:hover {
+  background: var(--control);
+}
+.notification-dropdown-all:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+@media (max-width: 600px) {
+  .notifications-heading {
+    align-items: flex-start;
+  }
+  .notifications-pagination {
+    justify-content: center;
+  }
+  .notifications-pagination-info {
+    width: 100%;
+    justify-content: center;
+  }
+  .notification-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: var(--space-2);
+    padding: 9px var(--space-3);
+  }
+  .notification-row .notification-glyph {
+    width: 28px;
+    height: 28px;
+  }
+  .notification-row .notification-glyph svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+/* ---------------------------------------------- dashboard sidebar bell */
+.notification-bell-wrap[data-variant="sidebar"] {
+  position: static;
+  display: block;
+}
+.notification-bell-wrap[data-variant="sidebar"] > .admin-sidebar-bell {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.notification-bell-wrap[data-variant="sidebar"] > .admin-sidebar-bell:hover,
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell[aria-expanded="true"] {
+  background: var(--control);
+}
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* The panel opens to the right of the sidebar, its foot level with the bell. */
+.notification-dropdown.notification-dropdown-sidebar {
+  position: fixed;
+  top: auto;
+  right: auto;
+  bottom: 96px;
+  left: calc(var(--admin-sidebar, 264px) + 12px);
+  z-index: 60;
+  width: 400px;
+  max-height: min(640px, calc(100dvh - 120px));
+  animation-name: notification-sidebar-in;
+}
+.notification-dropdown-sidebar .notification-dropdown-body {
+  max-height: none;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+@keyframes notification-sidebar-in {
+  from {
+    opacity: 0;
+    translate: -8px 0;
+  }
+}
+@media (max-width: 960px) {
+  /* The sidebar is a drawer here: the panel becomes a sheet over the page. */
+  .notification-dropdown.notification-dropdown-sidebar {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100dvh - 24px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-dropdown.notification-dropdown-sidebar {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------- row side: dot, read, go */
+.notification-row-side {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: var(--space-2);
+}
+/* Sits above the row's stretched link so it marks the row read without opening it. */
+.notification-mark-read {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--muted);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+.notification-mark-read svg {
+  width: 16px;
+  height: 16px;
+}
+.notification-row:hover .notification-mark-read,
+.notification-mark-read:focus-visible {
+  opacity: 1;
+}
+.notification-mark-read:hover {
+  color: var(--success-ink);
+}
+.notification-mark-read:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+@media (hover: none) {
+  .notification-mark-read {
+    opacity: 1;
+  }
+}
+.notification-row-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+  transition: transform var(--duration-fast) ease;
+}
+.notification-row:hover .notification-row-chevron {
+  transform: translateX(2px);
+}
+
+/* ------------------------------------------- inside a dashboard (owner, admin) */
+.admin-shell .notifications-page {
+  width: min(100%, 1120px);
+  margin-inline: 0;
+  gap: var(--space-5);
+}
+.admin-shell .notifications-heading {
+  align-items: center;
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgb(34 34 34 / 0.04),
+    0 12px 36px rgb(34 34 34 / 0.07);
+}
+.admin-shell .notifications-heading h1 {
+  font-size: clamp(26px, 2.6vw, 34px);
+}
+.admin-shell .notifications-heading-actions .button {
+  min-height: 40px;
+}
+.admin-shell .notifications-toolbar {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.admin-shell .notifications-toolbar .tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.admin-shell .notifications-toolbar .chip {
+  min-height: 38px;
+  padding: 8px 18px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.admin-shell .notifications-toolbar .chip:hover {
+  color: var(--ink);
+}
+.admin-shell .notifications-toolbar .chip.selected {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(34 34 34 / 0.12);
+}
+.admin-shell .notifications-groups {
+  gap: var(--space-6);
+}
+.admin-shell .notifications-list {
+  border: 0;
+  box-shadow:
+    0 1px 2px rgb(34 34 34 / 0.04),
+    0 6px 20px rgb(34 34 34 / 0.06);
+}
+.admin-shell .notification-row {
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+.admin-shell .notification-row .notification-glyph {
+  width: 40px;
+  height: 40px;
+}
+.admin-shell .notification-row .notification-glyph svg {
+  width: 20px;
+  height: 20px;
+}
+.admin-shell .notification-row[data-unread] {
+  background: linear-gradient(
+    90deg,
+    rgb(255 90 95 / 0.07),
+    transparent 60%
+  );
+  box-shadow: inset 3px 0 0 var(--coral);
+}
+.admin-shell .notification-row:hover,
+.admin-shell .notification-row:focus-within {
+  background: var(--control);
+}
+.admin-shell .notification-text h3 {
+  font-size: 15px;
+}
+.admin-shell .notification-body {
+  font-size: 14px;
+}
+
+/* The sidebar bell on the notifications page itself keeps the dark "current page" pill. */
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell[aria-current="page"] {
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}
+.notification-bell-wrap[data-variant="sidebar"]
+  > .admin-sidebar-bell[aria-current="page"]
+  svg {
+  color: var(--card);
+}
+@media (max-width: 600px) {
+  .admin-shell .notifications-heading {
+    padding: var(--space-5);
+  }
+  .admin-shell .notification-row {
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .admin-shell .notification-row .notification-glyph {
+    width: 32px;
+    height: 32px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notification-mark-read,
+  .notification-row-chevron {
+    transition: none;
+  }
+}

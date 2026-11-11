@@ -1,7 +1,15 @@
 "use client";
 import Link from "next/link";
+import "@/styles/legacy-workspace.css";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { AuthUserDto, RoleCode } from "@/features/auth/types";
 import { LogoutButton } from "@/features/auth/session-panel";
 import { PlatformProvider, usePlatform } from "@/features/platform/provider";
@@ -9,6 +17,37 @@ import { initialData } from "@/mocks/fixtures";
 import type { AppData, DataMode } from "@/features/platform/contracts";
 import { Avatar, Icon, ActionLink } from "@/components/ui/primitives";
 import Brand from "@/components/brand";
+import { ProvinceField } from "@/components/domain/province-field";
+import { useProfile } from "@/api/services/profile-service";
+import { notificationService } from "@/api/services/notification-service";
+import { AdminShell } from "./admin-shell";
+
+/**
+ * Unread notifications for the signed-in user (NotificationService: live BE, mock fallback),
+ * refreshed every 60 s so the badge follows even when the page is not reopened.
+ */
+function useUnreadCount(user: AuthUserDto | null) {
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    const refresh = () => {
+      notificationService
+        .unreadCount()
+        .then((res) => {
+          if (!cancelled) setUnread(res.unreadCount);
+        })
+        .catch(() => undefined);
+    };
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [user]);
+  return unread;
+}
 
 export const navigation: Record<RoleCode, [string, string][]> = {
   TRAVELER: [
@@ -42,7 +81,8 @@ export const navigation: Record<RoleCode, [string, string][]> = {
   ],
   ADMIN: [
     ["", "Tổng quan"],
-    ["moderators", "Mod và phân quyền"],
+    ["moderators", "Quản lý Mod"],
+    ["permissions", "Phân quyền"],
     ["audit", "Nhật ký hệ thống"],
     ["sync", "Đồng bộ dữ liệu"],
   ],
@@ -115,6 +155,38 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
     [search, setSearch] = useState("");
   const traveler = !user || user.role === "TRAVELER";
   const publicBase = demo ? "/demo/guest" : "";
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  // Đóng dropdown tài khoản khi điều hướng (bấm link bên trong)
+  useEffect(() => {
+    if (menuRef.current) menuRef.current.removeAttribute("open");
+  }, [path]);
+  // Đóng dropdown khi bấm ra vùng khác, cuộn trang, hoặc nhấn Esc —
+  // không cần bấm lại avatar.
+  useEffect(() => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const close = () => menu.removeAttribute("open");
+    const onPointerDown = (e: PointerEvent) => {
+      if (!menu.contains(e.target as Node)) close();
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        close();
+        (menu.querySelector("summary") as HTMLElement | null)?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    window.addEventListener("blur", close);
+    window.addEventListener("resize", close);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("blur", close);
+      window.removeEventListener("resize", close);
+    };
+  }, [user]);
+  const unread = useUnreadCount(user);
   return (
     <header className={`container header ${traveler ? "" : "header-staff"}`}>
       <Brand href={base || "/"} />
@@ -151,11 +223,13 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
           }}
         >
           <Icon name="search" />
-          <input
-            aria-label="Tìm địa điểm hoặc nhà hàng"
+          <ProvinceField
+            label="Tìm địa điểm hoặc nhà hàng"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={setSearch}
             placeholder="Nhập địa điểm hoặc nhà hàng"
+            autoComplete="off"
+            showCatalogStatus={false}
           />
         </form>
       )}
@@ -165,14 +239,35 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
       >
         {user ? (
           <>
-            <Link href={`${base}/notifications`} aria-label="Thông báo">
-              <Icon name="bell" />
+            <Link
+              href={`${base}/notifications`}
+              className={`bell-cta ${path.startsWith(`${base}/notifications`) ? "is-active" : ""}`}
+              aria-label={
+                unread > 0 ? `Thông báo, ${unread} chưa đọc` : "Thông báo"
+              }
+            >
+              <span className="bell-cta-icon">
+                <Icon name="bell" />
+                {unread > 0 && (
+                  <span className="notification-badge" aria-hidden>
+                    {unread > 9 ? "9+" : unread}
+                  </span>
+                )}
+              </span>
             </Link>
-            <details className="account-menu">
+            <details className="account-menu" ref={menuRef}>
               <summary aria-label={`Tài khoản ${user.displayName}`}>
                 <Avatar name={user.displayName} image={user.avatarUrl} />
               </summary>
-              <div>
+              <div
+                onClick={(e) => {
+                  // Đóng menu khi bấm vào link/logout bên trong
+                  const target = e.target as HTMLElement;
+                  if (target.closest("a, button")) {
+                    menuRef.current?.removeAttribute("open");
+                  }
+                }}
+              >
                 <p>{user.displayName}</p>
                 <p className="helper">{user.email}</p>
                 <Link
@@ -183,15 +278,10 @@ function Header({ base, demo }: { base: string; demo: boolean }) {
                 {user.role === "TRAVELER" && (
                   <>
                     <Link href={`${base}/roadmaps`}>Lịch ăn của tôi</Link>
-                    <Link href={`${base}/preferences`}>Khẩu vị của tôi</Link>
                     <Link href={`${base}/my-guides`}>Bài viết của tôi</Link>
                   </>
                 )}
-                {demo ? (
-                  <Link href="/demo">Về bản minh họa</Link>
-                ) : (
-                  <LogoutButton />
-                )}
+                <LogoutButton />
               </div>
             </details>
           </>
@@ -277,65 +367,195 @@ export function WorkspaceShell({
           <a className="skip-link" href="#main-content">
             Đến nội dung chính
           </a>
-          <Header base={base} demo={demo} />
-          {!isTraveler ? (
-            <main className="container workspace" id="main-content">
-              <div className="between workspace-identity">
-                <span className="eyebrow">{label}</span>
-                {mode === "demo" && (
-                  <span className="helper">Dữ liệu minh họa</span>
-                )}
-              </div>
-              {user?.role === "ADMIN" ? (
-                <div className="grouped-navigation">
-                  <div className="nav-group">
-                    <span>Quản trị</span>
-                    <Nav items={navigation.ADMIN} base={base} />
-                  </div>
-                  <div className="nav-group">
-                    <span>Kiểm duyệt</span>
-                    <Nav
-                      items={navigation.MOD.slice(1, 8)}
-                      base={demo ? base + "/moderation" : "/moderation"}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Nav items={navigation[user!.role]} base={base} />
-              )}
-              <div>{children}</div>
-            </main>
-          ) : (
-            <main
-              id="main-content"
-              className={isRoadmap ? "" : "traveler-content"}
-            >
+          {user?.role === "ADMIN" ||
+          user?.role === "MOD" ||
+          user?.role === "RESTAURANT_OWNER" ? (
+            <AdminWorkspace base={base} demo={demo}>
               {children}
-            </main>
+            </AdminWorkspace>
+          ) : (
+            <>
+              <Header base={base} demo={demo} />
+              {!isTraveler ? (
+                <main className="container workspace" id="main-content">
+                  <div className="between workspace-identity">
+                    <span className="eyebrow">{label}</span>
+                    {mode === "demo" && (
+                      <span className="helper">Dữ liệu minh họa</span>
+                    )}
+                  </div>
+                  <Nav items={navigation[user!.role]} base={base} />
+                  <div>{children}</div>
+                </main>
+              ) : (
+                <main
+                  id="main-content"
+                  className={isRoadmap ? "" : "traveler-content"}
+                >
+                  {children}
+                </main>
+              )}
+              {!isRoadmap &&
+                (isTraveler ? (
+                  <PublicFooter base={base} />
+                ) : (
+                  <footer className="container footer">
+                    <span>ANGI · {label.toLocaleLowerCase("vi")} · © 2026</span>
+                    <span>Tiếng Việt</span>
+                  </footer>
+                ))}
+            </>
           )}
-          {!isRoadmap &&
-            (isTraveler ? (
-              <PublicFooter base={base} />
-            ) : (
-              <footer className="container footer">
-                <span>ANGI · {label.toLocaleLowerCase("vi")} · © 2026</span>
-                <span>Tiếng Việt</span>
-              </footer>
-            ))}
         </ProfileIdentity>
       </PlatformProvider>
     </WorkspaceContext.Provider>
   );
 }
+/**
+ * The staff workspaces in the sidebar shell: the Admin gets the Admin and moderation sections,
+ * a Mod the moderation section (notifications and account sit at the sidebar's foot).
+ */
+/** The owner workspace in the sidebar shell: the restaurant sections (notifications and account at the foot). */
+function ownerSidebarGroups(base: string) {
+  return [
+    {
+      title: "Nhà hàng",
+      base,
+      items: navigation.RESTAURANT_OWNER.filter(
+        ([slug]) => slug !== "notifications" && slug !== "account",
+      ),
+    },
+  ];
+}
+
+/**
+ * The Restaurant Owner dashboard for the backend-integrated owner screens (app route group): the
+ * same sidebar shell as the Mod and Admin workspaces instead of the site header and footer.
+ */
+export function OwnerDashboard({
+  user,
+  children,
+}: {
+  user: AuthUserDto;
+  children: ReactNode;
+}) {
+  const base = "/restaurant";
+  const unread = useUnreadCount(user);
+  return (
+    <WorkspaceContext.Provider value={{ user, base, demo: false }}>
+      <a className="skip-link" href="#main-content">
+        Đến nội dung chính
+      </a>
+      <AdminShell
+        user={user}
+        base={base}
+        demo={false}
+        unread={unread}
+        label="chủ quán"
+        groups={ownerSidebarGroups(base)}
+      >
+        {children}
+      </AdminShell>
+    </WorkspaceContext.Provider>
+  );
+}
+
+function AdminWorkspace({
+  base,
+  demo,
+  children,
+}: {
+  base: string;
+  demo: boolean;
+  children: ReactNode;
+}) {
+  // ProfileIdentity has resolved the user (demo name and avatar included).
+  const { user } = useWorkspace();
+  const mod = user?.role === "MOD";
+  const owner = user?.role === "RESTAURANT_OWNER";
+  // Only the owner sidebar has a bell: the Mod gets no notification from the backend yet and
+  // the Admin sidebar keeps its foot to the account.
+  const unread = useUnreadCount(owner ? user : null);
+  if (!user) return null;
+  return (
+    <AdminShell
+      user={user}
+      base={base}
+      demo={demo}
+      unread={unread}
+      notifications={owner}
+      label={mod ? "kiểm duyệt" : owner ? "chủ quán" : "quản trị"}
+      groups={
+        owner
+          ? ownerSidebarGroups(base)
+          : mod
+            ? [
+                {
+                  title: "Kiểm duyệt",
+                  base,
+                  items: navigation.MOD.filter(
+                    ([slug]) => slug !== "notifications" && slug !== "account",
+                  ),
+                },
+              ]
+            : [
+                { title: "Quản trị", base, items: navigation.ADMIN },
+                {
+                  title: "Kiểm duyệt",
+                  base: demo ? base + "/moderation" : "/moderation",
+                  // MOD-V1..V3 are "MOD" only in the backend (Admin gets 403), so the
+                  // verification queue stays off the Admin sidebar until that changes.
+                  items: navigation.MOD.slice(1, 8).filter(
+                    ([slug]) => slug !== "verification",
+                  ),
+                },
+              ]
+      }
+    >
+      {children}
+    </AdminShell>
+  );
+}
 function ProfileIdentity({ children }: { children: ReactNode }) {
   const scope = useWorkspace(),
-    { data, mode } = usePlatform();
+    { data, mode, setSilent } = usePlatform();
+  // Always pull the BE profile when signed in. `useProfile()` returns
+  // `null` for `profile` when /me fails (no session, network error), so
+  // the `!live.profile` guard keeps the mock in place for unauthenticated
+  // previews. Once a real user is signed in (any route, including
+  // /demo/...) their data flows into the platform store and the rest of
+  // the app reads the real session.
+  const live = useProfile();
+  // Track the last `id` we synced so we only push into the platform
+  // store when the BE actually returns a different user (e.g. login,
+  // logout, switch account). Without this guard the hook returns a new
+  // object reference every render and we'd loop `setSilent → data →
+  // render → setSilent ...` until React throws "Too many re-renders".
+  const lastSyncedId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!live.profile) return;
+    if (lastSyncedId.current === live.profile.id) return;
+    lastSyncedId.current = live.profile.id;
+    setSilent((d) => {
+      d.profile = {
+        name: live.profile!.displayName,
+        phone: live.profile!.phone ?? "",
+        bio: live.profile!.bio ?? "",
+        avatar: live.profile!.avatarUrl ?? "",
+      };
+    });
+  }, [live.profile, setSilent]);
   const user =
     scope.user && mode === "demo"
       ? {
           ...scope.user,
           displayName: data.profile.name,
-          avatarUrl: data.profile.avatar ?? null,
+          // In demo mode the layout injects a mock user, but when a real
+          // user is signed in we want the BE email/avatar to win too.
+          email: live.profile?.email ?? scope.user.email,
+          avatarUrl: data.profile.avatar
+            ? data.profile.avatar
+            : (live.profile?.avatarUrl ?? null),
         }
       : scope.user;
   return (

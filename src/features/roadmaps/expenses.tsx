@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Alert, Button, Card } from "@/shared/ui";
 import {
   ConfirmDialog,
@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/primitives";
 import { usePlatform } from "@/features/platform/provider";
 import { dateLabel, money } from "@/features/platform/rules";
+import { DateField } from "@/components/ui/date-time-fields";
 export function TripExpenses({
   id,
   readOnly,
@@ -26,6 +27,8 @@ export function TripExpenses({
     [amount, setAmount] = useState(""),
     [sort, setSort] = useState("new"),
     [remove, setRemove] = useState<string | null>(null);
+  // The save button sits in the dialog footer and submits the form by id.
+  const formId = useId();
   const records = [...(trip.expenses ?? [])].sort((a, b) =>
     sort === "high"
       ? b.amount - a.amount
@@ -88,8 +91,18 @@ export function TripExpenses({
       <p className="helper">
         Chi phí bạn ghi riêng với dự chi theo món. Dữ liệu minh họa.
       </p>
-      <Dialog open={open} title="Thêm chi phí" onClose={() => setOpen(false)}>
+      <Dialog
+        open={open}
+        title="Thêm chi phí"
+        onClose={() => setOpen(false)}
+        footer={
+          <Button type="submit" form={formId} loading={busy}>
+            Lưu chi phí
+          </Button>
+        }
+      >
         <form
+          id={formId}
           className="stack"
           onSubmit={async (e) => {
             e.preventDefault();
@@ -120,12 +133,14 @@ export function TripExpenses({
             }))}
           />
           <Field
+            placeholder="Ví dụ: Vé xe khách"
             label="Tên khoản chi"
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
           <Field
+            placeholder="Ví dụ: 150000"
             label="Số tiền"
             required
             type="number"
@@ -134,21 +149,17 @@ export function TripExpenses({
             onChange={(e) => setAmount(e.target.value)}
             helper="VNĐ"
           />
-          <Field
+          <DateField
             label="Ngày chi"
             required
-            type="date"
             min={trip.start}
             max={trip.end}
             value={date}
-            onChange={(e) => setDate(e.target.value)}
+            onChange={(value) => setDate(value)}
           />
           <Alert tone="info">
             Khoản chi minh họa do bạn nhập; không phải thanh toán tại quán.
           </Alert>
-          <Button type="submit" loading={busy}>
-            Lưu chi phí
-          </Button>
         </form>
       </Dialog>
       <ConfirmDialog

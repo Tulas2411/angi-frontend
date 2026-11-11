@@ -1,0 +1,282 @@
+/* F-56 Moderate Restaurant: what differs from verification-review.css and menu-review.css. */
+.rm-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+.rm-filters .field {
+  margin: 0;
+}
+.vr-card-facts [data-tone="success"] {
+  color: var(--success-ink);
+}
+.vr-card-facts [data-tone="warning"] {
+  color: var(--warning-ink);
+}
+.vr-card-facts [data-tone="error"] {
+  color: var(--error-ink);
+}
+
+/* Pending reports at the right of a list card. */
+.rm-card-reports {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+.rm-report-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+.rm-report-pill svg {
+  width: 15px;
+  height: 15px;
+}
+.rm-card-reports[data-active="true"] .rm-report-pill {
+  background: var(--error-bg);
+  color: var(--error-ink);
+}
+.rm-card-chevron {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+.rm-hero-flag {
+  color: var(--error-ink);
+  font-weight: 600;
+}
+
+/* Owner block. */
+.rm-owner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.rm-owner > div {
+  display: grid;
+  min-width: 0;
+}
+.rm-owner small {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.rm-owner a,
+.rm-report-actions a {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Running menu, hidden dishes included. */
+.rm-dish {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rm-dish .mr-photo {
+  width: 72px;
+}
+/* The running menu: each dish photo fills the left of its row at full height. */
+.rm-dish {
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  gap: 0;
+  min-height: 112px;
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+  border-radius: var(--radius-md);
+}
+.rm-dish > .mr-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 112px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.rm-dish > .mr-item-body {
+  align-content: center;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+}
+.rm-dish > .button {
+  align-self: center;
+  margin-right: var(--space-4);
+}
+.rm-dish[data-hidden="true"] {
+  background: var(--warning-bg);
+}
+.rm-dish[data-hidden="true"] .mr-photo {
+  opacity: 0.6;
+  filter: grayscale(0.5);
+}
+
+/* Reports about the restaurant. */
+.rm-reports {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rm-report {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.rm-report[data-open="true"] {
+  box-shadow:
+    inset 3px 0 0 var(--error-ink),
+    inset 0 0 0 1px var(--line);
+}
+.rm-report-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.rm-report-by {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 13px;
+}
+.rm-report-by .avatar {
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+}
+.rm-report-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.rm-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* History. */
+.rm-audit {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rm-audit li {
+  display: grid;
+  gap: 2px;
+  padding: var(--space-3) 0 var(--space-3) var(--space-4);
+  border-left: 2px solid var(--line);
+  position: relative;
+}
+.rm-audit li::before {
+  content: "";
+  position: absolute;
+  top: 18px;
+  left: -5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.rm-audit strong {
+  font-size: 14px;
+}
+.rm-audit small {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.rm-audit svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* MOD-R3 choices: hidden reads as a warning, suspended as an error. */
+.rm-choices label[data-choice="visible"]:has(input:checked) {
+  border-color: var(--success-ink);
+  background: var(--success-bg);
+}
+.rm-choices label[data-choice="hidden"]:has(input:checked) {
+  border-color: var(--warning-ink);
+  background: var(--warning-bg);
+}
+.rm-choices label[data-choice="suspended"]:has(input:checked) {
+  border-color: var(--error-ink);
+  background: var(--error-bg);
+}
+.vr-side .card .button + .button {
+  margin-top: var(--space-2);
+}
+
+@media (max-width: 1000px) {
+  .rm-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .rm-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rm-card-reports {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+  }
+  .rm-dish {
+    grid-template-columns: 110px minmax(0, 1fr);
+  }
+  .rm-dish > .button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0 var(--space-4) var(--space-3);
+  }
+  .rm-owner {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .rm-owner > a {
+    grid-column: 1 / -1;
+  }
+}
+
+/* The detail inside the shared side panel (moderation-drawer.css): one column. */
+.rm-embedded {
+  padding-bottom: 0;
+}
+.rm-embedded .vr-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+.rm-embedded .vr-side {
+  position: static;
+  order: -1;
+}
+.vr-card[aria-current="true"] {
+  box-shadow:
+    var(--vr-lift),
+    inset 0 0 0 2px var(--ink);
+}

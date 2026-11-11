@@ -1,0 +1,416 @@
+/* Location picker dialog. Overlays sit on top of the Mapbox canvas. */
+.map-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--control);
+}
+.map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: var(--control);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+.mapbox-interactive-container {
+  width: 100%;
+  height: 100%;
+}
+.map-canvas .mapboxgl-canvas:focus-visible {
+  outline-offset: -4px;
+}
+.map-canvas .mapboxgl-ctrl-bottom-left,
+.map-canvas .mapboxgl-ctrl-bottom-right {
+  z-index: 3;
+}
+.map-canvas .mapboxgl-ctrl-attrib {
+  font-size: 10px;
+  line-height: 16px;
+}
+.map-unavailable {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+.map-unavailable .icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.3;
+}
+
+/* Search */
+.map-search {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  z-index: 4;
+  width: min(420px, calc(100% - 88px));
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+.map-search-bar {
+  display: flex;
+  align-items: center;
+  padding-right: 4px;
+}
+.map-search-bar .input {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  font-size: var(--text-sm);
+  box-shadow: none;
+}
+.map-search-bar .input:focus {
+  box-shadow: none;
+}
+.map-search-results {
+  max-height: min(240px, 35dvh);
+  padding: 4px 8px 8px;
+  margin: 0;
+  list-style: none;
+  overflow: auto;
+}
+.map-search-results .button {
+  width: 100%;
+  justify-content: flex-start;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  text-decoration: none;
+}
+.map-search-results span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.map-search-results strong,
+.map-search-results small {
+  display: block;
+}
+.map-search-results small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.map-search > .button {
+  margin: 0 10px 8px;
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: var(--text-xs);
+}
+
+/* Map style switch, manual coordinates, zoom */
+.map-style-control {
+  position: absolute;
+  bottom: 82px;
+  left: 20px;
+  z-index: 3;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.map-style-control .button {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: var(--text-xs);
+}
+.map-manual-toggle {
+  position: absolute;
+  left: 20px;
+  bottom: 32px;
+  z-index: 3;
+}
+.map-manual-toggle .button {
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--card);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow);
+}
+.map-manual-toggle .button:hover {
+  background: var(--control);
+}
+.map-coordinate-panel {
+  position: absolute;
+  left: 20px;
+  bottom: 136px;
+  z-index: 5;
+  width: min(360px, calc(100% - 40px));
+  max-height: calc(100% - 180px);
+  padding: 12px 16px 16px;
+  overflow: auto;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+.map-coordinate-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.map-coordinate-panel .grid-2 {
+  gap: var(--space-3);
+}
+.map-coordinate-panel .input {
+  min-width: 0;
+  padding: 10px;
+}
+.map-coordinate-panel .helper {
+  margin-top: 10px;
+}
+.map-save {
+  position: absolute;
+  right: 84px;
+  bottom: 28px;
+  z-index: 3;
+  min-width: 112px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.map-save:hover {
+  background: var(--control);
+}
+.map-controls {
+  position: absolute;
+  right: 20px;
+  bottom: 20px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: transparent;
+}
+.map-controls .button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 10px;
+  background: var(--card);
+  border-radius: 0;
+}
+.map-controls .map-locate,
+.map-zoom {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+.map-zoom {
+  display: flex;
+  flex-direction: column;
+}
+.map-zoom .button + .button {
+  border-top: 1px solid var(--line);
+}
+.map-controls .button:hover {
+  background: var(--control);
+}
+
+/* Notices */
+.map-notices {
+  position: absolute;
+  top: 104px;
+  left: 20px;
+  z-index: 3;
+  display: grid;
+  gap: var(--space-2);
+  width: min(420px, calc(100% - 40px));
+}
+.map-notices:empty {
+  display: none;
+}
+.map-notices .alert,
+.map-busy {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+.map-busy {
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+
+/* Selected point and its information cards */
+.map-selection-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.map-selected-pin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 54px;
+  padding: 6px 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: auto;
+}
+.map-selected-pin::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  bottom: -10px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgb(34 34 34 / 0.12);
+}
+.map-selected-pin img {
+  position: relative;
+  width: 28px;
+  height: 42px;
+}
+.map-selected-pin::after {
+  content: "";
+  position: absolute;
+  top: 17px;
+  left: calc(50% - 4.5px);
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--card);
+}
+.map-location-card {
+  position: absolute;
+  left: 50%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  width: min(360px, calc(100% - 32px));
+  padding: 14px 12px 14px 16px;
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+.map-location-pin {
+  bottom: calc(50% + 64px);
+  width: min(320px, calc(100% - 40px));
+}
+.map-location-pin::after {
+  content: "";
+  position: absolute;
+  left: calc(50% - 7px);
+  bottom: -7px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid var(--card);
+}
+.map-location-projected::after {
+  display: none;
+}
+.map-popup-arrow {
+  position: absolute;
+  bottom: -7px;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid var(--card);
+}
+.map-popup-arrow-above {
+  top: -7px;
+  bottom: auto;
+  transform: rotate(180deg);
+}
+.map-location-summary {
+  bottom: 104px;
+}
+.map-location-copy {
+  flex: 1;
+  min-width: 0;
+  max-height: 112px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+}
+.map-location-summary .map-location-copy {
+  max-height: min(190px, 28dvh);
+}
+.map-location-copy strong {
+  font-size: 14px;
+  line-height: 20px;
+}
+.map-location-copy p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 16px;
+}
+.map-location-card .map-info-close {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 6px;
+  opacity: 0.65;
+}
+.map-info-close .icon {
+  width: 16px;
+  height: 16px;
+}
+
+@media (max-width: 480px) {
+  .map-search {
+    left: 12px;
+    top: 16px;
+    width: calc(100% - 72px);
+    max-height: calc(100% - 160px);
+    overflow-y: auto;
+  }
+  .map-search-bar .input {
+    padding-inline: var(--space-3);
+    font-size: var(--text-xs);
+  }
+  .map-search-results {
+    max-height: 24dvh;
+  }
+  .map-location-pin {
+    width: min(280px, calc(100% - 32px));
+  }
+  .map-location-summary {
+    bottom: 168px;
+  }
+  .map-coordinate-panel,
+  .map-manual-toggle,
+  .map-style-control {
+    left: 16px;
+  }
+  .map-coordinate-panel {
+    width: calc(100% - 32px);
+  }
+  .map-notices {
+    top: 96px;
+    left: 12px;
+    width: calc(100% - 72px);
+  }
+}
+@media (max-height: 500px) {
+  .map-location-pin {
+    bottom: calc(50% + 52px);
+  }
+  .map-location-copy {
+    max-height: 48px;
+  }
+}

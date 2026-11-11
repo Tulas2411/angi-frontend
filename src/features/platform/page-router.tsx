@@ -1,33 +1,17 @@
 "use client";
 import { useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import type { RoleCode } from "@/features/auth/types";
 import { Button, Card, Alert } from "@/shared/ui";
 import { ActionLink, EmptyState, Skeleton } from "@/components/ui/primitives";
 import { usePlatform } from "./provider";
 import { useWorkspace, WorkspaceScope } from "@/components/layout/workspace";
-import {
-  DiscoveryPage,
-  DiscoveryList,
-  RestaurantDetail,
-} from "@/features/discovery/pages";
-import { BlogDetail, BlogEditor, BlogList } from "@/features/blogs/pages";
-import {
-  AccountPage,
-  NotificationsPage,
-  PreferencesPage,
-} from "@/features/profile/pages";
-import {
-  NewTripPage,
-  RoadmapPage,
-  RollDishPage,
-  TripList,
-} from "@/features/roadmaps/pages";
+import { AccountPage } from "@/features/profile/pages";
+import { NewTripPage, RoadmapPage, TripList } from "@/features/roadmaps/pages";
 import {
   OwnerMenuPage,
   OwnerOverview,
   OwnerRestaurant,
-  OwnerReviewsPage,
   VerificationPage,
 } from "@/features/owner/pages";
 import {
@@ -47,7 +31,41 @@ import {
   SubmissionQueue,
 } from "@/features/moderation/pages";
 import { AuthFlowPage, type AuthFlow } from "@/features/auth/flows";
-
+import { RestaurantRegistrationPage } from "@/features/owner/restaurant-registration-page";
+import { RestaurantProfilePage } from "@/features/owner/restaurant-profile-page";
+import { RestaurantBusinessHoursPage } from "@/features/owner/restaurant-business-hours-page";
+import { RestaurantOperatingStatusPage } from "@/features/owner/restaurant-operating-status-page";
+import { RestaurantReviewsPage } from "@/features/owner/restaurant-reviews-page";
+import { RestaurantReviewsLivePage } from "@/features/owner/restaurant-reviews-live-page";
+import {
+  ReportHandlingPage,
+  ReportQueuePage,
+} from "@/features/moderation/report-handling-page";
+import { ModerationHomePage } from "@/features/moderation/moderation-home-page";
+import { ReviewModerationPage } from "@/features/moderation/review-moderation-page";
+import { AccountPage as LiveAccountPage } from "@/features/account/account-page";
+import {
+  ModerationUserDetailPage,
+  ModerationUsersLivePage,
+} from "@/features/moderation/moderation-users-live-page";
+import { ModerationCommunityLivePage } from "@/features/moderation/moderation-community-live-page";
+import { PermissionsPage } from "@/features/admin/permissions-page";
+import { ModDetailPage, ModsPage } from "@/features/admin/mods-page";
+import { AdminDashboardPage } from "@/features/admin/dashboard-page";
+import { OutboxPage } from "@/features/admin/outbox-page";
+import { AuditLogPage } from "@/features/admin/audit-page";
+import {
+  VerificationQueuePage,
+  VerificationReviewPage,
+} from "@/features/moderation/verification-review-page";
+import {
+  MenuQueuePage,
+  MenuReviewPage,
+} from "@/features/moderation/menu-review-page";
+import {
+  RestaurantModerationDetailPage,
+  RestaurantModerationListPage,
+} from "@/features/moderation/restaurant-moderation-page";
 export function UnavailablePage() {
   const [attempts, setAttempts] = useState(0);
   const { status, reload } = usePlatform();
@@ -91,8 +109,44 @@ export function UnavailablePage() {
     </div>
   );
 }
+/**
+ * F-59 báo cáo vi phạm trong live mode: hàng đợi (MOD-RP1, MOD-RP3) hoặc xử lý một báo cáo
+ * (MOD-RP2..MOD-RP4). Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
+ */
+function ModReportsBase({ base, id }: { base: string; id?: string }) {
+  return (
+    <WorkspaceScope base={base}>
+      {/^[1-9]\d{0,17}$/.test(id ?? "") ? (
+        <ReportHandlingPage key={id} reportId={Number(id)} />
+      ) : (
+        <ReportQueuePage />
+      )}
+    </WorkspaceScope>
+  );
+}
+
+/**
+ * MOD-U1..MOD-U4 trong live mode: danh sách (MOD-U1) hoặc hồ sơ chi tiết
+ * (MOD-U2). Không phụ thuộc AppData nên đứng trước cổng `status !== "ready"`.
+ */
+function ModUsersBase({ base, id }: { base: string; id?: string }) {
+  const userId = Number(id);
+  return (
+    <WorkspaceScope base={base}>
+      {/* The list opens a profile in its side panel; /users/{id} still opens it as a page. */}
+      {Number.isInteger(userId) && userId > 0 ? (
+        <ModerationUserDetailPage userId={userId} />
+      ) : (
+        <ModerationUsersLivePage />
+      )}
+    </WorkspaceScope>
+  );
+}
+
 function ModPages({ segments }: { segments: string[] }) {
   const [area, id] = segments;
+  const { base } = useWorkspace();
+  const { mode } = usePlatform();
   if (!area) return <ModerationOverview />;
   if (area === "users") return <ModerationUsers id={id} />;
   if (area === "restaurants") return <ModerationRestaurants id={id} />;
@@ -103,12 +157,22 @@ function ModPages({ segments }: { segments: string[] }) {
         id={id}
       />
     );
-  if (area === "reports") return <ReportsPage id={id} />;
+  // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật; bản demo giữ dữ liệu mẫu.
+  if (area === "reports")
+    return mode === "live" ? (
+      <ModReportsBase base={base} id={id} />
+    ) : (
+      <ReportsPage id={id} />
+    );
   if (area === "community") return <CommunityPage />;
   if (area === "reviews") return <ModerationReviews />;
-  if (area === "notifications") return <NotificationsPage />;
+  if (area === "notifications") return <NotificationsRedirect />;
   if (area === "account") return <AccountPage />;
   return <MissingPage />;
+}
+/** Notifications moved to the shared /notifications screen (NOTI-01..03) for every role. */
+function NotificationsRedirect(): never {
+  redirect("/notifications");
 }
 function MissingPage() {
   const { base } = useWorkspace();
@@ -128,11 +192,166 @@ export function PageRouter({
   role: RoleCode | "GUEST";
   segments?: string[];
 }) {
-  const { status } = usePlatform(),
+  const { status, mode } = usePlatform(),
     { base, demo } = useWorkspace(),
     params = useSearchParams();
   const [area, id, operation] = segments;
-  if (status !== "ready") return <UnavailablePage />;
+  // Before the workspace data: the shared screen reads NOTI-01 itself.
+  if (role !== "GUEST" && area === "notifications")
+    return <NotificationsRedirect />;
+  if (
+    role === "RESTAURANT_OWNER" &&
+    mode === "live" &&
+    area === "profile" &&
+    params.get("tab") === "status"
+  )
+    return <RestaurantOperatingStatusPage />;
+  if (
+    role === "RESTAURANT_OWNER" &&
+    mode === "live" &&
+    area === "profile" &&
+    params.get("tab") === "hours"
+  )
+    return <RestaurantBusinessHoursPage />;
+
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "profile")
+    return (
+      <RestaurantProfilePage initialTab={params.get("tab") ?? "information"} />
+    );
+
+  // These operations do not depend on the AppData adapter.
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "menu")
+    return <OwnerMenuPage />;
+
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "verification")
+    return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
+
+  // OWN-19/OWN-20 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (role === "RESTAURANT_OWNER" && mode === "live" && area === "reviews")
+    return <RestaurantReviewsLivePage />;
+
+  // F-58 MOD-M1..MOD-M4 đã nối API: hàng đợi và duyệt bản thực đơn đọc ghi thật (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "menus")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <MenuReviewPage key={id} submissionId={Number(id)} />
+    ) : (
+      <MenuQueuePage />
+    );
+
+  // Trang "Công việc kiểm duyệt": tổng hợp các hàng đợi thật (MOD-V1, MOD-M1, MOD-RP1, MOD-R1).
+  if (mode === "live" && role === "MOD" && !area) return <ModerationHomePage />;
+
+  // ME-01..ME-03 đã nối API: tài khoản của Mod, chủ quán và Admin (hồ sơ, đổi mật khẩu, quyền hiệu lực).
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "RESTAURANT_OWNER" || role === "ADMIN") &&
+    area === "account"
+  )
+    return <LiveAccountPage />;
+
+  // MOD-F1..MOD-F3 đã nối API: kiểm duyệt đánh giá quán và phản hồi của chủ quán (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "reviews")
+    return <ReviewModerationPage />;
+
+  // F-56 MOD-R1..MOD-R4 đã nối API: danh sách và chi tiết kiểm duyệt nhà hàng đọc ghi thật (Mod và Admin).
+  if (mode === "live" && role === "MOD" && area === "restaurants")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <RestaurantModerationDetailPage key={id} restaurantId={Number(id)} />
+    ) : (
+      <RestaurantModerationListPage />
+    );
+
+  // F-57 MOD-V1..MOD-V3 đã nối API: hàng đợi và duyệt hồ sơ xác minh đọc ghi thật.
+  if (mode === "live" && role === "MOD" && area === "verification")
+    return /^[1-9]\d{0,17}$/.test(id ?? "") ? (
+      <VerificationReviewPage key={id} verificationId={Number(id)} />
+    ) : (
+      <VerificationQueuePage />
+    );
+
+  // MOD-RP1..MOD-RP4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "reports"
+  )
+    return <ModReportsBase base={base} id={id} />;
+
+  // MOD-U1..MOD-U4 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "users"
+  )
+    return <ModUsersBase base={base} id={id} />;
+
+  // MOD-B1..MOD-B3 đã nối API nên bản live đọc thật, không phụ thuộc AppData.
+  if (
+    mode === "live" &&
+    (role === "MOD" || role === "ADMIN") &&
+    area === "community"
+  )
+    return <ModerationCommunityLivePage />;
+
+  // F-66 ADM-P1..ADM-P4 đã nối API: phân quyền đọc và ghi thật, không phụ thuộc AppData.
+  if (mode === "live" && role === "ADMIN" && area === "permissions")
+    return <PermissionsPage />;
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderators" &&
+    operation === "permissions" &&
+    /^[1-9]\d{0,9}$/.test(id ?? "")
+  )
+    return <PermissionsPage initialModId={Number(id)} />;
+
+  // F-63 ADM-D1..ADM-D3 và OPS-01 đã nối API: tổng quan và đồng bộ gợi ý đọc số liệu thật.
+  if (mode === "live" && role === "ADMIN" && !area)
+    return <AdminDashboardPage />;
+  // F-64 ADM-A1, ADM-A2 đã nối API: nhật ký hệ thống chỉ đọc, chi tiết mở trong drawer.
+  if (mode === "live" && role === "ADMIN" && area === "audit")
+    return <AuditLogPage />;
+  if (mode === "live" && role === "ADMIN" && area === "sync")
+    return <OutboxPage />;
+
+  // F-65 ADM-M1..ADM-M4 đã nối API: danh sách, tạo, chi tiết và cập nhật Mod đọc ghi thật.
+  if (mode === "live" && role === "ADMIN" && area === "moderators" && !id)
+    return <ModsPage />;
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderators" &&
+    !operation &&
+    /^[1-9]\d{0,9}$/.test(id ?? "")
+  )
+    return <ModDetailPage key={id} userId={Number(id)} />;
+
+  // ADMIN gặp kiểm duyệt ở /administration/moderation/... — cùng bộ màn hình.
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderation" &&
+    segments[1] === "users"
+  )
+    return <ModUsersBase base={`${base}/moderation`} id={segments[2]} />;
+
+  if (
+    mode === "live" &&
+    role === "ADMIN" &&
+    area === "moderation" &&
+    segments[1] === "community"
+  )
+    return <ModerationCommunityLivePage />;
+
+  if (
+    role === "RESTAURANT_OWNER" &&
+    (area === "register" || (mode === "live" && !area))
+  )
+    return <RestaurantRegistrationPage />;
+
+  if (status !== "ready") {
+    return <UnavailablePage />;
+  }
   if (
     [
       "register",
@@ -145,51 +364,14 @@ export function PageRouter({
   )
     return <AuthFlowPage flow={area as AuthFlow} demo={demo} />;
   if (role === "GUEST" || role === "TRAVELER") {
-    if (!area) return <DiscoveryPage />;
-    if (area === "restaurants")
-      return id ? (
-        <RestaurantDetail id={id} />
-      ) : (
-        <DiscoveryList kind="restaurants" />
-      );
-    if (area === "dishes") return <DiscoveryList kind="dishes" />;
-    if (
-      role === "GUEST" &&
-      area === "guides" &&
-      (id === "new" || operation === "edit")
-    )
-      return (
-        <div className="container workspace">
-          <Card title="Đăng nhập để viết cẩm nang">
-            <ActionLink href="/login">Đăng nhập</ActionLink>
-          </Card>
-        </div>
-      );
-    if (area === "guides")
-      return id === "new" ? (
-        <BlogEditor />
-      ) : id ? (
-        operation === "edit" ? (
-          <BlogEditor id={id} />
-        ) : (
-          <BlogDetail id={id} />
-        )
-      ) : (
-        <BlogList />
-      );
     if (role === "TRAVELER") {
-      if (area === "my-guides") return <BlogList mine />;
       if (area === "profile" || area === "account")
-        return <AccountPage profile />;
-      if (area === "preferences" || area === "survey")
-        return <PreferencesPage survey={area === "survey"} />;
-      if (area === "notifications") return <NotificationsPage />;
-      if (area === "roll") return <RollDishPage />;
+        return <AccountPage profile={id === "edit"} />;
+      // F-18 moved to /roll, on DISH-03.
+      if (area === "roll") redirect("/roll");
       if (area === "roadmaps")
         return id === "new" ? (
           <NewTripPage />
-        ) : id === "share" ? (
-          <BlogEditor share />
         ) : id ? (
           <RoadmapPage id={id} />
         ) : (
@@ -203,10 +385,16 @@ export function PageRouter({
       return (
         <OwnerRestaurant initialTab={params.get("tab") ?? "information"} />
       );
-    if (area === "verification") return <VerificationPage />;
+    if (area === "verification")
+      return <VerificationPage initialTab={params.get("tab") ?? undefined} />;
     if (area === "menu") return <OwnerMenuPage />;
-    if (area === "reviews") return <OwnerReviewsPage />;
-    if (area === "notifications") return <NotificationsPage />;
+    if (area === "reviews")
+      // OWN-19/OWN-20 đã nối API nên bản live đọc thật; bản demo giữ dữ liệu mẫu.
+      return mode === "live" ? (
+        <RestaurantReviewsLivePage />
+      ) : (
+        <RestaurantReviewsPage />
+      );
     if (area === "account") return <AccountPage />;
   }
   if (role === "MOD") return <ModPages segments={segments} />;
@@ -227,7 +415,6 @@ export function PageRouter({
           <ModPages segments={segments.slice(1)} />
         </WorkspaceScope>
       );
-    if (area === "notifications") return <NotificationsPage />;
     if (area === "account") return <AccountPage />;
   }
   return <MissingPage />;

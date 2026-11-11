@@ -1,0 +1,351 @@
+import Image from "next/image";
+import Link from "next/link";
+import { AccountMenu } from "@/components/site/account-menu";
+import { navigationFor } from "@/components/site/navigation";
+import { SiteFooter } from "@/components/site/site-footer";
+import { SiteHeader } from "@/components/site/site-header";
+import { SiteNav } from "@/components/site/site-nav";
+import { Icon } from "@/components/ui/primitives";
+import type { AuthUserDto } from "@/features/auth/types";
+import { roadmapRoutes } from "@/features/roadmaps/routes";
+import { Button, Input } from "@/shared/ui";
+import { HomeDishCollection } from "./home-dish-collection";
+import { createDishPhotos } from "./home-dish-layout";
+import {
+  HomePreferencePreview,
+  HomeRoadmapPreview,
+} from "./home-experience-preview";
+import {
+  homeSelectionHref,
+  homeTastes,
+  selectHomeDishes,
+  type HomeSelection,
+} from "./home-content";
+import { HomeRoadmapStart } from "./home-roadmap-start";
+import "./public-home.css";
+
+/** Stops on the hero route, in % of its box: the path's joints (x / 1440, y / 400). */
+const homeRouteStops: readonly (readonly [number, number])[] = [
+  [15.28, 62.5],
+  [29.17, 80],
+  [44.44, 52.5],
+  [59.72, 70],
+  [75, 42.5],
+  [88.89, 57.5],
+];
+
+// Decorative taste bubbles floating around the hero photo.
+const heroTasteChips = ["Đậm đà", "Thanh nhẹ", "Ấm bụng"] as const;
+
+/**
+ * Public homepage with a real RM-01 quick planner for Travelers. The taste,
+ * roadmap preview and dish collection remain labelled editorial examples.
+ * Only browser-safe user details cross into the account menu and quick planner.
+ */
+export function PublicHomePage({
+  selection,
+  user = null,
+}: {
+  selection: HomeSelection;
+  user?: AuthUserDto | null;
+}) {
+  const dishes = selectHomeDishes(selection);
+  const filtered = Boolean(selection.query) || selection.taste !== "all";
+  // The same header items as the Traveler pages (`PublicShell` / `AppShell`).
+  const menu = navigationFor(user?.role ?? null);
+  return (
+    <div className="home-page">
+      <a className="skip-link" href="#noi-dung">
+        Đến nội dung chính
+      </a>
+      <SiteHeader
+        nav={menu && <SiteNav items={menu.items} label={menu.label} />}
+      >
+        {user ? (
+          <AccountMenu user={user} />
+        ) : (
+          <>
+            <Link
+              href="/login"
+              prefetch={false}
+              className="button button-secondary"
+            >
+              Đăng nhập
+            </Link>
+            <Link
+              href="/register"
+              prefetch={false}
+              className="button button-primary site-join"
+            >
+              Tham gia ANGI <span aria-hidden>↗</span>
+            </Link>
+          </>
+        )}
+      </SiteHeader>
+      <main id="noi-dung" tabIndex={-1}>
+        <HomeRoadmapStart role={user?.role ?? null} />
+        <section className="home-hero" aria-labelledby="home-title">
+          <div className="home-bubbles" aria-hidden>
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+          {/* A faint map route with its stops, running the full width of the screen. */}
+          <div className="home-route" aria-hidden>
+            <svg
+              className="home-route-line"
+              viewBox="0 0 1440 400"
+              preserveAspectRatio="none"
+            >
+              <path d="M0 300 C110 300 140 250 220 250 S330 320 420 320 S560 210 640 210 S780 280 860 280 S1000 170 1080 170 S1200 230 1280 230 S1390 150 1440 150" />
+            </svg>
+            {homeRouteStops.map(([x, y]) => (
+              <svg
+                key={x}
+                className="home-route-pin"
+                viewBox="0 0 24 32"
+                style={{ left: `${x}%`, top: `${y}%` }}
+              >
+                <path d="M12 0C5.4 0 0 5.2 0 11.6 0 20.3 12 32 12 32s12-11.7 12-20.4C24 5.2 18.6 0 12 0Z" />
+                <circle cx="12" cy="11.5" r="4.5" />
+              </svg>
+            ))}
+          </div>
+          <div className="home-hero-copy">
+            <p className="home-eyebrow">
+              <span className="home-dot" /> Người bạn đồng hành ẩm thực của bạn
+            </p>
+            <h2 id="home-title">
+              Ăn <span className="home-underline">đúng gu.</span>
+              <br />
+              Đi thật đã.
+            </h2>
+            <p className="home-hero-description">
+              Tìm món hợp khẩu vị, rồi biến những bữa ăn thành một lịch trình
+              đáng nhớ. Cùng ANGI khám phá Việt Nam theo gu của riêng bạn.
+            </p>
+            <div className="home-hero-actions">
+              <a
+                href="#goi-y"
+                className="button button-primary home-primary-cta"
+              >
+                Khám phá gu ăn <span aria-hidden>↗</span>
+              </a>
+              <a
+                href="#lich-trinh"
+                className="button button-secondary home-secondary-cta"
+              >
+                Xem roadmap mẫu <span aria-hidden>→</span>
+              </a>
+            </div>
+            <p className="home-guest-note">
+              {user
+                ? `Bạn đang đăng nhập với tài khoản ${user.displayName}.`
+                : "Thử khám phá ngay, chưa cần đăng nhập."}
+            </p>
+          </div>
+          <figure className="home-hero-visual">
+            <div className="home-hero-photo">
+              <Image
+                src="/assets/figma/roll-2.png"
+                alt="Bún thịt nướng với rau xanh, đồ chua và lạc rang"
+                fill
+                sizes="(max-width: 700px) 100vw, 50vw"
+                className="home-hero-image"
+              />
+            </div>
+            <div className="home-hero-inset">
+              <Image
+                src="/assets/figma/roll-1.png"
+                alt="Bánh mì trứng với rau thơm và đồ chua"
+                fill
+                sizes="(max-width: 700px) 120px, 180px"
+              />
+            </div>
+            <ul className="home-hero-chips" aria-hidden>
+              {heroTasteChips.map((chip) => (
+                <li key={chip}>{chip}</li>
+              ))}
+            </ul>
+            <figcaption className="home-hero-caption">
+              <span className="home-caption-symbol" aria-hidden>
+                ↗
+              </span>
+              <div>
+                <span>Từ một món hợp gu</span>
+                <strong>Đến cả hành trình ăn ngon.</strong>
+              </div>
+            </figcaption>
+          </figure>
+        </section>
+        <nav className="home-path" aria-label="Hành trình cùng ANGI">
+          <a href="#goi-y">
+            <span>01</span>
+            <div>
+              <strong>Hiểu gu của bạn</strong>
+              <p>Bắt đầu từ khẩu vị riêng.</p>
+            </div>
+            <span aria-hidden>↗</span>
+          </a>
+          <a href="#lich-trinh">
+            <span>02</span>
+            <div>
+              <strong>Ghép thành hành trình</strong>
+              <p>Mỗi ngày, một bữa đáng nhớ.</p>
+            </div>
+            <span aria-hidden>↗</span>
+          </a>
+          <a href="#mon-ngon">
+            <span>03</span>
+            <div>
+              <strong>Khám phá vị Việt</strong>
+              <p>Tìm cảm hứng cho chuyến đi.</p>
+            </div>
+            <span aria-hidden>↗</span>
+          </a>
+        </nav>
+        <HomePreferencePreview signedIn={Boolean(user)} />
+        <HomeRoadmapPreview
+          signedIn={Boolean(user)}
+          planHref={user?.role === "TRAVELER" ? roadmapRoutes.plan : undefined}
+        />
+        <section
+          id="mon-ngon"
+          className="home-collection"
+          aria-labelledby="collection-title"
+        >
+          <div className="home-section-heading">
+            <div>
+              <p className="home-eyebrow">Bộ sưu tập cảm hứng món Việt</p>
+              <h2 id="collection-title" tabIndex={-1}>
+                Nhìn thôi, đã thấy thèm.
+              </h2>
+              <p className="home-section-description">
+                Một món quen cũng có thể là khởi đầu của một chuyến đi mới.
+              </p>
+            </div>
+            <form action="/#mon-ngon" role="search" className="home-search">
+              <label htmlFor="home-food-search">
+                Bữa tiếp theo, bạn đang thèm gì?
+              </label>
+              <div className="home-search-box">
+                <Icon name="search" />
+                <Input
+                  key={selection.query}
+                  id="home-food-search"
+                  name="q"
+                  type="search"
+                  defaultValue={selection.query}
+                  maxLength={120}
+                  placeholder="Phở, bún chả, thanh nhẹ…"
+                  aria-describedby="home-search-help"
+                />
+                {selection.taste !== "all" && (
+                  <input type="hidden" name="taste" value={selection.taste} />
+                )}
+                <Button type="submit" className="home-search-button">
+                  Tìm món <span aria-hidden>↗</span>
+                </Button>
+              </div>
+              <p id="home-search-help">
+                Tìm trong bộ sưu tập cảm hứng món Việt bên dưới.
+              </p>
+            </form>
+          </div>
+          <div className="home-collection-toolbar">
+            <nav className="home-filters" aria-label="Lọc món theo khẩu vị">
+              {homeTastes.map((taste) => (
+                <Link
+                  key={taste.value}
+                  href={homeSelectionHref({
+                    query: selection.query,
+                    taste: taste.value,
+                  })}
+                  prefetch={false}
+                  aria-current={
+                    selection.taste === taste.value ? "true" : undefined
+                  }
+                >
+                  {taste.label}
+                </Link>
+              ))}
+            </nav>
+            <p className="home-result-count" role="status">
+              {dishes.length} món gợi cảm hứng
+              {selection.query && <> cho “{selection.query}”</>}
+            </p>
+          </div>
+          <HomeDishCollection photos={createDishPhotos(dishes)} />
+          {filtered && (
+            <div className="home-reset">
+              <Link href="/#mon-ngon" prefetch={false}>
+                Bỏ bộ lọc, xem tất cả món <span aria-hidden>↗</span>
+              </Link>
+            </div>
+          )}
+        </section>
+        <section className="home-invitation" aria-labelledby="invitation-title">
+          <div>
+            <p className="home-eyebrow">Hành trình tiếp theo là của bạn</p>
+            <h2 id="invitation-title">
+              Gu ăn riêng.
+              <br />
+              Chuyến đi mang dấu ấn riêng.
+            </h2>
+            <p>
+              Một nơi để khám phá món hợp gu và lên kế hoạch cho những bữa ăn
+              đáng nhớ.
+            </p>
+          </div>
+          <div className="home-invitation-actions">
+            {user ? (
+              <Link
+                href="/account"
+                prefetch={false}
+                className="button button-primary home-primary-cta"
+              >
+                Quản lý tài khoản <span aria-hidden>↗</span>
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/register"
+                  prefetch={false}
+                  className="button button-primary home-primary-cta"
+                >
+                  Bắt đầu cùng ANGI <span aria-hidden>↗</span>
+                </Link>
+                <span className="home-invitation-note">
+                  Đã có tài khoản?{" "}
+                  <Link href="/login" prefetch={false}>
+                    Đăng nhập
+                  </Link>
+                </span>
+              </>
+            )}
+          </div>
+        </section>
+      </main>
+      <SiteFooter
+        role={user?.role ?? null}
+        links={[
+          { href: "#mon-ngon", label: "Khám phá món Việt", anchor: true },
+          { href: "/dishes", label: "Tất cả món ăn" },
+          { href: "/restaurants", label: "Quán ăn" },
+          { href: "/guides", label: "Cẩm nang ẩm thực" },
+          user
+            ? { href: "/account", label: "Tài khoản của tôi" }
+            : {
+                href: "/login",
+                label: (
+                  <>
+                    Dành cho chủ nhà hàng <span aria-hidden>↗</span>
+                  </>
+                ),
+              },
+        ]}
+      />
+    </div>
+  );
+}

@@ -55,6 +55,43 @@ export async function POST(request: Request, context: Context) {
         );
         return created(result);
       }
+      case "verify-email": {
+        // Public endpoint. Consumes the one-time token, activates the account.
+        const body = await readJson(request);
+        const result = await backend<{
+          userId: string;
+          emailVerifiedAt: string;
+          status: string;
+        }>("auth/verify-email", { method: "POST", body });
+        return ok(result);
+      }
+      case "verify-email/resend": {
+        // Public endpoint. Reissues a verification email.
+        const body = await readJson(request);
+        const result = await backend<null>("auth/verify-email/resend", {
+          method: "POST",
+          body,
+        });
+        return ok(result);
+      }
+      case "forgot-password": {
+        // Public endpoint. Sends a password reset link to the email.
+        const body = await readJson(request);
+        const result = await backend<null>("auth/forgot-password", {
+          method: "POST",
+          body,
+        });
+        return ok(result);
+      }
+      case "reset-password": {
+        // Public endpoint. Consumes the reset token and updates the password.
+        const body = await readJson(request);
+        const result = await backend<null>("auth/reset-password", {
+          method: "POST",
+          body,
+        });
+        return ok(result);
+      }
       case "login": {
         const auth = await backend<AuthResultDto>("auth/login", {
           method: "POST",
@@ -62,6 +99,21 @@ export async function POST(request: Request, context: Context) {
         });
         await saveAuth(session, auth, true);
         return ok(auth.user);
+      }
+      case "google": {
+        const body = (await readJson(request)) as {
+          idToken: string;
+          role?: string;
+        };
+        const result = await backend<AuthResultDto & { isNewUser: boolean }>(
+          "auth/google",
+          { method: "POST", body: { idToken: body.idToken, role: body.role } },
+        );
+        const { isNewUser, ...auth } = result;
+        await saveAuth(session, auth, true);
+        // Return the user plus the isNewUser flag so the client can decide
+        // whether to redirect new users to onboarding.
+        return ok({ user: auth.user, isNewUser });
       }
       case "refresh":
         return ok((await refreshSession(session)).user);

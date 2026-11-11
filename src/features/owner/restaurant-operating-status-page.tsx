@@ -1,0 +1,368 @@
+"use client";
+import { notify } from "@/shared/ui/notify";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Alert, Button, Card } from "@/shared/ui";
+import {
+  ActionLink,
+  ConfirmDialog,
+  EmptyState,
+  SelectField,
+  Skeleton,
+  TextArea,
+} from "@/components/ui/primitives";
+import { RestaurantProfileHeader } from "./restaurant-profile-header";
+import { ApiError, getErrorMessage } from "@/shared/api/error";
+import { ownerProfileHref, ownerRoutes, type OwnerProfileTab } from "./routes";
+import { RestaurantStatusGrid } from "./status-labels";
+import {
+  buildOperatingStatusRequest,
+  isOperatingStatus,
+  operatingStatusFieldErrors,
+  operatingStatusLabels,
+  operatingStatuses,
+  validateOperatingStatus,
+} from "./operating-status-rules";
+import {
+  operatingStatusService,
+  type OperatingStatusService,
+} from "./operating-status-service";
+import type {
+  OwnerRestaurantDto,
+  UpdateOperatingStatusRequestDto,
+  UpdateOperatingStatusResponseDto,
+} from "./restaurant-types";
+
+export function RestaurantOperatingStatusPage() {
+  const service = operatingStatusService;
+  const [restaurant, setRestaurant] = useState<OwnerRestaurantDto | null>(null);
+  const [status, setStatus] = useState<
+    "loading" | "ready" | "error" | "missing"
+  >("loading");
+  const [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let ignore = false;
+    service
+      .getOwnerRestaurant()
+      .then((owner) => {
+        if (!ignore) {
+          setRestaurant(owner);
+          setStatus("ready");
+        }
+      })
+      .catch((caught) => {
+        if (ignore) return;
+        setError(getErrorMessage(caught));
+        setStatus(
+          caught instanceof ApiError &&
+            caught.errorCode === "RESTAURANT_NOT_FOUND"
+            ? "missing"
+            : "error",
+        );
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [service, attempt]);
+  if (status === "loading") return <Skeleton />;
+  if (status === "missing")
+    return (
+      <EmptyState
+        title="Bạn chưa đăng ký nhà hàng"
+        action={
+          <ActionLink href={ownerRoutes.register}>Đăng ký nhà hàng</ActionLink>
+        }
+      >
+        Đăng ký nhà hàng trước khi cập nhật trạng thái hoạt động.
+      </EmptyState>
+    );
+  if (status === "error")
+    return (
+      <Card title="Chưa tải được trạng thái nhà hàng">
+        <Alert>{error}</Alert>
+        <Button
+          onClick={() => {
+            setError("");
+            setStatus("loading");
+            setAttempt((value) => value + 1);
+          }}
+        >
+          Thử lại
+        </Button>
+      </Card>
+    );
+  if (!restaurant) return null;
+  return (
+    <OperatingStatusEditor
+      restaurant={restaurant}
+      service={service}
+      onSaved={(result) => {
+        setRestaurant((current) =>
+          current
+            ? { ...current, operatingStatus: result.operatingStatus }
+            : current,
+        );
+      }}
+    />
+  );
+}
+
+type DiscardConfirmation = {
+  title: string;
+  label: string;
+  description: string;
+  action: () => void;
+};
+
+function OperatingStatusEditor({
+  restaurant,
+  service,
+  onSaved,
+}: {
+  restaurant: OwnerRestaurantDto;
+  service: OperatingStatusService;
+  onSaved: (result: UpdateOperatingStatusResponseDto) => void;
+}) {
+  const router = useRouter();
+  const [selected, setSelected] = useState(restaurant.operatingStatus);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [error, setError] = useState("");
+  const [request, setRequest] =
+    useState<UpdateOperatingStatusRequestDto | null>(null);
+  const [discard, setDiscard] = useState<DiscardConfirmation | null>(null);
+  const [focusRequest, setFocusRequest] = useState<{ name: string } | null>(
+    null,
+  );
+  const active = useRef(true);
+  const submitting = useRef(false);
+  const form = useRef<HTMLFormElement>(null);
+  const feedback = useRef<HTMLDivElement>(null);
+  const changedStatus = selected !== restaurant.operatingStatus;
+  const dirty = changedStatus || note.length > 0;
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (busy || request || !focusRequest) return;
+    const field = form.current?.elements.namedItem(focusRequest.name);
+    if (field instanceof HTMLElement) field.focus();
+    else feedback.current?.focus();
+  }, [busy, request, focusRequest]);
+  function edited() {
+    setErrors({});
+    setError("");
+    setFocusRequest(null);
+  }
+  function reset() {
+    setSelected(restaurant.operatingStatus);
+    setNote("");
+    edited();
+  }
+  function changeTab(tab: string) {
+    if (busy || tab === "status") return;
+    const navigate = () =>
+      router.push(ownerProfileHref(tab as OwnerProfileTab));
+    if (dirty)
+      setDiscard({
+        title: "Bỏ thay đổi trạng thái chưa lưu?",
+        label: "Bỏ thay đổi và chuyển thẻ",
+        description:
+          "Trạng thái và lý do bạn đang chỉnh sửa sẽ bị bỏ khi chuyển thẻ.",
+        action: navigate,
+      });
+    else navigate();
+  }
+  function review(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (busy || submitting.current || request || !changedStatus) return;
+    const invalid = validateOperatingStatus(selected, note);
+    setErrors(invalid);
+    setError("");
+    if (Object.keys(invalid).length) {
+      setError("Vui lòng kiểm tra thông tin đã nhập.");
+      setFocusRequest({ name: Object.keys(invalid)[0] });
+      return;
+    }
+    setRequest(buildOperatingStatusRequest(selected, note));
+  }
+  async function save() {
+    if (!request || submitting.current) return;
+    submitting.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      const result = await service.updateStatus(request);
+      if (!active.current) return;
+      onSaved(result);
+      if (!active.current) return;
+      setSelected(result.operatingStatus);
+      setNote("");
+      setErrors({});
+      setFocusRequest(null);
+      notify.success("Đã cập nhật trạng thái hoạt động.");
+    } catch (caught) {
+      if (!active.current) return;
+      const fields =
+        caught instanceof ApiError
+          ? operatingStatusFieldErrors(caught.errors)
+          : {};
+      setErrors(fields);
+      setError(
+        caught instanceof ApiError &&
+          caught.errorCode === "RESTAURANT_SUSPENDED"
+          ? "Nhà hàng đang bị đình chỉ nên chưa thể mở lại. Vui lòng liên hệ bộ phận hỗ trợ."
+          : getErrorMessage(caught),
+      );
+      setFocusRequest({ name: Object.keys(fields)[0] ?? "" });
+    } finally {
+      submitting.current = false;
+      if (active.current) {
+        setRequest(null);
+        setBusy(false);
+      }
+    }
+  }
+  return (
+    <div className="stack form-page rp-page">
+      <RestaurantProfileHeader
+        restaurant={restaurant}
+        tab="status"
+        onTab={changeTab}
+      />
+      {restaurant.moderationStatus === "suspended" && (
+        <Alert tone="warning">
+          Nhà hàng đang bị đình chỉ. Bạn vẫn có thể tạm đóng hoặc đóng cửa vĩnh
+          viễn; chưa thể mở lại khi còn bị đình chỉ.
+        </Alert>
+      )}
+      {error && (
+        <div ref={feedback} tabIndex={-1}>
+          <Alert>{error}</Alert>
+        </div>
+      )}
+      <div className="rp-status-grid">
+        <Card title="Trạng thái hiện tại">
+          <RestaurantStatusGrid restaurant={restaurant} />
+          <p className="helper">
+            Trạng thái hoạt động được quản lý độc lập với giờ mở cửa, xác minh
+            và kiểm duyệt.
+          </p>
+        </Card>
+        <form
+          className="stack"
+          ref={form}
+          noValidate
+          onSubmit={review}
+          aria-busy={busy}
+        >
+          <fieldset className="registration-fields" disabled={busy}>
+            <Card title="Cập nhật trạng thái hoạt động" className="stack">
+              <SelectField
+                label="Trạng thái mới"
+                name="operatingStatus"
+                value={selected}
+                error={errors.operatingStatus}
+                onChange={(value) => {
+                  if (isOperatingStatus(value)) {
+                    setSelected(value);
+                    edited();
+                  }
+                }}
+                options={operatingStatuses.map((status) => ({
+                  value: status,
+                  label: operatingStatusLabels[status],
+                }))}
+              />
+              <TextArea
+                placeholder="Ví dụ: Nghỉ Tết từ 28 đến mùng 5"
+                label="Lý do (không bắt buộc)"
+                name="note"
+                maxLength={500}
+                value={note}
+                error={errors.note}
+                onChange={(event) => {
+                  setNote(event.target.value);
+                  edited();
+                }}
+                helper="Lý do đi kèm lần đổi trạng thái này."
+              />
+              {!changedStatus && (
+                <p className="helper">
+                  Chọn trạng thái khác để cập nhật. Lý do không được lưu riêng
+                  khi trạng thái giữ nguyên.
+                </p>
+              )}
+            </Card>
+          </fieldset>
+          <div className="actions registration-actions">
+            <Button type="submit" disabled={!changedStatus || busy}>
+              Cập nhật trạng thái
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={!dirty || busy}
+              onClick={() =>
+                setDiscard({
+                  title: "Bỏ thay đổi trạng thái chưa lưu?",
+                  label: "Bỏ thay đổi",
+                  description:
+                    "Thông tin sẽ được khôi phục về trạng thái đã lưu gần nhất.",
+                  action: reset,
+                })
+              }
+            >
+              Hủy thay đổi
+            </Button>
+          </div>
+        </form>
+      </div>
+      <ConfirmDialog
+        open={!!request}
+        title={
+          request?.operatingStatus === "permanently_closed"
+            ? "Xác nhận đóng cửa vĩnh viễn?"
+            : "Cập nhật trạng thái hoạt động?"
+        }
+        destructive={request?.operatingStatus !== "open"}
+        loading={busy}
+        label="Xác nhận cập nhật"
+        cancelLabel="Tiếp tục chỉnh sửa"
+        onClose={() => {
+          if (!busy) setRequest(null);
+        }}
+        onConfirm={() => {
+          void save();
+        }}
+      >
+        <div className="stack-sm">
+          <p>Hiện tại: {operatingStatusLabels[restaurant.operatingStatus]}</p>
+          <p>
+            Trạng thái mới:{" "}
+            {request ? operatingStatusLabels[request.operatingStatus] : ""}
+          </p>
+          {request?.note && <p>Lý do: {request.note}</p>}
+        </div>
+      </ConfirmDialog>
+      <ConfirmDialog
+        open={!!discard}
+        title={discard?.title ?? "Xác nhận thay đổi"}
+        label={discard?.label}
+        destructive
+        cancelLabel="Tiếp tục chỉnh sửa"
+        onClose={() => setDiscard(null)}
+        onConfirm={() => {
+          discard?.action();
+          setDiscard(null);
+        }}
+      >
+        <p>{discard?.description}</p>
+      </ConfirmDialog>
+    </div>
+  );
+}

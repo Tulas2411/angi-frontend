@@ -1,0 +1,21 @@
+/* User profile (MOD-U2): the account actions sit in the top right corner of the account card. */
+.mu-profile {
+  position: relative;
+}
+.mu-profile-actions {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  margin: 0;
+}
+.mu-profile > h2 {
+  padding-right: 220px;
+}
+@media (max-width: 560px) {
+  .mu-profile-actions {
+    position: static;
+  }
+  .mu-profile > h2 {
+    padding-right: 0;
+  }
+}

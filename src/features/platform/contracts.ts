@@ -1,6 +1,6 @@
 import type { RoleCode } from "@/features/auth/types";
 
-/** Frontend view models. Business API DTOs remain pending API Design v1.8. */
+/** Frontend view models; operation-specific wire DTOs live in feature modules. */
 export type DataMode = "demo" | "live";
 export type Visibility = "visible" | "hidden" | "suspended";
 export type Verification =
@@ -11,18 +11,22 @@ export interface Restaurant {
   address: string;
   province: string;
   district: string;
+  ward?: string;
+  priceLevel?: number | null;
   phone: string;
   email: string;
   website: string;
   description: string;
   image: string;
   verification: Verification;
-  operating: "open" | "closed";
+  // "closed" remains a legacy fixture value; new owner saves retain the exact status.
+  operating: "open" | "closed" | "temporarily_closed" | "permanently_closed";
   moderation: Visibility;
   rating: number;
   latitude: number;
   longitude: number;
   photos?: string[];
+  businessHours?: { dayOfWeek: number; openTime: string; closeTime: string }[];
 }
 export interface Dish {
   id: string;
@@ -159,11 +163,13 @@ export interface SyncEvent {
 }
 export interface Report {
   id: string;
-  target: "restaurant" | "blog";
+  target: "restaurant" | "blog" | "dish";
   targetId: string;
   reporter: string;
   reason: string;
   description: string;
+  /** Ảnh bằng chứng do người báo cáo đính kèm (bản minh họa). */
+  evidence?: string[];
   status: "open" | "claimed" | "resolved" | "dismissed";
   assignee?: string;
   date: string;
@@ -185,7 +191,15 @@ export interface Submission {
   legalName?: string;
   license?: string;
   taxCode?: string;
-  documents?: { type: string; name: string }[];
+  previousId?: number | null;
+  reviewedBy?: {
+    id: number;
+    displayName: string;
+    avatarUrl: string | null;
+  } | null;
+  reviewedAt?: string | null;
+  reviewNote?: string | null;
+  documents?: { type: string; name: string; mediaId?: number; url?: string }[];
 }
 export interface AppData {
   ownerRestaurantId?: string;

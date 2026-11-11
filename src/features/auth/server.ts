@@ -1,12 +1,13 @@
 import "server-only";
 import { createHash, randomUUID } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers as requestHeaders } from "next/headers";
 import { redirect } from "next/navigation";
 import { getIronSession, type SessionOptions } from "iron-session";
 import { ApiError, readApiResponse } from "@/shared/api/error";
 import { HOME_BY_ROLE, ROLE_CODES } from "./roles";
 import { createRefreshCoordinator } from "./refresh-coordinator";
-import { createSessionRegistry } from "./session-registry";
+import { createSessionRegistry, newerAuth } from "./session-registry";
+import { clientIpFrom } from "./client-ip";
 import { runAuthenticated } from "./authenticated-request";
 import type { AuthResultDto, AuthUserDto, RoleCode } from "./types";
 
@@ -64,7 +65,7 @@ const sessions = (state.angiSessions ??= createSessionRegistry());
 
 export function readAuth(session: AuthSession): AuthResultDto | null {
   if (!session.id || sessions.isRevoked(session.id)) return null;
-  const auth = sessions.get(session.id) ?? session.auth;
+  const auth = newerAuth(sessions.get(session.id), session.auth);
   return validAuth(auth) ? auth : null;
 }
 
@@ -106,21 +107,37 @@ export async function backend<T>(
     method?: string;
     body?: unknown;
     token?: string;
+    /** Trusted server callers may allow a longer Agent turn and preserve its 200/202 status. */
+    timeoutMs?: number;
+    /** Ends the backend call early, such as when the browser cancels the request it is serving. */
+    signal?: AbortSignal;
+    onSuccess?: (status: number) => void;
   } = {},
 ): Promise<T> {
   const baseUrl = process.env.API_BASE_URL;
   if (!baseUrl) throw new Error("Thiếu API_BASE_URL.");
   const headers = new Headers({ Accept: "application/json" });
-  if (init.body !== undefined) headers.set("Content-Type", "application/json");
+  const multipart = init.body instanceof FormData;
+  if (init.body !== undefined && !multipart)
+    headers.set("Content-Type", "application/json");
   if (init.token) headers.set("Authorization", `Bearer ${init.token}`);
+  await forwardClientIp(headers);
   let response: Response;
   try {
     response = await fetch(`${baseUrl.replace(/\/$/, "")}/${path}`, {
       method: init.method ?? "GET",
       headers,
-      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      body:
+        init.body instanceof FormData
+          ? init.body
+          : init.body === undefined
+            ? undefined
+            : JSON.stringify(init.body),
       cache: "no-store",
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.any([
+        AbortSignal.timeout(init.timeoutMs ?? 10_000),
+        ...(init.signal ? [init.signal] : []),
+      ]),
     });
   } catch {
     throw new ApiError(
@@ -129,7 +146,28 @@ export async function backend<T>(
       "Không kết nối được backend ANGI.",
     );
   }
-  return readApiResponse<T>(response);
+  const data = await readApiResponse<T>(response);
+  init.onSuccess?.(response.status);
+  return data;
+}
+
+/**
+ * Sends the browser IP with the shared key (BACKEND_PROXY_KEY = TrustedClientIp:ProxyKey of the backend), so the
+ * backend's per-IP limits count each visitor instead of this server. Nothing is sent without the key, or outside a
+ * request (build time).
+ */
+async function forwardClientIp(headers: Headers) {
+  const key = process.env.BACKEND_PROXY_KEY;
+  if (!key) return;
+  let ip: string | null;
+  try {
+    ip = clientIpFrom(await requestHeaders());
+  } catch {
+    return;
+  }
+  if (!ip) return;
+  headers.set("X-Angi-Proxy-Key", key);
+  headers.set("X-Angi-Client-Ip", ip);
 }
 
 export async function refreshSession(session: AuthSession) {
@@ -173,4 +211,30 @@ export async function requireUser(
   if (roles && !roles.includes(auth.user.role))
     redirect(HOME_BY_ROLE[auth.user.role]);
   return auth.user;
+}
+
+/** The signed-in user of any role, or null for a guest; never redirects. */
+export async function readSessionUser(): Promise<AuthUserDto | null> {
+  return readAuth(await getSession())?.user ?? null;
+}
+
+/**
+ * Đọc phiên cho các trang công khai — KHÔNG chuyển hướng khi chưa đăng nhập.
+ *
+ * Không gian công khai (`/dishes/*`, `/restaurants/*`, `/guides/*`) chỉ phục vụ
+ * vai trò TRAVELER. Nhân viên nội bộ (MOD / ADMIN / RESTAURANT_OWNER) xem các
+ * trang này với tư cách khách, để không bị `PageRouter` điều hướng sang layout
+ * của nhân viên. Khách chưa đăng nhập cũng xem bình thường, KHÔNG bị đẩy về
+ * trang đăng nhập.
+ */
+export async function readPublicSession(): Promise<{
+  user: AuthUserDto | null;
+  role: RoleCode | "GUEST";
+}> {
+  const auth = readAuth(await getSession());
+  const traveler = auth?.user.role === "TRAVELER";
+  return {
+    user: traveler ? (auth?.user ?? null) : null,
+    role: traveler ? "TRAVELER" : "GUEST",
+  };
 }

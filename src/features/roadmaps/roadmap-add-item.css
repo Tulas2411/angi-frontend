@@ -1,0 +1,193 @@
+/* F-24 "Thêm món": suggestion dialog opened from a day of the roadmap. */
+
+/* Wider than the other wide dialogs (960px): the filters fit one row and the cards have room. */
+.dialog.roadmap-add-dialog {
+  width: min(1200px, calc(100% - 32px));
+}
+
+.roadmap-add {
+  padding-top: var(--space-2);
+}
+
+/*
+ * Destination of a picked dish: the day in words and the five meals as chips. Sticky at the top
+ * of the scrolling dialog, on the card colour, so the add buttons below always say where they go.
+ */
+.roadmap-add-target {
+  position: sticky;
+  /* Flush with the top of the scrolling area, above the dialog content's top padding. */
+  top: calc(-1 * var(--dialog-content-pad-top, 0px));
+  z-index: 3;
+  display: grid;
+  gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-8));
+  padding: var(--space-3) var(--space-8);
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.roadmap-add-meals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.roadmap-add-meals > legend {
+  float: left;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.roadmap-add-notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--success-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.roadmap-add-notice svg {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+.roadmap-add-results-head {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.roadmap-add-results-title {
+  font-size: 20px;
+}
+.roadmap-add-nearby {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.roadmap-add-nearby svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* Phones: the sticky meal strip follows the narrower dialog padding. */
+@media (max-width: 700px) {
+  .roadmap-add-target {
+    margin-inline: calc(-1 * var(--space-5));
+    padding-inline: var(--space-5);
+  }
+  .roadmap-add-meals > legend {
+    float: none;
+  }
+}
+
+/* "Xem thêm món" (and its retry after a failed page) sits centred under the list. */
+.roadmap-add .stack-sm > .roadmap-add-more.button {
+  align-self: center;
+  min-width: 200px;
+}
+
+.roadmap-add-hint {
+  padding: var(--space-6);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  text-align: center;
+}
+
+/* The suggestions are the dish cards of "Khám phá món ăn" (explore.css); only the
+   dialog's own parts are styled here. */
+.roadmap-suggestion .dish-actions .button[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+/*
+ * Every suggestion card has one height in each layout, as on the explore pages: a part too long
+ * for it fades out at its end instead of growing the card. The name and the restaurant keep one
+ * line each, the tags one row. Gallery tiles already share one size (a 4:5 photo, the name faded
+ * after three lines). Only a card showing a problem (dish no longer available, failed add) grows,
+ * so the message is never cut.
+ */
+.roadmap-suggestion .dish-name,
+.roadmap-suggestion .dish-detail .dish-name {
+  display: block;
+  font-size: 18px;
+  line-height: 1.3;
+}
+/*
+ * A row shows the dish's description instead of the restaurant, and the price on the name's line
+ * (`priceInHead`; the map link still names the restaurant to screen readers). About two and a
+ * half lines show; a longer one scrolls in its box and fades out, as on the explore page.
+ */
+.roadmap-suggestion .dish-row:has(.dish-actions) {
+  height: 240px;
+}
+.roadmap-suggestion .dish-row .dish-head .dish-price {
+  margin-top: 2px;
+  font-size: 15px;
+}
+.roadmap-suggestion .dish-detail {
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+}
+/* Under 600px a detailed card stacks its photo above the details and keeps its natural height. */
+@media (min-width: 601px) {
+  .roadmap-suggestion .dish-detail:has(.dish-actions) {
+    height: 240px;
+    min-height: 0;
+  }
+  .roadmap-suggestion .dish-detail:has(.dish-actions) .dish-photo {
+    height: 100%;
+    min-height: 0;
+  }
+}
+.roadmap-suggestion
+  .dish-item:has(.dish-actions .field-error, .dish-actions .badge) {
+  height: auto;
+}
+.roadmap-suggestion .dish-detail .dish-body {
+  padding: var(--space-4);
+}
+.roadmap-suggestion .dish-kinds {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+.roadmap-suggestion .dish-place {
+  flex-wrap: wrap;
+  gap: 2px var(--space-3);
+  margin-top: 0;
+}
+.roadmap-suggestion .dish-place-name {
+  flex-basis: 100%;
+  text-overflow: clip;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+/* The add button takes the card width on one line; the map link sits under it. */
+.roadmap-suggestion .dish-body .dish-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+.roadmap-suggestion .dish-body .dish-actions .button {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 14px;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.roadmap-suggestion .dish-body .dish-actions .text-link {
+  align-self: flex-start;
+}
+
+.roadmap-suggestion-map {
+  align-self: flex-start;
+  font-size: var(--text-sm);
+}

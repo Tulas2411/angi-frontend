@@ -1,11 +1,10 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Badge, Button, Card } from "@/shared/ui";
 import {
   ActionLink,
   Choice,
-  Combobox,
   ConfirmDialog,
   Dialog,
   EmptyState,
@@ -17,6 +16,7 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { MapPicker } from "@/components/domain/map-picker";
+import { MapboxPreview } from "@/components/domain/mapbox-preview";
 import { PageHeading, useWorkspace } from "@/components/layout/workspace";
 import { usePlatform } from "@/features/platform/provider";
 import {
@@ -27,7 +27,9 @@ import {
 } from "@/features/platform/rules";
 import type { ItineraryItem } from "@/features/platform/contracts";
 import { TripExpenses } from "./expenses";
+import { ProvinceField } from "@/components/domain/province-field";
 
+import { DateField, TimeField } from "@/components/ui/date-time-fields";
 export function TripList() {
   const { data, mutate } = usePlatform(),
     { base } = useWorkspace(),
@@ -177,11 +179,11 @@ export function NewTripPage() {
             router.push(`${base}/roadmaps/${id}`);
           }}
         >
-          <Combobox
+          <ProvinceField
             label="Ăn ở đâu?"
             value={destination}
             onChange={setDestination}
-            options={["Hà Nội", "Đà Nẵng", "Đà Lạt", "Hồ Chí Minh", "Huế"]}
+            helper="Chọn tỉnh/thành từ gợi ý hoặc chọn địa điểm trên bản đồ."
           />
           <div className="actions">
             <Button variant="tertiary" onClick={() => setMapOpen(true)}>
@@ -190,19 +192,17 @@ export function NewTripPage() {
             <p className="helper">Chọn thành phố hoặc địa điểm trên bản đồ.</p>
           </div>
           <div className="grid-2">
-            <Field
+            <DateField
               label="Ngày bắt đầu"
-              type="date"
               value={start}
-              onChange={(e) => setStart(e.target.value)}
+              onChange={(value) => setStart(value)}
               required
             />
-            <Field
+            <DateField
               label="Ngày kết thúc"
-              type="date"
               value={end}
               min={start}
-              onChange={(e) => setEnd(e.target.value)}
+              onChange={(value) => setEnd(value)}
               required
             />
           </div>
@@ -263,7 +263,11 @@ export function NewTripPage() {
         onClose={() => setInvite(false)}
       >
         <div className="stack">
-          <Field label="Email người bạn" type="email" />
+          <Field
+            placeholder="ban@email.com"
+            label="Email người bạn"
+            type="email"
+          />
           <Alert tone="info">
             Mời cộng tác chưa khả dụng. Bạn có thể đính kèm lịch ăn khi viết cẩm
             nang.
@@ -275,7 +279,7 @@ export function NewTripPage() {
   );
 }
 export function RoadmapPage({ id }: { id: string }) {
-  const { data, mutate, busy, notify } = usePlatform(),
+  const { data, mutate, busy } = usePlatform(),
     { base } = useWorkspace(),
     params = useSearchParams(),
     [day, setDay] = useState(0),
@@ -291,7 +295,8 @@ export function RoadmapPage({ id }: { id: string }) {
     [tab, setTab] = useState("information"),
     [start, setStart] = useState(""),
     [end, setEnd] = useState(""),
-    [error, setError] = useState("");
+    [error, setError] = useState(""),
+    [showMapMarkers, setShowMapMarkers] = useState(true);
   const trip = data.trips.find((t) => t.id === id),
     readOnly = trip?.readOnly || params.get("view") === "readonly";
   if (!trip)
@@ -564,22 +569,21 @@ export function RoadmapPage({ id }: { id: string }) {
               }}
             >
               <Field
+                placeholder="Ví dụ: 3 ngày ăn ngon Hà Nội"
                 label="Tên chuyến đi"
                 name="name"
                 defaultValue={trip.name}
                 required
               />
-              <label>
-                Quyền riêng tư
-                <select
-                  className="input"
-                  name="privacy"
-                  defaultValue={trip.privacy ?? "private"}
-                >
-                  <option value="private">Chỉ mình tôi</option>
-                  <option value="public">Công khai</option>
-                </select>
-              </label>
+              <SelectField
+                label="Quyền riêng tư"
+                name="privacy"
+                defaultValue={trip.privacy ?? "private"}
+                options={[
+                  { value: "private", label: "Chỉ mình tôi" },
+                  { value: "public", label: "Công khai" },
+                ]}
+              />
               <Button type="submit">Lưu cài đặt</Button>
             </form>
           </details>
@@ -588,25 +592,26 @@ export function RoadmapPage({ id }: { id: string }) {
           Hỏi trợ lý món ăn
         </Button>
       </section>
-      <aside className="roadmap-map" aria-label="Bản đồ minh họa lịch ăn">
+      <aside className="roadmap-map" aria-label="Bản đồ lịch ăn">
         <details className="map-layers">
           <summary className="button button-secondary">Lớp bản đồ</summary>
           <div className="card">
             <Choice
               label="Lịch ăn uống"
-              checked={true}
-              onChange={() =>
-                notify(
-                  "Bản đồ tĩnh minh họa giữ các điểm ăn uống. Dịch vụ bản đồ chưa khả dụng.",
-                )
-              }
+              checked={showMapMarkers}
+              onChange={() => setShowMapMarkers((previous) => !previous)}
             />
-            <p className="helper">Bản đồ tĩnh minh họa.</p>
+            <p className="helper">
+              Hiển thị địa điểm trong ngày trên bản đồ Mapbox.
+            </p>
           </div>
         </details>
-        <img
-          src="/assets/figma/roadmap-map.png"
-          alt="Bản đồ khu vực Hoàn Kiếm, Hà Nội"
+        <MapboxPreview
+          locations={data.restaurants.filter((value) =>
+            currentDay?.items.some((entry) => entry.restaurantId === value.id),
+          )}
+          highlighted={restaurant}
+          showMarkers={showMapMarkers}
         />
         {restaurant && (
           <div className="map-detail stack-sm">
@@ -722,11 +727,10 @@ export function RoadmapPage({ id }: { id: string }) {
               (v) => ({ value: v, label: v }),
             )}
           />
-          <Field
+          <TimeField
             label="Thời gian"
-            type="time"
             value={time}
-            onChange={(e) => setTime(e.target.value)}
+            onChange={(value) => setTime(value)}
             required
           />
           <Button type="submit" loading={busy}>
@@ -751,6 +755,7 @@ export function RoadmapPage({ id }: { id: string }) {
           }}
         >
           <Field
+            placeholder="Ví dụ: 1500000"
             label="Ngân sách"
             type="number"
             min={0}
@@ -788,6 +793,7 @@ export function RoadmapPage({ id }: { id: string }) {
           }}
         >
           <TextArea
+            placeholder="Ghi chú cho ngày này…"
             label="Ghi chú của bạn"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -834,19 +840,17 @@ export function RoadmapPage({ id }: { id: string }) {
             setError("");
           }}
         >
-          <Field
+          <DateField
             label="Ngày bắt đầu"
-            type="date"
             value={start}
-            onChange={(e) => setStart(e.target.value)}
+            onChange={(value) => setStart(value)}
             required
           />
-          <Field
+          <DateField
             label="Ngày kết thúc"
-            type="date"
             min={start}
             value={end}
-            onChange={(e) => setEnd(e.target.value)}
+            onChange={(value) => setEnd(value)}
             required
           />
           {error && <Alert>{error}</Alert>}
@@ -858,132 +862,6 @@ export function RoadmapPage({ id }: { id: string }) {
           </Button>
         </form>
       </Dialog>
-    </div>
-  );
-}
-export function RollDishPage() {
-  const { notify } = usePlatform(),
-    { base } = useWorkspace(),
-    [state, setState] = useState<"ready" | "rolling" | "revealed">("ready"),
-    [selected, setSelected] = useState(2),
-    [filter, setFilter] = useState("viet"),
-    timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  const names = [
-      "Phở bò",
-      "Bánh mì trứng",
-      "Bún thịt nướng",
-      "Cơm tấm sườn",
-      "Bánh cuốn",
-    ],
-    prices = [48000, 25000, 45000, 49000, 35000];
-  return (
-    <div className="container roll">
-      <span className="eyebrow">Gợi ý bữa ăn · Roll Dish</span>
-      <h1>Hôm nay ăn gì?</h1>
-      <p className="muted">Để ANGI chọn giúp bạn nhé!</p>
-      <Tabs
-        value={filter}
-        onChange={(value) => {
-          setFilter(value);
-          setState("ready");
-        }}
-        items={[
-          { value: "viet", label: "✓ Món Việt" },
-          { value: "light", label: "Ăn nhẹ" },
-          { value: "vegetarian", label: "Ăn chay" },
-          { value: "budget", label: "✓ Dưới 50k" },
-        ]}
-      />
-      {filter === "vegetarian" ? (
-        <EmptyState title="Chưa có món chay trong bản minh họa">
-          Đổi lựa chọn để xem các món hiện có.
-        </EmptyState>
-      ) : (
-        <>
-          <img
-            className="roll-marker"
-            src="/assets/figma/roll-marker.svg"
-            alt="Mốc chọn món ở giữa"
-          />
-          <div className="roll-track" aria-busy={state === "rolling"}>
-            {names.map((_, position) => {
-              const i =
-                state === "revealed"
-                  ? (position + selected - 2 + names.length) % names.length
-                  : position;
-              const name = names[i];
-              return (
-                <Card
-                  key={name}
-                  className={
-                    state === "revealed" && position === 2 ? "selected" : ""
-                  }
-                >
-                  <Media src={`/assets/figma/roll-${i}.png`} alt={name} />
-                  <h3>{name}</h3>
-                  <p className="helper">{money(prices[i])} · Giá tham khảo</p>
-                </Card>
-              );
-            })}
-          </div>
-          {state === "revealed" ? (
-            <Card className="roll-result" title="Chốt món này nhé!">
-              <h2>{names[selected]}</h2>
-              <p>Khoảng {money(prices[selected])}</p>
-              <p>Hương vị Việt gần gũi cho bữa ăn hôm nay.</p>
-              <div className="actions" style={{ justifyContent: "center" }}>
-                <ActionLink href={`${base}/restaurants`} secondary>
-                  Xem quán ăn
-                </ActionLink>
-                <Button onClick={() => setState("ready")}>Roll lại</Button>
-              </div>
-            </Card>
-          ) : (
-            <Button
-              loading={state === "rolling"}
-              onClick={() => {
-                setState("rolling");
-                const reduce = window.matchMedia(
-                  "(prefers-reduced-motion: reduce)",
-                ).matches;
-                timer.current = setTimeout(
-                  () => {
-                    setSelected((i) =>
-                      filter === "light"
-                        ? i === 1
-                          ? 4
-                          : 1
-                        : (i + 1) % names.length,
-                    );
-                    setState("revealed");
-                    notify("Đã chọn món trong bản minh họa.");
-                  },
-                  reduce ? 50 : 700,
-                );
-              }}
-            >
-              Roll món ngay
-            </Button>
-          )}
-        </>
-      )}
-      <p className="helper" style={{ marginTop: 32 }}>
-        Dữ liệu minh họa · Giá tham khảo · Món mẫu không đại diện cho quán cụ
-        thể
-      </p>
-      <span role="status" className="sr-only">
-        {state === "rolling"
-          ? "Đang chọn món"
-          : state === "revealed"
-            ? `Món đã chọn: ${names[selected]}`
-            : "Sẵn sàng chọn món"}
-      </span>
     </div>
   );
 }

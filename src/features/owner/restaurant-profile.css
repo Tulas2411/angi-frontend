@@ -1,0 +1,375 @@
+/* "Nhà hàng của tôi": one head for every tab, then the tab's content in clear groups. */
+.form-page.rp-page {
+  max-width: 1120px;
+  gap: var(--space-5);
+}
+
+/* ------------------------------------------------------------ head */
+.rp-head {
+  display: grid;
+  gap: var(--space-4);
+}
+.rp-hero {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 168px;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow:
+    0 1px 2px rgb(34 34 34 / 0.04),
+    0 12px 36px rgb(34 34 34 / 0.07);
+}
+.rp-hero-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  border-radius: 0;
+}
+.rp-hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.rp-hero-body {
+  display: grid;
+  align-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-5) var(--space-6);
+}
+.rp-eyebrow {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rp-hero h1 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+.rp-hero .status-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-hero .badge {
+  white-space: nowrap;
+}
+.rp-hero-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--space-4);
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+.rp-hero-facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.rp-hero-facts svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+/* ------------------------------------------------------------ tabs */
+.rp-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+.rp-tab-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.rp-tab-group button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color var(--duration) ease;
+}
+.rp-tab-group button svg {
+  width: 17px;
+  height: 17px;
+}
+.rp-tab-group button:hover,
+.rp-tab-group button[aria-pressed="true"] {
+  color: var(--ink);
+}
+.rp-tab-group button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.rp-tab-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ------------------------------------------------- information tab */
+.rp-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.rp-grid > .card {
+  margin: 0;
+}
+.rp-location {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+}
+.rp-location p {
+  margin: 0;
+}
+
+/* Save / cancel stay in reach at the bottom while there are unsaved changes. */
+.rp-savebar {
+  position: sticky;
+  bottom: var(--space-4);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-5);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  box-shadow:
+    0 2px 6px rgb(34 34 34 / 0.06),
+    0 16px 40px rgb(34 34 34 / 0.14);
+}
+/* Nothing to save: the bar rests at the end of the form instead of covering the content. */
+.rp-savebar:not([data-dirty]) {
+  position: static;
+  padding-inline: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.rp-savebar:not([data-dirty]) p {
+  color: var(--muted);
+  font-weight: 400;
+}
+.rp-savebar[data-dirty] {
+  background: var(--ink);
+  color: var(--card);
+}
+.rp-savebar p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.rp-savebar[data-dirty] .button-secondary {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--card);
+}
+.rp-savebar[data-dirty] .button-primary {
+  background: var(--card);
+  color: var(--ink);
+}
+.rp-savebar .actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------------- hours tab */
+.rp-page .business-hours-day {
+  grid-template-columns: 120px minmax(0, 1fr) auto;
+  gap: var(--space-4);
+  min-height: 64px;
+  padding: var(--space-3) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.rp-page .business-hours-day[data-today] {
+  background: var(--canvas);
+}
+.rp-page .business-hours-day[data-today] .business-hours-day-name::after {
+  content: "Hôm nay";
+  margin-left: var(--space-2);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  font-size: 11px;
+  font-weight: 700;
+}
+.rp-page .business-hours-intervals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.rp-page .business-hours-intervals > span {
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--success-bg);
+  color: var(--success-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.rp-page .business-hours-intervals > span > span[aria-hidden] {
+  display: none;
+}
+.rp-page .business-hours-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+.rp-page .business-hours-day-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+.rp-page .business-hours-day-actions .button {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+}
+.rp-page .business-hours-day-actions .button svg {
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
+
+/* ------------------------------------------------------ status tab */
+.rp-status-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+.rp-status-grid > * {
+  margin: 0;
+}
+/* The current states as three rows (name, then its badge) instead of three narrow columns. */
+.rp-status-grid .status-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+.rp-status-grid .status-grid > div {
+  display: flex;
+  flex-direction: row;
+  text-align: left;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+}
+.rp-status-grid .status-grid h3 {
+  margin: 0;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.rp-page .badge {
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------ responsive */
+@media (max-width: 960px) {
+  .rp-grid,
+  .rp-status-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .rp-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rp-hero-photo {
+    min-height: 0;
+    aspect-ratio: 16 / 7;
+  }
+  .rp-hero-body {
+    padding: var(--space-4);
+  }
+  .rp-page .business-hours-day {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+  .rp-savebar {
+    border-radius: var(--radius-md);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rp-tab-group button {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------ shared owner bits */
+.owner-tabs .tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.owner-tabs .chip {
+  min-height: 40px;
+  padding: 8px 18px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+}
+.owner-tabs .chip:hover {
+  background: none;
+  color: var(--ink);
+}
+.owner-tabs .chip.selected {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgb(34 34 34 / 0.12);
+}
+.owner-ghost.button,
+.vf-card-head .button,
+.vf-hero-side .button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 14px;
+  text-decoration: none;
+}
+.owner-ghost.button svg,
+.vf-card-head .button svg,
+.vf-hero-side .button svg {
+  width: 16px;
+  height: 16px;
+}
+

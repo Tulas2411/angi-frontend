@@ -1,0 +1,198 @@
+/* F-20 "Lộ trình của tôi": card grid on the shared page width, four roadmaps a row. */
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roadmap-grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+/* A card is its cover and two lines under it: no frame, the photo carries it. */
+.roadmap-card {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.roadmap-card-cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-1);
+}
+.roadmap-card-cover > .media {
+  aspect-ratio: 3 / 2;
+  border-radius: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .roadmap-card-cover img {
+    transition: transform 500ms var(--ease-out);
+  }
+  .roadmap-card:hover .roadmap-card-cover img {
+    transform: scale(1.04);
+  }
+}
+
+/* How soon the trip starts, and a budget warning, on the top left of the cover. */
+.roadmap-card-badges {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: calc(100% - 120px);
+}
+.roadmap-card-badges > span {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--coral);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.roadmap-card-badges > .is-warning {
+  color: var(--warning-ink);
+}
+
+/* Share on the top right; it sits above the link that covers the card. */
+/* Share and delete, top right of the cover, above the card-wide title link. */
+.roadmap-card-actions {
+  position: absolute;
+  z-index: 1;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+.roadmap-card-share,
+.roadmap-card-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: rgb(20 16 14 / 0.55);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--duration-fast) ease;
+}
+.roadmap-card-share:hover {
+  background: rgb(20 16 14 / 0.75);
+}
+.roadmap-card-share:focus-visible,
+.roadmap-card-delete:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.roadmap-card-delete {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+}
+.roadmap-card-delete svg {
+  width: 17px;
+  height: 17px;
+}
+.roadmap-card-delete:hover {
+  background: var(--error-ink);
+}
+.roadmap-card-share svg {
+  fill: currentColor;
+}
+
+/* The title link covers the whole card, so the card is one link to the detail page. */
+.roadmap-card h2 {
+  display: -webkit-box;
+  overflow: hidden;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.roadmap-card h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+.roadmap-card h2 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+}
+.roadmap-card:hover h2 a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.roadmap-card h2 a:focus-visible {
+  outline: none;
+}
+.roadmap-card h2 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+
+/* Who, when, how long and how many dishes, separated by dots. */
+.roadmap-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.roadmap-card-meta > span:not(.roadmap-card-owner) + span::before {
+  content: "•";
+  margin-inline: 6px;
+  font-size: 10px;
+  vertical-align: 2px;
+}
+/* Same look as the header avatar (.avatar): coral circle, ink initial. */
+.roadmap-card-owner {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--coral);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 1280px) {
+  .roadmap-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 1000px) {
+  .roadmap-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .roadmap-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}

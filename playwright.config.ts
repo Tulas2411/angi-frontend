@@ -1,22 +1,63 @@
 import { defineConfig } from "@playwright/test";
+
+/**
+ * Default suite: public pages, auth pages and role landings on an isolated production build.
+ * A local auth stub (port 5164) answers login only; no provider or shared backend is used.
+ * Owner suites have their own `playwright.*.config.ts` files that reuse the same server setup.
+ */
 export default defineConfig({
   testDir: "./tests/browser",
+  testMatch: [
+    "site-footer.spec.ts",
+    "public-home.spec.ts",
+    "home-roadmap.spec.ts",
+    "auth-flows.spec.ts",
+    "routes.spec.ts",
+    "account.spec.ts",
+    "roadmap-plan.spec.ts",
+    "my-roadmaps.spec.ts",
+    "roadmap-detail.spec.ts",
+    "roadmap-add-item.spec.ts",
+    "roadmap-generate.spec.ts",
+    "roadmap-reorder.spec.ts",
+    "roadmap-add-position.spec.ts",
+    "roadmap-rate.spec.ts",
+    "roadmap-agent.spec.ts",
+    "explore.spec.ts",
+    "blogs.spec.ts",
+    "notifications.spec.ts",
+    "roll.spec.ts",
+  ],
+  workers: 1,
   timeout: 60000,
   expect: { timeout: 10000 },
-  fullyParallel: false,
-  workers: 1,
-  reporter: [["list"], ["html", { open: "never" }]],
+  reporter: "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3001",
     headless: true,
     locale: "vi-VN",
-    viewport: { width: 1920, height: 1080 },
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 3000",
-    url: "http://localhost:3000/demo",
-    reuseExistingServer: true,
-    timeout: 120000,
+    // ANGI_TEST_DEV=1 serves the isolated snapshot with `next dev` instead of a production build.
+    command: process.env.ANGI_TEST_DEV
+      ? "node scripts/owner-test-server.mjs"
+      : "node scripts/owner-test-server.mjs --production",
+    url: "http://localhost:3001/",
+    reuseExistingServer: Boolean(process.env.ANGI_TEST_REUSE),
+    timeout: 240000,
+    env: {
+      ANGI_TEST_SOURCE_REF: "",
+      API_BASE_URL: "http://127.0.0.1:5164/api/v1",
+      NEXT_PUBLIC_API_BASE_URL: "/api",
+      APP_URL: "http://localhost:3001",
+      SESSION_PASSWORD: "angi-homepage-local-test-session-key-only",
+      NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN: "",
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: "",
+      // /demo pages are off unless enabled (production default); several specs use them.
+      NEXT_PUBLIC_ENABLE_DEMO: "true",
+      NEXT_TELEMETRY_DISABLED: "1",
+      NODE_OPTIONS: "",
+    },
   },
 });

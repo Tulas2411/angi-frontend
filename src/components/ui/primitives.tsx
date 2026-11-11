@@ -1,16 +1,30 @@
 "use client";
 import Link from "next/link";
 import {
+  useCallback,
+  useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type InputHTMLAttributes,
   type ReactNode,
   type TextareaHTMLAttributes,
 } from "react";
 import { Button, Input } from "@/shared/ui";
 import { pageSlice, validateUpload } from "@/features/platform/rules";
+import { searchText } from "@/shared/text/search";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/shadcn/select";
+import { PortalContainerContext } from "@/components/ui/shadcn/portal-container";
+
 export function Icon({
   name,
 }: {
@@ -21,10 +35,16 @@ export function Icon({
     | "warning"
     | "success"
     | "motorcycle"
+    | "bicycle"
+    | "walking"
     | "Plus"
     | "Minus"
     | "X"
-    | "LocateFixed";
+    | "edit"
+    | "trash"
+    | "LocateFixed"
+    | "connection"
+    | "roadmap-chevron";
 }) {
   return (
     <span className={`icon icon-${name}`} aria-hidden>
@@ -61,18 +81,62 @@ export function ActionLink({
   href,
   children,
   secondary = false,
+  className = "",
 }: {
   href: string;
   children: ReactNode;
   secondary?: boolean;
+  className?: string;
 }) {
   return (
     <Link
       href={href}
-      className={`button button-${secondary ? "secondary" : "primary"}`}
+      className={`button button-${secondary ? "secondary" : "primary"} ${className}`.trim()}
     >
       {children}
     </Link>
+  );
+}
+export function CardActionLink({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: "edit" | "trash";
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={`card-action card-action-${icon}`}
+      aria-label={label}
+      title={label}
+    >
+      <Icon name={icon} />
+    </Link>
+  );
+}
+export function CardActionButton({
+  onClick,
+  icon,
+  label,
+}: {
+  onClick: () => void;
+  icon: "edit" | "trash";
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`card-action card-action-${icon}`}
+      aria-label={label}
+      title={label}
+      suppressHydrationWarning
+    >
+      <Icon name={icon} />
+    </button>
   );
 }
 export function Field({
@@ -106,12 +170,58 @@ export function Field({
     </div>
   );
 }
+/** Password input with an accessible show/hide toggle. */
+export function PasswordField({
+  label,
+  helper,
+  error,
+  id: suppliedId,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "type"> & {
+  label: string;
+  helper?: string;
+  error?: string;
+}) {
+  const generated = useId(),
+    id = suppliedId ?? generated,
+    [shown, setShown] = useState(false);
+  return (
+    <div className="field">
+      <label htmlFor={id}>
+        {label}
+        {props.required && " *"}
+      </label>
+      <div className="password-row">
+        <Input
+          {...props}
+          id={id}
+          type={shown ? "text" : "password"}
+          aria-invalid={!!error}
+          aria-describedby={helper || error ? `${id}-help` : undefined}
+        />
+        <Button
+          variant="secondary"
+          aria-pressed={shown}
+          aria-controls={id}
+          disabled={props.disabled}
+          onClick={() => setShown((value) => !value)}
+        >
+          {shown ? "Ẩn" : "Hiện"}
+        </Button>
+      </div>
+      <p className={error ? "field-error" : "helper"} id={`${id}-help`}>
+        {error || helper}
+      </p>
+    </div>
+  );
+}
 export function TextArea({
   label,
   helper,
   error,
   id: suppliedId,
   value,
+  className = "",
   ...props
 }: TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label: string;
@@ -130,9 +240,10 @@ export function TextArea({
         {...props}
         id={id}
         value={value}
-        className="input textarea"
+        className={`input textarea ${className}`.trim()}
         aria-invalid={!!error}
         aria-describedby={`${id}-help`}
+        suppressHydrationWarning
       />
       <div className="between helper" id={`${id}-help`}>
         <span className={error ? "field-error" : ""}>{error || helper}</span>
@@ -145,36 +256,75 @@ export function TextArea({
     </div>
   );
 }
+/** Radix Select forbids an empty item value, so "" (the "any" choice) travels under this key. */
+const emptySelectValue = "__angi-empty__";
+
+/**
+ * A labelled choice list on the shadcn Select (Radix): a rounded trigger and a rounded floating
+ * list. Controlled with `value`/`onChange`, or uncontrolled with `defaultValue` inside a form;
+ * `name` submits the real value (empty included) through a hidden input.
+ */
 export function SelectField({
   label,
+  name,
+  error,
   value,
+  defaultValue,
   onChange,
   options,
   disabled = false,
 }: {
   label: string;
-  value: string;
-  onChange: (value: string) => void;
+  name?: string;
+  error?: string;
+  value?: string;
+  defaultValue?: string;
+  onChange?: (value: string) => void;
   options: { value: string; label: string }[];
   disabled?: boolean;
 }) {
   const id = useId();
+  const [own, setOwn] = useState(defaultValue ?? options[0]?.value ?? "");
+  const current = value ?? own;
+  const toKey = (option: string) => (option === "" ? emptySelectValue : option);
   return (
     <div className="field">
       <label htmlFor={id}>{label}</label>
-      <select
-        className="input"
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <Select
+        value={toKey(current)}
+        onValueChange={(key) => {
+          const next = key === emptySelectValue ? "" : key;
+          if (value === undefined) setOwn(next);
+          onChange?.(next);
+        }}
         disabled={disabled}
       >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+        <SelectTrigger
+          id={id}
+          data-value={current}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${id}-error` : undefined}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem
+              key={option.value}
+              value={toKey(option.value)}
+              data-value={option.value}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {name && <input type="hidden" name={name} value={current} />}
+      {error && (
+        <p id={`${id}-error`} className="field-error">
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -205,6 +355,7 @@ export function Choice({
         disabled={disabled}
         name={name}
         value={value}
+        suppressHydrationWarning
       />
       <span
         className={kind === "switch" ? "switch-track" : "choice-mark"}
@@ -250,6 +401,7 @@ export function Tabs({
             onChange(items[next].value);
             document.getElementById(`${id}-${items[next].value}`)?.focus();
           }}
+          suppressHydrationWarning
         >
           {item.label}
         </button>
@@ -266,6 +418,8 @@ export function Dialog({
   wide = false,
   map = false,
   drawer = false,
+  focusField = false,
+  className = "",
 }: {
   open: boolean;
   onClose: () => void;
@@ -275,37 +429,72 @@ export function Dialog({
   wide?: boolean;
   map?: boolean;
   drawer?: boolean;
+  /**
+   * Forms move initial focus to their first field instead of the close button; a CSS selector
+   * (inside the dialog content) picks another field, e.g. `input[name="province"]`.
+   */
+  focusField?: boolean | string;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null),
     titleId = useId();
+  // Floating lists and pickers render inside the dialog, which owns the top layer while open.
+  const [element, setElement] = useState<HTMLDialogElement | null>(null);
+  const attach = useCallback((node: HTMLDialogElement | null) => {
+    ref.current = node;
+    setElement(node);
+  }, []);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
+    const returnFocus =
+      open && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    if (open && !dialog.open) {
+      dialog.showModal();
+      if (focusField)
+        dialog
+          .querySelector<HTMLElement>(
+            typeof focusField === "string"
+              ? `.dialog-content ${focusField}`
+              : ".dialog-content :is(input:not([type=hidden]), textarea, select, [role=combobox])",
+          )
+          ?.focus();
+    }
     if (!open && dialog.open) dialog.close();
-  }, [open]);
+    return () => {
+      if (dialog.open) dialog.close();
+      if (returnFocus?.isConnected) returnFocus.focus();
+    };
+  }, [open, focusField]);
   return (
-    <dialog
-      ref={ref}
-      className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""}`}
-      aria-labelledby={titleId}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
-    >
-      <div className="dialog-heading">
-        <h2 id={titleId}>{title}</h2>
-        <Button variant="icon" onClick={onClose} aria-label="Đóng hộp thoại">
-          <Icon name="X" />
-        </Button>
-      </div>
-      <div className="dialog-content">{children}</div>
-      {footer && <div className="dialog-footer">{footer}</div>}
-    </dialog>
+    <PortalContainerContext.Provider value={element}>
+      <dialog
+        ref={attach}
+        className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
+        aria-labelledby={titleId}
+        onCancel={(e) => {
+          e.preventDefault();
+          // Escape first closes an open list or picker, not the whole dialog.
+          if (ref.current?.querySelector("[data-radix-popper-content-wrapper]"))
+            return;
+          onClose();
+        }}
+        onClick={(e) => {
+          if (e.target === ref.current) onClose();
+        }}
+      >
+        <div className="dialog-heading">
+          <h2 id={titleId}>{title}</h2>
+          <Button variant="icon" onClick={onClose} aria-label="Đóng hộp thoại">
+            <Icon name="X" />
+          </Button>
+        </div>
+        <div className="dialog-content">{children}</div>
+        {footer && <div className="dialog-footer">{footer}</div>}
+      </dialog>
+    </PortalContainerContext.Provider>
   );
 }
 export function ConfirmDialog({
@@ -315,8 +504,10 @@ export function ConfirmDialog({
   onClose,
   onConfirm,
   destructive = false,
+  danger = false,
   loading = false,
   label = "Xác nhận",
+  cancelLabel = "Hủy",
 }: {
   open: boolean;
   title: string;
@@ -324,8 +515,11 @@ export function ConfirmDialog({
   onClose: () => void;
   onConfirm: () => void;
   destructive?: boolean;
+  /** Nút xác nhận đỏ đặc cho hành động không thể hoàn tác. */
+  danger?: boolean;
   loading?: boolean;
   label?: string;
+  cancelLabel?: string;
 }) {
   return (
     <Dialog
@@ -335,10 +529,12 @@ export function ConfirmDialog({
       footer={
         <>
           <Button variant="secondary" onClick={onClose} disabled={loading}>
-            Hủy
+            {cancelLabel}
           </Button>
           <Button
-            variant={destructive ? "destructive" : "primary"}
+            variant={
+              danger ? "danger" : destructive ? "destructive" : "primary"
+            }
             onClick={onConfirm}
             loading={loading}
           >
@@ -366,7 +562,7 @@ export function EmptyState({
         ◎
       </span>
       <h3>{title}</h3>
-      <p>{children}</p>
+      {children && <p>{children}</p>}
       {action}
     </div>
   );
@@ -384,13 +580,15 @@ export function Skeleton({ rows = 3 }: { rows?: number }) {
 export function Avatar({
   name,
   image,
+  className = "",
 }: {
   name: string;
   image?: string | null;
+  className?: string;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   return (
-    <span className="avatar">
+    <span className={`avatar ${className}`.trim()}>
       {image && image !== failed ? (
         <img src={image} alt={name} onError={() => setFailed(image)} />
       ) : (
@@ -399,6 +597,7 @@ export function Avatar({
     </span>
   );
 }
+/** Image from a backend record; a missing or broken image shows a neutral placeholder. */
 export function Media({
   src,
   alt,
@@ -410,7 +609,7 @@ export function Media({
 }) {
   const [failed, setFailed] = useState<string>();
   return (
-    <div className={`media ${className}`}>
+    <div className={`media ${className}`.trim()}>
       {src && src !== failed ? (
         <img src={src} alt={alt} onError={() => setFailed(src)} />
       ) : (
@@ -470,6 +669,9 @@ export function DataTable<T extends { id: string }>({
   page = 1,
   onPage,
   size = 5,
+  onRowClick,
+  rowLabel,
+  activeRowId,
 }: {
   rows: T[];
   columns: { label: string; render: (row: T) => ReactNode }[];
@@ -477,6 +679,12 @@ export function DataTable<T extends { id: string }>({
   page?: number;
   onPage?: (value: number) => void;
   size?: number;
+  /** The whole row opens the item; controls inside the row keep their own click. */
+  onRowClick?: (row: T) => void;
+  /** Accessible name of a clickable row, e.g. "Xem hồ sơ Nguyễn An". */
+  rowLabel?: (row: T) => string;
+  /** The row whose item is open, marked with aria-current. */
+  activeRowId?: string;
 }) {
   const shown = onPage ? pageSlice(rows, page, size).items : rows;
   return (
@@ -500,7 +708,37 @@ export function DataTable<T extends { id: string }>({
           </thead>
           <tbody>
             {shown.map((row) => (
-              <tr key={row.id}>
+              <tr
+                key={row.id}
+                className={onRowClick ? "is-clickable" : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                aria-label={onRowClick && rowLabel ? rowLabel(row) : undefined}
+                aria-current={activeRowId === row.id ? "true" : undefined}
+                onClick={
+                  onRowClick
+                    ? (event) => {
+                        if (
+                          (event.target as HTMLElement).closest(
+                            "a, button, input, select, textarea, label",
+                          )
+                        )
+                          return;
+                        onRowClick(row);
+                      }
+                    : undefined
+                }
+                onKeyDown={
+                  onRowClick
+                    ? (event) => {
+                        if (event.target !== event.currentTarget) return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          onRowClick(row);
+                        }
+                      }
+                    : undefined
+                }
+              >
                 {columns.map((col) => (
                   <td key={col.label}>{col.render(row)}</td>
                 ))}
@@ -530,62 +768,174 @@ export function Combobox({
   value,
   onChange,
   options,
-}: {
+  helper,
+  error,
+  id: suppliedId,
+  onKeyDown,
+  onClick,
+  onFocus,
+  onBlur,
+  strict = false,
+  ...props
+}: Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange"> & {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: string[];
+  helper?: string;
+  error?: string;
+  /**
+   * Only an option can be the value: typing filters the list, a pick (click or Enter) sets it,
+   * and leaving with text that is not exactly an option puts the last value back. Clearing the
+   * text clears the value. Without any option (a catalog that failed to load) typing is free.
+   */
+  strict?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [active, setActive] = useState(0),
-    id = useId();
+    generatedId = useId();
+  const id = suppliedId ?? generatedId;
+  const onlyOptions = strict && options.length > 0;
+  // Strict: what is being typed, until it is picked or abandoned (null = shows the value).
+  const [typed, setTyped] = useState<string | null>(null);
+  const text = onlyOptions && typed !== null ? typed : value;
+  const pick = (option: string) => {
+    setTyped(null);
+    onChange(option);
+  };
   const matches = options.filter((o) =>
-    o.toLocaleLowerCase("vi").includes(value.toLocaleLowerCase("vi")),
+    searchText(o).includes(searchText(text)),
   );
+  const expanded = open && matches.length > 0;
+  const activeOption = useRef<HTMLLIElement>(null);
+  const box = useRef<HTMLDivElement>(null);
+  // Inside a dialog the content scrolls and clips: the list is placed fixed under (or above) the input.
+  const inDialog = useContext(PortalContainerContext) !== null;
+  const [placement, setPlacement] = useState<CSSProperties>();
+  useLayoutEffect(() => {
+    if (!expanded || !inDialog) return;
+    const input = box.current?.querySelector("input");
+    if (!input) return;
+    const place = () => {
+      const rect = input.getBoundingClientRect();
+      const gap = 6;
+      const below = window.innerHeight - rect.bottom - gap - 12;
+      const above = rect.top - gap - 12;
+      const up = below < 200 && above > below;
+      const maxHeight = Math.max(120, Math.min(260, up ? above : below));
+      setPlacement({
+        position: "fixed",
+        left: rect.left,
+        width: rect.width,
+        margin: 0,
+        maxHeight,
+        ...(up
+          ? { top: "auto", bottom: window.innerHeight - rect.top + gap }
+          : { top: rect.bottom + gap }),
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    // Capture: the dialog content scrolls, not the window.
+    document.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      document.removeEventListener("scroll", place, true);
+    };
+  }, [expanded, inDialog]);
+  useEffect(() => {
+    if (expanded) activeOption.current?.scrollIntoView({ block: "nearest" });
+  }, [active, expanded, value, options]);
   return (
-    <div className="field combobox">
-      <label htmlFor={id}>{label}</label>
+    <div ref={box} className="field combobox">
+      <label htmlFor={id}>
+        {label}
+        {props.required && " *"}
+      </label>
       <Input
+        {...props}
         id={id}
         role="combobox"
         aria-autocomplete="list"
-        aria-expanded={open}
-        aria-controls={`${id}-list`}
+        aria-expanded={expanded}
+        aria-controls={expanded ? `${id}-list` : undefined}
         aria-activedescendant={
-          open && matches[active] ? `${id}-${active}` : undefined
+          expanded && matches[active] ? `${id}-${active}` : undefined
         }
-        value={value}
-        placeholder="VD: Hà Nội, Đà Nẵng, Đà Lạt"
+        aria-invalid={!!error}
+        aria-describedby={helper || error ? `${id}-help` : undefined}
+        value={text}
+        onClick={(event) => {
+          setOpen(true);
+          onClick?.(event);
+        }}
         onChange={(e) => {
-          onChange(e.target.value);
+          const next = e.target.value;
+          if (!onlyOptions) onChange(next);
+          else {
+            setTyped(next);
+            // Emptying the field clears the choice; any other text waits for a pick.
+            if (!next.trim()) onChange("");
+          }
           setOpen(true);
           setActive(0);
         }}
-        onFocus={() => setOpen(true)}
-        onBlur={() => setOpen(false)}
+        onFocus={(event) => {
+          setOpen(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setOpen(false);
+          if (onlyOptions && typed !== null) {
+            // Text that names an option exactly (accents and case aside) counts as picking it.
+            const exact = options.find(
+              (option) => searchText(option) === searchText(typed.trim()),
+            );
+            if (exact && typed.trim()) pick(exact);
+            else setTyped(null);
+          }
+          onBlur?.(event);
+        }}
         onKeyDown={(e) => {
-          if (e.key === "Escape") setOpen(false);
+          if (e.key === "Escape" && expanded) {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen(false);
+          }
           if (e.key === "ArrowDown") {
             e.preventDefault();
             setOpen(true);
-            setActive((i) => Math.min(i + 1, matches.length - 1));
+            setActive((i) =>
+              !open ? 0 : Math.max(0, Math.min(i + 1, matches.length - 1)),
+            );
           }
           if (e.key === "ArrowUp") {
             e.preventDefault();
-            setActive((i) => Math.max(0, i - 1));
+            setOpen(true);
+            setActive((i) =>
+              !open ? Math.max(0, matches.length - 1) : Math.max(0, i - 1),
+            );
           }
           if (e.key === "Enter" && open && matches[active]) {
             e.preventDefault();
-            onChange(matches[active]);
+            e.stopPropagation();
+            pick(matches[active]);
             setOpen(false);
           }
+          if (!e.defaultPrevented) onKeyDown?.(e);
         }}
       />
-      {open && matches.length > 0 && (
-        <ul role="listbox" id={`${id}-list`} className="combobox-options">
+      {expanded && (
+        <ul
+          role="listbox"
+          id={`${id}-list`}
+          className="combobox-options"
+          style={inDialog ? placement : undefined}
+        >
           {matches.map((o, i) => (
             <li
               key={o}
+              ref={i === active ? activeOption : undefined}
               role="option"
               aria-selected={i === active}
               id={`${id}-${i}`}
@@ -595,15 +945,21 @@ export function Combobox({
                 type="button"
                 tabIndex={-1}
                 onClick={() => {
-                  onChange(o);
+                  pick(o);
                   setOpen(false);
                 }}
+                suppressHydrationWarning
               >
                 {o}
               </button>
             </li>
           ))}
         </ul>
+      )}
+      {(helper || error) && (
+        <p id={`${id}-help`} className={error ? "field-error" : "helper"}>
+          {error || helper}
+        </p>
       )}
     </div>
   );
@@ -621,12 +977,21 @@ export function UploadField({
   onChange,
   documents = false,
   max = 1,
+  helper,
+  showCount = true,
+  actionLabel,
 }: {
   label: string;
   files: UploadedFile[];
   onChange: (files: UploadedFile[]) => void;
   documents?: boolean;
   max?: number;
+  /** Ghi đè dòng mô tả định dạng tệp mặc định. */
+  helper?: string;
+  /** Ẩn bộ đếm "x / max" khi nhãn đã chứa thông tin tương đương. */
+  showCount?: boolean;
+  /** Nhãn của ô bấm để chọn tệp (mặc định "Chọn ảnh" / "Chọn tài liệu"). */
+  actionLabel?: string;
 }) {
   const [error, setError] = useState(""),
     [progress, setProgress] = useState(0),
@@ -700,13 +1065,15 @@ export function UploadField({
     <div className="upload-field">
       <div className="between">
         <label htmlFor={id}>{label}</label>
-        <span className="helper">
-          {files.length} / {max}
-        </span>
+        {showCount && (
+          <span className="helper">
+            {files.length} / {max}
+          </span>
+        )}
       </div>
       <p className="helper">
-        JPG, PNG, WEBP tối đa 5 MB{documents && "; PDF tối đa 10 MB"}. Tải tệp
-        trong bản minh họa.
+        {helper ??
+          `JPG, PNG, WEBP tối đa 5 MB${documents ? "; PDF tối đa 10 MB" : ""}. Tải tệp trong bản minh họa.`}
       </p>
       <input
         id={id}
@@ -724,6 +1091,7 @@ export function UploadField({
           upload(Array.from(e.target.files ?? []));
           e.target.value = "";
         }}
+        suppressHydrationWarning
       />
       <div className="upload-grid">
         {files.map((file) => (
@@ -738,7 +1106,7 @@ export function UploadField({
               aria-label={`Bỏ ${file.name}`}
               onClick={() => onChange(files.filter((f) => f.id !== file.id))}
             >
-              ×
+              <Icon name="trash" />
             </Button>
             <p>{file.name}</p>
             <span className="helper">
@@ -757,8 +1125,10 @@ export function UploadField({
               e.preventDefault();
               if (!progress) upload(Array.from(e.dataTransfer.files));
             }}
+            suppressHydrationWarning
           >
-            <span aria-hidden>＋</span>Chọn {documents ? "tài liệu" : "ảnh"}
+            <span aria-hidden>＋</span>
+            {actionLabel ?? `Chọn ${documents ? "tài liệu" : "ảnh"}`}
           </button>
         )}
       </div>

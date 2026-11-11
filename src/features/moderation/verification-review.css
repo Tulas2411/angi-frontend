@@ -1,0 +1,563 @@
+/* F-57 Review Verification Submission (Mod): queue and review. Theme tokens, soft shadows. */
+.vr-page {
+  --vr-lift: 0 1px 2px rgb(34 34 34 / 0.04), 0 12px 36px rgb(34 34 34 / 0.07);
+  padding-bottom: var(--space-8);
+}
+.vr-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 6px;
+}
+
+/* ------------------------------------------------------ toolbar */
+.vr-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+}
+.vr-tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+}
+.vr-tabs button {
+  min-height: 36px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease;
+}
+.vr-tabs button:hover {
+  color: var(--ink);
+}
+.vr-tabs button[aria-pressed="true"] {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgb(34 34 34 / 0.12);
+}
+.vr-tabs button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.vr-province {
+  flex: 0 1 320px;
+  min-width: 240px;
+}
+
+/* -------------------------------------------------------- queue */
+.vr-queue {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vr-card {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-4) var(--space-5);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--vr-lift);
+  text-decoration: none;
+  transition: transform var(--duration) var(--ease-out);
+}
+.vr-card:hover {
+  transform: translateY(-2px);
+}
+.vr-card:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.vr-card-photo {
+  width: 96px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+}
+.vr-card-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vr-card-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+.vr-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.vr-card-head strong {
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+.vr-card-body small,
+.vr-card-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-3);
+  color: var(--muted);
+  font-size: 13px;
+}
+.vr-card-body svg {
+  width: 15px;
+  height: 15px;
+  margin-right: 2px;
+}
+.vr-card-facts span {
+  display: inline-flex;
+  align-items: center;
+}
+.vr-card-wait {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  text-align: right;
+}
+.vr-card-wait svg {
+  width: 18px;
+  height: 18px;
+  color: var(--warning-ink);
+}
+.vr-card-wait strong {
+  font-size: 15px;
+}
+.vr-card-wait small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ------------------------------------------------------- review */
+.vr-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.vr-back svg {
+  width: 16px;
+  height: 16px;
+}
+.vr-back:hover {
+  color: var(--ink);
+}
+.vr-hero {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+  box-shadow: var(--vr-lift);
+}
+.vr-hero-photo {
+  width: 120px;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+}
+.vr-hero-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.vr-eyebrow {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.vr-hero h1 {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 34px);
+  overflow-wrap: anywhere;
+}
+.vr-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.vr-hero-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.vr-hero-meta svg {
+  width: 15px;
+  height: 15px;
+}
+.vr-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  gap: var(--space-5);
+  align-items: start;
+}
+.vr-main {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.vr-side {
+  position: sticky;
+  top: var(--space-4);
+}
+.vr-facts {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+.vr-facts > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 0.8fr) minmax(0, 1.2fr);
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+.vr-facts dt {
+  color: var(--muted);
+}
+.vr-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.vr-docs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vr-docs a {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background var(--duration) ease;
+}
+.vr-docs a:hover {
+  background: var(--control-hover, var(--line));
+}
+.vr-docs a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.vr-docs a > span:last-child {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--space-1) var(--space-1);
+}
+.vr-docs small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-weight: 400;
+}
+.vr-docs small svg {
+  width: 13px;
+  height: 13px;
+}
+.vr-doc-preview,
+.vr-doc-file {
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--card);
+}
+.vr-doc-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* A portrait paper reads from its top: the title and the name, not the middle. */
+  object-position: top;
+}
+.vr-doc-file {
+  display: grid;
+  place-items: center;
+}
+.vr-doc-file svg {
+  width: 40px;
+  height: 40px;
+  color: var(--muted);
+}
+.vr-doc-missing {
+  display: block;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--control);
+  color: var(--muted);
+  font-size: 13px;
+}
+.vr-previous-note {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--warning-ink);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--warning-bg);
+  font-size: 14px;
+}
+.vr-previous-note p {
+  margin: 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+.vr-diff {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.vr-diff th,
+.vr-diff td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.vr-diff thead th {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.vr-diff tbody th {
+  color: var(--muted);
+  font-weight: 400;
+}
+.vr-diff tr[data-changed="true"] td:last-child {
+  background: var(--warning-bg);
+}
+.vr-diff td .badge {
+  margin-left: var(--space-2);
+}
+.vr-description {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+.vr-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vr-gallery .media {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 10px;
+}
+.vr-gallery img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Decision choices: three cards that read as one radio group. */
+.vr-decisions {
+  display: grid;
+  gap: var(--space-2);
+}
+.vr-decisions label {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--duration) ease,
+    background var(--duration) ease;
+}
+.vr-decisions input {
+  margin-top: 3px;
+  accent-color: var(--ink);
+}
+.vr-decisions span {
+  display: grid;
+  gap: 2px;
+}
+.vr-decisions strong {
+  font-size: 14px;
+}
+.vr-decisions small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.vr-decisions label:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--control);
+}
+.vr-decisions label[data-choice="approve"]:has(input:checked) {
+  border-color: var(--success-ink);
+  background: var(--success-bg);
+}
+.vr-decisions label[data-choice="reject"]:has(input:checked) {
+  border-color: var(--error-ink);
+  background: var(--error-bg);
+}
+.vr-decisions label[data-choice="needs_more_info"]:has(input:checked) {
+  border-color: var(--warning-ink);
+  background: var(--warning-bg);
+}
+.vr-decisions label:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+.vr-side .button {
+  width: 100%;
+}
+
+/*
+ * Cards and headers with a photo: the photo fills the left of the card at full height, like the
+ * dish cards of the Traveler pages. Cards without a photo (menu, report queues) keep their padding.
+ */
+.vr-card:has(> .vr-card-photo) {
+  grid-template-columns: 200px minmax(0, 1fr) auto;
+  gap: 0;
+  min-height: 140px;
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+}
+.vr-card > .vr-card-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 140px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.vr-card:has(> .vr-card-photo) > .vr-card-body {
+  align-content: center;
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+}
+.vr-card:has(> .vr-card-photo) > :last-child:not(.vr-card-body) {
+  align-self: center;
+  padding-right: var(--space-5);
+}
+.vr-hero:has(> .vr-hero-photo) {
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 0;
+  min-height: 180px;
+  padding: 0;
+  overflow: hidden;
+  align-items: stretch;
+}
+.vr-hero > .vr-hero-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.vr-hero:has(> .vr-hero-photo) > :not(.vr-hero-photo) {
+  align-self: center;
+  padding: var(--space-5) var(--space-6);
+}
+
+/* ---------------------------------------------------- responsive */
+@media (max-width: 1000px) {
+  .vr-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vr-side {
+    position: static;
+    order: -1;
+  }
+}
+@media (max-width: 640px) {
+  .vr-card:has(> .vr-card-photo) {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+  .vr-card:has(> .vr-card-photo) > :last-child:not(.vr-card-body) {
+    grid-column: 1 / -1;
+    padding: 0 var(--space-4) var(--space-4);
+  }
+  .vr-hero:has(> .vr-hero-photo) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vr-hero > .vr-hero-photo {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+  .vr-card {
+    grid-template-columns: 72px minmax(0, 1fr);
+  }
+  .vr-card-photo {
+    width: 72px;
+  }
+  .vr-card-wait {
+    grid-column: 1 / -1;
+    grid-template-columns: auto auto 1fr;
+    align-items: center;
+    justify-items: start;
+    gap: var(--space-2);
+    text-align: left;
+  }
+  .vr-hero {
+    grid-template-columns: 72px minmax(0, 1fr);
+    padding: var(--space-4);
+  }
+  .vr-hero-photo {
+    width: 72px;
+  }
+  .vr-facts > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+  .vr-province {
+    flex-basis: 100%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vr-card,
+  .vr-tabs button,
+  .vr-docs a,
+  .vr-decisions label {
+    transition: none;
+  }
+}

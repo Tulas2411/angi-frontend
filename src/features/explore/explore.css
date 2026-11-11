@@ -1,0 +1,1663 @@
+/* Public discovery: dish and restaurant lists, their detail pages, review and report dialogs. */
+
+/* ---------------------------------------------------------------- lists */
+.explore-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-grid > li {
+  display: flex;
+  min-width: 0;
+}
+
+.explore-card {
+  position: relative;
+  flex: 1;
+  gap: 0;
+  padding: var(--space-3);
+  transition:
+    box-shadow var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.explore-card:hover,
+.explore-card:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow);
+}
+/* The title link covers the whole card, so the card is one link to the detail page. */
+.explore-card h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+.explore-card h3 a:focus-visible {
+  outline: none;
+}
+.explore-card h3 a:focus-visible::after {
+  box-shadow: var(--focus-ring);
+}
+.explore-card > .media {
+  aspect-ratio: 16 / 10;
+  border-radius: var(--radius-md);
+}
+.explore-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-3) var(--space-3);
+}
+.explore-card h3 {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.explore-price {
+  font-weight: 600;
+}
+.explore-price-lg {
+  font-size: var(--text-lg);
+}
+.explore-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore-chips > span {
+  padding: 6px var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-more {
+  display: flex;
+  justify-content: center;
+}
+/* Restaurant list lazy loading: the marker after the last card, with what is happening there. */
+.explore-lazy {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 1px;
+}
+.explore-lazy-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore-lazy-loading .spinner {
+  display: inline-block;
+}
+/*
+ * A restaurant's score: a tag hung in the card's top-right corner. In a row or a detailed card it
+ * sits in the name's row and steps over the body's padding (`--body-pad-*`), so the name gives
+ * way to it; on a gallery photo it is placed in the tile's corner. Chrome does not clip a
+ * backdrop-filter to a parent's rounded overflow, so the tag rounds its own corner to the card's
+ * inner radius and casts its shadow only downwards. Clicks pass through to the link over the card.
+ */
+.rating-badge {
+  display: inline-flex;
+  flex: none;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  margin: calc(-1 * var(--body-pad-top, 0px))
+    calc(-1 * var(--body-pad-right, 0px)) 0 0;
+  padding: 6px 10px 6px 12px;
+  border-radius: 0 calc(var(--radius-md) - 1px) 0 var(--radius-md);
+  background: rgb(255 255 255 / 0.9);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 10px -6px rgb(34 34 34 / 0.25);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.rating-badge svg {
+  width: 14px;
+  height: 14px;
+  fill: #f4a300;
+}
+.rating-badge-count {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+.rating-badge.is-new {
+  color: var(--muted);
+}
+/* A gallery tile has no body: the tag sits in its corner, which has no border and a smaller radius. */
+.dish-tile .rating-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  margin: 0;
+  border-radius: 0 var(--radius-sm) 0 var(--radius-md);
+}
+/*
+ * A card name (dish or restaurant): one line in a card body, three on a gallery photo. A longer
+ * name fades out at the end of its last line; the mask is on the text, so it works on the card and
+ * on the photo.
+ */
+.dish-name.card-name {
+  display: block;
+  flex: none;
+  -webkit-line-clamp: unset;
+}
+.card-name-text {
+  display: block;
+  overflow: hidden;
+}
+.card-name[data-lines="1"] .card-name-text {
+  white-space: nowrap;
+}
+.card-name[data-lines="3"] .card-name-text {
+  max-height: 3lh;
+}
+.card-name-text[data-overflowing] {
+  -webkit-mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 1lh) no-repeat,
+    linear-gradient(to right, #000 60%, transparent) bottom / 100% 1lh no-repeat;
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - 1lh) no-repeat,
+    linear-gradient(to right, #000 60%, transparent) bottom / 100% 1lh no-repeat;
+}
+/* Beside the likes or the score, the name takes the room they leave. */
+.dish-head .dish-name.card-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* -------------------------------------------------------------- filters */
+.explore-filters {
+  gap: var(--space-4);
+}
+.explore-filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.explore-tags {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.explore-tags legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* ------------------------------------------------- dish search and filters */
+.dish-search {
+  display: grid;
+  gap: var(--space-4);
+}
+.dish-search-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: center;
+}
+.dish-search-box {
+  position: relative;
+  min-width: 0;
+}
+.dish-search-box .input {
+  min-height: 52px;
+  padding-left: 52px;
+  border-radius: var(--radius-pill);
+}
+.dish-search-submit {
+  position: absolute;
+  top: 50%;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+.dish-search-submit:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+.dish-search-submit:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-search-submit svg,
+.dish-filter-toggle svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dish-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 52px;
+  padding: 0 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.dish-filter-toggle:hover {
+  border-color: var(--ink);
+}
+.dish-filter-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-filter-toggle svg {
+  transition: transform var(--duration) var(--ease-out);
+}
+/* Open: the accent marks the control that owns the panel below it. */
+.dish-filter-toggle[aria-expanded="true"] {
+  border-color: var(--coral);
+  background: #ffeceb;
+}
+.dish-filter-toggle[aria-expanded="true"] svg {
+  color: var(--coral);
+  transform: rotate(180deg);
+}
+.dish-filter-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  color: var(--ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dish-filter-panel {
+  display: grid;
+  gap: var(--space-5);
+  padding: var(--space-6);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+/*
+ * The filter panel slides down when shown and back up when hidden: its rows go from 0fr to 1fr
+ * while it fades in, and `hidden` (display: none) takes effect only once it has slid up, so a
+ * closed panel stays out of the tab order. Browsers without discrete transitions open and close
+ * it at once.
+ */
+.dish-filter-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: 0;
+  opacity: 1;
+  transition:
+    grid-template-rows var(--duration) var(--ease-out),
+    margin-top var(--duration) var(--ease-out),
+    opacity var(--duration) ease,
+    display var(--duration) allow-discrete;
+}
+/*
+ * Closing leaves quickly and accelerating. The form's gap above the panel folds away during the
+ * slide (negative margin), so nothing below jumps when `display: none` removes the panel.
+ */
+.dish-filter-collapse[hidden] {
+  display: none;
+  grid-template-rows: 0fr;
+  margin-top: calc(-1 * var(--space-4));
+  opacity: 0;
+  transition:
+    grid-template-rows var(--duration-exit) var(--ease-exit),
+    margin-top var(--duration-exit) var(--ease-exit),
+    opacity var(--duration-exit) var(--ease-exit),
+    display var(--duration-exit) allow-discrete;
+}
+@starting-style {
+  .dish-filter-collapse:not([hidden]) {
+    grid-template-rows: 0fr;
+    margin-top: calc(-1 * var(--space-4));
+    opacity: 0;
+  }
+}
+/* The inner box can shrink to nothing; the panel keeps its padding and border inside it. */
+.dish-filter-collapse > div {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dish-filter-collapse,
+  .dish-filter-collapse[hidden] {
+    transition: none;
+  }
+}
+.dish-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.dish-filter-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5) var(--space-6);
+}
+/* Two fields that form one part of the sidebar; in the narrow panel's grid they are two cells. */
+.dish-filter-pair {
+  display: contents;
+}
+.dish-filter-chips {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.dish-filter-chips legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.dish-filter-chips .chip {
+  min-height: 36px;
+  padding: 6px 14px;
+}
+.dish-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+/*
+ * ------------------------------------------------- dish page: Yelp-like layout
+ * Wide screens (≥1024px): the page leaves the centred column and runs edge to edge. The filter
+ * sidebar is flush with the left edge, as tall as the window under the header, sticky, and scrolls
+ * on its own; the heading, the search bar and the results fill the rest.
+ * Narrow screens: heading, search bar, the filter panel its button slides down (its negative
+ * margin folds this grid's row gap, as in the restaurant page's form), results.
+ */
+/* Narrow screens keep the shell's centred column and padding. */
+.explore-browse-page {
+  padding: 0;
+}
+.dish-browse {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "search" "filters" "main";
+  row-gap: var(--space-4);
+}
+.dish-browse > .dish-browse-head {
+  grid-area: head;
+  padding-bottom: var(--space-2);
+}
+.dish-browse > .dish-search {
+  grid-area: search;
+}
+.dish-browse > .dish-filter-sidebar {
+  grid-area: filters;
+}
+.dish-browse > .dish-browse-main {
+  grid-area: main;
+  min-width: 0;
+}
+/* Page head of the browse pages: a breadcrumb "Khám phá › Quán ăn" over the description. */
+.explore-browse-title {
+  gap: var(--space-2);
+}
+.explore-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+}
+.explore-crumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.explore-crumbs [aria-current="page"] {
+  color: var(--ink);
+}
+.explore-crumbs svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+.dish-filter-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.dish-filter-head h2 {
+  font-size: 18px;
+}
+/* "Đặt lại bộ lọc" as a quiet text button at the end of the heading row. */
+.dish-filter-head .dish-filter-reset.button {
+  min-height: 32px;
+  margin-left: auto;
+  padding: 4px 8px;
+  font-size: var(--text-sm);
+}
+/* How tag groups combine, under the groups. */
+.dish-filter-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+/*
+ * Narrow screens: the panel closes like the restaurant page's `[hidden]` panel (same slide and
+ * folded gap), keyed on `data-closed` because `[hidden]` is display: none !important (Tailwind
+ * preflight) and could not be shown again on wide screens.
+ */
+@media (max-width: 1023px) {
+  .dish-filter-sidebar[data-closed] {
+    display: none;
+    grid-template-rows: 0fr;
+    margin-top: calc(-1 * var(--space-4));
+    opacity: 0;
+    transition:
+      grid-template-rows var(--duration-exit) var(--ease-exit),
+      margin-top var(--duration-exit) var(--ease-exit),
+      opacity var(--duration-exit) var(--ease-exit),
+      display var(--duration-exit) allow-discrete;
+  }
+  @starting-style {
+    .dish-filter-sidebar:not([data-closed]) {
+      grid-template-rows: 0fr;
+      margin-top: calc(-1 * var(--space-4));
+      opacity: 0;
+    }
+  }
+}
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .dish-filter-sidebar,
+  .dish-filter-sidebar[data-closed] {
+    transition: none;
+  }
+}
+
+@media (min-width: 1024px) {
+  /* Edge to edge: no centred column, no top/bottom padding of the main area. */
+  .app-shell:has(.explore-browse-page) .app-main {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+  .explore-browse-page {
+    padding: 0;
+  }
+  .dish-browse {
+    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      "filters head"
+      "filters search"
+      "filters main";
+    align-items: start;
+    column-gap: 0;
+    row-gap: var(--space-5);
+  }
+  .dish-browse > .dish-browse-head {
+    padding: var(--space-8) var(--space-8) 0;
+  }
+  .dish-browse > .dish-search,
+  .dish-browse > .dish-browse-main {
+    padding-inline: var(--space-8);
+  }
+  .dish-browse > .dish-browse-main {
+    padding-bottom: var(--space-16);
+  }
+  /* The filters are always in sight: no button to show them. */
+  .dish-browse .dish-filter-toggle {
+    display: none;
+  }
+  .dish-browse .dish-search-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /*
+   * The sidebar, on the page's background like the list, with no scroll bar of its own. It is a
+   * "tall sticky": shorter than the window it stays under the header; taller, it scrolls with the
+   * page until its end shows, then stays (top = window height − its height, measured into
+   * --sidebar-height by DishFilterSidebar). Its top shows again when the page is scrolled back to
+   * where the sidebar starts.
+   */
+  .dish-filter-sidebar.dish-filter-collapse {
+    position: sticky;
+    top: min(
+      var(--header-height),
+      calc(100dvh - var(--sidebar-height, 100dvh))
+    );
+    display: block;
+    align-self: start;
+    margin-top: 0;
+    opacity: 1;
+    transition: none;
+  }
+  .dish-filter-sidebar.dish-filter-collapse > div {
+    overflow: visible;
+  }
+  .dish-filter-sidebar .dish-filter-panel {
+    gap: var(--space-5);
+    padding: var(--space-6) var(--space-6) var(--space-8);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+  /* One field a row: two price menus side by side would cut their values ("Khôn…"). */
+  .dish-filter-sidebar .dish-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  .dish-filter-sidebar .dish-filter-groups {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  /*
+   * A rule above each part, as on Yelp: every field, a pair of fields (the dish price range),
+   * every group. The hint under the last group has none.
+   */
+  .dish-filter-sidebar .dish-filter-pair {
+    display: grid;
+    gap: var(--space-4);
+  }
+  .dish-filter-sidebar .dish-filter-grid > *,
+  .dish-filter-sidebar .dish-filter-chips {
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--line);
+  }
+  /* A floated legend leaves the fieldset's border, so the rule runs above it, not through it. */
+  .dish-filter-sidebar .dish-filter-chips > legend {
+    float: left;
+    width: 100%;
+  }
+  .dish-filter-sidebar .dish-filter-chips > legend + * {
+    clear: both;
+  }
+  .dish-filter-sidebar .dish-filter-chips .chip {
+    min-height: 32px;
+    padding: 4px 12px;
+  }
+  /*
+   * The results get wider without the map column: the layouts add columns instead of stretching
+   * one card across the window.
+   */
+  /* Narrower list rows than before: their tags stay on one line and fade, as on detailed cards. */
+  .dish-browse .dish-row .dish-kinds {
+    flex-wrap: nowrap;
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+    mask-image: linear-gradient(to right, #000 85%, transparent);
+  }
+  .dish-browse .dish-items-list {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 640px), 1fr));
+  }
+  .dish-browse .dish-items-detailed {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 560px), 1fr));
+  }
+  .dish-browse .dish-items-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+/* ------------------------------------------------------- dish results */
+.dish-results {
+  display: grid;
+  gap: var(--space-4);
+}
+.dish-results-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.dish-view-switcher {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+}
+.dish-view-switcher button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease;
+}
+.dish-view-switcher button:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+.dish-view-switcher button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--card);
+}
+.dish-view-switcher button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-view-switcher svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.dish-items {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dish-items > li {
+  display: flex;
+  min-width: 0;
+}
+.dish-item {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration) var(--ease-out);
+}
+.dish-item:hover,
+.dish-item:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: 0 8px 24px rgb(34 34 34 / 0.08);
+}
+/* The name covers the whole item, so the item is one link to the dish. */
+.dish-name a {
+  color: inherit;
+  text-decoration: none;
+}
+.dish-name a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.dish-item:has(.dish-name a:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+.dish-name a:focus-visible {
+  outline: none;
+}
+.dish-name {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 20px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.dish-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.dish-head {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+}
+.dish-likes {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.dish-likes svg {
+  width: 16px;
+  height: 16px;
+  fill: var(--coral);
+}
+.dish-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.dish-kind,
+.dish-tag {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.dish-kind {
+  background: var(--ink);
+  color: var(--card);
+}
+.dish-tag {
+  background: var(--control);
+  color: var(--ink);
+}
+.dish-description {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+/*
+ * The whole description in a box three lines high (the room left above the price in a detailed
+ * card). Longer text scrolls inside it and fades out at the bottom until its end; only then does
+ * the box sit above the link that covers the item, so the wheel and touch reach it.
+ */
+.dish-description-wrap {
+  position: relative;
+  min-width: 0;
+  max-height: calc(3 * 1.6 * 14px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+.dish-description-wrap::-webkit-scrollbar {
+  display: none;
+}
+.dish-description-wrap[data-overflowing] {
+  z-index: 1;
+}
+.dish-description-wrap[data-faded] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 28px),
+    transparent
+  );
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 28px), transparent);
+}
+.dish-detail .dish-description-wrap {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+.dish-place {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 14px;
+}
+.dish-price {
+  flex: none;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.dish-place-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mode 1: rows across the width with a compact photo. */
+/*
+ * Every row has the same height. A row that carries actions (the roadmap dialog) grows to hold
+ * them instead, as a detailed card does.
+ */
+.dish-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  /* The photo fills the left of the row edge to edge, as in a detailed card. */
+  align-items: stretch;
+  height: 180px;
+  overflow: hidden;
+}
+.dish-row:has(.dish-actions) {
+  height: auto;
+}
+.dish-row .dish-body {
+  --body-pad-top: var(--space-4);
+  --body-pad-right: var(--space-5);
+  height: 100%;
+  overflow: hidden;
+  padding: var(--body-pad-top) var(--body-pad-right);
+}
+.dish-thumb {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+
+/* Mode 2: two cards a row, a large photo beside the details. */
+.dish-items-detailed {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+.dish-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  height: 300px;
+  overflow: hidden;
+}
+.dish-photo {
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+.dish-detail .dish-body {
+  --body-pad-top: var(--space-5);
+  --body-pad-right: var(--space-5);
+  overflow: hidden;
+  padding: var(--body-pad-top) var(--body-pad-right);
+}
+/*
+ * The card has a fixed height: every part keeps its own height and the fixed gaps, and only the
+ * description box gives way (it scrolls and fades), so a long text never squeezes the name, the
+ * score or the tags.
+ */
+.dish-detail .dish-body > *,
+.dish-row .dish-body > * {
+  flex-shrink: 0;
+}
+.dish-detail .dish-body > .dish-description-wrap,
+.dish-row .dish-body > .dish-description-wrap {
+  flex-shrink: 1;
+  min-height: 0;
+}
+/* One row of tags; the ones that do not fit fade out at the edge. */
+.dish-detail .dish-kinds {
+  flex-wrap: nowrap;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, #000 85%, transparent);
+  mask-image: linear-gradient(to right, #000 85%, transparent);
+}
+/*
+ * "Lưới chi tiết" of the dish list: the tags wrap onto at most two rows (a chip is 24px tall,
+ * rows 6px apart); a third row is cut off whole.
+ */
+.dish-results .dish-detail .dish-kinds {
+  flex-wrap: wrap;
+  max-height: calc(2 * 24px + 6px);
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.dish-detail .dish-name {
+  font-size: 22px;
+}
+
+/*
+ * Actions a list adds under a card (the roadmap dialog's "+ Thêm vào bữa…"). They sit above the
+ * name's link, which covers the whole card; otherwise every click on them would open the dish.
+ */
+.dish-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+.dish-actions .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+/* A card with actions grows to hold them instead of cutting them off. */
+.dish-detail:has(.dish-actions) {
+  height: auto;
+  min-height: 300px;
+}
+.dish-detail:has(.dish-actions) .dish-photo {
+  height: auto;
+  min-height: 100%;
+}
+/* On a photo tile the actions sit at the top, over the photo. */
+.dish-tile-actions {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  left: var(--space-2);
+  justify-content: flex-end;
+  margin: 0;
+  padding: 0;
+}
+.dish-tile-actions .button {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 13px;
+  box-shadow: var(--shadow-card);
+}
+
+/* Mode 3: photos only, the name on the photo. */
+.dish-items-gallery {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+.dish-tile {
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--control);
+}
+.dish-tile-photo {
+  aspect-ratio: 4 / 5;
+  border-radius: 0;
+}
+.dish-tile-photo .media-fallback span:last-child {
+  display: none;
+}
+/* A dark fade under the name keeps it readable on any photo. */
+.dish-tile .dish-name {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  padding: 48px 12px 12px;
+  background: linear-gradient(to top, rgb(20 16 14 / 0.82), rgb(20 16 14 / 0));
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.dish-tile .dish-name.card-name {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .dish-tile-photo img {
+    transition: transform 600ms var(--ease-out);
+  }
+  .dish-tile:hover .dish-tile-photo img {
+    transform: scale(1.05);
+  }
+}
+
+@media (max-width: 1100px) {
+  .dish-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .dish-items-detailed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 700px) {
+  .dish-filter-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-items-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+  }
+}
+@media (max-width: 600px) {
+  .dish-search-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-filter-toggle {
+    justify-content: center;
+  }
+  .dish-filter-panel {
+    padding: var(--space-4);
+  }
+  .dish-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .dish-row {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+  .dish-row .dish-body {
+    --body-pad-top: var(--space-3);
+    --body-pad-right: var(--space-3);
+  }
+  .dish-row .rating-badge-count {
+    display: none;
+  }
+  .dish-name {
+    font-size: 18px;
+  }
+  /* A narrow card stacks: the photo above its details. */
+  .dish-detail {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+  .dish-photo {
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+  .dish-detail .dish-body {
+    --body-pad-top: var(--space-4);
+    --body-pad-right: var(--space-4);
+  }
+  /* Stacked, the card's top-right corner is on the photo: the tag hangs there instead. */
+  .dish-detail .rating-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1;
+    margin: 0;
+  }
+}
+
+/* --------------------------------------------------------------- detail */
+.explore-back a {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+.explore-back a:hover {
+  color: var(--ink);
+}
+.explore-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: start;
+}
+.explore-hero h1 {
+  overflow-wrap: anywhere;
+}
+.explore-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.explore-gallery > .media {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-lg);
+}
+.explore-thumbs {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-thumbs button {
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--control);
+  cursor: pointer;
+}
+.explore-thumbs button[aria-pressed="true"] {
+  border-color: var(--ink);
+}
+.explore-thumbs button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-thumbs img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+.explore-thumbs .media {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+}
+.explore-restaurant {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.explore-restaurant > .media {
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-md);
+}
+.explore-info {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  align-items: start;
+}
+/* The name above the menu and review tabs (the hero lives in "Thông tin"). */
+.explore-tab-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-6);
+}
+/* The name and today's state side by side; the actions keep the right end. */
+.explore-tab-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+.explore-tab-title h1 {
+  font-size: clamp(26px, 3vw, 36px);
+  overflow-wrap: anywhere;
+}
+/* Today's state in the colours of the status badges: green open, amber outside hours, red closed. */
+.explore-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--tone-line, var(--line));
+  border-radius: var(--radius-md);
+  background: var(--tone-bg, var(--control));
+  color: var(--tone-ink, var(--ink));
+  font-size: 14px;
+}
+.explore-today-state {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+}
+.explore-today-state > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 4px var(--tone-line, var(--line));
+}
+[data-tone="success"].explore-today,
+.explore-hours > div[data-tone="success"] {
+  --tone-bg: var(--success-bg);
+  --tone-ink: var(--success-ink);
+  --tone-line: var(--success-line);
+}
+[data-tone="warning"].explore-today,
+.explore-hours > div[data-tone="warning"] {
+  --tone-bg: var(--warning-bg);
+  --tone-ink: var(--warning-ink);
+  --tone-line: var(--warning-line);
+}
+[data-tone="error"].explore-today,
+.explore-hours > div[data-tone="error"] {
+  --tone-bg: var(--error-bg);
+  --tone-ink: var(--error-ink);
+  --tone-line: var(--error-line);
+}
+.explore-hours > div[data-today] {
+  align-items: center;
+  margin-inline: calc(-1 * var(--space-3));
+  padding: var(--space-3);
+  border-top-color: transparent;
+  border-radius: var(--radius-xs);
+  background: var(--tone-bg, var(--canvas));
+  box-shadow: inset 3px 0 0 var(--tone-ink, var(--ink));
+  font-weight: 600;
+}
+.explore-hours > div[data-today] dt,
+.explore-hours > div[data-today] dd {
+  color: var(--tone-ink, var(--ink));
+}
+/* The row after today keeps no line against the highlighted one. */
+.explore-hours > div[data-today] + div {
+  border-top-color: transparent;
+}
+
+/* -------------------------------------------------------------- reviews */
+/*
+ * REST-04 in one white card: the score and the spread of stars, a toolbar, then the reviews
+ * divided by thin rules (no box per review). Stars use the rating yellow of the cards.
+ */
+.explore-reviews {
+  --review-star: #f4a300;
+  --review-pad: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.explore-reviews > .pagination {
+  padding: var(--space-4) var(--review-pad) var(--review-pad);
+}
+.explore-rating-summary {
+  display: grid;
+  /* The spread of stars takes the rest of the card, so no half of it is left empty. */
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-8);
+  align-items: center;
+  padding: var(--review-pad);
+}
+/* Score, stars, count and the satisfied share, centred in their column. */
+.explore-rating-score {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  text-align: center;
+}
+/* "100% thực khách chấm 4–5 sao", under the count. */
+.explore-rating-satisfied {
+  justify-self: stretch;
+  margin: var(--space-2) 0 0;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.explore-rating-satisfied strong {
+  color: var(--success-ink);
+}
+.explore-rating-big {
+  font-family: var(--font-heading);
+  font-size: 52px;
+  line-height: 1;
+}
+.explore-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-breakdown-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 32px;
+  gap: var(--space-3);
+  align-items: center;
+  width: 100%;
+  padding: 5px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background var(--duration-fast) ease;
+}
+.explore-breakdown-row:hover {
+  background: var(--canvas);
+}
+.explore-breakdown-row.selected {
+  background: var(--canvas);
+  color: var(--ink);
+  font-weight: 600;
+}
+.explore-breakdown-row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-breakdown-star {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.explore-breakdown-star svg {
+  width: 13px;
+  height: 13px;
+  color: var(--review-star);
+}
+.explore-breakdown-count {
+  text-align: right;
+}
+.explore-bar {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  overflow: hidden;
+}
+.explore-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--review-star);
+}
+
+/* Toolbar: count and the star filter in use on the left, "Có ảnh" and the order on the right. */
+.explore-review-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--review-pad);
+  border-block: 1px solid var(--line);
+}
+.explore-review-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.explore-review-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding: 4px 8px 4px 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--ink);
+  color: var(--card);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+.explore-review-filter-chip svg {
+  width: 14px;
+  height: 14px;
+}
+.explore-review-filter-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-review-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* "Có ảnh": a real checkbox drawn as a chip. */
+.explore-review-photo-chip {
+  position: relative;
+}
+.explore-review-photo-chip input {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.explore-review-photo-chip span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition:
+    background var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.explore-review-photo-chip span svg {
+  width: 16px;
+  height: 16px;
+}
+.explore-review-photo-chip:hover span {
+  background: var(--control);
+}
+.explore-review-photo-chip input:checked + span {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--card);
+}
+.explore-review-photo-chip input:focus-visible + span {
+  box-shadow: var(--focus-ring);
+}
+/* The order as a compact inline menu: "Sắp xếp [Mới nhất ▾]". */
+.explore-review-filters .field {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+.explore-review-filters .field > label {
+  color: var(--muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* As tall as the "Có ảnh" chip (the shared .input has a 48px field's padding). */
+.explore-review-filters .field .ui-select-trigger {
+  height: 36px;
+  min-height: 36px;
+  padding: 0 12px 0 16px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+}
+
+/* The reviews, divided by rules. */
+.explore-review-list {
+  display: flex;
+  flex-direction: column;
+}
+.explore-review {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding: var(--space-5) var(--review-pad);
+}
+.explore-review + .explore-review {
+  border-top: 1px solid var(--line);
+}
+.explore-review-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.explore-review-body > header {
+  display: grid;
+  gap: 2px;
+}
+.explore-review-body > header strong {
+  font-size: 15px;
+}
+.explore-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.explore-review-text {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.explore-review-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 104px));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.explore-review-images .media {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+}
+/* The restaurant's answer: a quiet block under the review. */
+.explore-reply {
+  display: grid;
+  gap: 4px;
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--canvas);
+  font-size: 14px;
+}
+.explore-reply p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.explore-reply-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-reply-title svg {
+  width: 16px;
+  height: 16px;
+}
+.explore-stars-static {
+  color: var(--review-star, #f4a300);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+.explore-stars-static .off {
+  color: var(--line-strong);
+}
+.explore-reviews > .empty-state {
+  margin: var(--review-pad);
+}
+
+@media (max-width: 760px) {
+  .explore-reviews {
+    --review-pad: var(--space-4);
+  }
+  .explore-rating-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}
+
+/* -------------------------------------------------------------- dialogs */
+.explore-stars {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.explore-stars legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.explore-star-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.explore-star {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--line-strong);
+  font-size: 28px;
+  line-height: 1;
+  cursor: pointer;
+}
+.explore-star.on {
+  color: var(--coral);
+}
+.explore-star:hover {
+  background: var(--control);
+}
+.explore-star:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.explore-star-row .helper {
+  margin-left: var(--space-3);
+}
+/* ------------------------------------------------------------ responsive */
+@media (max-width: 1000px) {
+  .explore-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 760px) {
+  .explore-hero,
+  .explore-info,
+  .explore-restaurant {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+}
+@media (max-width: 560px) {
+  .explore-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,16 +1,24 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import { HOME_BY_ROLE } from "./roles";
+import Link from "next/link";
 import { api } from "@/shared/api/client";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
-import { Alert, Button, Input } from "@/shared/ui";
+import { Alert, Button } from "@/shared/ui";
+import { Field, PasswordField } from "@/components/ui/primitives";
+import { GoogleLoginButton } from "@/features/auth/google-login-button";
+import { HOME_BY_ROLE } from "./roles";
+import { landingAfterSignIn } from "@/features/preferences/survey-rules";
+
+const googleEnabled = Boolean(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
 
 export default function LoginForm() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [fields, setFields] = useState<Record<string, string[]>>({});
+  const [fields, setFields] = useState<Record<string, string>>({});
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (busy) return;
     const form = new FormData(event.currentTarget);
     setBusy(true);
     setError(null);
@@ -20,22 +28,44 @@ export default function LoginForm() {
         email: String(form.get("email") ?? "").trim(),
         password: String(form.get("password") ?? ""),
       });
-      window.location.assign(HOME_BY_ROLE[user.role]);
+      // Full navigation clears cached protected content after the session changes.
+      // F-17: a Traveler with no survey in reco answers it first.
+      window.location.assign(landingAfterSignIn(user, HOME_BY_ROLE[user.role]));
     } catch (caught) {
       setError(getErrorMessage(caught));
-      if (caught instanceof ApiError) setFields(caught.errors ?? {});
+      if (caught instanceof ApiError)
+        setFields(
+          Object.fromEntries(
+            Object.entries(caught.errors ?? {}).map(([key, messages]) => [
+              key.toLowerCase(),
+              messages.join(" "),
+            ]),
+          ),
+        );
       setBusy(false);
     }
   }
+
   return (
-    <form onSubmit={submit} className="space-y-5">
+    <div className="stack">
       {error && <Alert>{error}</Alert>}
-      <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <Input
-          id="email"
+      {googleEnabled && (
+        <>
+          <div className="login-social">
+            <GoogleLoginButton
+              role="TRAVELER"
+              onError={setError}
+              disabled={busy}
+            />
+          </div>
+          <div className="auth-divider" role="separator" aria-label="Hoặc">
+            <span>Hoặc</span>
+          </div>
+        </>
+      )}
+      <form onSubmit={submit} className="stack" noValidate aria-busy={busy}>
+        <Field
+          label="Email"
           name="email"
           type="email"
           placeholder="ban@example.com"
@@ -43,39 +73,26 @@ export default function LoginForm() {
           maxLength={255}
           required
           disabled={busy}
-          aria-invalid={!!fields.email}
-          aria-describedby={fields.email ? "email-error" : undefined}
+          error={fields.email}
         />
-        {fields.email && (
-          <p id="email-error" className="text-xs text-red-700">
-            {fields.email.join(" ")}
-          </p>
-        )}
-      </div>
-      <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium">
-          Mật khẩu
-        </label>
-        <Input
-          id="password"
+        <PasswordField
+          placeholder="Nhập mật khẩu"
+          label="Mật khẩu"
           name="password"
-          type="password"
-          placeholder="Nhập mật khẩu của bạn"
           autoComplete="current-password"
           required
           disabled={busy}
-          aria-invalid={!!fields.password}
-          aria-describedby={fields.password ? "password-error" : undefined}
+          error={fields.password}
         />
-        {fields.password && (
-          <p id="password-error" className="text-xs text-red-700">
-            {fields.password.join(" ")}
-          </p>
-        )}
-      </div>
-      <Button type="submit" disabled={busy} className="w-full">
-        {busy ? "Đang đăng nhập..." : "Đăng nhập →"}
-      </Button>
-    </form>
+        <div className="between">
+          <Link href="/forgot-password" className="text-link">
+            Quên mật khẩu?
+          </Link>
+        </div>
+        <Button type="submit" loading={busy} className="full-width">
+          Đăng nhập
+        </Button>
+      </form>
+    </div>
   );
 }

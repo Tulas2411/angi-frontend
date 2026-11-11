@@ -1,54 +1,85 @@
-# Setup and previews
+# Setup
 
-Use Node.js 24 and npm. Run commands inside `angi-frontend`.
+The short version lives in the [README](../README.md#getting-started). This page adds the details that do not fit there. For a complete Vietnamese walkthrough of the backend, local accounts and manual owner checks, see the [local run and test guide](local-run-and-test-guide.vi.md).
+
+Use Node.js 22 or newer (24 recommended) and npm. Run commands inside `angi-frontend`.
 
 ```powershell
 npm ci
 if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
 ```
 
-Set `SESSION_PASSWORD` to a random string of at least 32 characters. Preserve existing local configuration if `.env.local` already exists. Generate a key with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`.
+Set `SESSION_PASSWORD` to a random string of at least 32 characters (preserve an existing `.env.local`):
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
 
 ```powershell
 npm run dev
 ```
 
-Open <http://localhost:3000/demo> for Guest, Traveler, Owner, Moderator and Admin previews. <http://localhost:3000/dev/components> is the component gallery; <http://localhost:3000/dev/scenarios> holds reproducible business states. No backend is required for these previews. Mock data persists during client navigation within a workspace and resets on refresh/workspace remount.
+Open <http://localhost:3000/>. The public homepage uses local editorial content and needs no backend. Sign in, register and every other screen need the backend running at `API_BASE_URL`. `/demo/*` (role previews on demo fixtures) is served only with `NEXT_PUBLIC_ENABLE_DEMO=true`; `/dev/components` and `/dev/scenarios` in development, or with `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY=true`.
 
-| Variable                               | Default/example                    | Purpose                                                                                     |
-| -------------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------- |
-| `API_BASE_URL`                         | `http://localhost:5154/api/v1`     | Server-only existing backend URL                                                            |
-| `NEXT_PUBLIC_API_BASE_URL`             | `/api`                             | Same-origin browser API handlers                                                            |
-| `APP_URL`                              | `http://localhost:3000`            | Origin validation and app URL                                                               |
-| `SESSION_PASSWORD`                     | Private random key, ≥32 characters | Existing encrypted cookie                                                                   |
-| `NEXT_PUBLIC_DATA_MODE`                | `live`                             | Business adapter: live unavailable until implemented; `demo` for fixture-backed shells      |
-| `NEXT_PUBLIC_ENABLE_DEMO`              | `true`                             | Set `false` to disable the entire `/demo` route family                                      |
-| `NEXT_PUBLIC_ENABLE_COMPONENT_GALLERY` | `false`                            | Gallery/scenarios automatically enabled in development; production requires explicit `true` |
+## Environment variables
 
-Public environment variables are selected at build time. Restart development or rebuild after changing them. Production can disable previews and should keep the gallery flag false. Real `/login` uses the existing backend; role roots continue to require a real session even if business data mode is demo. Demo role selection does not authenticate a user.
+| Variable                          | Default/example                | Purpose                                                                            |
+| --------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------- |
+| `API_BASE_URL`                    | `http://127.0.0.1:5154/api/v1` | Server-only backend URL                                                            |
+| `NEXT_PUBLIC_API_BASE_URL`        | `/api`                         | Same-origin browser API handlers                                                   |
+| `APP_URL`                         | `http://localhost:3000`        | Origin validation for mutations; must match the browser origin                     |
+| `SESSION_PASSWORD`                | Private random key, ≥ 32 chars | Encrypts the session cookie                                                        |
+| `NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | Empty                          | Optional public `pk.*` token for the owner map picker and permanent address lookup |
+| `NEXT_PUBLIC_GOOGLE_CLIENT_ID`    | Empty                          | Optional; must match `Google:ClientId` in the backend. Empty → no Google button    |
+
+For production on Vercel (`BACKEND_PROXY_KEY`, `/demo` off by default, security headers) see [deploy](deploy.vi.md). Public variables are selected at build time; restart development or rebuild after changing them. Use IPv4 `127.0.0.1` in `API_BASE_URL` for the local Docker stack: Node.js may resolve `localhost` to `::1`, but the backend port is bound to IPv4 only, which produces `503 SERVICE_UNAVAILABLE` on login.
+
+## Maps
+
+Manual coordinates and browser geolocation always work. A public Mapbox token enables the map, POI search and address prefill; the account must support permanent geocoding (`permanent=true`) because the coordinates are stored on the restaurant. Restrict the token to your application origins. `./scripts/sync-mapbox-env.ps1` copies the backend's public token into `.env.local` (or `.env`) and refuses secret tokens. Automated suites never use a real token: they set a placeholder and intercept all Mapbox requests. See [manual Mapbox checks](mapbox-features.vi.md) and [address prefill](map-address-prefill.vi.md).
+
+Province and ward suggestions come from the public [Provinces Open API V2](https://provinces.open-api.vn/) (34 provinces/cities after the July 2025 merger) through `/api/locations/provinces[/{code}/wards]`; no key is needed. Owner forms use province → ward with no district input, and typed values stay editable when the catalogue is unavailable. See [the V2 address note](address-entry-v2.vi.md).
+
+## Checks
 
 ```powershell
-npm run build
-npm run typecheck
 npm run lint
+npm run typecheck      # run npm run build first on a fresh checkout
 npm test
+npm run build
+npm run format:check
+node scripts/verify-assets.mjs
 ```
 
-Build first on a fresh checkout so Next can generate route types. Browser validation:
+Browser suites (Chromium via Playwright):
 
 ```powershell
 $env:PLAYWRIGHT_BROWSERS_PATH='.cache/browsers'
 npx playwright install chromium
-npm run test:browser
+npm run test:browser   # homepage, auth, routing, account
+npm run test:owner     # owner workspace against a local API stub
+npm run test:map       # registration, profile, map picker, province/ward
 ```
 
-Playwright starts a dev server or reuses port 3000. Screenshot scripts expect that server to be running:
+Each suite snapshots the source and public assets into an ignored `.cache/owner-test-*` workspace, builds and serves it on port 3001 and starts an API stub on port 5164, with test-only auth. No private env file is copied and a running preview on port 3000 is untouched. Run the suites one at a time because they share ports. Set `ANGI_TEST_DEV=1` to serve the snapshot with `next dev` instead of building it, and `node scripts/owner-test-server.mjs --build` to only compile a snapshot. Keep `PLAYWRIGHT_BROWSERS_PATH` consistent with your Chromium installation.
 
-```powershell
-npm run test:visual
-npm run test:states
-node scripts/verify-assets.mjs
-npm run format:check
-```
+`npm run test:smoke` needs the running local backend, seeded local accounts, `ANGI_TEST_PASSWORD` and `SESSION_PASSWORD`. `npm run test:live` runs the opt-in suites in `tests/live` against the real local backend with your own accounts and `.env.integration`; see [live backend verification](live-backend-verification.md).
 
-Screenshots, manifests and browser reports go into ignored `artifacts/`, `playwright-report/` and `test-results/`. `PLAYWRIGHT_BASE_URL` can override the screenshot scripts' origin. `test:smoke` requires the running local backend and existing seeded accounts; see the main README.
+Screenshots, manifests and browser reports go into the ignored `artifacts/`, `playwright-report/` and `test-results/` directories.
+
+## Feature notes
+
+Detailed behavior, exact contracts and manual checks for each owner feature are in the Vietnamese notes: [business hours](business-hours.vi.md), [verification](restaurant-verification.vi.md), [status and history](verification-status.vi.md), [resubmission](verification-resubmission.vi.md), [menu](restaurant-menu.vi.md) and [menu approval](menu-approval.vi.md). The contract summary and routes are in the [scope inventory](scope-inventory.md).
+
+## Troubleshooting
+
+| Symptom                                         | Check                                                                                                                        |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `/login` reports a session key error            | Set `SESSION_PASSWORD` (≥ 32 characters) and restart                                                                         |
+| Login cannot connect                            | Backend running? `API_BASE_URL` includes `/api/v1` and uses `127.0.0.1`                                                      |
+| Mutation returns `FORBIDDEN`                    | Browser origin/port must match `APP_URL`; do not disable Origin validation                                                   |
+| A page I remember is a 404                      | Check the route table and `docs/scope-inventory.md`; earlier screens live under `/demo`, `/dishes`, `/restaurant/*` (legacy) |
+| No Google button on `/login`                    | `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is empty; set it and rebuild                                                                  |
+| Typecheck reports missing generated route types | Run `npm run build` before a standalone typecheck on a fresh checkout                                                        |
+| Browser tests cannot find Chromium              | Install it with the same `PLAYWRIGHT_BROWSERS_PATH` used by the test process                                                 |
+| Browser suite cannot bind port 3001 / 5164      | Another suite or preview is running; stop it and rerun                                                                       |

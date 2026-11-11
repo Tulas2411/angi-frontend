@@ -6,7 +6,6 @@ import {
   Avatar,
   Breadcrumbs,
   Choice,
-  Combobox,
   ConfirmDialog,
   DataTable,
   Dialog,
@@ -29,8 +28,10 @@ import {
   BlogCard,
 } from "@/components/domain/cards";
 import { MapPicker } from "@/components/domain/map-picker";
+import { ProvinceField } from "@/components/domain/province-field";
 import { usePlatform } from "./provider";
 import { effectivePermission } from "./rules";
+import { DateField } from "@/components/ui/date-time-fields";
 export function ComponentGallery() {
   const { data, mutate, notify, busy } = usePlatform(),
     [text, setText] = useState("Hà Nội"),
@@ -90,6 +91,7 @@ export function ComponentGallery() {
       <Card title="Trường nhập">
         <div className="grid-3">
           <Field
+            placeholder="Ví dụ: Nguyễn Văn An"
             label="Tên hiển thị"
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -97,13 +99,20 @@ export function ComponentGallery() {
             required
           />
           <Field
+            placeholder="ten@email.com"
             label="Email có lỗi"
             type="email"
             defaultValue="chua-hop-le"
             error="Nhập email hợp lệ."
           />
-          <Field label="Chỉ xem" value="Tuấn Nguyễn Minh" readOnly />
           <Field
+            placeholder="Chỉ xem"
+            label="Chỉ xem"
+            value="Tuấn Nguyễn Minh"
+            readOnly
+          />
+          <Field
+            placeholder="Ví dụ: 500000"
             label="Ngân sách"
             type="number"
             defaultValue={3500000}
@@ -111,14 +120,9 @@ export function ComponentGallery() {
             step={1000}
             helper="Đơn vị: đồng"
           />
-          <Field label="Ngày bắt đầu" type="date" defaultValue="2026-09-25" />
-          <Field label="Ngày kết thúc" type="date" defaultValue="2026-10-04" />
-          <Combobox
-            label="Điểm đến"
-            value={text}
-            onChange={setText}
-            options={["Hà Nội", "Đà Nẵng", "Đà Lạt"]}
-          />
+          <DateField label="Ngày bắt đầu" defaultValue="2026-09-25" />
+          <DateField label="Ngày kết thúc" defaultValue="2026-10-04" />
+          <ProvinceField label="Điểm đến" value={text} onChange={setText} />
           <SelectField
             label="Lựa chọn"
             value={tab}
@@ -128,9 +132,15 @@ export function ComponentGallery() {
               { value: "selected", label: "Đã chọn" },
             ]}
           />
-          <Field label="Không khả dụng" disabled value="Chờ API" />
+          <Field
+            placeholder="Không khả dụng"
+            label="Không khả dụng"
+            disabled
+            value="Chờ API"
+          />
         </div>
         <TextArea
+          placeholder="Nhập mô tả…"
           label="Mô tả"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -252,6 +262,7 @@ export function ComponentGallery() {
       </Card>
       <Card title="Bảng, bộ lọc và phân trang">
         <Field
+          placeholder="Nhập tên nhà hàng…"
           label="Tìm nhà hàng"
           value={text}
           onChange={(e) => {
@@ -373,7 +384,11 @@ export function ComponentGallery() {
           </Alert>
         ) : (
           <div className="stack">
-            <Field label="Tên hiển thị" defaultValue="Tuấn Nguyễn Minh" />
+            <Field
+              placeholder="Ví dụ: Nguyễn Văn An"
+              label="Tên hiển thị"
+              defaultValue="Tuấn Nguyễn Minh"
+            />
             <p>
               Nội dung cuộn trong hộp thoại; Escape đóng và trả tiêu điểm về nút
               mở.
@@ -398,7 +413,7 @@ export function ComponentGallery() {
         onClose={() => setDialog("")}
         onSelect={() => {
           setDialog("");
-          notify("Đã chọn tọa độ minh họa.");
+          notify("Đã chọn tọa độ trên bản đồ.");
         }}
       />
     </div>

@@ -35,8 +35,12 @@ yarn-error.log*
 !.env.example
 /playwright-report/
 /test-results/
+/test-results-*/
 /.cache/
 /artifacts/
+
+# private design notes, never pushed
+/.claude/ai-agent-chat-ui-spec.md
 
 # vercel
 .vercel
@@ -44,3 +48,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local logs of a backend started from this folder
+/.be.*.log

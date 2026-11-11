@@ -4,7 +4,12 @@ import type {
   ReactNode,
 } from "react";
 export type ButtonVariant =
-  "primary" | "secondary" | "tertiary" | "destructive" | "icon";
+  | "primary"
+  | "secondary"
+  | "tertiary"
+  | "destructive"
+  | "danger"
+  | "icon";
 export function Button({
   className = "",
   variant = "primary",
@@ -23,9 +28,14 @@ export function Button({
       type={type}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`button button-${variant} ${className}`}
+      className={`button button-${variant} ${className}`.trim()}
+      // Browser extensions (McAfee Web Advisor, password managers) inject
+      // `fdprocessedid` onto <button> before React hydrates, which triggers a
+      // hydration mismatch. suppressHydrationWarning only silences this
+      // element's own attributes; it never hides real content mismatches.
+      suppressHydrationWarning
     >
-      {loading && <span aria-hidden>⌛</span>}
+      {loading && <span className="spinner" aria-hidden />}
       {loading ? "Đang xử lý…" : children}
     </button>
   );
@@ -34,7 +44,15 @@ export function Input({
   className = "",
   ...props
 }: InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...props} className={`input ${className}`} />;
+  return (
+    <input
+      {...props}
+      className={`input ${className}`.trim()}
+      // See the note on Button: extensions may add `fdprocessedid` to
+      // <input> before hydration.
+      suppressHydrationWarning
+    />
+  );
 }
 export function Card({
   title,
@@ -46,7 +64,7 @@ export function Card({
   className?: string;
 }) {
   return (
-    <section className={`card ${className}`}>
+    <section className={`card ${className}`.trim()}>
       {title && <h2>{title}</h2>}
       {children}
     </section>
@@ -65,7 +83,7 @@ export function Alert({
       className={`alert alert-${tone}`}
     >
       <span className="alert-symbol" aria-hidden>
-        {tone === "error" ? "!" : tone === "success" ? "✓" : "ⓘ"}
+        {tone === "error" ? "!" : tone === "success" ? "✓" : "i"}
       </span>
       <div>{children}</div>
     </div>

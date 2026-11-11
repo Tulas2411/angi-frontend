@@ -1,0 +1,309 @@
+/* Admin workspace as a dashboard: a fixed sidebar and the page beside it; a drawer on phones. */
+.admin-shell {
+  --admin-sidebar: 264px;
+  min-height: 100dvh;
+  background: var(--canvas);
+}
+.admin-sidebar {
+  position: fixed;
+  z-index: 40;
+  inset: 0 auto 0 0;
+  display: flex;
+  flex-direction: column;
+  width: var(--admin-sidebar);
+  padding: var(--space-5) var(--space-3) var(--space-4);
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--card);
+  scrollbar-width: thin;
+}
+.admin-sidebar-brand {
+  display: grid;
+  gap: 2px;
+  padding: 0 var(--space-3) var(--space-5);
+}
+.admin-sidebar-brand > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.admin-sidebar-nav {
+  display: grid;
+  gap: var(--space-5);
+}
+.admin-sidebar-group > p {
+  margin: 0 0 var(--space-2);
+  padding: 0 var(--space-3);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.admin-sidebar-group ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.admin-sidebar-nav a,
+.admin-sidebar-bell,
+.admin-sidebar-account {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 40px;
+  padding: 8px var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease;
+}
+.admin-sidebar-nav a svg,
+.admin-sidebar-bell svg,
+.admin-sidebar-account > svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+  transition: color var(--duration) ease;
+}
+.admin-sidebar-nav a:hover,
+.admin-sidebar-bell:hover,
+.admin-sidebar-account:hover {
+  background: var(--control);
+}
+/* The open page: a dark pill, like the active chips elsewhere in ANGI. */
+.admin-sidebar-nav a[aria-current="page"],
+.admin-sidebar-bell[aria-current="page"] {
+  background: var(--ink);
+  color: var(--card);
+  font-weight: 600;
+}
+.admin-sidebar-nav a[aria-current="page"] svg,
+.admin-sidebar-bell[aria-current="page"] svg {
+  color: var(--coral);
+}
+.admin-sidebar-nav a:focus-visible,
+.admin-sidebar-bell:focus-visible,
+.admin-sidebar-account:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.admin-sidebar-foot {
+  display: grid;
+  gap: 2px;
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.admin-sidebar-badge {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.admin-sidebar-account .avatar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+}
+.admin-sidebar-account > span {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+.admin-sidebar-account strong,
+.admin-sidebar-account small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.admin-sidebar-account strong {
+  font-size: 13px;
+}
+.admin-sidebar-account small {
+  color: var(--muted);
+  font-size: 11px;
+}
+.admin-sidebar-logout {
+  padding: 0 var(--space-3);
+}
+.admin-sidebar-logout .logout-link {
+  width: 100%;
+  min-height: 36px;
+  text-align: left;
+}
+.admin-main {
+  min-width: 0;
+  margin-left: var(--admin-sidebar);
+  padding: var(--space-8) clamp(16px, 3vw, 48px) var(--space-12);
+}
+
+/* Phone and small tablet: a top bar with the menu button, the sidebar slides in over the page. */
+.admin-topbar,
+.admin-backdrop {
+  display: none;
+}
+@media (max-width: 960px) {
+  .admin-topbar {
+    position: sticky;
+    z-index: 30;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    min-height: 60px;
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--line);
+    background: var(--card);
+  }
+  .admin-menu-button {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--card);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .admin-menu-button svg {
+    width: 22px;
+    height: 22px;
+  }
+  .admin-menu-button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  .admin-sidebar {
+    width: min(300px, 86vw);
+    box-shadow: 0 24px 60px rgb(34 34 34 / 0.2);
+    transform: translateX(-102%);
+    visibility: hidden;
+    transition:
+      transform 300ms var(--ease-out),
+      visibility 0s 300ms;
+  }
+  .admin-shell[data-drawer] .admin-sidebar {
+    transform: none;
+    visibility: visible;
+    transition: transform 300ms var(--ease-out);
+  }
+  .admin-backdrop {
+    position: fixed;
+    z-index: 35;
+    inset: 0;
+    display: block;
+    border: 0;
+    background: rgb(34 34 34 / 0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 250ms ease;
+  }
+  .admin-shell[data-drawer] .admin-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .admin-main {
+    margin-left: 0;
+    padding: var(--space-6) var(--space-4) var(--space-12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar,
+  .admin-shell[data-drawer] .admin-sidebar,
+  .admin-backdrop,
+  .admin-sidebar-nav a {
+    transition: none;
+  }
+}
+
+/* Fixed bars of a page (the permission save bar) centre on the content, not the whole window. */
+@media (min-width: 961px) {
+  .admin-main .permission-savebar {
+    right: calc((100vw - var(--admin-sidebar)) / 2);
+    width: min(720px, calc(100vw - var(--admin-sidebar) - 48px));
+  }
+}
+
+/*
+ * The Admin pages in the Traveler style: no black outline and no offset grey shadow on cards,
+ * a soft shadow that lifts them instead (the tokens of src/styles/theme/tokens.css).
+ */
+.legacy-ui .admin-shell {
+  --shadow: 0 12px 36px rgb(34 34 34 / 0.06);
+  --shadow-card: 0 12px 36px rgb(34 34 34 / 0.06);
+}
+.legacy-ui .admin-shell .card {
+  border-color: transparent;
+  box-shadow:
+    0 1px 2px rgb(34 34 34 / 0.04),
+    0 12px 36px rgb(34 34 34 / 0.07);
+}
+.legacy-ui .admin-shell .card.control {
+  box-shadow: none;
+}
+.legacy-ui .admin-shell .alert {
+  border-color: transparent;
+}
+.legacy-ui .admin-shell .table-scroll {
+  border-color: var(--line);
+  box-shadow: none;
+}
+.legacy-ui .admin-shell .dialog {
+  border-color: transparent;
+}
+
+/*
+ * Type as on the Traveler pages. The older workspace sheet sets DM Sans, which lacks part of the
+ * Vietnamese diacritics (the browser then mixes in another font); Be Vietnam Pro has them all.
+ * Headings take the Traveler tracking and line height.
+ */
+.legacy-ui .admin-shell {
+  --font-body: "Be Vietnam Pro", "DM Sans", sans-serif;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.legacy-ui .admin-shell :is(h1, h2, h3, h4) {
+  letter-spacing: var(--tracking-heading);
+  line-height: 1.2;
+}
+
+/* DataTable rows with onRowClick: the whole row opens the item. */
+.legacy-ui .admin-shell tr.is-clickable {
+  cursor: pointer;
+  transition: background var(--duration) ease;
+}
+.legacy-ui .admin-shell tr.is-clickable:hover,
+.legacy-ui .admin-shell tr.is-clickable[aria-current="true"] {
+  background: var(--canvas);
+}
+.legacy-ui .admin-shell tr.is-clickable:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ink);
+}
+.legacy-ui .admin-shell tr.is-clickable[aria-current="true"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--ink);
+}
+@media (prefers-reduced-motion: reduce) {
+  .legacy-ui .admin-shell tr.is-clickable {
+    transition: none;
+  }
+}

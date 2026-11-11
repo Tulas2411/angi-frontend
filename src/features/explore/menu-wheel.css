@@ -1,0 +1,719 @@
+/*
+ * Menu wheel (angi-menu-wheel-prompt.md). ANGI has no wood colour, so the walnut is derived from
+ * --ink (#222) warmed towards brown; everything else uses the theme tokens. The wheel angle
+ * (--spin) is a registered property so it can ease, and every plate reads it to ride the arc.
+ */
+@property --spin {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --grain {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.menu-wheel {
+  --walnut-light: #6e4a35;
+  --walnut: #45291c;
+  --walnut-deep: #2a1710;
+  --turn-easing: cubic-bezier(0.65, 0, 0.25, 1.06);
+  position: relative;
+  container-type: inline-size;
+  display: grid;
+  gap: var(--space-6);
+  padding-bottom: var(--space-8);
+  /* No frame: the section sits on the page; the wheel still bleeds off-screen on phones. */
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* ------------------------------------------------------------ the stage */
+.menu-wheel-stage {
+  --wheel-w: min(56cqw, 760px);
+  --wheel-h: calc(var(--wheel-w) * 0.42);
+  --plate: calc(var(--wheel-w) * 0.41);
+  --radius: calc(var(--wheel-h) - var(--plate) * 0.1);
+  position: relative;
+  height: calc(var(--wheel-h) + var(--plate) * 0.5 + var(--space-4));
+  touch-action: pan-y;
+  cursor: grab;
+  user-select: none;
+  transition:
+    --spin var(--turn-ms, 650ms) var(--turn-easing),
+    --grain var(--turn-ms, 650ms) var(--turn-easing);
+}
+.menu-wheel-stage[data-dragging] {
+  cursor: grabbing;
+  transition: none;
+}
+
+/*
+ * The board and its shadow live in one layer a little larger than the board (--bleed), and that
+ * whole layer fades at the top. So the flat cut melts into the page on an eased curve, shadow
+ * included, with no straight edge or square corner left.
+ */
+.menu-wood {
+  --bleed: 72px;
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: calc(var(--wheel-w) + 2 * var(--bleed));
+  height: calc(var(--wheel-h) + var(--bleed));
+  translate: -50% 0;
+  pointer-events: none;
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgb(0 0 0 / 0.04) 6%,
+    rgb(0 0 0 / 0.16) 13%,
+    rgb(0 0 0 / 0.36) 20%,
+    rgb(0 0 0 / 0.6) 27%,
+    rgb(0 0 0 / 0.82) 34%,
+    rgb(0 0 0 / 0.95) 41%,
+    #000 48%
+  );
+  animation: menu-wood-in 600ms var(--ease-out) both;
+}
+.menu-wood::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--bleed);
+  right: var(--bleed);
+  height: var(--wheel-h);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  /*
+   * The board is a photographed walnut (walnut.webp, ambientCG Wood067, CC0, seamless), sliding
+   * sideways with the turn (--grain). Above it: a broad satin sheen from the upper left and the
+   * wood darkening towards the round edge, as on a turned, oiled board.
+   */
+  background:
+    radial-gradient(
+      ellipse 55% 75% at 28% 8%,
+      rgb(255 236 214 / 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 75% 110% at 50% 0%,
+      transparent 58%,
+      rgb(20 9 3 / 0.28) 100%
+    ),
+    linear-gradient(155deg, rgb(122 74 44 / 0.08), rgb(30 14 5 / 0.16)),
+    url("/assets/textures/walnut.webp") var(--grain) 0 / 720px auto repeat,
+    var(--walnut);
+  box-shadow:
+    inset 0 -22px 34px rgb(0 0 0 / 0.38),
+    0 26px 44px rgb(34 34 34 / 0.22);
+}
+
+/* -------------------------------------------------------------- plates */
+/* The wood of each plate (.menu-plate-face) is shared with the dish page: wood-plate.css. */
+.menu-plate {
+  --tilt: calc(var(--angle) + var(--spin));
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 50%;
+  width: var(--plate);
+  height: var(--plate);
+  margin: calc(var(--plate) / -2) 0 0 calc(var(--plate) / -2);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  /* Ride the arc; turn back 85% of the way so the food stays upright with a slight swing. */
+  transform: rotate(var(--tilt)) translateY(var(--radius))
+    rotate(calc(var(--tilt) * -0.85));
+  scale: 0.85;
+  opacity: 0;
+  filter: blur(1.5px);
+  cursor: inherit;
+  transition:
+    scale 300ms var(--ease-out),
+    opacity 220ms ease,
+    filter 300ms ease,
+    translate 300ms var(--ease-out);
+}
+.menu-plate[data-active] {
+  z-index: 3;
+  scale: 1;
+  opacity: 1;
+  filter: none;
+  cursor: pointer;
+}
+.menu-wheel-stage[data-intro] .menu-plate[data-active] {
+  animation: menu-plate-drop 700ms 350ms var(--ease-out) both;
+}
+.menu-wheel-stage[data-turning] .menu-plate {
+  opacity: 0.88;
+}
+.menu-wheel-stage[data-turning] .menu-plate[data-active] {
+  opacity: 1;
+}
+.menu-wheel-stage:not([data-turning]) .menu-plate[data-active]:hover {
+  translate: 0 -4px;
+  scale: 1.02;
+}
+.menu-plate:focus-visible {
+  outline: none;
+}
+.menu-plate:focus-visible .menu-plate-face {
+  box-shadow:
+    var(--focus-ring),
+    14px 20px 32px rgb(34 34 34 / 0.3);
+}
+.menu-wheel[data-detail] .menu-plate[data-active] {
+  opacity: 0;
+}
+
+.menu-plate[data-active]:hover .menu-plate-face {
+  box-shadow:
+    inset 0 0 0 1px rgb(255 222 190 / 0.16),
+    inset 0 0 0 3px rgb(20 9 3 / 0.35),
+    inset -6px -8px 16px rgb(10 4 1 / 0.45),
+    inset 5px 6px 10px rgb(255 228 200 / 0.18),
+    0 0 0 1px rgb(255 228 200 / 0.1),
+    20px 28px 44px rgb(10 4 1 / 0.4),
+    4px 6px 10px rgb(10 4 1 / 0.2);
+}
+/* ------------------------------------------------- side copy and hint */
+.menu-wheel-tagline,
+.menu-wheel-hint {
+  position: absolute;
+  top: calc(var(--radius) - var(--space-6));
+  margin: 0;
+  max-width: calc((100% - var(--plate)) / 2 - var(--space-8));
+  color: var(--ink);
+  animation: menu-fade-up 500ms 700ms var(--ease-out) both;
+}
+.menu-wheel-tagline {
+  left: var(--space-8);
+  font-family: var(--font-heading);
+  font-size: clamp(18px, 2cqw, 26px);
+  font-weight: 900;
+  line-height: 1.15;
+}
+.menu-wheel-tagline small,
+.menu-wheel-eyebrow,
+.menu-wheel-picker-head p {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.menu-wheel-tagline small {
+  display: block;
+  margin-top: var(--space-3);
+}
+.menu-wheel-hint {
+  right: var(--space-8);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 2px var(--space-3);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+}
+.menu-wheel-hint > span {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+/* -------------------------------------------------------- dish details */
+.menu-wheel-copy {
+  position: relative;
+  display: grid;
+  min-height: 210px;
+  padding-inline: var(--space-6);
+  transition:
+    opacity 250ms ease,
+    filter 250ms ease;
+}
+.menu-wheel[data-detail] .menu-wheel-copy,
+.menu-wheel[data-detail] .menu-wheel-picker {
+  opacity: 0;
+  filter: blur(4px);
+}
+.menu-wheel-info {
+  grid-area: 1 / 1;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--space-3);
+  text-align: center;
+}
+.menu-wheel-info > * {
+  margin: 0;
+  animation: menu-text-in 350ms 150ms var(--ease-out) both;
+}
+.menu-wheel-info > :nth-child(2) {
+  animation-delay: 190ms;
+}
+.menu-wheel-info > :nth-child(3) {
+  animation-delay: 230ms;
+}
+.menu-wheel-info > :nth-child(4) {
+  animation-delay: 270ms;
+}
+.menu-wheel-info > :nth-child(5) {
+  animation-delay: 310ms;
+}
+.menu-wheel-info.is-leaving {
+  pointer-events: none;
+}
+.menu-wheel-info.is-leaving > * {
+  animation: menu-text-out 200ms ease-in both;
+}
+.menu-wheel-info h3 {
+  max-width: 720px;
+  font-family: var(--font-heading);
+  font-size: clamp(34px, 5cqw, 60px);
+  font-weight: 900;
+  line-height: 1.02;
+  letter-spacing: var(--tracking-heading, -0.02em);
+  overflow-wrap: anywhere;
+}
+.menu-wheel-description {
+  display: -webkit-box;
+  max-width: 440px;
+  min-height: 3em;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.menu-wheel-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.menu-wheel-price,
+.menu-wheel-meta strong {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+}
+/* Heroicons' solid heart, as on the dish page's facts row. */
+.menu-wheel-likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.menu-wheel-likes svg {
+  width: 14px;
+  height: 14px;
+  color: var(--coral);
+}
+.menu-wheel-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--line-strong);
+}
+.menu-wheel-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+/* Odometer digits: a column of 0–9 that slides to the digit. */
+.menu-roll-digits {
+  display: inline-flex;
+  height: 1.2em;
+  overflow: hidden;
+  line-height: 1.2;
+  vertical-align: bottom;
+  font-variant-numeric: tabular-nums;
+}
+.menu-roll-column {
+  display: inline-flex;
+  flex-direction: column;
+  translate: 0 calc(var(--digit) * -1.2em);
+  transition: translate 400ms var(--ease-out);
+}
+
+/* ------------------------------------------------------------- picker */
+.menu-wheel-picker {
+  display: grid;
+  gap: var(--space-3);
+  padding-inline: var(--space-8);
+  transition:
+    opacity 250ms ease,
+    filter 250ms ease;
+}
+.menu-wheel-picker-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.menu-wheel-picker-head p {
+  margin: 0;
+}
+.menu-wheel-counter {
+  display: inline-flex;
+  gap: var(--space-2);
+  color: var(--ink);
+}
+.menu-wheel-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+}
+.menu-wheel-arrow {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--duration) ease,
+    color var(--duration) ease;
+}
+.menu-wheel-arrow:hover {
+  background: var(--ink);
+  color: var(--card);
+}
+.menu-wheel-cards {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 3 * var(--space-3)) / 4);
+  gap: var(--space-3);
+  margin: 0;
+  padding: 4px 2px 6px;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.menu-wheel-cards::-webkit-scrollbar {
+  display: none;
+}
+.menu-wheel-cards li {
+  scroll-snap-align: start;
+}
+.menu-wheel-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background 250ms ease,
+    border-color 250ms ease,
+    translate 250ms var(--ease-out),
+    box-shadow 250ms ease;
+}
+.menu-wheel-card:hover {
+  border-color: var(--line-strong);
+  translate: 0 -2px;
+}
+.menu-wheel-card[aria-pressed="true"] {
+  border-color: var(--line-strong);
+  background: var(--control);
+  translate: 0 -2px;
+  box-shadow: var(--shadow-card);
+}
+.menu-wheel-card .media {
+  flex: 0 0 48px;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+.menu-wheel-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.menu-wheel-card > span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.menu-wheel-card strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.menu-wheel-card small {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.menu-wheel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+}
+.menu-wheel-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--line-strong);
+  transition:
+    width 300ms var(--ease-out),
+    background 300ms ease;
+}
+.menu-wheel-dots span[data-active] {
+  width: 22px;
+  background: var(--ink);
+}
+
+/* --------------------------------------------------------- dish card */
+.dialog.menu-dish-dialog {
+  width: min(420px, 92vw);
+  border-radius: 28px;
+  transition: none;
+  transform-origin: center;
+}
+/*
+ * Closing morphs the card back into its plate (closeMs, 450ms). The backdrop fades during that
+ * flight instead of after it, so the dialog closes the moment the card lands.
+ */
+.dialog.menu-dish-dialog.is-closing::backdrop {
+  opacity: 0;
+  transition: opacity 450ms var(--ease-exit);
+}
+.menu-dish-dialog .dialog-heading h2 {
+  font-size: 30px;
+  line-height: 1.1;
+}
+.menu-dish-dialog .dialog-content {
+  display: grid;
+  gap: var(--space-4);
+}
+.menu-dish-dialog .menu-wheel-eyebrow,
+.menu-dish-description,
+.menu-dish-label {
+  margin: 0;
+}
+.menu-dish-description {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.menu-dish-label {
+  margin-bottom: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 600;
+}
+.menu-dish-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.menu-dish-chips li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 10px 6px 6px;
+  border-radius: 12px;
+  background: var(--control);
+  font-size: 13px;
+}
+.menu-dish-chips .media {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  overflow: hidden;
+  border-radius: 50%;
+}
+.menu-dish-chips img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.menu-dish-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.menu-dish-tiles p {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.menu-dish-tiles small,
+.menu-dish-footer small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.menu-dish-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.menu-dish-footer p {
+  display: grid;
+  margin: 0;
+}
+.menu-dish-footer strong {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+}
+.menu-dish-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ---------------------------------------------------------- keyframes */
+@keyframes menu-wood-in {
+  from {
+    translate: -50% -100%;
+  }
+}
+@keyframes menu-plate-drop {
+  0% {
+    translate: 0 -48px;
+    opacity: 0;
+  }
+  60% {
+    translate: 0 6px;
+    opacity: 1;
+  }
+  80% {
+    translate: 0 -2px;
+  }
+  100% {
+    translate: 0 0;
+  }
+}
+@keyframes menu-text-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+}
+@keyframes menu-text-out {
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+    filter: blur(4px);
+  }
+}
+@keyframes menu-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* --------------------------------------------------------- responsive */
+@container (max-width: 1024px) {
+  .menu-wheel-stage {
+    --wheel-w: 70cqw;
+  }
+  .menu-wheel-cards {
+    grid-auto-columns: calc((100% - 2 * var(--space-3)) / 3);
+  }
+}
+@container (max-width: 640px) {
+  .menu-wheel-stage {
+    --wheel-w: 112cqw;
+    --wheel-h: 46cqw;
+    --plate: 56cqw;
+  }
+  .menu-wheel-tagline,
+  .menu-wheel-hint {
+    display: none;
+  }
+  .menu-wheel-picker {
+    padding-inline: var(--space-4);
+  }
+  .menu-wheel-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .menu-wheel-arrow {
+    display: none;
+  }
+  .menu-wheel-cards {
+    grid-auto-columns: calc((100% - 2 * var(--space-3)) / 2.3);
+  }
+}
+@media (max-width: 640px) {
+  .dialog.menu-dish-dialog {
+    width: 100%;
+    max-height: 88dvh;
+    margin: auto 0 0;
+    border-radius: 28px 28px 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .menu-wheel-stage,
+  .menu-plate,
+  .menu-roll-column,
+  .menu-wheel-card,
+  .menu-wheel-dots span {
+    transition: none;
+  }
+  .menu-wood,
+  .menu-wheel-stage[data-intro] .menu-plate[data-active],
+  .menu-wheel-tagline,
+  .menu-wheel-hint,
+  .menu-wheel-info > *,
+  .menu-wheel-info.is-leaving > * {
+    animation: none;
+  }
+  .menu-wheel-info.is-leaving {
+    display: none;
+  }
+}

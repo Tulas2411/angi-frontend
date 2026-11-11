@@ -1,0 +1,235 @@
+/* Signed-in header actions: account pill, round icon buttons and the right-side account drawer. */
+.account-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 220px;
+  min-height: 40px;
+  padding: 4px 16px 4px 4px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  transition: background var(--duration-fast) ease;
+}
+.account-pill:hover {
+  background: var(--control-hover);
+}
+.account-pill:focus-visible,
+.header-icon-button:focus-visible,
+.account-drawer-link:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.site-actions .account-pill .avatar {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}
+.account-pill-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Same 40px round target as the notification bell. */
+.header-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background var(--duration-fast) ease;
+}
+.header-icon-button:hover,
+.header-icon-button[aria-expanded="true"] {
+  background: var(--control);
+}
+.header-icon-button > svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* The dialog box is the full-height drawer; its ::backdrop dims the page. */
+.account-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(360px, 100vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--canvas);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  translate: 100% 0;
+  /* Closing slides out quickly and accelerating; opening glides in on --ease-out. */
+  transition:
+    translate var(--duration-exit) var(--ease-exit),
+    overlay var(--duration-exit) allow-discrete,
+    display var(--duration-exit) allow-discrete;
+}
+.account-drawer[open] {
+  translate: 0 0;
+  transition:
+    translate var(--duration) var(--ease-out),
+    overlay var(--duration) allow-discrete,
+    display var(--duration) allow-discrete;
+}
+@starting-style {
+  .account-drawer[open] {
+    translate: 100% 0;
+  }
+}
+.account-drawer::backdrop {
+  background: rgb(23 20 18 / 0);
+  transition:
+    background var(--duration-exit) var(--ease-exit),
+    overlay var(--duration-exit) allow-discrete,
+    display var(--duration-exit) allow-discrete;
+}
+.account-drawer[open]::backdrop {
+  background: rgb(23 20 18 / 0.28);
+  transition:
+    background var(--duration) ease,
+    overlay var(--duration) allow-discrete,
+    display var(--duration) allow-discrete;
+}
+@starting-style {
+  .account-drawer[open]::backdrop {
+    background: rgb(23 20 18 / 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .account-drawer,
+  .account-drawer[open],
+  .account-drawer::backdrop,
+  .account-drawer[open]::backdrop {
+    transition: none;
+  }
+}
+.account-drawer-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-6);
+  overflow-y: auto;
+}
+.account-drawer-top {
+  display: flex;
+  justify-content: flex-end;
+}
+.account-drawer-identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.account-drawer-identity > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.account-drawer-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-block: var(--space-3);
+}
+.account-drawer-group {
+  margin: var(--space-3) 0 var(--space-1);
+  padding: var(--space-3) var(--space-3) 0;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.account-drawer-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  transition: background var(--duration-fast) ease;
+}
+.account-drawer-link:hover,
+.account-drawer-link[aria-current="page"] {
+  background: var(--control);
+}
+.account-drawer-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+.account-drawer-icon > svg {
+  width: 20px;
+  height: 20px;
+}
+/* Logout sits at the bottom as a full-width pill, apart from the navigation. */
+.account-drawer-footer {
+  margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.account-drawer-logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 48px;
+  padding: 12px var(--space-4);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--duration-fast) ease;
+}
+.account-drawer-logout:hover {
+  background: var(--control-hover);
+}
+.account-drawer-logout:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.account-drawer-logout > svg {
+  width: 20px;
+  height: 20px;
+}
+/* On phones the pill keeps only the avatar so the header stays on one line. */
+@media (max-width: 700px) {
+  .account-pill {
+    padding: 4px;
+  }
+  .account-pill-name {
+    display: none;
+  }
+}
+/* The smallest phones drop the home shortcut (the logo and the drawer still lead home). */
+@media (max-width: 480px) {
+  .site-actions:has(.account-pill) {
+    gap: 4px;
+  }
+  .header-home {
+    display: none;
+  }
+}

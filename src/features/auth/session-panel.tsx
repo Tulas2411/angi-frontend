@@ -23,22 +23,24 @@ export function LogoutButton() {
     }
   }
   return (
-    <div>
-      <Button
-        variant="secondary"
+    <>
+      <button
         type="button"
         onClick={logout}
         disabled={busy}
-        className="px-4 py-2"
+        className="logout-link"
+        // Browser extensions add `fdprocessedid` to <button> before hydration,
+        // which causes a hydration mismatch on the account menu.
+        suppressHydrationWarning
       >
-        {busy ? "Đang đăng xuất..." : "Đăng xuất"}
-      </Button>
+        {busy ? "Đang đăng xuất…" : "Đăng xuất"}
+      </button>
       {error && (
-        <div className="mt-2">
-          <Alert>{error}</Alert>
-        </div>
+        <p className="helper field-error" role="alert">
+          {error}
+        </p>
       )}
-    </div>
+    </>
   );
 }
 export default function SessionPanel({
@@ -109,8 +111,11 @@ export default function SessionPanel({
           </div>
           {user.needsPreferenceSurvey === true && (
             <p className="rounded-xl bg-orange-50 p-3 text-sm leading-6 text-orange-900">
-              Phần khảo sát khẩu vị sẽ sớm được mở để ANGI gợi ý món ăn phù hợp
-              hơn.
+              Bạn chưa làm khảo sát khẩu vị.{" "}
+              <a href="/survey" className="font-semibold underline">
+                Trả lời vài câu
+              </a>{" "}
+              để ANGI gợi ý món ăn hợp với bạn hơn.
             </p>
           )}
         </>

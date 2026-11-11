@@ -1,0 +1,953 @@
+/* The map's bubble opens a popup and the sidebar button opens a full panel beside the map; the map stays live with both. */
+.roadmap-agent-trigger.button {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 44px;
+  padding-inline: var(--space-3);
+  font-size: var(--text-sm);
+}
+.roadmap-agent-panel {
+  --agent-gutter: var(--space-4);
+  position: fixed;
+  z-index: 60;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  color: var(--ink);
+  opacity: 0;
+  transform: translateY(16px);
+  visibility: hidden;
+  pointer-events: none;
+  /* Closing is shorter and accelerating, then hides; opening glides in (below). */
+  transition:
+    opacity 160ms var(--ease-exit),
+    transform 160ms var(--ease-exit),
+    visibility 0s 160ms;
+  font-family: "DM Sans", var(--font-body);
+}
+.roadmap-agent-panel[data-mode="popup"] {
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: min(720px, calc(100vw - 2 * var(--space-4)));
+  height: min(840px, calc(100dvh - var(--header-height) - 2 * var(--space-4)));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 12px 40px rgb(34 34 34 / 0.12);
+  overflow: hidden;
+}
+/*
+ * Everything left of the map, site header and sidebar included, at full height. Like the page
+ * (roadmap-detail.css), the map keeps the right half on wide screens, so the panel ends mid-screen.
+ */
+.roadmap-agent-panel[data-mode="expanded"] {
+  --agent-gutter: clamp(16px, 2vw, 32px);
+  inset: 0 auto 0 0;
+  width: calc(100% - var(--roadmap-map-width, 50%));
+  height: 100dvh;
+  box-shadow: var(--shadow-pop);
+}
+/* 900–1200px: the notebook and the map keep their 1.16 : 1 split, and so does the panel. */
+@media (max-width: 1200px) {
+  .roadmap-agent-panel[data-mode="expanded"] {
+    width: calc(
+      var(--roadmap-sidebar-width) + (100% - var(--roadmap-sidebar-width)) *
+        0.537037
+    );
+  }
+}
+.roadmap-agent-panel[data-open="true"] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 240ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+.agent-glyph {
+  flex-shrink: 0;
+}
+
+.agent-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  min-height: 56px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--agent-gutter);
+  border-bottom: 1px solid var(--line);
+}
+.agent-header-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-1);
+}
+.agent-header-actions .button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  box-shadow: none;
+}
+.agent-header-actions .button:not(:disabled):hover {
+  background: var(--control);
+  color: var(--ink);
+}
+
+/* The conversation and, over it, the draft sheet that slides up from the composer. */
+.agent-body {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  /*
+   * hidden still lets focus or scrollIntoView scroll this box, which lifted the conversation
+   * and the sheet off their place: the panel resets it on scroll (onScroll) and focuses with
+   * preventScroll. (overflow: clip would forbid it, but broke clicks inside the conversation.)
+   */
+  overflow: hidden;
+}
+.agent-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-4) var(--agent-gutter);
+  overflow-wrap: anywhere;
+}
+.agent-disclaimer {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.agent-welcome h3 {
+  margin-bottom: var(--space-4);
+  font-size: 22px;
+  line-height: 1.3;
+}
+.agent-prompts {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+.agent-prompts .button {
+  justify-content: flex-start;
+  min-height: 38px;
+  padding: var(--space-2) var(--space-4);
+  background: var(--canvas);
+  color: var(--ink);
+  font-weight: 400;
+  text-align: left;
+}
+.agent-prompts .button:not(:disabled):hover {
+  background: var(--control);
+}
+.agent-prompts .agent-glyph {
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+/* Both sides read left to right as avatar and text, without bubbles. */
+.agent-transcript {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+.agent-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  font-size: var(--text-base);
+  line-height: 24px;
+}
+.agent-message > span[aria-hidden]:not(.agent-mark) {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.avatar.agent-avatar,
+.agent-avatar {
+  width: 32px;
+  height: 32px;
+  font-size: var(--text-sm);
+}
+.agent-mark {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--coral), #7446b8);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+/* The first line sits level with the 32px avatar. */
+.agent-message-body {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+}
+.agent-message-body p {
+  margin: 0;
+}
+.agent-message-user .agent-message-body p {
+  white-space: pre-wrap;
+}
+.agent-message-body ul,
+.agent-message-body ol {
+  margin: 0;
+  padding-inline-start: var(--space-5);
+}
+.agent-message-body ul {
+  list-style: disc;
+}
+.agent-message-body ol {
+  list-style: decimal;
+}
+.agent-message-body li + li {
+  margin-top: var(--space-1);
+}
+.agent-reply-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  text-decoration: underline dotted var(--coral);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.agent-reply-link:hover {
+  color: var(--coral);
+}
+.agent-reply-link:focus-visible {
+  outline: none;
+  border-radius: 4px;
+  box-shadow: var(--focus-ring);
+}
+/* A failure reads as part of the conversation, not as a separate notice with controls. */
+.agent-message-error .agent-message-body > p:not(.sr-only) {
+  color: var(--ink);
+  border-inline-start: 2px solid var(--coral);
+  padding-inline-start: var(--space-3);
+}
+.agent-message-error .button {
+  justify-self: start;
+  min-height: 32px;
+  font-size: var(--text-xs);
+}
+.agent-thinking {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+}
+.agent-thinking > span[aria-hidden] {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: agent-dot 1.2s ease-in-out infinite;
+}
+.agent-thinking > span[aria-hidden]:nth-child(3) {
+  animation-delay: 0.15s;
+}
+.agent-thinking > span[aria-hidden]:nth-child(4) {
+  animation-delay: 0.3s;
+}
+@keyframes agent-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: none;
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+.agent-composer-area {
+  flex-shrink: 0;
+  display: grid;
+  gap: var(--space-2);
+  padding: 0 var(--agent-gutter) var(--space-3);
+}
+.agent-quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.agent-quick-replies .button {
+  min-height: 36px;
+  font-size: var(--text-sm);
+}
+.agent-composer {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  background: var(--card);
+  box-shadow: 0 4px 18px rgb(34 34 34 / 0.1);
+}
+.agent-composer:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: 0 6px 22px rgb(34 34 34 / 0.16);
+}
+.agent-composer .field {
+  gap: 0;
+}
+.agent-composer .field > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+/* The card is the visible field, so the textarea itself has no surface of its own. */
+.agent-composer textarea,
+.agent-composer textarea:hover,
+.agent-composer textarea:focus {
+  display: block;
+  width: 100%;
+  min-height: 24px;
+  max-height: 160px;
+  padding: 0 2px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  font: inherit;
+  font-size: var(--text-base);
+  line-height: 1.5;
+  resize: none;
+}
+.agent-composer .helper {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+}
+/* The field's character count only appears beside an error, when it matters. */
+.agent-composer .field > .helper:not(:has(.field-error)) {
+  display: none;
+}
+.agent-composer-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.agent-composer-budget {
+  min-width: 0;
+  overflow: hidden;
+  padding: 2px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.agent-composer-budget:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
+}
+.agent-composer-budget:disabled {
+  cursor: default;
+}
+.agent-composer-budget:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.agent-composer-row .button {
+  flex-shrink: 0;
+  width: 34px;
+  min-width: 34px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0;
+  border-radius: 50%;
+}
+.agent-composer-row .agent-send.button {
+  margin-inline-start: auto;
+  border: 0;
+  background: var(--ink);
+  color: var(--card);
+  opacity: 1;
+}
+.agent-composer-row .agent-send.button[data-state="empty"] {
+  background: var(--line-strong);
+}
+.agent-send-glyph {
+  display: grid;
+  animation: agent-glyph-in 150ms ease-out;
+}
+@keyframes agent-glyph-in {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+.agent-footnote {
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+/* The draft uses the notebook's own meal heading, number badge and price, lined up with the reply above it. */
+.agent-proposal {
+  display: grid;
+  gap: var(--space-3);
+  margin-inline-start: 46px;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+}
+.agent-proposal h3 {
+  font-size: 20px;
+  line-height: 1.25;
+}
+.agent-proposal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.agent-proposal-status {
+  background: var(--control);
+  border-radius: var(--radius-pill);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+.agent-proposal-status[data-status="ready"] {
+  background: rgb(255 94 98 / 0.16);
+}
+.agent-proposal-total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+}
+.agent-proposal-total strong {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.agent-proposal-total .helper:last-child:not(:first-child) {
+  margin-inline-start: auto;
+}
+
+.agent-proposal-days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.agent-proposal-days button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+.agent-proposal-days button::before,
+.agent-day-title::before {
+  content: "";
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--map-day-color);
+}
+.agent-proposal-days button[aria-pressed="true"] {
+  border-color: var(--map-day-color);
+  background: var(--map-day-color);
+  color: #fff;
+  font-weight: 600;
+}
+.agent-proposal-days button[aria-pressed="true"]::before {
+  background: #fff;
+}
+.agent-proposal-days button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.agent-day {
+  display: grid;
+  gap: var(--space-1);
+}
+.agent-day-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1.3;
+}
+.agent-leg {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  padding-inline-start: var(--space-1);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.agent-leg strong {
+  color: var(--ink);
+}
+.roadmap-items > li > .agent-leg {
+  margin-bottom: var(--space-2);
+}
+.agent-proposal-items {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.agent-meal {
+  display: grid;
+  gap: var(--space-2);
+}
+.agent-proposal-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--ink);
+}
+/* Follows the pin chosen on the map. */
+.agent-proposal-item[data-selected="true"] {
+  border-color: var(--map-day-color);
+  background: color-mix(in srgb, var(--map-day-color) 8%, var(--card));
+}
+.agent-proposal-item-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+.agent-proposal-item-name .roadmap-item-order {
+  flex-shrink: 0;
+  margin-right: var(--space-1);
+}
+.agent-proposal-intro,
+.agent-proposal-reason {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.agent-proposal-intro {
+  margin-top: var(--space-2);
+}
+.agent-proposal-reason {
+  color: var(--muted);
+}
+.agent-day-summary {
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-sm);
+  background: var(--canvas);
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+.agent-proposal-new {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: rgb(255 94 98 / 0.16);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+/* Above 900px the map stays beside the panel, so there is nothing to reveal. */
+.agent-map-toggle.button {
+  display: none;
+}
+.agent-map-back.button {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  bottom: var(--space-5);
+  transform: translateX(-50%);
+  box-shadow: var(--shadow-pop);
+}
+/* ------------------------------------------------------------ draft dock */
+/*
+ * The draft card sits on the composer's top edge. Open, the sheet rises from that edge over the
+ * conversation (the card stays below it as its handle) and the card's chevron turns down.
+ */
+/*
+ * Inside .agent-body (which clips), at its foot: the gutter on both sides, and 12px below so the
+ * card's shadow is not cut off before the composer.
+ */
+.agent-draft-tab {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--space-3);
+  width: auto;
+  margin: var(--space-2) var(--agent-gutter) var(--space-3);
+  min-height: 56px;
+  padding: 8px 12px 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 4px 14px rgb(34 34 34 / 0.08);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    border-radius var(--duration-fast) ease;
+}
+.agent-draft-tab:hover {
+  border-color: var(--line-strong);
+}
+.agent-draft-tab:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* Open, the card steps aside: the sheet's title row has the collapse button. */
+.agent-draft-tab[data-open="true"] {
+  display: none;
+}
+.agent-draft-tab-icon {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  color: var(--coral);
+}
+.agent-draft-tab-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+.agent-draft-tab-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.agent-draft-tab-new {
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--coral);
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.agent-draft-tab-text strong {
+  overflow: hidden;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agent-draft-tab-meta {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.agent-draft-tab-status {
+  flex-shrink: 0;
+  padding: 2px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--control);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.agent-draft-tab-status[data-status="ready"] {
+  background: rgb(255 94 98 / 0.16);
+}
+.agent-draft-tab-status[data-status="committed"] {
+  background: var(--success-bg);
+  color: var(--success-ink);
+}
+.agent-draft-tab-chevron {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--muted);
+  transition: transform var(--duration) var(--ease-out);
+}
+
+.agent-draft-sheet {
+  position: absolute;
+  z-index: 2;
+  inset: var(--space-2) var(--agent-gutter);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: 0 -10px 30px rgb(34 34 34 / 0.12);
+  transform: translateY(100%);
+  visibility: hidden;
+  transition:
+    transform 220ms var(--ease-exit),
+    visibility 0s 220ms;
+}
+.agent-draft-sheet[data-open="true"] {
+  transform: none;
+  visibility: visible;
+  transition:
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    visibility 0s;
+}
+.agent-draft-sheet-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+}
+/* Under the open sheet the conversation fades out, so no line of it shows in the 8px gap above. */
+.agent-scroll {
+  transition: opacity 200ms ease;
+}
+.agent-body:has(> .agent-draft-sheet[data-open="true"]) > .agent-scroll {
+  opacity: 0;
+}
+/*
+ * The draft's header (title, status, collapse, total, day chips) sticks to the top of the sheet's
+ * scroller. It reaches over the scroller's padding so nothing shows above it, and a line marks
+ * where the day scrolls under it. A dish brought into view (a pin picked on the map) keeps clear
+ * of it (scroll-margin-top).
+ */
+.agent-proposal-top {
+  display: grid;
+  gap: var(--space-3);
+}
+.agent-draft-sheet .agent-proposal-top {
+  position: sticky;
+  z-index: 1;
+  top: calc(-1 * var(--space-4));
+  margin: calc(-1 * var(--space-4)) calc(-1 * var(--space-4)) 0;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.agent-draft-sheet .agent-proposal-item {
+  scroll-margin-top: 170px;
+}
+/* The title row of the open draft: name, status, then the collapse button at the end. */
+.agent-draft-sheet .agent-proposal-head {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.agent-draft-sheet .agent-proposal-head h3 {
+  flex: 1;
+  min-width: 0;
+}
+.agent-draft-sheet .agent-proposal-status {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.agent-draft-collapse {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.agent-draft-collapse:hover {
+  background: var(--control);
+  color: var(--ink);
+}
+.agent-draft-collapse:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.agent-draft-collapse svg {
+  width: 20px;
+  height: 20px;
+}
+/* Inside the sheet the draft needs no frame or reply indent of its own. */
+.agent-draft-sheet .agent-proposal {
+  margin-inline-start: 0;
+  padding: 0;
+  border: 0;
+}
+.agent-draft-actions {
+  flex-shrink: 0;
+  display: grid;
+  gap: var(--space-2);
+  /* Room under the button for its shadow: the body clips what leaves the sheet. */
+  padding: var(--space-3) var(--space-4) 20px;
+  border-top: 1px solid var(--line);
+  background: var(--card);
+}
+.agent-draft-actions .helper,
+.agent-draft-hint {
+  margin: 0;
+  text-align: center;
+}
+.agent-draft-hint {
+  margin-top: var(--space-4);
+}
+/* The date field (only without a start date) and the button share one row. */
+.agent-draft-confirm-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: end;
+  gap: var(--space-3);
+}
+.agent-draft-confirm-row[data-with-date] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.agent-draft-confirm-row .field {
+  gap: 4px;
+}
+.agent-draft-confirm-row .field > p:empty {
+  display: none;
+}
+/* The same coral-to-violet gradient as the "Trợ lý món ăn" openers (--agent-gradient). */
+.agent-draft-confirm.button {
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: var(
+    --agent-gradient,
+    linear-gradient(90deg, var(--coral), #c4579a 55%, #8a4fd0)
+  );
+  color: #fff;
+  /* Kept close under the button: the sheet clips anything lower than its 20px bottom padding. */
+  box-shadow: 0 2px 10px rgb(138 79 208 / 0.26);
+}
+.agent-draft-confirm-row[data-with-date] .agent-draft-confirm.button {
+  width: auto;
+  padding-inline: var(--space-6);
+}
+.agent-draft-confirm.button:not(:disabled):hover {
+  background: var(
+    --agent-gradient,
+    linear-gradient(90deg, var(--coral), #c4579a 55%, #8a4fd0)
+  );
+  filter: brightness(1.06) saturate(1.05);
+  box-shadow: 0 4px 14px rgb(138 79 208 / 0.32);
+}
+.agent-draft-confirm.button:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px var(--card),
+    0 0 0 6px rgb(138 79 208 / 0.55);
+}
+.agent-draft-confirm.button:disabled {
+  box-shadow: none;
+}
+@media (max-width: 480px) {
+  .agent-draft-confirm-row[data-with-date] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agent-draft-confirm-row[data-with-date] .agent-draft-confirm.button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 900px) {
+  .roadmap-agent-panel[data-mode="expanded"] {
+    width: 100%;
+  }
+  .roadmap-detail-nav > .roadmap-agent-trigger {
+    width: auto;
+    align-self: flex-start;
+  }
+  .agent-map-toggle.button {
+    display: inline-flex;
+    justify-self: start;
+  }
+  .roadmap-agent-panel[data-map-view="true"] {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+@media (max-width: 480px) {
+  .agent-proposal {
+    margin-inline-start: 0;
+  }
+  .agent-welcome h3 {
+    font-size: 20px;
+  }
+  .agent-composer {
+    padding: var(--space-3);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-scroll,
+  .roadmap-agent-panel,
+  .agent-draft-sheet,
+  .agent-draft-sheet[data-open="true"],
+  .agent-draft-tab-chevron {
+    transition: none;
+  }
+  .agent-thinking > span[aria-hidden] {
+    animation: none;
+  }
+  .agent-send-glyph {
+    animation: none;
+  }
+}

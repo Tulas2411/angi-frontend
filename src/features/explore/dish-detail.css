@@ -1,0 +1,448 @@
+/*
+ * F-13 dish detail (redesigned 2026-11-07 to the owner's mock-up, measured on a 1218px page).
+ * Left (356px of the page, centred content): the dish on a round wooden plate, then its name,
+ * description, price, form, likes and tags. Right (from 510px): the restaurant that sells it
+ * (at most 655px) and its menu, whose row reaches past the page edge when the window has room.
+ * Uploads are small and of any shape, so the photo is cropped to the plate's circle.
+ */
+/*
+ * The page is the size container of the plate, as the restaurant page's menu wheel section is of
+ * its own: both are as wide as the page, so the two plates come out the same size.
+ */
+.dish-page {
+  container-type: inline-size;
+}
+.dish-page-hero {
+  /* How far the menu row may run past the page's right edge (108px in the mock-up). */
+  --dish-reach: clamp(
+    0px,
+    (100vw - var(--page-width)) / 2 - var(--gutter) - 8px,
+    108px
+  );
+  display: grid;
+  grid-template-columns: minmax(0, 356fr) minmax(0, 708fr);
+  column-gap: clamp(48px, 9vw, 154px);
+  row-gap: var(--space-12);
+  align-items: start;
+  padding-top: 30px;
+}
+.dish-page-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding-top: 26px;
+  text-align: center;
+}
+.dish-page-side {
+  display: grid;
+  gap: 36px;
+  min-width: 0;
+}
+.dish-page-gallery {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  margin-bottom: 52px;
+}
+
+/*
+ * The plate is the restaurant menu wheel's walnut plate (wood-plate.css): .dish-plate only sets
+ * its size; the photo in its well is the zoom button.
+ */
+/*
+ * Exactly as large as the menu wheel's plate (menu-wheel.css: --plate = 0.41 × --wheel-w, the
+ * wheel being min(56cqw, 760px), 70cqw up to 1024px and the plate 56cqw up to 640px): 281px on a
+ * 1224px page.
+ */
+.dish-plate {
+  position: relative;
+  width: calc(min(56cqw, 760px) * 0.41);
+  aspect-ratio: 1 / 1;
+  margin: 0;
+}
+@container (max-width: 1024px) {
+  .dish-plate {
+    width: calc(70cqw * 0.41);
+  }
+}
+@container (max-width: 640px) {
+  .dish-plate {
+    width: 56cqw;
+  }
+}
+.dish-plate-food {
+  padding: 0;
+  border: 0;
+  background: var(--control);
+  cursor: zoom-in;
+}
+.dish-plate-food img {
+  display: block;
+  transition: transform var(--duration-slow) var(--ease-out);
+}
+.dish-plate-food:hover img {
+  transform: scale(1.04);
+}
+.dish-plate-food:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.dish-plate-empty .media-fallback > span:last-child {
+  display: none;
+}
+.dish-plate-out .dish-plate-food img {
+  filter: grayscale(0.85);
+  opacity: 0.75;
+}
+.dish-plate-flag {
+  position: absolute;
+  bottom: 4%;
+  left: 50%;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+/*
+ * The zoomed photo alone on the dimmed backdrop: no white card, no heading line. The dialog is as
+ * large as the picture, the title stays for screen readers only and the close button floats on
+ * the photo's top-right corner. A click on the backdrop still closes it.
+ */
+.dialog.dish-page-zoom {
+  width: fit-content;
+  max-width: calc(100vw - 32px);
+  max-height: none;
+  overflow: visible;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  box-shadow: none;
+}
+.dish-page-zoom .dialog-heading {
+  position: absolute;
+  z-index: 1;
+  top: 12px;
+  right: 12px;
+  padding: 0;
+  border-bottom: 0;
+}
+.dish-page-zoom .dialog-heading h2 {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.dish-page-zoom .dialog-heading .button {
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 9px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+.dish-page-zoom .dialog-heading .button:hover {
+  background: var(--control);
+}
+.dish-page-zoom .dialog-content {
+  padding: 0;
+  overflow: visible;
+}
+.dish-page-zoom-photo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: calc(100vw - 32px);
+  max-height: 88dvh;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+}
+
+/* "– CHI TIẾT · HƯƠNG VỊ & ĐẶC ĐIỂM –" */
+.dish-page-kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.dish-page-kicker::before,
+.dish-page-kicker::after {
+  content: "";
+  width: 6px;
+  height: 1px;
+  background: currentColor;
+}
+.dish-page-intro h1 {
+  /* Wider than the column, spilling over both sides evenly. */
+  --wide: min(460px, calc(100vw - 2 * var(--gutter)));
+  justify-self: start;
+  width: var(--wide);
+  margin: 0 calc((100% - var(--wide)) / 2);
+  font-size: clamp(38px, 3.6vw, 56px);
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+/*
+ * Four lines at most (4 × 23px). A longer text fades out over its last line and "Xem thêm" below
+ * opens it. A little wider than the column (430px, centred over it), as in the mock-up.
+ */
+.dish-page-description {
+  --wide: min(430px, calc(100vw - 2 * var(--gutter)));
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  justify-self: start;
+  width: var(--wide);
+  margin: -5px calc((100% - var(--wide)) / 2) 0;
+}
+.dish-page-description p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 23px;
+}
+.dish-page-description p[data-folded] {
+  max-height: calc(4 * 23px);
+  overflow: hidden;
+}
+.dish-page-description p[data-cut] {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - 30px),
+    transparent
+  );
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 30px), transparent);
+}
+.dish-page-description button {
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.dish-page-description button:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+/* "75.000đ | Món nước | ♥1": three facts split by thin rules. */
+.dish-page-facts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dish-page-facts > li {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+/* The same rule as the menu wheel's .menu-wheel-divider: 1 × 18px, 16px from the text. */
+.dish-page-facts > li + li::before {
+  content: "";
+  width: 1px;
+  height: 18px;
+  margin-right: 12px;
+  background: var(--line-strong);
+}
+.dish-page-facts svg {
+  width: 14px;
+  height: 14px;
+  color: var(--coral);
+}
+.dish-page-price {
+  color: var(--ink);
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+}
+/* "Bữa sáng ·Bữa trưa ·Bữa tối ·Có thịt bò" */
+.dish-page-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2px 8px;
+  margin: 1px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 13px;
+}
+.dish-page-tags li + li::before {
+  content: "·";
+  margin-right: 3px;
+}
+
+.dish-page-seller {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  max-width: 655px;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+}
+.dish-page-seller-top {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: var(--space-3);
+  align-items: center;
+}
+.dish-page-seller-cover {
+  width: 56px;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+}
+.dish-page-seller-cover .media-fallback > span:last-child {
+  display: none;
+}
+.dish-page-seller-name {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.dish-page-seller-name h2 {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  font-weight: 700;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+.dish-page-seller-name h2 a {
+  color: inherit;
+}
+.dish-page-seller-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.dish-page-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+.dish-page-open i {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.dish-page-open-success {
+  color: var(--success-ink);
+}
+.dish-page-open-warning {
+  color: var(--warning-ink);
+}
+.dish-page-open-error {
+  color: var(--error-ink);
+}
+.dish-page-open-neutral {
+  color: var(--muted);
+}
+.dish-page-open-success i::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: currentColor;
+  animation: dish-page-open-pulse 1.8s ease-out infinite;
+}
+@keyframes dish-page-open-pulse {
+  from {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  to {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+.dish-page-seller-actions > * {
+  flex: 1 1 140px;
+}
+
+/* "Khám phá menu ở {quán}": four tall tiles a row (196 × 244 in the mock-up). */
+.dish-page-more {
+  display: grid;
+  gap: 32px;
+  min-width: 0;
+  padding-top: 4px;
+}
+.dish-page-more h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.dish-page-more .dish-items-gallery {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  width: calc(100% + var(--dish-reach));
+}
+.dish-page-more .dish-tile {
+  aspect-ratio: 196 / 244;
+}
+
+@media (max-width: 1000px) {
+  .dish-page-hero {
+    grid-template-columns: minmax(0, 1fr);
+    --dish-reach: 0px;
+  }
+  .dish-page-intro {
+    padding-top: 0;
+  }
+  .dish-page-gallery {
+    margin-bottom: var(--space-8);
+  }
+  .dish-page-seller {
+    max-width: none;
+  }
+}
+@media (max-width: 560px) {
+  .dish-page-more .dish-items-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dish-plate-food img {
+    transition: none;
+  }
+  .dish-plate-food:hover img {
+    transform: none;
+  }
+  .dish-page-open-success i::after {
+    animation: none;
+  }
+}

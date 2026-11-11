@@ -12,7 +12,7 @@ export default async function DemoLayout({
 }) {
   const { role } = await params,
     code = demoRoles[role];
-  if (!code || process.env.NEXT_PUBLIC_ENABLE_DEMO === "false") notFound();
+  if (!code || process.env.NEXT_PUBLIC_ENABLE_DEMO !== "true") notFound();
   return (
     <WorkspaceShell
       user={code === "GUEST" ? null : demoUsers[code]}

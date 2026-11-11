@@ -16,6 +16,11 @@ const eslintConfig = defineConfig([
     "artifacts/**",
     "playwright-report/**",
     "test-results/**",
+    // Claude Code skill tooling (CommonJS helper scripts), not application code.
+    ".claude/**",
+    // Installed agent skills (taste-skill) and their working files, not application code.
+    ".agents/skills/**",
+    ".taste-skill/**",
   ]),
   // Local Figma exports preserve intrinsic SVG geometry; demo uploads use data URLs.
   {
