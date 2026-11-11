@@ -503,7 +503,11 @@ function AdminWorkspace({
                 {
                   title: "Kiểm duyệt",
                   base: demo ? base + "/moderation" : "/moderation",
-                  items: navigation.MOD.slice(1, 8),
+                  // MOD-V1..V3 are "MOD" only in the backend (Admin gets 403), so the
+                  // verification queue stays off the Admin sidebar until that changes.
+                  items: navigation.MOD.slice(1, 8).filter(
+                    ([slug]) => slug !== "verification",
+                  ),
                 },
               ]
       }

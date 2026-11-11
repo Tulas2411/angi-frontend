@@ -83,7 +83,14 @@ export const documentLabel = (docType: string) =>
 /** A signed document URL that points to an image (by its path), to preview it inline. */
 export function isImageUrl(url: string) {
   try {
-    return /\.(png|jpe?g|webp|gif|avif)$/i.test(new URL(url).pathname);
+    const parsed = new URL(url);
+    const image = /^(png|jpe?g|webp|gif|avif)$/i;
+    // A private document comes as a signed download link (`…/image/download?format=jpg&…`):
+    // the path has no extension, the `format` parameter names the file type.
+    return (
+      image.test(parsed.pathname.split(".").pop() ?? "") ||
+      image.test(parsed.searchParams.get("format") ?? "")
+    );
   } catch {
     return false;
   }

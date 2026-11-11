@@ -68,6 +68,17 @@ describe("F-57 dossier display", () => {
     expect(isImageUrl("https://cdn.example/doc.JPG?sig=1")).toBe(true);
     expect(isImageUrl("https://cdn.example/doc.pdf?sig=1")).toBe(false);
     expect(isImageUrl("not a url")).toBe(false);
+    // Private documents: a signed Cloudinary download link, the type only in `format`.
+    expect(
+      isImageUrl(
+        "https://api.cloudinary.com/v1_1/demo/image/download?format=jpg&public_id=verification_doc/a&signature=x",
+      ),
+    ).toBe(true);
+    expect(
+      isImageUrl(
+        "https://api.cloudinary.com/v1_1/demo/image/download?format=pdf&public_id=verification_doc/a",
+      ),
+    ).toBe(false);
   });
 
   it("shows how long a dossier waited", () => {
