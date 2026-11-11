@@ -15,9 +15,11 @@ export const runtime = "nodejs";
  * Header "Lộ trình": a Traveler without any roadmap goes straight to the planner, otherwise to
  * the list. It runs as a Route Handler because RM-02 may rotate the session tokens.
  */
-export async function GET(request: Request) {
+export async function GET() {
+  // A relative Location: behind a reverse proxy, `request.url` is the address Next.js listens on
+  // (http://0.0.0.0:3000), not the public one, and the browser blocks that redirect.
   const to = (path: string) =>
-    NextResponse.redirect(new URL(path, request.url));
+    new NextResponse(null, { status: 307, headers: { Location: path } });
   const session = await getSession();
   const auth = readAuth(session);
   if (!auth) return to("/login");
