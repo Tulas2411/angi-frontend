@@ -55,6 +55,18 @@ export function checkOrigin(request: Request) {
   }
   throw new ApiError(403, "FORBIDDEN", "Nguồn gửi yêu cầu không hợp lệ.");
 }
+/**
+ * Absolute URL of an ANGI page, for a redirect from a Route Handler. In production it is built on
+ * APP_URL: behind a reverse proxy (Caddy, Cloudflare Tunnel) `request.url` holds the address
+ * Next.js listens on (http://0.0.0.0:3000), which the browser cannot open. `next dev` keeps the
+ * address the request was sent to, so a phone on the LAN stays on http://192.168.x.x:3000.
+ */
+export function publicUrl(path: string, request: Request) {
+  const appUrl = process.env.APP_URL;
+  const base =
+    process.env.NODE_ENV === "production" && appUrl ? appUrl : request.url;
+  return new URL(path, base);
+}
 export async function readJson(request: Request) {
   try {
     return await request.json();

@@ -234,13 +234,7 @@
   font-size: 15px;
   line-height: 1.35;
   letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
-  /* Tiêu đề chỉ hiện một dòng, phần còn lại cắt bằng dấu "…". */
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  /* One line; a longer title fades out at its end (FadingText in TitleLink). */
 }
 .blog-card-title h2 a::after {
   content: "";
@@ -1313,33 +1307,33 @@
   gap: 8px;
 }
 /* Over the cover the buttons read as glass chips. */
-.blog-hero-section .blog-article-actions .button {
+.blog-hero-section:has(.blog-hero-media) .blog-article-actions .button {
   border-color: rgb(255 255 255 / 0.32);
   background: rgb(255 255 255 / 0.14);
   color: #ffffff;
   backdrop-filter: blur(6px);
 }
-.blog-hero-section .blog-article-actions .button:hover {
+.blog-hero-section:has(.blog-hero-media) .blog-article-actions .button:hover {
   border-color: rgb(255 255 255 / 0.6);
   background: rgb(255 255 255 / 0.26);
 }
-.blog-hero-section .blog-article-actions .button[aria-pressed="true"] {
+.blog-hero-section:has(.blog-hero-media) .blog-article-actions .button[aria-pressed="true"] {
   border-color: var(--coral);
   background: var(--coral);
   color: #ffffff;
 }
 /* The report button reads as a quiet link, without the underline. */
-.blog-hero-section .blog-article-actions .button-tertiary {
+.blog-hero-section:has(.blog-hero-media) .blog-article-actions .button-tertiary {
   border-color: rgb(255 255 255 / 0.32);
   background: rgb(255 255 255 / 0.14);
   text-decoration: none;
 }
-.blog-hero-section .blog-article-actions .button-tertiary:hover {
+.blog-hero-section:has(.blog-hero-media) .blog-article-actions .button-tertiary:hover {
   border-color: rgb(255 255 255 / 0.6);
   background: rgb(255 255 255 / 0.26);
   text-decoration: none;
 }
-.blog-hero-section .blog-pill {
+.blog-hero-section:has(.blog-hero-media) .blog-pill {
   border-color: rgb(255 255 255 / 0.32);
   background: rgb(255 255 255 / 0.14);
   color: #ffffff;

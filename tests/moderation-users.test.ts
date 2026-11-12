@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   canLiftRestriction,
+  canSanction,
   moderationUsersService,
   sanctionTypeLabels,
   userStatusLabels,
@@ -233,6 +234,12 @@ describe("MOD-U and MOD-B helpers", () => {
     expect(canLiftRestriction("active")).toBe(false);
     expect(canLiftRestriction("pending_verification")).toBe(false);
     expect(canLiftRestriction("deactivated")).toBe(false);
+  });
+
+  it("hides the sanction action for a banned account (USER_ALREADY_BANNED)", () => {
+    expect(canSanction("banned")).toBe(false);
+    expect(canSanction("active")).toBe(true);
+    expect(canSanction("suspended")).toBe(true);
   });
 
   it("labels every status the backend can return", () => {

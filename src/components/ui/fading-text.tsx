@@ -70,11 +70,15 @@ export function FadingLines({
   lines,
   className = "",
   as: Tag = "p",
+  children,
 }: {
+  /** The plain text: shown, and the tooltip when cut. */
   text: string;
   lines: number;
   className?: string;
   as?: ElementType;
+  /** Styled content to show instead of `text` (same words), e.g. the title as a link. */
+  children?: ReactNode;
 }) {
   const [element, overflowing] = useOverflowing(text);
   return (
@@ -85,7 +89,7 @@ export function FadingLines({
       data-overflowing={overflowing || undefined}
       title={overflowing ? text : undefined}
     >
-      {text}
+      {children ?? text}
     </Tag>
   );
 }

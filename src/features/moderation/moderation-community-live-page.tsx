@@ -13,10 +13,12 @@ import {
   TextArea,
 } from "@/components/ui/primitives";
 import { PageHeading } from "@/components/layout/workspace";
+import { FadingLines } from "@/components/ui/fading-text";
 import { getErrorMessage } from "@/shared/api/error";
 import { blogService } from "@/features/blogs/blog-service";
 import type { BlogCommentDto } from "@/features/blogs/blog-types";
 import { plainText } from "./report-handling-rules";
+import "./community-moderation.css";
 import {
   blogStatusLabels,
   commentStatusLabels,
@@ -82,6 +84,10 @@ export function ModerationCommunityLivePage() {
   const [reason, setReason] = useState("");
   const [fieldError, setFieldError] = useState("");
   const [commentsOf, setCommentsOf] = useState<ModeratedBlogDto | null>(null);
+  // Bình luận đã ẩn theo bài, giữ qua các lần đóng mở hộp thoại để còn hiển thị lại.
+  const [hiddenComments, setHiddenComments] = useState<
+    Record<number, BlogCommentDto[]>
+  >({});
 
   /** Bộ lọc hiện tại là chìa khoá của lần tải; tải xong mới hiện dữ liệu. */
   const queryKey = `${query}|${status}|${reportedOnly}|${page}|${attempt}`;
@@ -212,10 +218,14 @@ export function ModerationCommunityLivePage() {
               {
                 label: "Bài viết",
                 render: (blog) => (
-                  <>
-                    <strong>{blog.title}</strong>
-                    <p className="helper">{plainText(blog.excerpt)}</p>
-                  </>
+                  <div className="mc-blog-cell">
+                    <FadingLines as="strong" text={blog.title} lines={2} />
+                    <FadingLines
+                      className="helper"
+                      text={plainText(blog.excerpt)}
+                      lines={2}
+                    />
+                  </div>
                 ),
               },
               {
@@ -318,6 +328,12 @@ export function ModerationCommunityLivePage() {
       <ModerationCommentsDialog
         key={commentsOf?.id ?? "comments"}
         blog={commentsOf}
+        hidden={commentsOf ? (hiddenComments[commentsOf.id] ?? []) : []}
+        onHiddenChange={(list) => {
+          if (!commentsOf) return;
+          const blogId = commentsOf.id;
+          setHiddenComments((current) => ({ ...current, [blogId]: list }));
+        }}
         onClose={() => setCommentsOf(null)}
         onChanged={() => setAttempt((value) => value + 1)}
       />
@@ -326,18 +342,25 @@ export function ModerationCommunityLivePage() {
 }
 
 /**
- * MOD-B3 — ẩn hoặc gỡ một bình luận.
+ * MOD-B3 — ẩn bình luận và hiển thị lại bình luận vừa ẩn.
  *
  * Backend không có endpoint đọc bình luận cho kiểm duyệt viên, nên danh sách
  * lấy từ `GET blogs/{id}/comments` của phía công khai (chỉ trả bình luận đang
- * hiển thị). Vì vậy kiểm duyệt viên chỉ ẩn được bình luận đang hiển thị.
+ * hiển thị). Bình luận Mod vừa ẩn được trang giữ lại (`hidden`) và vẫn hiện ở
+ * chỗ cũ với nút "Hiển thị lại" (MOD-B3 status `visible`) cho tới khi tải lại
+ * trang; sau đó backend không còn trả về nó nữa.
  */
 function ModerationCommentsDialog({
   blog,
+  hidden,
+  onHiddenChange,
   onClose,
   onChanged,
 }: {
   blog: ModeratedBlogDto | null;
+  /** Bình luận của bài này đã ẩn trong lần mở trang hiện tại. */
+  hidden: BlogCommentDto[];
+  onHiddenChange: (hidden: BlogCommentDto[]) => void;
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -365,18 +388,25 @@ function ModerationCommentsDialog({
     };
   }, [blog]);
 
-  async function hide(commentId: number) {
-    setBusyId(commentId);
+  async function setStatus(
+    comment: BlogCommentDto,
+    status: ModeratedCommentStatus,
+  ) {
+    setBusyId(comment.id);
     setError("");
     try {
-      await service.setCommentStatus(commentId, {
-        status: "hidden" as ModeratedCommentStatus,
-        reason: reason.trim() || "Kiểm duyệt nội dung cộng đồng.",
+      await service.setCommentStatus(comment.id, {
+        status,
+        reason:
+          reason.trim() ||
+          (status === "visible"
+            ? "Hiển thị lại sau khi kiểm duyệt."
+            : "Kiểm duyệt nội dung cộng đồng."),
       });
-      setComments((current) =>
-        current
-          ? current.filter((comment) => comment.id !== commentId)
-          : current,
+      onHiddenChange(
+        status === "hidden"
+          ? [...hidden.filter((item) => item.id !== comment.id), comment]
+          : hidden.filter((item) => item.id !== comment.id),
       );
       onChanged();
     } catch (caught) {
@@ -385,6 +415,15 @@ function ModerationCommentsDialog({
       setBusyId(null);
     }
   }
+
+  // Bình luận đang hiển thị (backend) cùng bình luận vừa ẩn, theo thứ tự thời gian.
+  const hiddenIds = new Set(hidden.map((comment) => comment.id));
+  const shown = comments
+    ? [
+        ...comments.filter((comment) => !hiddenIds.has(comment.id)),
+        ...hidden,
+      ].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))
+    : null;
 
   return (
     <Dialog
@@ -399,34 +438,54 @@ function ModerationCommentsDialog({
         value={reason}
         onChange={(event) => setReason(event.target.value)}
         maxLength={1000}
-        helper="Lý do dùng chung cho mọi bình luận bạn ẩn trong phiên này."
+        helper="Lý do dùng chung cho mọi bình luận bạn ẩn hoặc hiển thị lại trong phiên này."
       />
-      {!comments ? (
+      {hidden.length > 0 && (
+        <Alert tone="info">
+          Bình luận đã ẩn vẫn hiện ở đây để bạn hiển thị lại nếu cần, cho tới
+          khi tải lại trang.
+        </Alert>
+      )}
+      {!shown ? (
         <Skeleton rows={3} />
-      ) : comments.length === 0 ? (
+      ) : shown.length === 0 ? (
         <EmptyState title="Không có bình luận đang hiển thị">
-          Backend không có nguồn đọc danh sách bình luận đã bị ẩn.
+          Bình luận đã ẩn từ trước không còn đọc được từ hệ thống.
         </EmptyState>
       ) : (
         <ul className="stack-sm">
-          {comments.map((comment) => (
-            <li key={comment.id} className="stack-sm">
-              <div className="between">
-                <strong>{comment.user.displayName}</strong>
-                <Badge tone={commentStatusTone("visible")}>
-                  {commentStatusLabels.visible}
-                </Badge>
-              </div>
-              <p className="helper">{comment.content}</p>
-              <Button
-                variant="tertiary"
-                loading={busyId === comment.id}
-                onClick={() => void hide(comment.id)}
+          {shown.map((comment) => {
+            const status = hiddenIds.has(comment.id) ? "hidden" : "visible";
+            return (
+              <li
+                key={comment.id}
+                className="stack-sm mc-comment"
+                data-status={status}
               >
-                Ẩn bình luận
-              </Button>
-            </li>
-          ))}
+                <div className="between">
+                  <strong>{comment.user.displayName}</strong>
+                  <Badge tone={commentStatusTone(status)}>
+                    {commentStatusLabels[status]}
+                  </Badge>
+                </div>
+                <p className="helper">{comment.content}</p>
+                <Button
+                  variant="tertiary"
+                  loading={busyId === comment.id}
+                  onClick={() =>
+                    void setStatus(
+                      comment,
+                      (status === "hidden"
+                        ? "visible"
+                        : "hidden") as ModeratedCommentStatus,
+                    )
+                  }
+                >
+                  {status === "hidden" ? "Hiển thị lại" : "Ẩn bình luận"}
+                </Button>
+              </li>
+            );
+          })}
         </ul>
       )}
     </Dialog>
