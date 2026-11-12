@@ -18,6 +18,7 @@ import {
   agentMessageError,
   agentMessageLimit,
   agentPromptSuggestions,
+  type AgentPromptSuggestion,
   agentQuickReply,
   agentReplyBlocks,
   agentRevealNext,
@@ -398,9 +399,11 @@ export function RoadmapAgentPanel({
       { timeout: 10000, maximumAge: 60000 },
     );
   }
-  function sendPrompt(prompt: string) {
+  function sendPrompt(prompt: AgentPromptSuggestion) {
     setInputError(null);
-    void agent.send(prompt).then((result) => restore(prompt, result));
+    void agent
+      .send(prompt.label, prompt.command)
+      .then((result) => restore(prompt.label, result));
   }
   /** While a reply is being revealed it already exists, so stopping just shows the rest of it. */
   function stop() {
@@ -483,13 +486,13 @@ export function RoadmapAgentPanel({
               <div className="agent-prompts">
                 {agentPromptSuggestions(conversation?.state).map((prompt) => (
                   <Button
-                    key={prompt}
+                    key={prompt.command}
                     variant="secondary"
                     disabled={blocked}
                     onClick={() => sendPrompt(prompt)}
                   >
                     <Glyph name="suggestion" />
-                    {prompt}
+                    {prompt.label}
                   </Button>
                 ))}
               </div>

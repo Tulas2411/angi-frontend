@@ -1,6 +1,7 @@
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { vnd } from "./roadmap-list-rules";
 import type {
+  AgentStarterCommand,
   AgentConversation,
   AgentItem,
   AgentProposal,
@@ -14,17 +15,35 @@ export const agentPollLimitMs = 90000;
 /** Same as the backend's default radius around the traveler. */
 const agentNearbyKm = 10;
 
-/** Suggestions use only what the conversation already knows, never an invented place or price. */
-export function agentPromptSuggestions(state: AgentState | null | undefined) {
+/** A starter button: the label shown and sent as the message, and the command that tells the backend exactly what it means. */
+export interface AgentPromptSuggestion {
+  label: string;
+  command: AgentStarterCommand;
+}
+
+/**
+ * Suggestions use only what the conversation already knows, never an invented place or price. Each one is a button, not typed
+ * text: its command makes the backend run the matching search itself (whole trip, lunch within budget, regional dishes), so the
+ * model never has to guess what the label meant.
+ */
+export function agentPromptSuggestions(
+  state: AgentState | null | undefined,
+): AgentPromptSuggestion[] {
   const place = state?.province ? ` ở ${state.province}` : "";
   return [
-    state?.numDays
-      ? `Lộ trình ăn uống ${state.numDays} ngày${place}`
-      : `Lập lịch ăn uống${place}`,
-    state?.maxPricePerMeal
-      ? `Bữa trưa dưới ${vnd(state.maxPricePerMeal)}${place}`
-      : `Bữa trưa hợp ngân sách${place}`,
-    `Món đặc trưng nên thử${place}`,
+    {
+      label: state?.numDays
+        ? `Lộ trình ăn uống ${state.numDays} ngày${place}`
+        : `Lập lịch ăn uống${place}`,
+      command: "plan_trip",
+    },
+    {
+      label: state?.maxPricePerMeal
+        ? `Bữa trưa dưới ${vnd(state.maxPricePerMeal)}${place}`
+        : `Bữa trưa hợp ngân sách${place}`,
+      command: "suggest_lunch",
+    },
+    { label: `Món đặc trưng nên thử${place}`, command: "suggest_specialty" },
   ];
 }
 
