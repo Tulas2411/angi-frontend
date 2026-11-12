@@ -40,7 +40,13 @@ describe("notification destinations", () => {
         { type: "REVIEW_REPLIED", data: { review_id: 9, restaurant_id: 7 } },
         "TRAVELER",
       ),
-    ).toBe("/restaurants/7");
+    ).toBe("/restaurants/7?tab=reviews&review=9");
+    expect(
+      notificationHref(
+        { type: "REVIEW_REPLIED", data: { restaurant_id: 7 } },
+        "TRAVELER",
+      ),
+    ).toBe("/restaurants/7?tab=reviews");
     expect(
       notificationHref({ type: "BLOG_COMMENTED", data: {} }, "TRAVELER"),
     ).toBeNull();

@@ -1,6 +1,6 @@
 "use client";
 import { notify } from "@/shared/ui/notify";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   BuildingStorefrontIcon,
   PhotoIcon,
@@ -74,10 +74,20 @@ function Stars({ value }: { value: number }) {
   );
 }
 
-function ReviewItem({ review }: { review: ReviewDto }) {
+function ReviewItem({
+  review,
+  focused = false,
+}: {
+  review: ReviewDto;
+  focused?: boolean;
+}) {
   const reply = visibleReply(review);
   return (
-    <article className="explore-review">
+    <article
+      id={`review-${review.id}`}
+      className={`explore-review${focused ? " explore-review-focused" : ""}`}
+      aria-current={focused || undefined}
+    >
       <Avatar name={review.user.displayName} image={review.user.avatarUrl} />
       <div className="explore-review-body">
         <header>
@@ -129,11 +139,18 @@ function ReviewsTab({
   restaurantId,
   service,
   version,
+  focusReviewId = null,
+  pinned = null,
 }: {
   restaurantId: number;
   service: ExploreService;
   version: number;
+  /** The review to scroll to and highlight (from a REVIEW_REPLIED notification). */
+  focusReviewId?: number | null;
+  /** The viewer's own review, pinned above the list so it is found whatever page it is on. */
+  pinned?: ReviewDto | null;
 }) {
+  const scrolled = useRef(false);
   const [rating, setRating] = useState("");
   const [hasImage, setHasImage] = useState(false);
   const [sort, setSort] = useState<ReviewSort>("newest");
@@ -149,6 +166,15 @@ function ReviewsTab({
       }),
     `${restaurantId}:${rating}:${hasImage}:${sort}:${page}:${version}`,
   );
+  const ready = state.status === "ready";
+  // Scroll once, after the list has rendered, to the review the notification is about.
+  useEffect(() => {
+    if (!ready || !focusReviewId || scrolled.current) return;
+    const target = document.getElementById(`review-${focusReviewId}`);
+    if (!target) return;
+    scrolled.current = true;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [ready, focusReviewId]);
   if (state.status === "loading") return <Skeleton rows={3} />;
   if (state.status === "error")
     return (
@@ -158,6 +184,9 @@ function ReviewsTab({
       </Card>
     );
   const { data } = state;
+  const listed = pinned
+    ? data.items.filter((review) => review.id !== pinned.id)
+    : data.items;
   const shares = ratingShares(data.ratingBreakdown);
   const satisfied = satisfiedShare(data.ratingBreakdown);
   const rated = data.ratingCount > 0;
@@ -255,7 +284,17 @@ function ReviewsTab({
         </div>
       </div>
 
-      {data.items.length === 0 ? (
+      {pinned && (
+        <section
+          className="explore-review-pinned"
+          aria-label="Đánh giá của bạn"
+        >
+          <p className="explore-review-pinned-title">Đánh giá của bạn</p>
+          <ReviewItem review={pinned} focused={pinned.id === focusReviewId} />
+        </section>
+      )}
+
+      {listed.length === 0 && !pinned ? (
         <EmptyState title="Chưa có đánh giá phù hợp">
           {rating || hasImage
             ? "Thử bỏ bớt bộ lọc để xem thêm đánh giá."
@@ -263,8 +302,12 @@ function ReviewsTab({
         </EmptyState>
       ) : (
         <div className="explore-review-list">
-          {data.items.map((review) => (
-            <ReviewItem key={review.id} review={review} />
+          {listed.map((review) => (
+            <ReviewItem
+              key={review.id}
+              review={review}
+              focused={review.id === focusReviewId}
+            />
           ))}
         </div>
       )}
@@ -490,14 +533,22 @@ function InfoTab({
 }
 
 /** F-16 View Restaurant Detail: REST-02, REST-03, REST-04, with REV-01 and REP-01 for a Traveler. */
+const detailTabs = ["information", "menu", "reviews"];
+
 export function RestaurantDetailPage({
   restaurantId,
   viewer,
   service = exploreService,
+  initialTab,
+  focusReviewId = null,
 }: {
   restaurantId: number;
   viewer: Viewer;
   service?: ExploreService;
+  /** `?tab=` from the URL; anything unknown falls back to the menu. */
+  initialTab?: string;
+  /** `?review=`: open "Đánh giá" on this review (REVIEW_REPLIED notification). */
+  focusReviewId?: number | null;
 }) {
   const [reload, setReload] = useState(0);
   const [state, retry] = useRemote(
@@ -506,7 +557,9 @@ export function RestaurantDetailPage({
   );
   // The general information opens first; it holds the photos, the name and the actions.
   // The menu opens first (owner request 2026-11-07): people come to a restaurant for its dishes.
-  const [tab, setTab] = useState("menu");
+  const [tab, setTab] = useState(
+    initialTab && detailTabs.includes(initialTab) ? initialTab : "menu",
+  );
   const [reviewOpen, setReviewOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
@@ -643,6 +696,8 @@ export function RestaurantDetailPage({
             restaurantId={restaurantId}
             service={service}
             version={reload}
+            focusReviewId={focusReviewId}
+            pinned={mine}
           />
         </>
       )}

@@ -1512,6 +1512,41 @@
 .explore-review + .explore-review {
   border-top: 1px solid var(--line);
 }
+/* The viewer's own review, pinned above the list. */
+.explore-review-pinned {
+  border-bottom: 1px solid var(--line);
+}
+.explore-review-pinned-title {
+  margin: 0;
+  padding: var(--space-4) var(--review-pad) 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+/* The review a REVIEW_REPLIED notification points to; it fades back after a moment. */
+.explore-review-focused {
+  scroll-margin-top: 96px;
+  animation: explore-review-focus 3.2s ease-out 0.3s both;
+}
+.explore-review-focused .explore-reply {
+  box-shadow: inset 3px 0 0 var(--coral);
+}
+@keyframes explore-review-focus {
+  from {
+    background: rgb(255 94 98 / 0.12);
+  }
+  to {
+    background: transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .explore-review-focused {
+    animation: none;
+    background: rgb(255 94 98 / 0.06);
+  }
+}
 .explore-review-body {
   display: flex;
   flex-direction: column;

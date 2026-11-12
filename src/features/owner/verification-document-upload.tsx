@@ -107,8 +107,11 @@ export function VerificationDocumentUpload({
             className="verification-document"
             aria-label={`Tài liệu ${document.fileName}`}
           >
-            <div className="between">
-              <strong className="verification-file-name">
+            <div className="verification-document-head">
+              <strong
+                className="verification-file-name"
+                title={document.fileName}
+              >
                 {document.fileName}
               </strong>
               <Button
