@@ -2,15 +2,33 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Avatar } from "@/components/ui/primitives";
-import {
-  CommentIcon,
-  DotsHorizontalIcon,
-  HeartIcon,
-} from "./blog-icons";
+import { FadingLines, FadingText } from "@/components/ui/fading-text";
+import { CommentIcon, DotsHorizontalIcon, HeartIcon } from "./blog-icons";
 import { blogDate, blogStatusLabels, htmlToText } from "./blog-rules";
 import type { BlogCardDto, BlogStatus, MyBlogCardDto } from "./blog-types";
 
 export const blogHref = (blogId: number) => `/guides/${blogId}`;
+
+/**
+ * A blog title as its link: a title longer than `lines` lines is cut and fades out (the whole
+ * title is the tooltip), like the dish names of Discovery, instead of growing the card.
+ */
+function TitleLink({
+  blog,
+  lines,
+}: {
+  blog: { id: number; title: string };
+  lines: number;
+}) {
+  const link = <Link href={blogHref(blog.id)}>{blog.title}</Link>;
+  return lines === 1 ? (
+    <FadingText text={blog.title}>{link}</FadingText>
+  ) : (
+    <FadingLines as="span" text={blog.title} lines={lines}>
+      {link}
+    </FadingLines>
+  );
+}
 export const blogEditHref = (blogId: number) => `/guides/${blogId}/edit`;
 
 /**
@@ -22,7 +40,13 @@ function excerptOf(blog: { excerpt: string }) {
 }
 
 /** The cover of a blog, or a plain tile with the first letter of its title when it has none. */
-function Cover({ blog, size }: { blog: BlogCardDto; size: "lead" | "row" | "card" }) {
+function Cover({
+  blog,
+  size,
+}: {
+  blog: BlogCardDto;
+  size: "lead" | "row" | "card";
+}) {
   return blog.coverUrl ? (
     // eslint-disable-next-line @next/next/no-img-element
     <img
@@ -80,13 +104,7 @@ export function StatusPill({ status }: { status: BlogStatus }) {
  * The menu of a card: one round button with three dots, opened on click and closed
  * when the pointer or the keyboard leaves it.
  */
-function CardMenu({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function CardMenu({ label, children }: { label: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -169,7 +187,7 @@ export function BlogCard({
       <div className="blog-card-body">
         <div className="blog-card-title">
           <h2 id={`blog-${blog.id}`}>
-            <Link href={blogHref(blog.id)}>{blog.title}</Link>
+            <TitleLink blog={blog} lines={1} />
           </h2>
         </div>
         <p className="blog-excerpt">{excerptOf(blog)}</p>
@@ -193,7 +211,7 @@ export function BlogLead({ blog }: { blog: BlogCardDto }) {
       {blog.coverUrl && <Cover blog={blog} size="lead" />}
       <div className="blog-lead-text">
         <h2 id={`blog-${blog.id}`}>
-          <Link href={blogHref(blog.id)}>{blog.title}</Link>
+          <TitleLink blog={blog} lines={3} />
         </h2>
         <p className="blog-excerpt">{excerptOf(blog)}</p>
         <div className="blog-meta">
@@ -229,7 +247,7 @@ export function MyBlogCard({
       <div className="blog-card-body">
         <div className="blog-card-title">
           <h2 id={`blog-${blog.id}`}>
-            <Link href={blogHref(blog.id)}>{blog.title}</Link>
+            <TitleLink blog={blog} lines={1} />
           </h2>
         </div>
         <div className="blog-card-status">
@@ -266,7 +284,7 @@ export function BlogRow({
       <Cover blog={blog} size="row" />
       <div className="blog-row-text">
         <h3 id={`blog-${blog.id}`}>
-          <Link href={blogHref(blog.id)}>{blog.title}</Link>
+          <TitleLink blog={blog} lines={2} />
         </h3>
         {mine ? (
           <p className="blog-row-status">

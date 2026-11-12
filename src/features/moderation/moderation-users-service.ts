@@ -66,6 +66,11 @@ export const sanctionTypeLabels: Record<string, string> = {
   ban: "Cấm tài khoản",
 };
 
+/** Tài khoản đã bị cấm thì không xử phạt thêm được (BE trả 409 USER_ALREADY_BANNED). */
+export function canSanction(status: string): boolean {
+  return status !== "banned";
+}
+
 /** Tài khoản đang bị hạn chế thì mới có thể gỡ hạn chế. */
 export function canLiftRestriction(status: string): boolean {
   return status === "suspended" || status === "banned";

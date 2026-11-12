@@ -17,6 +17,7 @@ import { PageHeading } from "@/components/layout/workspace";
 import { getErrorMessage } from "@/shared/api/error";
 import {
   canLiftRestriction,
+  canSanction,
   moderationUsersService,
   sanctionTypeLabels,
   userStatusLabels,
@@ -236,19 +237,21 @@ export function ModerationUsersLivePage() {
                 label: "Thao tác",
                 render: (person) => (
                   <div className="actions">
-                    <Button
-                      variant="tertiary"
-                      onClick={() =>
-                        setSanctioning({
-                          userId: person.userId,
-                          displayName: person.displayName,
-                          email: person.email,
-                          status: person.status,
-                        })
-                      }
-                    >
-                      Xử phạt
-                    </Button>
+                    {canSanction(person.status) && (
+                      <Button
+                        variant="tertiary"
+                        onClick={() =>
+                          setSanctioning({
+                            userId: person.userId,
+                            displayName: person.displayName,
+                            email: person.email,
+                            status: person.status,
+                          })
+                        }
+                      >
+                        Xử phạt
+                      </Button>
+                    )}
                     {canLiftRestriction(person.status) && (
                       <Button
                         variant="tertiary"
@@ -588,15 +591,17 @@ export function ModerationUserDetailPage({
           </p>
         )}
         <div className="actions mu-profile-actions">
-          <Button
-            variant="destructive"
-            onClick={() => {
-              setSaved("");
-              setSanctioning(true);
-            }}
-          >
-            Xử phạt
-          </Button>
+          {canSanction(detail.status) && (
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setSaved("");
+                setSanctioning(true);
+              }}
+            >
+              Xử phạt
+            </Button>
+          )}
           {canLiftRestriction(detail.status) && (
             <Button variant="secondary" onClick={() => setLifting(true)}>
               Gỡ hạn chế
