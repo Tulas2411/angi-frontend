@@ -20,7 +20,7 @@ Mã nguồn: `src/features/notifications/` và `src/features/roll/`. Route nằm
   | -------------------------------------------------- | ------------------------------------- |
   | `BLOG_*`                                           | `/guides/{blog_id}`                   |
   | `ROADMAP_GENERATED`                                | `/roadmaps/{roadmap_id}`              |
-  | `REVIEW_REPLIED`                                   | `/restaurants/{restaurant_id}`        |
+  | `REVIEW_REPLIED`                                   | `/restaurants/{restaurant_id}?tab=reviews&review={review_id}` |
   | `VERIFICATION_*` (chủ nhà hàng)                    | `/restaurant/verification?tab=status` |
   | `MENU_*` (chủ nhà hàng)                            | `/restaurant/menu`                    |
   | `RESTAURANT_REVIEWED` (chủ nhà hàng)               | `/restaurant/reviews`                 |

@@ -10,6 +10,8 @@ export interface MenuTagDto {
 export interface MenuDishDto {
   id: number;
   name: string;
+  /** DishCard.description (API Design v1.8, added 09/11/2026); optional on older answers. */
+  description?: string | null;
   price: number;
   coverUrl: string | null;
   dishForm: DishForm;

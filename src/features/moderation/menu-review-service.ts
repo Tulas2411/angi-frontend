@@ -1,8 +1,17 @@
 import { api } from "@/shared/api/client";
-import type { MenuSubmissionDto } from "@/features/owner/menu-types";
+import type {
+  MenuItemDto,
+  MenuSubmissionDto,
+} from "@/features/owner/menu-types";
+import {
+  compareItems,
+  itemCounts,
+  previousApproved,
+} from "./menu-review-rules";
 import type {
   ApproveMenuSubmissionResponseDto,
   ListMenuSubmissionsQuery,
+  ModMenuSubmissionCardDto,
   ModMenuSubmissionDetailDto,
   ModMenuSubmissionsPageDto,
 } from "./menu-review-types";
@@ -34,6 +43,107 @@ export function menuSubmissionsQueryString(query: ListMenuSubmissionsQuery) {
 }
 
 const base = "mod/menu-submissions";
+
+/** MOD-M1 accepts at most 100 per page (ListModMenuSubmissionsRequestDtoValidator). */
+const baselinePageSize = 100;
+/** A restaurant with more approved menus than this is compared with what MOD-M2 sends. */
+const baselineMaxPages = 5;
+
+/** MOD-M1: every approved submission of one restaurant (at most `baselineMaxPages` pages). */
+async function listApproved(service: MenuReviewService, restaurantId: number) {
+  const cards: ModMenuSubmissionCardDto[] = [];
+  for (let page = 1; page <= baselineMaxPages; page += 1) {
+    const result = await service.list({
+      status: "approved",
+      restaurantId,
+      page,
+      pageSize: baselinePageSize,
+    });
+    cards.push(...result.items);
+    if (page >= result.totalPages) break;
+  }
+  return cards;
+}
+
+/**
+ * The items of the approved submission reviewed last before `submission` (MOD-M1 filtered by
+ * restaurant, then MOD-M2): the menu that `submission` replaced. `null` when there is none.
+ */
+export async function loadApprovedBaseline(
+  service: MenuReviewService,
+  submission: Pick<MenuSubmissionDto, "id" | "restaurantId" | "reviewedAt">,
+): Promise<{
+  submissionId: number;
+  reviewedAt: string | null;
+  items: MenuItemDto[];
+} | null> {
+  const cards = await listApproved(service, submission.restaurantId);
+  const previous = previousApproved(cards, submission);
+  if (!previous) return null;
+  const detail = await service.detail(previous.id);
+  return {
+    submissionId: detail.id,
+    reviewedAt: detail.reviewedAt,
+    items: detail.items,
+  };
+}
+
+export type MenuChangeCounts = ReturnType<typeof itemCounts>;
+
+/**
+ * The counts of approved queue cards, computed like the detail page: MOD-M1 `newCount`,
+ * `editedCount` and `removedCount` compare with the menu on sale, which an approval has already
+ * overwritten. One MOD-M1 call per restaurant and one MOD-M2 call per submission (a card and the
+ * baseline of another card share it). A card whose loads fail maps to `null`.
+ */
+export async function loadApprovedCounts(
+  service: MenuReviewService,
+  cards: readonly Pick<
+    ModMenuSubmissionCardDto,
+    "id" | "restaurantId" | "reviewedAt"
+  >[],
+): Promise<Map<number, MenuChangeCounts | null>> {
+  const approvedBy = new Map<number, Promise<ModMenuSubmissionCardDto[]>>();
+  const details = new Map<number, Promise<ModMenuSubmissionDetailDto>>();
+  const approvedOf = (restaurantId: number) => {
+    let found = approvedBy.get(restaurantId);
+    if (!found) {
+      found = listApproved(service, restaurantId);
+      approvedBy.set(restaurantId, found);
+    }
+    return found;
+  };
+  const detailOf = (submissionId: number) => {
+    let found = details.get(submissionId);
+    if (!found) {
+      found = service.detail(submissionId);
+      details.set(submissionId, found);
+    }
+    return found;
+  };
+  const results = await Promise.allSettled(
+    cards.map(async (card) => {
+      const previous = previousApproved(
+        await approvedOf(card.restaurantId),
+        card,
+      );
+      const [own, baseline] = await Promise.all([
+        detailOf(card.id),
+        previous ? detailOf(previous.id) : null,
+      ]);
+      return itemCounts(
+        compareItems(own.items, baseline?.items ?? null),
+        own.removedDishes.length,
+      );
+    }),
+  );
+  return new Map(
+    cards.map((card, index) => {
+      const result = results[index];
+      return [card.id, result.status === "fulfilled" ? result.value : null];
+    }),
+  );
+}
 
 export const menuReviewService: MenuReviewService = {
   list: (query) =>

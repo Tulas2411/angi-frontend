@@ -27,8 +27,10 @@ import { dishFormLabels, menuStatusLabels } from "@/features/owner/menu-rules";
 import type { MenuDishDto } from "@/features/owner/menu-types";
 import { waitingFor } from "./verification-review-rules";
 import {
+  compareItems,
   itemChanges,
   itemCounts,
+  type ComparedItem,
   menuDecisionProblem,
   menuNoteMax,
   menuQueueTabs,
@@ -39,12 +41,15 @@ import {
   type MenuDecision,
 } from "./menu-review-rules";
 import {
+  loadApprovedBaseline,
+  loadApprovedCounts,
   menuReviewService,
+  type MenuChangeCounts,
   type MenuReviewService,
 } from "./menu-review-service";
 import type {
   MenuQueueStatus,
-  ModMenuItemDiffDto,
+  ModMenuSubmissionCardDto,
   ModRestaurantMiniDto,
 } from "./menu-review-types";
 import { SlidingSegment } from "@/components/ui/sliding-segment";
@@ -55,6 +60,32 @@ const pageSize = 20;
 
 const place = (restaurant: ModRestaurantMiniDto) =>
   [restaurant.ward, restaurant.provinceName].filter(Boolean).join(", ");
+
+/**
+ * What a queue card changes. `loading` while an approved card is recomputed; `error` or `null`
+ * when it could not be, so no wrong number is shown.
+ */
+function CardCounts({
+  counts,
+}: {
+  counts:
+    | Pick<MenuChangeCounts, "new" | "edited" | "removed">
+    | "loading"
+    | "error"
+    | null;
+}) {
+  if (counts === "loading")
+    return <span className="helper">Đang tính thay đổi…</span>;
+  if (counts === "error" || counts === null)
+    return <span className="helper">Mở bản thực đơn để xem thay đổi.</span>;
+  return (
+    <span className="mr-counts">
+      <span data-change="new">+{counts.new} món mới</span>
+      <span data-change="edited">{counts.edited} món sửa</span>
+      <span data-change="removed">{counts.removed} món gỡ</span>
+    </span>
+  );
+}
 
 /** F-58 queue (MOD-M1): one tab per status, with what each submission changes. */
 export function MenuQueuePage({
@@ -69,6 +100,30 @@ export function MenuQueuePage({
     () => service.list({ status, page, pageSize }),
     `${status}:${page}`,
   );
+  // MOD-M1 counts of an approved card compare with a menu the approval already overwrote, so
+  // they are recomputed against the previous approved submission (as the detail page does).
+  const approvedCards =
+    status === "approved" && list.status === "ready" ? list.data.items : null;
+  const [approvedCounts] = useRemote(
+    () =>
+      approvedCards
+        ? loadApprovedCounts(service, approvedCards)
+        : Promise.resolve(null),
+    approvedCards
+      ? `approved:${approvedCards.map((card) => card.id).join(",")}`
+      : "none",
+  );
+  const countsOf = (item: ModMenuSubmissionCardDto) => {
+    if (item.status !== "approved")
+      return {
+        new: item.newCount,
+        edited: item.editedCount,
+        removed: item.removedCount,
+      };
+    return approvedCounts.status === "ready"
+      ? (approvedCounts.data?.get(item.id) ?? null)
+      : approvedCounts.status;
+  };
 
   return (
     <div className="stack vr-page">
@@ -137,15 +192,7 @@ export function MenuQueuePage({
                           {place(item.restaurant)}
                         </small>
                       )}
-                      <span className="mr-counts">
-                        <span data-change="new">+{item.newCount} món mới</span>
-                        <span data-change="edited">
-                          {item.editedCount} món sửa
-                        </span>
-                        <span data-change="removed">
-                          {item.removedCount} món gỡ
-                        </span>
-                      </span>
+                      <CardCounts counts={countsOf(item)} />
                       {item.ownerNote && (
                         <span className="mr-note">“{item.ownerNote}”</span>
                       )}
@@ -194,27 +241,28 @@ function TagChips({
 
 /** One submitted dish: new, edited (old → new for what changed) or unchanged. */
 function ItemRow({
-  item,
+  compared,
   names,
 }: {
-  item: ModMenuItemDiffDto;
+  compared: ComparedItem;
   names: ReadonlyMap<number, string>;
 }) {
-  const changes = item.change === "edited" ? itemChanges(item, names) : [];
+  const { item, change, before } = compared;
+  const changes = change === "edited" ? itemChanges(item, before, names) : [];
   const coverChanged = changes.some((row) => row.label === "Ảnh món");
   return (
-    <li className="mr-item" data-change={item.change}>
+    <li className="mr-item" data-change={change}>
       <div
         className="mr-photos"
-        data-compare={(coverChanged && !!item.before) || undefined}
+        data-compare={(coverChanged && !!before) || undefined}
       >
-        {coverChanged && item.before ? (
+        {coverChanged && before ? (
           <>
             <figure className="mr-photo-frame">
               <Media
                 className="mr-photo is-before"
-                src={item.before.coverUrl ?? undefined}
-                alt={`Ảnh cũ của ${item.before.name}`}
+                src={before.coverUrl ?? undefined}
+                alt={`Ảnh cũ của ${before.name}`}
               />
               <figcaption>Ảnh cũ</figcaption>
             </figure>
@@ -240,16 +288,16 @@ function ItemRow({
           <strong>{item.name}</strong>
           <Badge
             tone={
-              item.change === "new"
+              change === "new"
                 ? "success"
-                : item.change === "edited"
+                : change === "edited"
                   ? "warning"
                   : "neutral"
             }
           >
-            {item.change === "new"
+            {change === "new"
               ? "Món mới"
-              : item.change === "edited"
+              : change === "edited"
                 ? "Đã sửa"
                 : "Không đổi"}
           </Badge>
@@ -319,6 +367,19 @@ export function MenuReviewPage({
     `${submissionId}:${version}`,
   );
   const [tags] = useRemote(() => exploreService.tags(), "tags");
+  // Once approved, MOD-M2 compares with a menu that already holds the new values, so the earlier
+  // values come from the approved submission reviewed just before this one.
+  const approved =
+    state.status === "ready" && state.data.status === "approved"
+      ? state.data
+      : null;
+  const [baseline, retryBaseline] = useRemote(
+    () =>
+      approved
+        ? loadApprovedBaseline(service, approved)
+        : Promise.resolve(null),
+    approved ? `${approved.id}:${approved.reviewedAt}` : "none",
+  );
   const [filter, setFilter] = useState<ItemFilter>("all");
   const [decision, setDecision] = useState<MenuDecision>("approve");
   const [note, setNote] = useState("");
@@ -363,14 +424,17 @@ export function MenuReviewPage({
   }
   const item = state.data;
   const names = tagNamesOf(tags.status === "ready" ? tags.data : []);
-  const counts = itemCounts(item.items, item.removedDishes.length);
+  const isApproved = item.status === "approved";
+  const baselineData = baseline.status === "ready" ? baseline.data : null;
+  const compared = compareItems(item.items, baselineData?.items ?? null);
+  const counts = itemCounts(compared, item.removedDishes.length);
   const open = item.status === "pending";
   const shownItems =
     filter === "all"
-      ? item.items
+      ? compared
       : filter === "removed"
         ? []
-        : item.items.filter((entry) => entry.change === filter);
+        : compared.filter((entry) => entry.change === filter);
   const showRemoved = filter === "all" || filter === "removed";
   const filters: { value: ItemFilter; label: string }[] = [
     { value: "all", label: `Tất cả (${counts.all})` },
@@ -465,7 +529,41 @@ export function MenuReviewPage({
               <p>{item.ownerNote}</p>
             </div>
           )}
-          <Card title="So với thực đơn đang bán">
+          <Card
+            title={
+              isApproved
+                ? "So với thực đơn trước khi duyệt"
+                : "So với thực đơn đang bán"
+            }
+          >
+            {isApproved && baseline.status === "loading" && (
+              <p className="helper" role="status">
+                Đang tải thực đơn trước khi duyệt để so sánh…
+              </p>
+            )}
+            {isApproved && baseline.status === "error" && (
+              <Alert>
+                Chưa tải được thực đơn trước khi duyệt, nên món sửa có thể hiện
+                là “Không đổi”. {menuReviewError(baseline.error)}{" "}
+                <Button variant="tertiary" onClick={retryBaseline}>
+                  Thử lại
+                </Button>
+              </Alert>
+            )}
+            {isApproved &&
+              baseline.status === "ready" &&
+              (baselineData ? (
+                <p className="helper">
+                  Giá trị cũ lấy từ bản thực đơn #{baselineData.submissionId}{" "}
+                  (duyệt {verificationDateLabel(baselineData.reviewedAt)}).
+                </p>
+              ) : (
+                <Alert tone="info">
+                  Bản này đã được áp dụng vào thực đơn đang bán và quán chưa có
+                  bản thực đơn nào được duyệt trước đó, nên không còn giá trị cũ
+                  để so. Món sửa có thể hiện là “Không đổi”.
+                </Alert>
+              ))}
             <SlidingSegment
               className="vr-tabs mr-filter"
               role="group"
@@ -488,7 +586,7 @@ export function MenuReviewPage({
             ) : (
               <ul className="mr-items">
                 {shownItems.map((entry) => (
-                  <ItemRow key={entry.id} item={entry} names={names} />
+                  <ItemRow key={entry.item.id} compared={entry} names={names} />
                 ))}
                 {showRemoved &&
                   item.removedDishes.map((dish) => (
