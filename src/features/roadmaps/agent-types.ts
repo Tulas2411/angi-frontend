@@ -99,7 +99,17 @@ export interface AgentConversation {
   messages: AgentTranscript[];
   currentProposal: AgentProposal | null;
 }
-export type AgentCommand = "chat" | "alternative" | "discard" | "reset";
+/** The starter buttons above an empty chat; the backend runs the search each one means instead of having the model read the label. */
+export type AgentStarterCommand =
+  | "plan_trip"
+  | "suggest_lunch"
+  | "suggest_specialty";
+export type AgentCommand =
+  | "chat"
+  | "alternative"
+  | "discard"
+  | "reset"
+  | AgentStarterCommand;
 export interface AgentMessageRequest {
   clientMessageId: number;
   expectedConversationVersion: number;

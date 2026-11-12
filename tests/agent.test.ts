@@ -27,11 +27,17 @@ afterEach(() => vi.unstubAllGlobals());
 describe("Agent chat presentation rules", () => {
   it("suggests only from what the conversation knows", () => {
     expect(agentPromptSuggestions(agentConversation().state)).toEqual([
-      "Lộ trình ăn uống 1 ngày ở Đà Nẵng",
-      "Bữa trưa dưới 100.000 VND ở Đà Nẵng",
-      "Món đặc trưng nên thử ở Đà Nẵng",
+      { label: "Lộ trình ăn uống 1 ngày ở Đà Nẵng", command: "plan_trip" },
+      {
+        label: "Bữa trưa dưới 100.000 VND ở Đà Nẵng",
+        command: "suggest_lunch",
+      },
+      {
+        label: "Món đặc trưng nên thử ở Đà Nẵng",
+        command: "suggest_specialty",
+      },
     ]);
-    expect(agentPromptSuggestions(null)).toEqual([
+    expect(agentPromptSuggestions(null).map((prompt) => prompt.label)).toEqual([
       "Lập lịch ăn uống",
       "Bữa trưa hợp ngân sách",
       "Món đặc trưng nên thử",
