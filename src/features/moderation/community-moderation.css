@@ -1,0 +1,25 @@
+/*
+ * MOD-B1 blog table: the "Bài viết" cell has a bounded width, so a long title or excerpt (even one
+ * long word) wraps and fades out instead of widening the table and scrolling the other columns away.
+ */
+.mc-blog-cell {
+  display: grid;
+  gap: 4px;
+  width: clamp(240px, 32vw, 460px);
+  overflow-wrap: anywhere;
+}
+.mc-blog-cell strong {
+  line-height: 1.35;
+}
+/* A comment hidden in this session stays in the dialog, dimmed, with "Hiển thị lại". */
+.mc-comment[data-status="hidden"] > .helper {
+  opacity: 0.55;
+}
+.mc-comment > .helper {
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+.mc-blog-cell .helper {
+  margin: 0;
+  line-height: 1.5;
+}

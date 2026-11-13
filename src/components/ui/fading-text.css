@@ -22,6 +22,7 @@
  * out over its last line. It can shrink further in a flex column that has less room.
  */
 .fading-lines {
+  display: block;
   max-height: calc(var(--fading-lines, 3) * 1lh);
   min-height: 0;
   overflow: hidden;

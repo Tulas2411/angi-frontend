@@ -464,6 +464,19 @@
   overflow: hidden;
   align-items: stretch;
 }
+.vr-card > .vr-card-photo,
+.vr-hero > .vr-hero-photo {
+  position: relative;
+}
+/*
+ * The photo only fills its cell: taken out of the flow, its own size (a tall or a wide upload) no
+ * longer sets the height of the card, so every card of a queue is cropped the same way.
+ */
+.vr-card > .vr-card-photo > img,
+.vr-hero > .vr-hero-photo > img {
+  position: absolute;
+  inset: 0;
+}
 .vr-card > .vr-card-photo {
   width: 100%;
   height: 100%;

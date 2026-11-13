@@ -1,5 +1,5 @@
 import type { RoleCode } from "@/features/auth/types";
-import { restaurantHref } from "@/features/explore/explore-routes";
+import { restaurantReviewsHref } from "@/features/explore/explore-routes";
 import { ownerRoutes, ownerVerificationHref } from "@/features/owner/routes";
 import { roadmapDetailHref } from "@/features/roadmaps/routes";
 import type { NotificationDto } from "./notification-types";
@@ -53,7 +53,9 @@ export function notificationHref(
   }
   if (type === "REVIEW_REPLIED") {
     const restaurantId = dataId(data, "restaurant_id");
-    return restaurantId ? restaurantHref(restaurantId) : null;
+    return restaurantId
+      ? restaurantReviewsHref(restaurantId, dataId(data, "review_id"))
+      : null;
   }
   if (role !== "RESTAURANT_OWNER") return null;
   if (type.startsWith("VERIFICATION_")) return ownerVerificationHref("status");

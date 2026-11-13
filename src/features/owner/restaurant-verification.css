@@ -18,10 +18,30 @@
   border-radius: var(--radius-md);
   background: var(--card);
 }
+/* Name and remove button stay on one row: the name takes the room left and wraps inside it. */
+.verification-document-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 .verification-file-name {
+  flex: 1;
   min-width: 0;
   font-size: 14px;
   overflow-wrap: anywhere;
+  /* A very long name stops after two lines; the full name is in the title tooltip. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+/* "Loại tài liệu · <file name>": one line, the name cut with an ellipsis instead of overflowing. */
+.verification-document .field > label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .verification-document .verification-remove {
   flex-shrink: 0;

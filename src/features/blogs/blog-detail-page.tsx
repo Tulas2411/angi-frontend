@@ -10,6 +10,7 @@ import {
   ConfirmDialog,
 } from "@/components/ui/primitives";
 import { ReportDialog } from "@/components/domain/report-dialog";
+import { FadingLines } from "@/components/ui/fading-text";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { useRemote } from "@/features/explore/use-remote";
 import { exploreService } from "@/features/explore/explore-service";
@@ -150,7 +151,12 @@ export function BlogDetailPage({
           <section className="blog-section blog-hero-section">
             <div className="blog-hero-top">
               <header className="blog-article-head">
-              <h1 className="blog-hero-title">{blog.title}</h1>
+              <FadingLines
+                as="h1"
+                className="blog-hero-title"
+                text={blog.title}
+                lines={3}
+              />
               <div className="blog-article-meta">
                 <p className="blog-byline blog-byline-lg">
                   <Avatar

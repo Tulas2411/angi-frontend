@@ -7,3 +7,10 @@ export const exploreRoutes = {
 export const dishHref = (dishId: number) => `${exploreRoutes.dishes}/${dishId}`;
 export const restaurantHref = (restaurantId: number) =>
   `${exploreRoutes.restaurants}/${restaurantId}`;
+
+/** The restaurant's "Đánh giá" tab, scrolled to one review when `reviewId` is given. */
+export const restaurantReviewsHref = (
+  restaurantId: number,
+  reviewId?: number | null,
+) =>
+  `${restaurantHref(restaurantId)}?tab=reviews${reviewId ? `&review=${reviewId}` : ""}`;
