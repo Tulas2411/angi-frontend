@@ -31,6 +31,7 @@ import { useRemote } from "./use-remote";
 import "./explore.css";
 import "./wood-plate.css";
 import "./dish-detail.css";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 /**
  * The dish served on a round wooden plate: the photo is cropped to a circle inside a turned-wood
@@ -319,9 +320,9 @@ export function DishDetailPage({
               </li>
             )}
           </ul>
-          {dish.tags.length > 0 && (
+          {visibleTags(dish.tags).length > 0 && (
             <ul className="dish-page-tags" aria-label="Đặc điểm">
-              {dish.tags.map((tag) => (
+              {visibleTags(dish.tags).map((tag) => (
                 <li key={tag.id}>{tag.name}</li>
               ))}
             </ul>

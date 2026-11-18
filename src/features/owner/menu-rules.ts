@@ -1,9 +1,11 @@
 import { ApiError, getErrorMessage } from "@/shared/api/error";
+import { dietConflictProblem, isDishKindTag } from "@/shared/tags/tag-catalog";
 import type {
   AddMenuItemDto,
   MenuItemDto,
   MenuItemValues,
   MenuStatus,
+  MenuTagDto,
   PatchMenuItemDto,
 } from "./menu-types";
 export const menuStatusLabels: Record<MenuStatus, string> = {
@@ -68,9 +70,29 @@ export function menuItemRequest(
     body.sortOrder = Number(values.sortOrder);
   return body;
 }
+/**
+ * Kiểu món rule of sheet "Bố trí UI": a dish has at most one kind, and a new dish (or one that already had a kind)
+ * must keep one. A dish saved before the catalogue change may still have none: the form reminds instead of blocking,
+ * so the owner can resubmit an old menu. Unchecked while the catalogue is not loaded.
+ */
+export function dishKindProblem(
+  tagIds: readonly number[],
+  tags: readonly MenuTagDto[],
+  original?: MenuItemDto,
+): string {
+  if (!tags.length) return "";
+  const kinds = (ids: readonly number[]) =>
+    tags.filter((tag) => isDishKindTag(tag) && ids.includes(tag.id)).length;
+  const count = kinds(tagIds);
+  if (count > 1) return "Chỉ chọn một Kiểu món.";
+  if (count === 0 && (!original || kinds(original.tagIds) > 0))
+    return "Vui lòng chọn một Kiểu món.";
+  return "";
+}
 export function validateMenuItem(
   values: MenuItemValues,
   original?: MenuItemDto,
+  tags: readonly MenuTagDto[] = [],
 ) {
   const errors: Record<string, string> = {};
   const body = menuItemRequest(values, original);
@@ -113,6 +135,12 @@ export function validateMenuItem(
     new Set(values.tagIds).size !== values.tagIds.length
   )
     errors.tagIds = "Tag phải có mã dương, không trùng nhau.";
+  else {
+    const kind =
+      dishKindProblem(values.tagIds, tags, original) ||
+      dietConflictProblem(values.tagIds, tags);
+    if (kind) errors.tagIds = kind;
+  }
   return errors;
 }
 export function newMenuItemRequest(values: MenuItemValues): AddMenuItemDto {

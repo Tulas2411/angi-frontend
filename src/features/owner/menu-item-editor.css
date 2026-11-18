@@ -213,9 +213,33 @@
   background: var(--ink);
   color: var(--card);
 }
+/* Ruled out by the chosen diet (Món chay / Thuần chay). */
+.mie-tags .choice.is-disabled {
+  border-style: dashed;
+  background: transparent;
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.mie-tags .choice.is-disabled > input {
+  cursor: not-allowed;
+}
 .mie-tags .choice:has(input:focus-visible) {
   outline: 2px solid var(--ink);
   outline-offset: 2px;
+}
+/* "Thêm chi tiết": role, cooking method and ingredient groups, folded by default (sheet "Bố trí UI"). */
+.mie-tag-details {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--line);
+}
+.mie-tag-details > .stack {
+  width: 100%;
+}
+.mie-tags .alert .button {
+  margin-left: var(--space-1);
 }
 
 @media (max-width: 760px) {

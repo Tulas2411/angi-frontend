@@ -14,6 +14,7 @@ import {
 import { useRemote } from "@/features/explore/use-remote";
 import type { DishDetailDto } from "@/features/explore/explore-types";
 import { ApiError, getErrorMessage } from "@/shared/api/error";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 export interface RollDishPreview {
   id: number;
@@ -101,7 +102,7 @@ function DishContent({ dishId }: { dishId: number }) {
         <p className="eyebrow">{dishFormLabels[dish.dishForm]}</p>
         <p className="roll-dish-price">{vnd(dish.price)}</p>
         <div className="roll-dish-tags">
-          {dish.tags.map((tag) => (
+          {visibleTags(dish.tags).map((tag) => (
             <span key={tag.id}>{tag.name}</span>
           ))}
           {!dish.isAvailable && <Badge tone="warning">Tạm hết món</Badge>}

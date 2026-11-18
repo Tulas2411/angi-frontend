@@ -37,7 +37,8 @@ let nextMediaId = 9200;
 
 const tags = [
   { id: 1, tagType: "meal_time", code: "lunch", name: "Bữa trưa" },
-  { id: 2, tagType: "category", code: "noodle", name: "Món nước" },
+  // "Không ăn" offers diet and ingredient tags only (6-type catalogue), so the excluded tag is an ingredient.
+  { id: 2, tagType: "ingredient", code: "beef", name: "Thịt bò" },
 ];
 const mini = (id: number, name: string) => ({
   id,
@@ -593,7 +594,7 @@ test.describe("dishes", () => {
       switcher.getByRole("button", { name: "Lưới chi tiết" }),
     ).toHaveAttribute("aria-pressed", "true");
     await expect(page.locator(".dish-detail")).toHaveCount(2);
-    await expect(dishOf(page, "Bún bò Huế")).toContainText("Món nước");
+    await expect(dishOf(page, "Bún bò Huế")).toContainText("Thịt bò");
     await expect(dishOf(page, "Bún bò Huế")).toContainText("Bữa trưa");
     await expect(dishOf(page, "Bún bò Huế")).toContainText(
       "Nước dùng hầm xương 8 tiếng",
@@ -645,12 +646,12 @@ test.describe("dishes", () => {
     await chooseOption(page.getByLabel("Giá từ"), "50000");
     await page
       .getByRole("group", { name: "Không ăn (bỏ món có thẻ)" })
-      .getByRole("button", { name: "Món nước" })
+      .getByRole("button", { name: "Thịt bò" })
       .click();
     // Each pick applies at once; the panel stays open.
     await expect(page).toHaveURL(/min=50000/);
     await expect(page).toHaveURL(/notag=2/);
-    // Bún chả (55.000, no noodle tag) is the only dish left.
+    // Bún chả (55.000, no beef tag) is the only dish left.
     await expect(dishItems(page)).toHaveCount(1);
     await expect(dishOf(page, "Bún chả")).toBeVisible();
     await expect(page.getByRole("button", { name: /Ẩn bộ lọc/ })).toBeVisible();

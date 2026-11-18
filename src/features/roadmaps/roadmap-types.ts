@@ -1,4 +1,5 @@
 import type { MapLocation } from "@/shared/maps/mapbox";
+import type { TagType } from "@/shared/tags/tag-catalog";
 
 /** Wire DTOs of RM-01 / RM-04 (API Design v1.8, sheets "Chi tiết Request-Response" and "DTO"). */
 
@@ -55,7 +56,8 @@ export interface RoadmapSummaryDto {
 /** Tag of a dish (DTO "Tag"). */
 export interface RoadmapTagDto {
   id: number;
-  tagType: "meal_time" | "dietary" | "category";
+  /** API Design v1.8, sheet "Enum": six tag groups. */
+  tagType: TagType;
   code: string;
   name: string;
 }

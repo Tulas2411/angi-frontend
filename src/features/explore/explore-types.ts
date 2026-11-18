@@ -1,4 +1,5 @@
 /** Wire DTOs of the public discovery operations (API Design v1.8: DISH-01/02, REST-01..04, REV-01, REP-01, CAT-02). */
+import type { TagType } from "@/shared/tags/tag-catalog";
 
 export type DishForm = "soup" | "dry" | "other";
 export type OperatingStatus =
@@ -6,7 +7,8 @@ export type OperatingStatus =
 
 export interface TagDto {
   id: number;
-  tagType: "meal_time" | "dietary" | "category";
+  /** API Design v1.8, sheet "Enum": six tag groups. */
+  tagType: TagType;
   code: string;
   name: string;
 }
