@@ -433,7 +433,9 @@ test.describe("dishes", () => {
     await expect(
       page.getByRole("banner").getByRole("link", { name: "Đăng nhập" }),
     ).toBeVisible();
-    expect(callsTo("GET", "dishes")).toHaveLength(1);
+    expect(
+      callsTo("GET", "dishes").some((call) => call.query.has("cursor")),
+    ).toBe(false);
     expect(callsTo("GET", "dishes")[0].authorized).toBe(false);
     expect(callsTo("GET", "dishes")[0].query.get("limit")).toBe("12");
   });
@@ -488,7 +490,7 @@ test.describe("dishes", () => {
     await expect(dishItems(page)).toHaveCount(5);
   });
 
-  test("no result is said, and there is no “Xem thêm” when everything fits one page", async ({
+  test("no result is said, and nothing more is loaded when everything fits one page", async ({
     page,
   }) => {
     await page.goto("/dishes?q=khong-co-mon-nay");
@@ -497,12 +499,12 @@ test.describe("dishes", () => {
     ).toBeVisible();
     await page.goto("/dishes");
     await expect(dishItems(page)).toHaveCount(5);
-    await expect(
-      page.getByRole("button", { name: "Xem thêm món" }),
-    ).toHaveCount(0);
+    await page.locator(".explore-lazy").scrollIntoViewIfNeeded();
+    await expect(dishItems(page)).toHaveCount(5);
+    expect(callsTo("GET", "dishes")).toHaveLength(1);
   });
 
-  test("“Xem thêm” appends the next page and an expired cursor is explained", async ({
+  test("the end of the list nearing the screen appends the next page", async ({
     page,
   }) => {
     // Twelve dishes per page: add enough dishes for a second page.
@@ -511,12 +513,11 @@ test.describe("dishes", () => {
     try {
       await page.goto("/dishes");
       await expect(dishItems(page)).toHaveCount(12);
-      await page.getByRole("button", { name: "Xem thêm món" }).click();
+      // Lazy loading: no button, the end of the list brings the last 2 of the 14 dishes.
+      await page.locator(".explore-lazy").scrollIntoViewIfNeeded();
       await expect(dishItems(page)).toHaveCount(14);
       expect(callsTo("GET", "dishes").at(-1)!.query.get("cursor")).toBe("c12");
-      await expect(
-        page.getByRole("button", { name: "Xem thêm món" }),
-      ).toHaveCount(0);
+      await expect(page.getByText("Đã hiện tất cả 14 món.")).toBeVisible();
     } finally {
       dishes.splice(5);
     }

@@ -459,8 +459,9 @@ test("open conflict, stale draft and load failures offer explicit recovery", asy
   };
   await modal.getByRole("button", { name: "Lưu món", exact: true }).click();
   await expect(modal.getByText(/không còn ở trạng thái nháp/)).toBeVisible();
+  // The price is a VND text field: it shows the grouped amount, the request still sends 60000.
   await expect(modal.getByLabel("Giá (VND) *", { exact: true })).toHaveValue(
-    "60000",
+    "60.000 VND",
   );
 });
 test("history forwards status/page; reviewed records show feedback and no edit actions", async ({

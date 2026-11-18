@@ -39,7 +39,7 @@ OWN-17 `/menu-submissions/{id}/submit` có trong BE nhưng thuộc **F-51 Submit
 9. **Lịch sử**: lọc trạng thái, chuyển trang, xem từng bản cùng ngày nộp/ngày duyệt/người duyệt/ghi chú/phản hồi. Giá trị chưa có được hiển thị rõ, không bịa ngày hoặc người duyệt.
 10. Kiểm tra mobile và bàn phím: Tab, Escape, modal bỏ thay đổi chưa lưu. Không dùng browser alert/confirm/prompt.
 
-Tên được trim và giới hạn 1–200 ký tự; mô tả mới/thay đổi 30–2000 ký tự; giá nguyên VND 0–999.999.999.999; `dishForm=soup|dry|other`; thứ tự nguyên 0–32767; tag ID dương, không trùng. Mô tả cũ null/ngắn được giữ khi không chỉnh trường đó. BE vẫn quyết định validation, trạng thái và quyền sở hữu cuối cùng.
+Tên được trim và giới hạn 1–200 ký tự; mô tả mới/thay đổi 30–2000 ký tự; giá nguyên VND 0–999.999.999.999 (ô giá là `VndField` dùng chung với ngân sách lộ trình: hiện `45.000 VND` khi gõ, lăn chuột không đổi giá, dán `45.000`, `45.000đ` hay `45.000,00` đều nhận 45.000 đồng); `dishForm=soup|dry|other`; thứ tự nguyên 0–32767; tag ID dương, không trùng. Mô tả cũ null/ngắn được giữ khi không chỉnh trường đó. BE vẫn quyết định validation, trạng thái và quyền sở hữu cuối cùng.
 
 ## Lệnh kiểm thử
 

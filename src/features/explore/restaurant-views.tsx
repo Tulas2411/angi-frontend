@@ -129,6 +129,7 @@ export function RestaurantRow(props: { restaurant: RestaurantCardDto }) {
       aria-labelledby={`restaurant-${restaurant.id}`}
     >
       <Media
+        lazy
         className="dish-thumb"
         src={restaurant.coverUrl ?? undefined}
         alt={restaurant.name}
@@ -147,6 +148,7 @@ export function RestaurantDetailCard(props: { restaurant: RestaurantCardDto }) {
       aria-labelledby={`restaurant-${restaurant.id}`}
     >
       <Media
+        lazy
         className="dish-photo"
         src={restaurant.coverUrl ?? undefined}
         alt={restaurant.name}
@@ -168,6 +170,7 @@ export function RestaurantTile({
       aria-labelledby={`restaurant-${restaurant.id}`}
     >
       <Media
+        lazy
         className="dish-tile-photo"
         src={restaurant.coverUrl ?? undefined}
         alt=""

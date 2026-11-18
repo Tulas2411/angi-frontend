@@ -382,6 +382,35 @@
   }
 }
 
+/* Several draft items at once: "Chọn tất cả", the count and the removal of the ticked ones. */
+.mn-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--card);
+}
+.mn-bulk > .button {
+  margin-left: auto;
+}
+.mn-select {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+  cursor: pointer;
+}
+.mn-select > input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
 /* Draft items as cards: the photo fills the left side, the details sit beside it. */
 .mn-draft .menu-list {
   gap: var(--space-4);

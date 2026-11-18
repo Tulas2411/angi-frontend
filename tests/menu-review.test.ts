@@ -8,6 +8,7 @@ import {
   menuReviewError,
   menuStatusTone,
   previousApproved,
+  removedDishesOf,
   tagNamesOf,
 } from "@/features/moderation/menu-review-rules";
 import {
@@ -431,5 +432,66 @@ describe("F-58 approved queue counts", () => {
     ]);
     expect(counts.get(28)).toBeNull();
     expect(counts.get(29)).toMatchObject({ edited: 1 });
+  });
+});
+
+describe("F-58 removed dishes", () => {
+  const newItem = (id: number, resultDishId: number) =>
+    item({ id, sourceDishId: null, change: "new", resultDishId, before: null });
+
+  it("lists the dishes on sale that a pending submission does not keep", () => {
+    const removed = removedDishesOf(
+      { status: "pending", items: [newItem(601, 0)], removedDishes: [before] },
+      null,
+    );
+    expect(removed).toEqual([
+      expect.objectContaining({
+        name: "Bún bò Huế",
+        price: 45000,
+        likeCount: 128,
+      }),
+    ]);
+  });
+
+  it("does not list a first approval's own new dishes as removed", () => {
+    // After approval MOD-M2 sends the dishes this approval created (no item keeps them as a source).
+    const created = [
+      { ...before, id: 901 },
+      { ...before, id: 902, name: "Bún chả" },
+    ];
+    expect(
+      removedDishesOf(
+        {
+          status: "approved",
+          items: [newItem(601, 901), newItem(602, 902)],
+          removedDishes: created,
+        },
+        null,
+      ),
+    ).toEqual([]);
+  });
+
+  it("lists, once approved, the previous approved dishes the submission dropped", () => {
+    const kept = item({ id: 611, sourceDishId: 105, change: "unchanged" });
+    const removed = removedDishesOf(
+      {
+        status: "approved",
+        items: [kept, newItem(612, 903)],
+        removedDishes: [],
+      },
+      [
+        snapshot(),
+        snapshot({
+          id: 402,
+          name: "Bánh bèo",
+          price: 30000,
+          resultDishId: 106,
+        }),
+      ],
+    );
+    expect(removed.map((dish) => [dish.name, dish.price])).toEqual([
+      ["Bánh bèo", 30000],
+    ]);
+    expect(itemCounts([], removed.length).removed).toBe(1);
   });
 });
