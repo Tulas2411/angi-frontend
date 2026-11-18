@@ -254,7 +254,8 @@ export function RoadmapAgentPanel({
     agent.stale ||
     !!agent.pending ||
     locating ||
-    revealing;
+    revealing ||
+    conversation.quota?.remaining === 0;
   const quickReply = agentQuickReply(conversation);
   const state = conversation?.state;
   const thinking = work === "sending" || !!conversation?.processing;
@@ -728,6 +729,22 @@ export function RoadmapAgentPanel({
                 Không, lập lịch luôn
               </Button>
             )}
+          </div>
+        )}
+        {conversation?.quota && (
+          <div
+            className="agent-quota"
+            data-empty={conversation.quota.remaining === 0 || undefined}
+            role="status"
+          >
+            <span>
+              {conversation.quota.remaining === 0
+                ? "Bạn đã dùng hết lượt nhắn trong 24 giờ qua"
+                : `Còn ${conversation.quota.remaining} tin nhắn hôm nay`}
+            </span>
+            <span className="agent-quota-limit">
+              {conversation.quota.limit} tin / 24 giờ
+            </span>
           </div>
         )}
         <form className="agent-composer" onSubmit={send}>

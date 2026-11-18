@@ -211,10 +211,25 @@ export function agentQuickReply(
   )
     return null;
   if (conversation.state.planningIntake === "preferences") return "plan-now";
-  return conversation.state.planningIntake === "details" &&
-    !conversation.state.province
+  return conversation.state.planningIntake === "scope" ||
+    (conversation.state.planningIntake === "details" &&
+      !conversation.state.province)
     ? "current-location"
     : null;
+}
+/**
+ * A conversation's state also holds values only the backend may write, such as the roadmap timestamp of every
+ * conversation attached to a roadmap. The API rejects a confirmed state that repeats them.
+ */
+export function agentConfirmedState(state: AgentState): AgentState {
+  const backendOwned = [
+    "sourceRoadmapUpdatedAt",
+    "historyStartSequence",
+    "pendingStateChange",
+  ];
+  return Object.fromEntries(
+    Object.entries(state).filter(([key]) => !backendOwned.includes(key)),
+  ) as unknown as AgentState;
 }
 /** Sends coordinates only as this turn's confirmed state; they are never kept in browser storage. */
 export function agentLocationState(

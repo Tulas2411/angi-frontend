@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/shared/api/error";
 import { agentService, type AgentService } from "./agent-service";
 import {
+  agentConfirmedState,
   agentError,
   agentPollLimitMs,
   agentPollMs,
@@ -334,7 +335,9 @@ export function useAgentConversation({
       content,
       command,
       ...(selectedItemKey ? { selectedItemKey } : {}),
-      ...(confirmedState ? { confirmedState } : {}),
+      ...(confirmedState
+        ? { confirmedState: agentConfirmedState(confirmedState) }
+        : {}),
     });
   }
   /** Replays the same message ID after an unknown outcome, under the conversation's current version. */

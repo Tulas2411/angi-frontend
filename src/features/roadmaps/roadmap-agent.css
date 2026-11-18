@@ -316,7 +316,28 @@
   min-height: 36px;
   font-size: var(--text-sm);
 }
+/* Sits behind the top edge of the composer card, like a tab the card rests on. */
+.agent-quota {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: calc(-1 * (var(--space-2) + var(--radius-md)));
+  padding: 8px 18px calc(8px + var(--radius-md));
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: var(--control);
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+.agent-quota-limit {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.agent-quota[data-empty] {
+  background: var(--warning-bg);
+  color: var(--warning-ink);
+}
 .agent-composer {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   padding: 14px 18px;
@@ -478,10 +499,22 @@
   margin-inline-start: auto;
 }
 
+.agent-proposal-notes {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .agent-proposal-days {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+  max-height: 168px;
+  overflow-y: auto;
 }
 .agent-proposal-days button {
   display: inline-flex;

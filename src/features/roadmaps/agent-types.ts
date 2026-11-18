@@ -22,7 +22,15 @@ export interface AgentState {
   focusDay: number | null;
   focusMeal: MealSlot | null;
   /** Backend-owned stage of the questions asked before a new plan; absent once they are done. */
-  planningIntake?: "details" | "preferences" | null;
+  planningIntake?: "details" | "scope" | "preferences" | null;
+  /** Backend-owned places of the user's itinerary, one per day. */
+  dayAreas?: {
+    dayNumber: number;
+    label: string;
+    latitude: number;
+    longitude: number;
+    radiusKm: number;
+  }[];
 }
 export interface AgentItem {
   itemKey: string;
@@ -82,6 +90,8 @@ export interface AgentProposal {
     dishNotes?:
       { dishId: number; intro: string | null; reason: string | null }[] | null;
     daySummaries?: { dayNumber: number; summary: string }[] | null;
+    /** What to know before saving; written by the backend. Older drafts have none. */
+    notes?: string[] | null;
   };
   validation: AgentValidation;
   expiresAt: string;
@@ -98,6 +108,12 @@ export interface AgentConversation {
   processing: boolean;
   messages: AgentTranscript[];
   currentProposal: AgentProposal | null;
+  /** Messages left for this user in the last 24 hours, across all conversations. */
+  quota?: AgentQuota | null;
+}
+export interface AgentQuota {
+  remaining: number;
+  limit: number;
 }
 /** The starter buttons above an empty chat; the backend runs the search each one means instead of having the model read the label. */
 export type AgentStarterCommand =
