@@ -25,7 +25,7 @@ function roadmapValues(values: HomeRoadmapValues) {
     originMode: "none" as const,
   };
 }
-/** Reuse the planner's app limit (1–7 days); RM-01 itself supports 1–30. */
+/** Reuse the planner's limit (1–7 days), the same as RM-01. */
 export function validateHomeRoadmap(values: HomeRoadmapValues) {
   const original = validateRoadmapForm(roadmapValues(values), null);
   const errors: Record<string, string> = {};

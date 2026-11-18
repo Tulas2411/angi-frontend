@@ -352,7 +352,7 @@ describe("RM-04 dates picked in the hero", () => {
   it("limits the end to seven days from the start", () => {
     expect(lastPickableDay("2026-11-28")).toBe("2026-12-04");
   });
-  it("keeps a trip the Agent made longer than seven days movable", () => {
+  it("keeps a trip made before the seven-day limit movable", () => {
     expect(maxPickableDays(3)).toBe(7);
     expect(maxPickableDays(10)).toBe(10);
     expect(dateRangeError("2026-11-01", "2026-11-10", 10)).toBeNull();
@@ -360,6 +360,13 @@ describe("RM-04 dates picked in the hero", () => {
       "Chuyến đi tối đa 10 ngày.",
     );
     expect(lastPickableDay("2026-11-01", 10)).toBe("2026-11-10");
+  });
+  it("lets such a trip keep its length or shrink to seven days, as RM-04 accepts", () => {
+    expect(dateRangeError("2026-11-01", "2026-11-10", 10, 10)).toBeNull();
+    expect(dateRangeError("2026-11-01", "2026-11-07", 10, 10)).toBeNull();
+    expect(dateRangeError("2026-11-01", "2026-11-09", 10, 10)).toBe(
+      "Chuyến đi tối đa 7 ngày, hoặc giữ nguyên 10 ngày.",
+    );
   });
 });
 

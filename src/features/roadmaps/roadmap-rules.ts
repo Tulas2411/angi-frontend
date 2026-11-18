@@ -14,7 +14,7 @@ export const roadmapLimits = {
   /** roadmaps.destination_province (RM-01 destinationProvince); the field also takes typed text. */
   province: 100,
   minDays: 1,
-  /** Product limit of the app; RM-01 itself accepts 1..30 (API Design v1.8). */
+  /** Team decision: same limit as RM-01, RM-04 and the Agent in the backend (Roadmap.MaxNumDays). */
   maxDays: 7,
 } as const;
 
@@ -265,24 +265,34 @@ export function tripDays(from: string, to: string): number {
 }
 
 /**
- * Longest trip the hero picker offers: the product limit of RM-01, or the current length when the
- * Agent already made the trip longer (it accepts up to 30 days), so such a trip can still be moved.
+ * Longest trip the hero picker offers: the 7-day limit, or the current length of a roadmap made
+ * before that limit (the backend once accepted up to 100 days), so such a trip can still be moved.
  */
 export function maxPickableDays(currentDays: number) {
   return Math.max(roadmapLimits.maxDays, currentDays);
 }
 
-/** Rule of the date range picked on the detail page: whole days, at most `maxDays`. */
+/**
+ * Rule of the date range picked on the detail page: whole days, at most `maxDays`. A trip longer
+ * than the 7-day limit may only keep its `currentDays`: RM-04 refuses any other count above 7.
+ */
 export function dateRangeError(
   from: string,
   to: string,
   maxDays: number = roadmapLimits.maxDays,
+  currentDays?: number,
 ): string | null {
   if (!isDateOnly(from) || !isDateOnly(to))
     return "Chọn ngày đi rồi chọn ngày về.";
   const days = tripDays(from, to);
   if (days < roadmapLimits.minDays) return "Ngày về không được trước ngày đi.";
   if (days > maxDays) return `Chuyến đi tối đa ${maxDays} ngày.`;
+  if (
+    currentDays !== undefined &&
+    days > roadmapLimits.maxDays &&
+    days !== currentDays
+  )
+    return `Chuyến đi tối đa ${roadmapLimits.maxDays} ngày, hoặc giữ nguyên ${currentDays} ngày.`;
   return null;
 }
 
