@@ -319,8 +319,9 @@
 /* Sits behind the top edge of the composer card, like a tab the card rests on. */
 .agent-quota {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: 2px var(--space-2);
   margin-bottom: calc(-1 * (var(--space-2) + var(--radius-md)));
   padding: 8px 18px calc(8px + var(--radius-md));
   border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -328,9 +329,8 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
-.agent-quota-limit {
+.agent-quota-reset {
   font-weight: 600;
-  white-space: nowrap;
 }
 .agent-quota[data-empty] {
   background: var(--warning-bg);
@@ -359,6 +359,9 @@
   margin: -1px;
   overflow: hidden;
   clip-path: inset(50%);
+}
+.agent-composer textarea:disabled {
+  cursor: not-allowed;
 }
 /* The card is the visible field, so the textarea itself has no surface of its own. */
 .agent-composer textarea,

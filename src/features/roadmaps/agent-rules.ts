@@ -299,6 +299,13 @@ export function proposalItems(proposal: AgentProposal) {
       a.sortOrder - b.sortOrder,
   );
 }
+/** Carries the date so the text stays right when the chat is left open past midnight. */
+export function agentQuotaReset(resetsAt?: string | null) {
+  const date = resetsAt ? new Date(resetsAt) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Mỗi lượt hồi sau 24 giờ";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `Có thêm lượt lúc ${pad(date.getHours())}:${pad(date.getMinutes())} ngày ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
+}
 export function newAgentMessageId() {
   const values = crypto.getRandomValues(new Uint32Array(2));
   return (values[0] & 0x1fffff) * 4294967296 + values[1] || 1;

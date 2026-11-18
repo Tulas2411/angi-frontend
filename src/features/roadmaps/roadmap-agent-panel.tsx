@@ -16,6 +16,7 @@ import {
   agentLocationProblem,
   agentLocationState,
   agentMessageError,
+  agentQuotaReset,
   agentMessageLimit,
   agentPromptSuggestions,
   type AgentPromptSuggestion,
@@ -246,6 +247,7 @@ export function RoadmapAgentPanel({
         ?.focus({ preventScroll: true }),
     );
   }
+  const quotaOut = conversation?.quota?.remaining === 0;
   const blocked =
     !conversation ||
     conversation.status !== "active" ||
@@ -255,7 +257,7 @@ export function RoadmapAgentPanel({
     !!agent.pending ||
     locating ||
     revealing ||
-    conversation.quota?.remaining === 0;
+    quotaOut;
   const quickReply = agentQuickReply(conversation);
   const state = conversation?.state;
   const thinking = work === "sending" || !!conversation?.processing;
@@ -738,22 +740,24 @@ export function RoadmapAgentPanel({
             role="status"
           >
             <span>
-              {conversation.quota.remaining === 0
-                ? "Bạn đã dùng hết lượt nhắn trong 24 giờ qua"
-                : `Còn ${conversation.quota.remaining} tin nhắn hôm nay`}
+              {conversation.quota.remaining === 0 ? "Đã hết" : "Còn"}{" "}
+              {conversation.quota.remaining}/{conversation.quota.limit} tin nhắn
             </span>
-            <span className="agent-quota-limit">
-              {conversation.quota.limit} tin / 24 giờ
+            <span className="agent-quota-reset">
+              {agentQuotaReset(conversation.quota.resetsAt)}
             </span>
           </div>
         )}
         <form className="agent-composer" onSubmit={send}>
           <TextArea
             label="Yêu cầu với trợ lý món ăn"
+            disabled={quotaOut}
             placeholder={
-              empty
-                ? "Hỏi các câu hỏi liên quan đến ẩm thực"
-                : 'Hỏi các câu hỏi liên quan đến ẩm thực như "Ăn gì ở phố cổ?"'
+              quotaOut
+                ? `Bạn đã hết lượt nhắn. ${agentQuotaReset(conversation?.quota?.resetsAt)}`
+                : empty
+                  ? "Hỏi các câu hỏi liên quan đến ẩm thực"
+                  : 'Hỏi các câu hỏi liên quan đến ẩm thực như "Ăn gì ở phố cổ?"'
             }
             value={content}
             onChange={(e) => {

@@ -114,6 +114,8 @@ export interface AgentConversation {
 export interface AgentQuota {
   remaining: number;
   limit: number;
+  /** When the oldest counted message comes back; null while none is counted. */
+  resetsAt?: string | null;
 }
 /** The starter buttons above an empty chat; the backend runs the search each one means instead of having the model read the label. */
 export type AgentStarterCommand =

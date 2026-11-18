@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   agentMessageError,
+  agentQuotaReset,
   canConfirmProposal,
   agentError,
   validationFromError,
@@ -26,6 +27,11 @@ import { agentConversation, agentProposal } from "./fixtures/agent";
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Agent chat presentation rules", () => {
+  it("says when messages come back", () => {
+    const at = new Date(2026, 10, 19, 7, 5).toISOString();
+    expect(agentQuotaReset(at)).toBe("Có thêm lượt lúc 07:05 ngày 19/11");
+    expect(agentQuotaReset(null)).toBe("Mỗi lượt hồi sau 24 giờ");
+  });
   it("suggests only from what the conversation knows", () => {
     expect(agentPromptSuggestions(agentConversation().state)).toEqual([
       { label: "Lộ trình ăn uống 1 ngày ở Đà Nẵng", command: "plan_trip" },

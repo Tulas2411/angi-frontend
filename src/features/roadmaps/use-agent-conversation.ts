@@ -213,6 +213,38 @@ export function useAgentConversation({
     };
   }, [open, processingId, work, publish, report, service]);
 
+  // Messages come back with no user action, and a used-up chat must unlock when they do.
+  const conversationId = conversation?.conversationId;
+  const quotaResetsAt = conversation?.quota?.resetsAt;
+  useEffect(() => {
+    if (!open || !conversationId || !quotaResetsAt) return;
+    const wait = new Date(quotaResetsAt).getTime() - Date.now();
+    if (Number.isNaN(wait)) return;
+    let ignore = false;
+    const timer = setTimeout(
+      async () => {
+        if (lock.current) return; // The turn in progress reloads the conversation itself.
+        try {
+          const value = await service.get(conversationId);
+          if (
+            !ignore &&
+            !lock.current &&
+            current.current?.conversationId === conversationId
+          )
+            publish(value);
+        } catch {
+          /* The next send or reload reports a real problem. */
+        }
+      },
+      // The floor stops a fast device clock from turning this into a tight loop.
+      Math.max(wait + 1000, 5000),
+    );
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [open, conversationId, quotaResetsAt, publish, service]);
+
   async function execute(body: AgentMessageRequest): Promise<AgentSendResult> {
     const value = current.current;
     if (!value || lock.current) return "failed";
