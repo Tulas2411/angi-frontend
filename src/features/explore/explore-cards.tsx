@@ -15,6 +15,7 @@ import type {
   MenuDishDto,
   RestaurantCardDto,
 } from "./explore-types";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 /** One dish of a list: the whole card is a link to its detail page. */
 export function DishCard({
@@ -44,7 +45,7 @@ export function DishCard({
         </div>
         <p className="explore-chips">
           <span>{dishFormLabels[dish.dishForm]}</span>
-          {dish.tags.slice(0, 3).map((tag) => (
+          {visibleTags(dish.tags).slice(0, 3).map((tag) => (
             <span key={tag.id}>{tag.name}</span>
           ))}
           {!dish.isAvailable && <Badge tone="warning">Tạm hết món</Badge>}

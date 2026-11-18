@@ -229,10 +229,11 @@ function TagChips({
   ids: readonly number[];
   names: ReadonlyMap<number, string>;
 }) {
-  if (!ids.length) return null;
+  const shown = ids.filter((id) => names.get(id) !== "");
+  if (!shown.length) return null;
   return (
     <span className="mr-tags">
-      {ids.map((id) => (
+      {shown.map((id) => (
         <span key={id}>{names.get(id) ?? `Thẻ #${id}`}</span>
       ))}
     </span>

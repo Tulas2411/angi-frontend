@@ -37,6 +37,7 @@ import { MenuHistory } from "./menu-history";
 import { MenuApprovalSubmit } from "./menu-approval-submit";
 import "./restaurant-profile.css";
 import "./restaurant-menu.css";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 type Confirmation =
   | { kind: "availability"; dish: OwnerMenuDishDto }
@@ -405,9 +406,9 @@ export function RestaurantMenuPage() {
                               {money(dish.price)}
                               <span>{dishFormLabels[dish.dishForm]}</span>
                             </p>
-                            {!!dish.tags.length && (
+                            {!!visibleTags(dish.tags).length && (
                               <ul className="mn-tags">
-                                {dish.tags.map((tag) => (
+                                {visibleTags(dish.tags).map((tag) => (
                                   <li key={tag.id}>{tag.name}</li>
                                 ))}
                               </ul>

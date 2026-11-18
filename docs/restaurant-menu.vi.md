@@ -32,7 +32,7 @@ OWN-17 `/menu-submissions/{id}/submit` có trong BE nhưng thuộc **F-51 Submit
 2. Đăng nhập Restaurant Owner, mở `/restaurant/menu`. Nhà hàng chưa đăng ký có liên kết đăng ký; nhà hàng chưa xác minh không tạo được bản nháp. Không dùng dữ liệu demo khi API thật lỗi.
 3. Ở **Đang bán**, đánh dấu còn món/hết món và xác nhận bằng modal. Tải lại trang để kiểm tra đã lưu.
 4. Chọn **Tạo bản nháp** ở nhà hàng đã xác minh. BE sao chép các món hiện tại. Nếu đã có draft/pending thì mở bản đó; BE trả 409 khi cố tạo thêm.
-5. **Thêm món**: nhập tên, mô tả, giá VND, loại món, chọn nhãn từ CAT-02 và ảnh nếu muốn. Ô ảnh xám có dấu cộng; nút bỏ ảnh nhỏ. Ảnh được tải lên trước, sau đó lưu món bằng media ID.
+5. **Thêm món**: nhập tên, mô tả, giá VND, loại món, chọn nhãn từ CAT-02 (6 nhóm, một Kiểu món, tự gắn kèm: [danh mục tag](dish-tag-catalog.vi.md)) và ảnh nếu muốn. Ô ảnh xám có dấu cộng; nút bỏ ảnh nhỏ. Ảnh được tải lên trước, sau đó lưu món bằng media ID.
 6. **Sửa** tên/mô tả/loại/giá/nhãn/ảnh/thứ tự. Thứ tự nhỏ hơn hiển thị trước; món mới để trống thứ tự sẽ nối cuối. PATCH chỉ gửi trường thay đổi. Bỏ ảnh gửi `coverMediaId:null`; bỏ toàn bộ nhãn gửi `tagIds:[]`. Lỗi BE giữ nguyên dữ liệu để sửa/thử lại. Nếu thay hẳn bằng món khác, nên xóa dòng cũ và thêm món mới để không giữ nhầm lịch sử của món gốc.
 7. **Xóa** món trong bản nháp rồi xác nhận. Món gốc xuất hiện ở danh sách món đã bỏ; chuyển sang **Đang bán** để kiểm tra menu thật vẫn còn nguyên.
 8. **Hủy bản thực đơn**, xác nhận rồi tải lại. Draft và pending có thể hủy; trạng thái đã duyệt/bị từ chối/đã hủy chỉ đọc. Menu đang bán không đổi.

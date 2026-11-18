@@ -218,6 +218,16 @@ describe("RM-10 form rules", () => {
         tag(6, "dietary", "Món chay"),
       ]).map((entry) => entry.id),
     ).toEqual([4, 6]);
+    // Hidden catalogue tags stay out; the newer groups follow diet in form order.
+    expect(
+      preferenceTags([
+        tag(9, "ingredient", "Hải sản"),
+        { id: 10, tagType: "category", code: "local_sf_main", name: "Món chính" },
+        tag(38, "cooking_method", "Nướng"),
+        tag(27, "meal_role", "Món chính"),
+        tag(6, "dietary", "Món chay"),
+      ]).map((entry) => entry.id),
+    ).toEqual([6, 27, 38, 9]);
     expect(toggleMealSlot(["dinner", "breakfast"], "lunch", true)).toEqual([
       "breakfast",
       "lunch",
