@@ -4,6 +4,7 @@ import { Alert, Button } from "@/shared/ui";
 import { Choice, Dialog, Field } from "@/components/ui/primitives";
 import { ProvinceField } from "@/components/domain/province-field";
 import type { AgentState } from "./agent-types";
+import { roadmapLimits } from "./roadmap-rules";
 
 /** Only explicitly confirmed fields are changed; tags, origin and scope are preserved. */
 export function AgentConstraintsDialog({
@@ -34,9 +35,13 @@ export function AgentConstraintsDialog({
     }
     if (
       numberOfDays !== null &&
-      (!Number.isInteger(numberOfDays) || numberOfDays < 1 || numberOfDays > 30)
+      (!Number.isInteger(numberOfDays) ||
+        numberOfDays < roadmapLimits.minDays ||
+        numberOfDays > roadmapLimits.maxDays)
     ) {
-      setError("Số ngày cần từ 1 đến 30.");
+      setError(
+        `Số ngày cần từ ${roadmapLimits.minDays} đến ${roadmapLimits.maxDays}.`,
+      );
       return;
     }
     if (
@@ -118,8 +123,8 @@ export function AgentConstraintsDialog({
           placeholder="Ví dụ: 3"
           label="Số ngày"
           type="number"
-          min={1}
-          max={30}
+          min={roadmapLimits.minDays}
+          max={roadmapLimits.maxDays}
           step={1}
           value={days}
           onChange={(e) => setDays(e.target.value)}

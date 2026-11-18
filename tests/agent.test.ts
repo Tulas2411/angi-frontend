@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   agentMessageError,
+  agentQuotaReset,
   canConfirmProposal,
   agentError,
   validationFromError,
@@ -9,6 +10,7 @@ import {
   agentStorageKey,
   storedConversation,
   rememberConversation,
+  agentConfirmedState,
   agentLocationState,
   agentQuickReply,
   agentTurnSettled,
@@ -25,6 +27,11 @@ import { agentConversation, agentProposal } from "./fixtures/agent";
 
 afterEach(() => vi.unstubAllGlobals());
 describe("Agent chat presentation rules", () => {
+  it("says when messages come back", () => {
+    const at = new Date(2026, 10, 19, 7, 5).toISOString();
+    expect(agentQuotaReset(at)).toBe("Có thêm lượt lúc 07:05 ngày 19/11");
+    expect(agentQuotaReset(null)).toBe("Mỗi lượt hồi sau 24 giờ");
+  });
   it("suggests only from what the conversation knows", () => {
     expect(agentPromptSuggestions(agentConversation().state)).toEqual([
       { label: "Lộ trình ăn uống 1 ngày ở Đà Nẵng", command: "plan_trip" },
@@ -269,7 +276,7 @@ describe("Agent chat flow rules", () => {
   it("offers a quick reply from the backend stage, never over a plan or a closed conversation", () => {
     const base = agentConversation();
     const at = (
-      stage: "details" | "preferences" | null,
+      stage: "details" | "scope" | "preferences" | null,
       province: string | null,
     ) => ({
       ...base,
@@ -279,6 +286,7 @@ describe("Agent chat flow rules", () => {
     expect(agentQuickReply(null)).toBeNull();
     expect(agentQuickReply(at("details", null))).toBe("current-location");
     expect(agentQuickReply(at("details", "Hà Nội"))).toBeNull();
+    expect(agentQuickReply(at("scope", "Hà Nội"))).toBe("current-location");
     expect(agentQuickReply(at("preferences", "Hà Nội"))).toBe("plan-now");
     expect(agentQuickReply(at(null, null))).toBeNull();
     expect(
@@ -303,6 +311,25 @@ describe("Agent chat flow rules", () => {
     expect(
       agentLocationState({ ...state, province: null }, 21, 105).radiusKm,
     ).toBeNull();
+  });
+  it("never repeats backend-owned values in a confirmed state, which the API rejects", () => {
+    const state = {
+      ...agentConversation().state,
+      sourceRoadmapUpdatedAt: "2026-11-03T04:35:27.328816Z",
+      historyStartSequence: 4,
+      pendingStateChange: null,
+    };
+    const confirmed = agentConfirmedState(
+      agentLocationState(state, 21.0278, 105.8342),
+    );
+    expect(confirmed).not.toHaveProperty("sourceRoadmapUpdatedAt");
+    expect(confirmed).not.toHaveProperty("historyStartSequence");
+    expect(confirmed).not.toHaveProperty("pendingStateChange");
+    expect(confirmed).toMatchObject({
+      originMode: "gps",
+      originLatitude: 21.0278,
+      originLongitude: 105.8342,
+    });
   });
   it("names why the browser gave no position", () => {
     expect(agentLocationProblem(1, true)).toContain("chặn quyền");

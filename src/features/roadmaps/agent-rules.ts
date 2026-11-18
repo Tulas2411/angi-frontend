@@ -211,10 +211,25 @@ export function agentQuickReply(
   )
     return null;
   if (conversation.state.planningIntake === "preferences") return "plan-now";
-  return conversation.state.planningIntake === "details" &&
-    !conversation.state.province
+  return conversation.state.planningIntake === "scope" ||
+    (conversation.state.planningIntake === "details" &&
+      !conversation.state.province)
     ? "current-location"
     : null;
+}
+/**
+ * A conversation's state also holds values only the backend may write, such as the roadmap timestamp of every
+ * conversation attached to a roadmap. The API rejects a confirmed state that repeats them.
+ */
+export function agentConfirmedState(state: AgentState): AgentState {
+  const backendOwned = [
+    "sourceRoadmapUpdatedAt",
+    "historyStartSequence",
+    "pendingStateChange",
+  ];
+  return Object.fromEntries(
+    Object.entries(state).filter(([key]) => !backendOwned.includes(key)),
+  ) as unknown as AgentState;
 }
 /** Sends coordinates only as this turn's confirmed state; they are never kept in browser storage. */
 export function agentLocationState(
@@ -283,6 +298,13 @@ export function proposalItems(proposal: AgentProposal) {
       order.indexOf(a.mealSlot) - order.indexOf(b.mealSlot) ||
       a.sortOrder - b.sortOrder,
   );
+}
+/** Carries the date so the text stays right when the chat is left open past midnight. */
+export function agentQuotaReset(resetsAt?: string | null) {
+  const date = resetsAt ? new Date(resetsAt) : null;
+  if (!date || Number.isNaN(date.getTime())) return "Mỗi lượt hồi sau 24 giờ";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `Có thêm lượt lúc ${pad(date.getHours())}:${pad(date.getMinutes())} ngày ${pad(date.getDate())}/${pad(date.getMonth() + 1)}`;
 }
 export function newAgentMessageId() {
   const values = crypto.getRandomValues(new Uint32Array(2));
