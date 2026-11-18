@@ -7,6 +7,7 @@ import { dishHref } from "./explore-routes";
 import { dishFormLabels, locationText, vnd } from "./explore-rules";
 import type { MenuDishDto } from "./explore-types";
 import { dishViews, type DishView } from "./dish-view-mode";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 const viewIcons: Record<DishView, ReactNode> = {
   list: (
@@ -82,7 +83,7 @@ function DishKinds({ dish }: { dish: MenuDishDto }) {
   return (
     <p className="dish-kinds">
       <span className="dish-kind">{dishFormLabels[dish.dishForm]}</span>
-      {dish.tags
+      {visibleTags(dish.tags)
         .filter((tag) => tag.name !== dishFormLabels[dish.dishForm])
         .map((tag) => (
           <span key={tag.id} className="dish-tag">

@@ -26,6 +26,7 @@ import {
 } from "./menu-wheel-rules";
 import "./wood-plate.css";
 import "./menu-wheel.css";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 const reducedMotion = () =>
   typeof window !== "undefined" &&
@@ -81,7 +82,7 @@ function DishInfo({
   dish: MenuDishDto;
   leaving?: boolean;
 }) {
-  const tags = dish.tags.filter(
+  const tags = visibleTags(dish.tags).filter(
     (tag) => tag.name !== dishFormLabels[dish.dishForm],
   );
   return (
@@ -549,11 +550,11 @@ export function MenuWheel({
           <p className="menu-dish-row menu-dish-description">
             {dish.description?.trim() || "Quán chưa viết mô tả cho món này."}
           </p>
-          {dish.tags.length > 0 && (
+          {visibleTags(dish.tags).length > 0 && (
             <div className="menu-dish-row">
               <p className="menu-dish-label">Đặc điểm nổi bật</p>
               <ul className="menu-dish-chips">
-                {dish.tags.slice(0, 4).map((tag) => (
+                {visibleTags(dish.tags).slice(0, 4).map((tag) => (
                   <li key={tag.id}>
                     <Media src={dish.coverUrl ?? undefined} alt="" />
                     {tag.name}

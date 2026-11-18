@@ -44,6 +44,7 @@ import { vnd } from "./roadmap-list-rules";
 import type { RoadmapMapStop } from "./roadmap-map-rules";
 import { FadingText } from "@/components/ui/fading-text";
 import "./roadmap-place.css";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 
 /** What the place card reads: DISH-02, REST-02 and REST-04 (public reads, the session token is sent). */
 export type PlaceService = Pick<
@@ -169,7 +170,7 @@ function DishPanel({
 }) {
   const { dish } = stop.item;
   const detail = state.status === "ready" ? state.data : null;
-  const tags = detail?.tags ?? dish.tags;
+  const tags = visibleTags(detail?.tags ?? dish.tags);
   const likes = detail?.likeCount ?? dish.likeCount;
   const available = detail?.isAvailable ?? dish.isAvailable;
   const place = [dish.restaurant.district, dish.restaurant.provinceName]
