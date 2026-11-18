@@ -1,6 +1,7 @@
 import { ApiError, getErrorMessage } from "@/shared/api/error";
 import { dishFormLabels } from "@/features/owner/menu-rules";
 import { money } from "@/shared/format";
+import { visibleTags } from "@/shared/tags/tag-catalog";
 import type {
   DishForm,
   MenuDishDto,
@@ -51,6 +52,7 @@ export interface FieldChange {
 const tagList = (ids: readonly number[], names: ReadonlyMap<number, string>) =>
   ids
     .map((id) => names.get(id) ?? `#${id}`)
+    .filter(Boolean)
     .sort((a, b) => a.localeCompare(b, "vi"))
     .join(", ");
 
@@ -82,7 +84,7 @@ export const beforeFromDish = (dish: MenuDishDto): DishBefore => ({
   dishForm: dish.dishForm,
   coverUrl: dish.coverUrl,
   tagIds: dish.tags.map((tag) => tag.id),
-  tagNames: new Map(dish.tags.map((tag) => [tag.id, tag.name])),
+  tagNames: tagNamesOf(dish.tags),
 });
 
 export const beforeFromItem = (item: MenuItemDto): DishBefore => ({
@@ -250,10 +252,16 @@ export function itemCounts(
   };
 }
 
+/**
+ * Tag id → name for the review. The catalogue's hidden tags (the main-dish mirror, regional specialty) map to ""
+ * and are left out of lists, so a dish does not show "Món chính" twice.
+ */
 export const tagNamesOf = (
-  tags: readonly { id: number; name: string }[],
+  tags: readonly { id: number; name: string; code?: string }[],
 ): ReadonlyMap<number, string> =>
-  new Map(tags.map((tag) => [tag.id, tag.name]));
+  new Map(
+    tags.map((tag) => [tag.id, visibleTags([tag]).length ? tag.name : ""]),
+  );
 
 /** MOD-M1..MOD-M4 failures by `errorCode` (sheet "Mã lỗi"). */
 export function menuReviewError(error: unknown) {

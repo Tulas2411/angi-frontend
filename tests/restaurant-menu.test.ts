@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { restaurantMenuService as service } from "@/features/owner/menu-service";
 import {
+  dishKindProblem,
   menuFieldErrors,
   menuItemRequest,
   menuItemValues,
@@ -223,5 +224,33 @@ describe("menu editor", () => {
         { ...menuDetailSample.items[0], tagIds: [2, 9] },
       ),
     ).not.toHaveProperty("tagIds");
+  });
+});
+describe("Kiểu món rule (ANGI_8_TagType_Mon_An_Dong_Bo.xlsx, sheet Bố trí UI)", () => {
+  const catalogue = [
+    { id: 2, tagType: "meal_time" as const, code: "lunch", name: "Ăn trưa" },
+    { id: 10, tagType: "category" as const, code: "local_sf_main", name: "Món chính" },
+    { id: 16, tagType: "category" as const, code: "form.mon_com_va_ngu_coc", name: "Cơm & xôi" },
+    { id: 20, tagType: "category" as const, code: "form.lau", name: "Lẩu" },
+  ];
+  const saved = (tagIds: number[]) => ({ ...menuDetailSample.items[0], tagIds });
+
+  it("asks a new dish for one kind and never accepts two; the hidden main-dish tag is not a kind", () => {
+    expect(dishKindProblem([2, 10], catalogue)).toBe("Vui lòng chọn một Kiểu món.");
+    expect(dishKindProblem([2, 16], catalogue)).toBe("");
+    expect(dishKindProblem([16, 20], catalogue, saved([16]))).toBe("Chỉ chọn một Kiểu món.");
+  });
+
+  it("lets a dish saved before the catalogue change keep no kind, but not drop the one it had", () => {
+    expect(dishKindProblem([2, 10], catalogue, saved([2, 10]))).toBe("");
+    expect(dishKindProblem([2], catalogue, saved([2, 16]))).toBe("Vui lòng chọn một Kiểu món.");
+  });
+
+  it("does not judge kinds before the catalogue has loaded", () => {
+    expect(dishKindProblem([], [])).toBe("");
+    expect(validateMenuItem(menuItemValues(saved([16, 20])), saved([16]), catalogue)).toHaveProperty(
+      "tagIds",
+      "Chỉ chọn một Kiểu món.",
+    );
   });
 });

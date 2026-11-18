@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpTrayIcon,
   PhotoIcon,
@@ -17,6 +17,18 @@ import {
 } from "@/components/ui/primitives";
 import { validateRestaurantImage } from "./registration-rules";
 import {
+  compareTags,
+  excludedTags,
+  isDishKindTag,
+  isHiddenTag,
+  mentionsSeafood,
+  normalizeTagIds,
+  SEAFOOD_CODE,
+  tagGroups,
+  tagPlacement,
+  toggleTag,
+} from "@/shared/tags/tag-catalog";
+import {
   dishFormLabels,
   menuErrorMessage,
   menuFieldErrors,
@@ -30,20 +42,40 @@ import type { DishForm, MenuItemDto, MenuTagDto } from "./menu-types";
 import "./restaurant-image-upload.css";
 import "./menu-item-editor.css";
 
-const tagTypeTitles: Record<MenuTagDto["tagType"], string> = {
-  meal_time: "Bữa ăn",
-  category: "Kiểu món",
-  dietary: "Chế độ ăn",
-};
-
-/** Tags split by type (meal, kind, diet) in a fixed order, each group keeping the API order. */
-function tagGroups(tags: MenuTagDto[]): [string, MenuTagDto[]][] {
-  return (["meal_time", "category", "dietary"] as const)
-    .map((type): [string, MenuTagDto[]] => [
-      tagTypeTitles[type],
-      tags.filter((tag) => tag.tagType === type),
-    ])
-    .filter(([, group]) => group.length > 0);
+/** One group of tag chips; `ids` is the whole selection, `onToggle` applies the catalogue's companion rules. */
+function TagGroup({
+  title,
+  tags,
+  ids,
+  excluded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  tags: MenuTagDto[];
+  ids: number[];
+  /** Chips a chosen diet rules out; they cannot be turned on (a chosen one can still be turned off). */
+  excluded: ReadonlyMap<number, string>;
+  onToggle: (id: number, checked: boolean) => void;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="mie-tag-group">
+      <span className="mie-tag-title">{title}</span>
+      <div className="mie-tag-list">
+        {tags.map((tag) => (
+          <Choice
+            key={tag.id}
+            label={tag.name}
+            checked={ids.includes(tag.id)}
+            disabled={excluded.has(tag.id) && !ids.includes(tag.id)}
+            onChange={(checked) => onToggle(tag.id, checked)}
+          />
+        ))}
+        {children}
+      </div>
+    </div>
+  );
 }
 
 export function MenuItemEditor({
@@ -65,6 +97,8 @@ export function MenuItemEditor({
   const [tags, setTags] = useState<MenuTagDto[]>([]);
   const [tagProblem, setTagProblem] = useState("");
   const [tagsLoading, setTagsLoading] = useState(true);
+  const [moreKinds, setMoreKinds] = useState(false);
+  const [details, setDetails] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [confirm, setConfirm] = useState<"discard" | "image" | null>(null);
@@ -154,13 +188,22 @@ export function MenuItemEditor({
       if (active.current) setUploading(false);
     }
   }
+  // Companion rules applied to what was saved before (hidden main-dish tag → Món chính chip).
+  const tagIds = normalizeTagIds(values.tagIds, tags);
+  function toggle(id: number, checked: boolean) {
+    setValues((previous) => ({
+      ...previous,
+      tagIds: toggleTag(normalizeTagIds(previous.tagIds, tags), tags, id, checked),
+    }));
+  }
   async function save() {
     if (locked.current) return;
-    const invalid = validateMenuItem(values, item);
+    const current = { ...values, tagIds };
+    const invalid = validateMenuItem(current, item, tags);
     setErrors(invalid);
     setProblem("");
     if (Object.keys(invalid).length) return;
-    const patch = menuItemRequest(values, item);
+    const patch = menuItemRequest(current, item);
     if (item && !Object.keys(patch).length) {
       onClose();
       return;
@@ -170,7 +213,7 @@ export function MenuItemEditor({
     try {
       const saved = item
         ? await service.update(submissionId, item.id, patch)
-        : await service.add(submissionId, newMenuItemRequest(values));
+        : await service.add(submissionId, newMenuItemRequest(current));
       if (active.current) onSaved(saved);
     } catch (caught) {
       if (active.current) {
@@ -183,6 +226,27 @@ export function MenuItemEditor({
     }
   }
   const disabled = busy || uploading;
+  const groups = tagGroups(tags);
+  const openGroups = groups.filter((group) => group.placement === "open");
+  const detailGroups = groups.filter((group) => group.placement === "detail");
+  const detailChosen = detailGroups.flatMap((group) =>
+    group.tags.filter((tag) => tagIds.includes(tag.id)),
+  );
+  const excluded = excludedTags(tagIds, tags);
+  const excludedNames = tags
+    .filter((tag) => excluded.has(tag.id) && !isHiddenTag(tag))
+    .sort(compareTags)
+    .map((tag) => tag.name);
+  const dietNames = [...new Set(excluded.values())];
+  const seafood = tags.find((tag) => tag.code === SEAFOOD_CODE);
+  const remindSeafood =
+    !!seafood &&
+    !tagIds.includes(seafood.id) &&
+    !excluded.has(seafood.id) &&
+    mentionsSeafood(`${values.name} ${values.description}`);
+  const noKind =
+    tags.length > 0 &&
+    !tags.some((tag) => isDishKindTag(tag) && tagIds.includes(tag.id));
   return (
     <>
       <Dialog
@@ -373,7 +437,8 @@ export function MenuItemEditor({
           <fieldset disabled={disabled} className="mie-tags">
             <legend>Nhãn món ăn</legend>
             <p className="helper">
-              Chọn bữa ăn, kiểu món và chế độ ăn để khách tìm thấy món dễ hơn.
+              Chọn một kiểu món, rồi bữa ăn và chế độ ăn nếu phù hợp. Mở Thêm chi
+              tiết để ghi vai trò trong bữa, cách chế biến và nguyên liệu.
             </p>
             {tagsLoading && <p role="status">Đang tải nhãn…</p>}
             {tagProblem && (
@@ -389,29 +454,91 @@ export function MenuItemEditor({
             {!tagsLoading && !tagProblem && !tags.length && (
               <p>Chưa có nhãn để chọn.</p>
             )}
-            {tagGroups(tags).map(([title, group]) => (
-              <div className="mie-tag-group" key={title}>
-                <span className="mie-tag-title">{title}</span>
-                <div className="mie-tag-list">
-                  {group.map((tag) => (
-                    <Choice
-                      key={tag.id}
-                      label={tag.name}
-                      checked={values.tagIds.includes(tag.id)}
-                      onChange={(checked) =>
-                        setValues((previous) => ({
-                          ...previous,
-                          tagIds: checked
-                            ? [...previous.tagIds, tag.id]
-                            : previous.tagIds.filter((id) => id !== tag.id),
-                        }))
-                      }
-                    />
-                  ))}
+            {openGroups.map((group) => {
+              // "Xem thêm" chips stay hidden until opened, except the ones already chosen.
+              const extra = group.tags.filter((tag) => tagPlacement(tag) === "more");
+              const shown = group.tags.filter(
+                (tag) =>
+                  moreKinds ||
+                  tagPlacement(tag) !== "more" ||
+                  tagIds.includes(tag.id),
+              );
+              return (
+                <TagGroup
+                  key={group.type}
+                  title={group.title}
+                  tags={shown}
+                  ids={tagIds}
+                  excluded={excluded}
+                  onToggle={toggle}
+                >
+                  {extra.length > 0 && (
+                    <Button
+                      variant="tertiary"
+                      aria-expanded={moreKinds}
+                      onClick={() => setMoreKinds(!moreKinds)}
+                    >
+                      {moreKinds ? "Thu gọn" : `Xem thêm (${extra.length})`}
+                    </Button>
+                  )}
+                </TagGroup>
+              );
+            })}
+            {noKind && !errors.tagIds && (
+              <p className="helper">
+                Món này chưa có kiểu món; chọn một kiểu để khách lọc thấy món.
+              </p>
+            )}
+            {excludedNames.length > 0 && (
+              <p className="helper">
+                Đã chọn {dietNames.join(" và ")} nên không chọn được{" "}
+                {excludedNames.join(", ").toLocaleLowerCase("vi")}.
+              </p>
+            )}
+            {remindSeafood && seafood && (
+              <Alert tone="warning">
+                Tên hoặc mô tả có nhắc tới hải sản. Hãy chọn nhãn Hải sản để
+                khách bị dị ứng lọc được món này.{" "}
+                <Button variant="tertiary" onClick={() => toggle(seafood.id, true)}>
+                  Chọn Hải sản
+                </Button>
+              </Alert>
+            )}
+            {detailGroups.length > 0 && (
+              <div className="mie-tag-details">
+                <Button
+                  variant="tertiary"
+                  aria-expanded={details}
+                  aria-controls="menu-tag-details"
+                  onClick={() => setDetails(!details)}
+                >
+                  {details ? "Ẩn chi tiết" : "Thêm chi tiết"}
+                </Button>
+                <div id="menu-tag-details" className="stack">
+                  {details
+                    ? detailGroups.map((group) => (
+                        <TagGroup
+                          key={group.type}
+                          title={group.title}
+                          tags={group.tags}
+                          ids={tagIds}
+                          excluded={excluded}
+                          onToggle={toggle}
+                        />
+                      ))
+                    : detailChosen.length > 0 && (
+                        <TagGroup
+                          title="Đã chọn"
+                          tags={detailChosen}
+                          ids={tagIds}
+                          excluded={excluded}
+                          onToggle={toggle}
+                        />
+                      )}
                 </div>
               </div>
-            ))}
-            {values.tagIds
+            )}
+            {tagIds
               .filter((id) => !tags.some((tag) => tag.id === id))
               .map((id) => (
                 <Choice

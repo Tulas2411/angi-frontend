@@ -1,9 +1,12 @@
+import type { TagType } from "@/shared/tags/tag-catalog";
+
 export type DishForm = "soup" | "dry" | "other";
 export type MenuStatus =
   "draft" | "pending" | "approved" | "rejected" | "cancelled";
 export interface MenuTagDto {
   id: number;
-  tagType: "meal_time" | "dietary" | "category";
+  /** API Design v1.8, sheet "Enum": six tag groups. */
+  tagType: TagType;
   code: string;
   name: string;
 }

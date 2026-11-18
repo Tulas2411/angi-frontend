@@ -1,4 +1,5 @@
 import { ApiError, getErrorMessage } from "@/shared/api/error";
+import { tagGroups } from "@/shared/tags/tag-catalog";
 import { mealSlots } from "./roadmap-add-item-rules";
 import { budgetMaxDigits } from "./roadmap-rules";
 import type {
@@ -92,9 +93,14 @@ export function withTagChoice(
   };
 }
 
-/** Meal-time tags repeat the meals already chosen above, so only these tags are offered. */
+/**
+ * Meal-time tags repeat the meals already chosen above, and the catalogue's hidden tags are not offered; the rest
+ * come group by group (kind, diet, role, cooking method, ingredient) in catalogue order.
+ */
 export function preferenceTags(tags: readonly RoadmapTagDto[]) {
-  return tags.filter((tag) => tag.tagType !== "meal_time");
+  return tagGroups(tags)
+    .filter((group) => group.type !== "meal_time")
+    .flatMap((group) => group.tags);
 }
 
 /** Meals in day order, whatever order the checkboxes were ticked in. */

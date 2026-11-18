@@ -101,6 +101,7 @@ test.beforeAll(async () => {
       send(200, [
         { id: 2, tagType: "meal_time", code: "lunch", name: "Bữa trưa" },
         { id: 9, tagType: "category", code: "spicy", name: "Cay" },
+        { id: 16, tagType: "category", code: "form.mon_soi", name: "Bún, phở & mì" },
       ]);
       return;
     }
@@ -287,6 +288,8 @@ async function newDish(page: Page, name = "Mì Quảng gà") {
     .getByLabel("Mô tả món *", { exact: true })
     .fill("Sợi mì vàng, nước lèo sệt, gà ta và đậu phộng rang.");
   await modal.getByLabel("Giá (VND) *", { exact: true }).fill("40000");
+  // A new dish needs one Kiểu món (ANGI_8_TagType_Mon_An_Dong_Bo.xlsx, sheet "Bố trí UI").
+  await modal.getByLabel("Cay", { exact: true }).check();
   return modal;
 }
 test("full F50 workflow preserves live menu, sends dish media, precise PATCH, null DELETE and no-body cancel", async ({
@@ -321,14 +324,16 @@ test("full F50 workflow preserves live menu, sends dish media, precise PATCH, nu
     exact: true,
   });
   await editor.getByLabel("Giá (VND) *", { exact: true }).fill("55000");
-  await editor.getByLabel("Cay", { exact: true }).uncheck();
+  // Another Kiểu món replaces the first one: the dish keeps exactly one kind.
+  await editor.getByLabel("Bún, phở & mì", { exact: true }).check();
+  await expect(editor.getByLabel("Cay", { exact: true })).not.toBeChecked();
   await editor.getByRole("button", { name: "Bỏ ảnh món ăn" }).click();
   await confirm(page, "Bỏ ảnh món ăn?");
   await editor.getByRole("button", { name: "Lưu món", exact: true }).click();
   await expect(editor).not.toBeVisible();
   expect(
     JSON.parse(calls.findLast((value) => value.method === "PATCH")!.raw),
-  ).toEqual({ price: 55000, coverMediaId: null, tagIds: [] });
+  ).toEqual({ price: 55000, coverMediaId: null, tagIds: [16] });
   await page
     .getByRole("button", { name: "Xóa Bún bò Huế", exact: true })
     .click();

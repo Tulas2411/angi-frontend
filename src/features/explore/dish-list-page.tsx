@@ -23,6 +23,7 @@ import {
 } from "./explore-rules";
 import { exploreService, type ExploreService } from "./explore-service";
 import type { DishCardDto, DishForm, TagDto } from "./explore-types";
+import { tagGroups, tagsOfType } from "@/shared/tags/tag-catalog";
 import { useDishView } from "./dish-view-mode";
 import {
   DishDetailCard,
@@ -94,8 +95,16 @@ function DishFilterFields({
   tags: TagDto[];
 }) {
   const { draft, change } = filters;
-  const byType = (type: TagDto["tagType"]) =>
-    tags.filter((tag) => tag.tagType === type);
+  const groups = tagGroups(tags);
+  const detailGroups = groups.filter((group) => group.placement === "detail");
+  const detailChosen = detailGroups.some((group) =>
+    group.tags.some((tag) => draft.tagIds.includes(tag.id)),
+  );
+  // "Không ăn" removes dishes by what they contain: diet and ingredients, never by kind or role.
+  const avoidable = [
+    ...tagsOfType(tags, "dietary"),
+    ...tagsOfType(tags, "ingredient"),
+  ];
   return (
     <>
       <div className="dish-filter-grid">
@@ -132,27 +141,34 @@ function DishFilterFields({
         </div>
       </div>
       <div className="dish-filter-groups">
-        <TagChips
-          legend="Bữa ăn"
-          tags={byType("meal_time")}
-          ids={draft.tagIds}
-          onChange={(tagIds) => change({ tagIds }, "now")}
-        />
-        <TagChips
-          legend="Phân loại"
-          tags={byType("category")}
-          ids={draft.tagIds}
-          onChange={(tagIds) => change({ tagIds }, "now")}
-        />
-        <TagChips
-          legend="Chế độ ăn"
-          tags={byType("dietary")}
-          ids={draft.tagIds}
-          onChange={(tagIds) => change({ tagIds }, "now")}
-        />
+        {groups
+          .filter((group) => group.placement === "open")
+          .map((group) => (
+            <TagChips
+              key={group.type}
+              legend={group.title}
+              tags={group.tags}
+              ids={draft.tagIds}
+              onChange={(tagIds) => change({ tagIds }, "now")}
+            />
+          ))}
+        {detailGroups.length > 0 && (
+          <details className="dish-filter-details" open={detailChosen || undefined}>
+            <summary>Thêm bộ lọc chi tiết</summary>
+            {detailGroups.map((group) => (
+              <TagChips
+                key={group.type}
+                legend={group.title}
+                tags={group.tags}
+                ids={draft.tagIds}
+                onChange={(tagIds) => change({ tagIds }, "now")}
+              />
+            ))}
+          </details>
+        )}
         <TagChips
           legend="Không ăn (bỏ món có thẻ)"
-          tags={[...byType("dietary"), ...byType("category")]}
+          tags={avoidable}
           ids={draft.excludeTagIds}
           onChange={(excludeTagIds) => change({ excludeTagIds }, "now")}
         />

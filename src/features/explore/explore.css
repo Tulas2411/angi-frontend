@@ -491,6 +491,21 @@
   grid-column: 1 / -1;
   margin: 0;
 }
+/* Role, cooking method and ingredient filters, folded unless one of them is chosen. */
+.dish-filter-details {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: var(--space-4);
+}
+.dish-filter-details[open] {
+  padding-bottom: var(--space-2);
+}
+.dish-filter-details > summary {
+  width: fit-content;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
 
 /*
  * Narrow screens: the panel closes like the restaurant page's `[hidden]` panel (same slide and
