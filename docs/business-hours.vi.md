@@ -11,6 +11,7 @@ Màn hình F-45 được sửa theo ảnh do chủ dự án cung cấp ngày 17/
 - Bảng **Lịch phục vụ trong tuần** hiển thị thứ hai đến chủ nhật, nhiều khoảng cách nhau bằng dấu `·`.
 - **Chỉnh giờ** mở modal chỉnh/xóa các khoảng của một ngày. **Thêm khoảng** mở modal có thêm một cặp giờ trống. Có thể thêm tiếp trong modal.
 - **Áp dụng** kiểm tra dữ liệu và cập nhật bản nháp lịch tuần. Bước này chưa gửi API.
+- **Áp dụng giờ cho các ngày khác** (2026-11-19): trong modal, bật “Áp dụng giờ của {ngày} cho các ngày khác” rồi chọn ngày (mặc định chọn hết, có “Chọn tất cả” / “Bỏ chọn”). Các ngày được chọn nhận đúng các khoảng của ngày đang sửa, thay giờ cũ của chúng; nút đổi thành “Áp dụng cho N ngày”. Kiểm tra chồng giờ (kể cả qua nửa đêm) chạy trên cả tuần sau khi chép; lỗi ở bản chép được báo trên khoảng gốc. Quy tắc: `weekWithDayHours` trong `business-hours-rules.ts`.
 - **Lưu cả tuần** gửi toàn bộ lịch lên BE. **Hủy** khôi phục lần lưu gần nhất sau khi xác nhận bằng modal.
 - Xóa khoảng, bỏ sửa ngày, bỏ sửa tuần và chuyển tab khi chưa lưu đều dùng modal. Escape có thể đóng modal; nếu có dữ liệu chưa áp dụng sẽ hỏi trước khi bỏ.
 - Xóa hết các khoảng rồi lưu sẽ hỏi xác nhận **Lưu lịch tuần trống?**. Ngày trống hiển thị **Chưa khai báo giờ**; không đổi trạng thái hoạt động sang đóng cửa.

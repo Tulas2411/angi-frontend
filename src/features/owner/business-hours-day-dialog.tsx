@@ -1,14 +1,21 @@
 "use client";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Alert, Button } from "@/shared/ui";
-import { ConfirmDialog, Dialog } from "@/components/ui/primitives";
+import { Choice, ConfirmDialog, Dialog } from "@/components/ui/primitives";
 import { TimeField } from "@/components/ui/date-time-fields";
-import { businessDays, validateBusinessHours } from "./business-hours-rules";
+import {
+  businessDays,
+  validateBusinessHours,
+  weekWithDayHours,
+} from "./business-hours-rules";
 import { HoursRangeSlider } from "./hours-range-slider";
 import type { BusinessHourDto } from "./restaurant-types";
 type DaySlot = BusinessHourDto & { id: string };
 
-/** Day edits stay local until applied; only the weekly form calls OWN-04. */
+/**
+ * Day edits stay local until applied; only the weekly form calls OWN-04. The same intervals can be copied
+ * to other days in one go (they replace what those days had); `onApply` receives the whole week.
+ */
 export function BusinessHoursDayDialog({
   day,
   add,
@@ -21,7 +28,7 @@ export function BusinessHoursDayDialog({
   add: boolean;
   week: readonly BusinessHourDto[];
   initialErrors: Record<string, string>;
-  onApply: (hours: BusinessHourDto[]) => void;
+  onApply: (week: BusinessHourDto[]) => void;
   onClose: () => void;
 }) {
   const formId = useId();
@@ -61,6 +68,14 @@ export function BusinessHoursDayDialog({
     ),
   );
   const [error, setError] = useState("");
+  const otherDays = businessDays.filter(
+    (entry) => entry.dayOfWeek !== day.dayOfWeek,
+  );
+  const [copying, setCopying] = useState(false);
+  const [copyTo, setCopyTo] = useState<number[]>(() =>
+    otherDays.map((entry) => entry.dayOfWeek),
+  );
+  const targets = copying ? copyTo : [];
   const [confirmation, setConfirmation] = useState<
     "discard" | { remove: string } | null
   >(null);
@@ -70,7 +85,9 @@ export function BusinessHoursDayDialog({
       openTime,
       closeTime,
     }));
-  const dirty = JSON.stringify(wire(slots)) !== JSON.stringify(wire(original));
+  const dirty =
+    JSON.stringify(wire(slots)) !== JSON.stringify(wire(original)) ||
+    targets.length > 0;
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -95,11 +112,15 @@ export function BusinessHoursDayDialog({
   }
   function apply(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const others = week.filter((hour) => hour.dayOfWeek !== day.dayOfWeek);
-    const candidate = [...others, ...wire(slots)];
+    const { week: candidate, kept } = weekWithDayHours(
+      week,
+      day.dayOfWeek,
+      wire(slots),
+      targets,
+    );
     const result = validateBusinessHours(candidate);
     if (!result.errorCode) {
-      onApply(wire(slots));
+      onApply(candidate);
       return;
     }
     const fields: Record<string, string> = {};
@@ -112,7 +133,11 @@ export function BusinessHoursDayDialog({
         (entry) => entry.dayOfWeek === candidate[index]?.dayOfWeek,
       )?.label;
       if (label) affected.add(label);
-      const slot = slots[index - others.length];
+      // Copies to other days map back to the interval they came from.
+      const slot =
+        index >= kept && slots.length
+          ? slots[(index - kept) % slots.length]
+          : undefined;
       if (slot) fields[`${slot.id}.${match[2]}`] = message;
     });
     setErrors(fields);
@@ -141,7 +166,9 @@ export function BusinessHoursDayDialog({
               Hủy
             </Button>
             <Button type="submit" form={formId}>
-              Áp dụng
+              {targets.length
+                ? `Áp dụng cho ${targets.length + 1} ngày`
+                : "Áp dụng"}
             </Button>
           </>
         }
@@ -249,6 +276,59 @@ export function BusinessHoursDayDialog({
           >
             Thêm khoảng giờ
           </Button>
+          <fieldset className="business-hours-copy">
+            <legend className="sr-only">Áp dụng cho ngày khác</legend>
+            <Choice
+              label={`Áp dụng giờ của ${day.label} cho các ngày khác`}
+              checked={copying}
+              onChange={(checked) => {
+                setCopying(checked);
+                setErrors({});
+                setError("");
+              }}
+            />
+            {copying && (
+              <>
+                <div className="business-hours-copy-days">
+                  {otherDays.map((entry) => (
+                    <Choice
+                      key={entry.dayOfWeek}
+                      label={entry.label}
+                      checked={copyTo.includes(entry.dayOfWeek)}
+                      onChange={(checked) =>
+                        setCopyTo((previous) =>
+                          checked
+                            ? [...previous, entry.dayOfWeek]
+                            : previous.filter(
+                                (value) => value !== entry.dayOfWeek,
+                              ),
+                        )
+                      }
+                    />
+                  ))}
+                  <Button
+                    variant="tertiary"
+                    onClick={() =>
+                      setCopyTo(
+                        copyTo.length === otherDays.length
+                          ? []
+                          : otherDays.map((entry) => entry.dayOfWeek),
+                      )
+                    }
+                  >
+                    {copyTo.length === otherDays.length
+                      ? "Bỏ chọn"
+                      : "Chọn tất cả"}
+                  </Button>
+                </div>
+                <p className="helper">
+                  {copyTo.length
+                    ? `Giờ hiện có của ${copyTo.length} ngày được chọn sẽ được thay bằng ${slots.length ? `${slots.length} khoảng giờ ở trên` : "“Chưa khai báo giờ”"}.`
+                    : "Chọn ít nhất một ngày để áp dụng."}
+                </p>
+              </>
+            )}
+          </fieldset>
           <p className="helper">
             Áp dụng để cập nhật bản nháp. Chọn “Lưu cả tuần” để lưu vào hệ
             thống.
