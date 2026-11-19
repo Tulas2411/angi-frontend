@@ -475,6 +475,9 @@ export function Dialog({
         className={`dialog ${wide ? "dialog-wide" : ""} ${map ? "dialog-map" : ""} ${drawer ? "dialog-drawer" : ""} ${className}`.trim()}
         aria-labelledby={titleId}
         onCancel={(e) => {
+          // A file input fires a bubbling `cancel` when its picker is dismissed; only the dialog's own
+          // cancel (Escape) closes it, so cancelling a photo choice returns to the form.
+          if (e.target !== e.currentTarget) return;
           e.preventDefault();
           // Escape first closes an open list or picker, not the whole dialog.
           if (ref.current?.querySelector("[data-radix-popper-content-wrapper]"))
@@ -602,16 +605,43 @@ export function Media({
   src,
   alt,
   className = "",
+  lazy = false,
 }: {
   src?: string;
   alt: string;
   className?: string;
+  /** Long lists: load the image only when it nears the screen. */
+  lazy?: boolean;
 }) {
   const [failed, setFailed] = useState<string>();
+  const [loaded, setLoaded] = useState<string>();
+  // A lazy image waits on a shimmering block and fades in once decoded.
+  const waiting = lazy && !!src && src !== failed && src !== loaded;
   return (
-    <div className={`media ${className}`.trim()}>
+    <div
+      className={`media ${waiting ? "is-loading" : ""} ${className}`
+        .replace(/\s+/g, " ")
+        .trim()}
+    >
       {src && src !== failed ? (
-        <img src={src} alt={alt} onError={() => setFailed(src)} />
+        <img
+          // An image already decoded before hydration fires no `load` event: read `complete` instead.
+          ref={(node) => {
+            if (
+              lazy &&
+              node?.complete &&
+              node.naturalWidth > 0 &&
+              loaded !== src
+            )
+              setLoaded(src);
+          }}
+          src={src}
+          alt={alt}
+          loading={lazy ? "lazy" : undefined}
+          decoding={lazy ? "async" : undefined}
+          onLoad={lazy ? () => setLoaded(src) : undefined}
+          onError={() => setFailed(src)}
+        />
       ) : (
         <div className="media-fallback">
           <span aria-hidden>▧</span>

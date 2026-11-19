@@ -41,7 +41,7 @@ import { visibleTags } from "@/shared/tags/tag-catalog";
 
 type Confirmation =
   | { kind: "availability"; dish: OwnerMenuDishDto }
-  | { kind: "remove"; item: MenuItemDto; submissionId: number }
+  | { kind: "remove"; items: MenuItemDto[]; submissionId: number }
   | { kind: "cancel"; submissionId: number };
 export function RestaurantMenuPage() {
   const service = restaurantMenuService;
@@ -62,6 +62,8 @@ export function RestaurantMenuPage() {
   const [confirm, setConfirm] = useState<Confirmation | null>(null),
     [editor, setEditor] = useState<{ item?: MenuItemDto } | null>(null);
   const [historyVersion, setHistoryVersion] = useState(0);
+  // Draft items ticked for removal; only ids still in the open draft count.
+  const [selected, setSelected] = useState<number[]>([]);
   const [approvalNotes, setApprovalNotes] = useState<Record<number, string>>(
     {},
   );
@@ -100,8 +102,24 @@ export function RestaurantMenuPage() {
       ignore = true;
     };
   }, [service]);
+  /**
+   * Reloads the open submission in place: the list stays on screen (no skeleton), so the page keeps its
+   * scroll position, e.g. after removing dishes.
+   */
+  async function refresh(id: number) {
+    const sequence = ++detailSequence.current;
+    try {
+      const result = await service.detail(id);
+      if (active.current && sequence === detailSequence.current)
+        setDetail(result);
+    } catch (error) {
+      if (active.current && sequence === detailSequence.current)
+        setProblem(menuErrorMessage(error));
+    }
+  }
   async function open(id: number) {
     const sequence = ++detailSequence.current;
+    setSelected([]);
     setSelectedId(id);
     setDetail(null);
     setDetailLoading(true);
@@ -175,12 +193,49 @@ export function RestaurantMenuPage() {
         }));
         notify.success("Đã cập nhật tình trạng phục vụ món.");
       } else if (action.kind === "remove") {
-        await service.remove(action.submissionId, action.item.id);
+        // OWN-16 removes one item per call: remove them in turn and stop at the first failure.
+        const removed: number[] = [];
+        let failure: unknown = null;
+        for (const item of action.items) {
+          try {
+            await service.remove(action.submissionId, item.id);
+            removed.push(item.id);
+          } catch (error) {
+            failure = error;
+            break;
+          }
+        }
         if (!active.current) return;
-        notify.success(
-          "Đã xóa món khỏi bản nháp. Thực đơn đang bán vẫn được giữ nguyên.",
+        setDetail((previous) =>
+          previous?.id === action.submissionId
+            ? {
+                ...previous,
+                items: previous.items.filter(
+                  (item) => !removed.includes(item.id),
+                ),
+              }
+            : previous,
         );
-        await open(action.submissionId);
+        setSelected((previous) =>
+          previous.filter((id) => !removed.includes(id)),
+        );
+        if (removed.length)
+          notify.success(
+            removed.length === 1
+              ? "Đã xóa món khỏi bản nháp. Thực đơn đang bán vẫn được giữ nguyên."
+              : `Đã xóa ${removed.length} món khỏi bản nháp. Thực đơn đang bán vẫn được giữ nguyên.`,
+          );
+        void refresh(action.submissionId);
+        if (failure) {
+          setConfirm(null);
+          setHistoryVersion((value) => value + 1);
+          notify.error(
+            removed.length
+              ? `Đã xóa ${removed.length}/${action.items.length} món. ${menuErrorMessage(failure)}`
+              : menuErrorMessage(failure),
+          );
+          return;
+        }
       } else {
         const result = await service.cancel(action.submissionId);
         if (!active.current) return;
@@ -226,6 +281,15 @@ export function RestaurantMenuPage() {
     restaurant = state.restaurant,
     disabled = busy || detailLoading;
   const editable = detail?.status === "draft";
+  const chosen = editable
+    ? detail.items.filter((item) => selected.includes(item.id))
+    : [];
+  const allChosen =
+    !!detail?.items.length && chosen.length === detail.items.length;
+  // Compared with the menu on sale, which an approval has already replaced: an approved submission's
+  // dishes on sale are its own results, so that comparison would list them as removed.
+  const removedDishes =
+    detail && detail.status !== "approved" ? detail.removedDishes : [];
   return (
     <div className="stack form-page menu-workspace">
       {!(menu && restaurant) && (
@@ -273,8 +337,8 @@ export function RestaurantMenuPage() {
                 <p className="rp-eyebrow">Thực đơn · {restaurant.name}</p>
                 <h1>Quản lý thực đơn</h1>
                 <p>
-                  Món đang bán thay đổi ngay khi bạn bật tắt còn món. Thêm,
-                  sửa, xóa món thì làm trong bản nháp và gửi duyệt.
+                  Món đang bán thay đổi ngay khi bạn bật tắt còn món. Thêm, sửa,
+                  xóa món thì làm trong bản nháp và gửi duyệt.
                 </p>
               </div>
               <dl className="mn-stats">
@@ -332,7 +396,10 @@ export function RestaurantMenuPage() {
             </div>
             {tab === "current" && (
               <>
-                <div className="mn-draft-bar" data-open={!!menu.openSubmission || undefined}>
+                <div
+                  className="mn-draft-bar"
+                  data-open={!!menu.openSubmission || undefined}
+                >
                   <DocumentTextIcon aria-hidden />
                   {menu.openSubmission ? (
                     <p>
@@ -469,8 +536,8 @@ export function RestaurantMenuPage() {
                         </Badge>
                         <span className="helper">
                           {detail.items.length} món
-                          {!!detail.removedDishes.length &&
-                            ` · bỏ ${detail.removedDishes.length} món`}
+                          {!!removedDishes.length &&
+                            ` · bỏ ${removedDishes.length} món`}
                         </span>
                         <div className="actions">
                           {editable && (
@@ -575,89 +642,160 @@ export function RestaurantMenuPage() {
                       {!detail.items.length ? (
                         <EmptyState title="Bản thực đơn chưa có món" />
                       ) : (
-                        <ul className="menu-list">
-                          {[...detail.items]
-                            .sort(
-                              (a, b) =>
-                                a.sortOrder - b.sortOrder || a.id - b.id,
-                            )
-                            .map((item) => (
-                              <li className="menu-dish-row" key={item.id}>
-                                <Media
-                                  src={item.coverUrl ?? undefined}
-                                  alt={item.name}
+                        <>
+                          {editable && (
+                            <div
+                              className="mn-bulk"
+                              role="group"
+                              aria-label="Chọn nhiều món"
+                            >
+                              <label className="mn-select">
+                                <input
+                                  type="checkbox"
+                                  checked={allChosen}
+                                  ref={(input) => {
+                                    if (input)
+                                      input.indeterminate =
+                                        chosen.length > 0 && !allChosen;
+                                  }}
+                                  disabled={disabled}
+                                  onChange={(event) =>
+                                    setSelected(
+                                      event.target.checked
+                                        ? detail.items.map((item) => item.id)
+                                        : [],
+                                    )
+                                  }
                                 />
-                                <div className="menu-dish-copy">
-                                  <div className="mn-row-title">
-                                    <h3>{item.name}</h3>
-                                    <Badge
-                                      tone={
-                                        item.change === "new"
-                                          ? "success"
-                                          : item.change === "edited"
-                                            ? "warning"
-                                            : "neutral"
-                                      }
-                                    >
-                                      {
+                                Chọn tất cả ({detail.items.length} món)
+                              </label>
+                              <span className="helper" aria-live="polite">
+                                {chosen.length
+                                  ? `Đã chọn ${chosen.length} món`
+                                  : "Chưa chọn món nào"}
+                              </span>
+                              <Button
+                                variant="destructive"
+                                disabled={disabled || !chosen.length}
+                                onClick={() =>
+                                  setConfirm({
+                                    kind: "remove",
+                                    items: chosen,
+                                    submissionId: detail.id,
+                                  })
+                                }
+                              >
+                                {chosen.length
+                                  ? `Xóa ${chosen.length} món đã chọn`
+                                  : "Xóa món đã chọn"}
+                              </Button>
+                            </div>
+                          )}
+                          <ul className="menu-list">
+                            {[...detail.items]
+                              .sort(
+                                (a, b) =>
+                                  a.sortOrder - b.sortOrder || a.id - b.id,
+                              )
+                              .map((item) => (
+                                <li className="menu-dish-row" key={item.id}>
+                                  <Media
+                                    src={item.coverUrl ?? undefined}
+                                    alt={item.name}
+                                  />
+                                  <div className="menu-dish-copy">
+                                    <div className="mn-row-title">
+                                      {editable && (
+                                        <label className="mn-select">
+                                          <input
+                                            type="checkbox"
+                                            aria-label={`Chọn ${item.name}`}
+                                            checked={selected.includes(item.id)}
+                                            disabled={disabled}
+                                            onChange={(event) =>
+                                              setSelected((previous) =>
+                                                event.target.checked
+                                                  ? [...previous, item.id]
+                                                  : previous.filter(
+                                                      (id) => id !== item.id,
+                                                    ),
+                                              )
+                                            }
+                                          />
+                                        </label>
+                                      )}
+                                      <h3>{item.name}</h3>
+                                      <Badge
+                                        tone={
+                                          item.change === "new"
+                                            ? "success"
+                                            : item.change === "edited"
+                                              ? "warning"
+                                              : "neutral"
+                                        }
+                                      >
                                         {
-                                          new: "Món mới",
-                                          edited: "Đã sửa",
-                                          unchanged: "Không đổi",
-                                        }[item.change]
-                                      }
-                                    </Badge>
+                                          {
+                                            new: "Món mới",
+                                            edited: "Đã sửa",
+                                            unchanged: "Không đổi",
+                                          }[item.change]
+                                        }
+                                      </Badge>
+                                    </div>
+                                    <p className="mn-row-kinds">
+                                      <span>
+                                        {dishFormLabels[item.dishForm]}
+                                      </span>
+                                      <small>Thứ tự {item.sortOrder}</small>
+                                    </p>
+                                    <p className="mn-row-description">
+                                      {item.description ?? "Chưa có mô tả"}
+                                    </p>
+                                    <strong className="mn-row-price">
+                                      {money(item.price)}
+                                    </strong>
                                   </div>
-                                  <p className="mn-row-kinds">
-                                    <span>{dishFormLabels[item.dishForm]}</span>
-                                    <small>Thứ tự {item.sortOrder}</small>
-                                  </p>
-                                  <p className="mn-row-description">
-                                    {item.description ?? "Chưa có mô tả"}
-                                  </p>
-                                  <strong className="mn-row-price">
-                                    {money(item.price)}
-                                  </strong>
-                                </div>
-                                {editable && (
-                                  <div className="actions">
-                                    <Button
-                                      variant="secondary"
-                                      disabled={disabled}
-                                      aria-label={`Sửa ${item.name}`}
-                                      onClick={(event) => {
-                                        editorTrigger.current =
-                                          event.currentTarget;
-                                        setEditor({ item });
-                                      }}
-                                    >
-                                      Sửa
-                                    </Button>
-                                    <Button
-                                      variant="destructive"
-                                      disabled={disabled}
-                                      aria-label={`Xóa ${item.name}`}
-                                      onClick={() =>
-                                        setConfirm({
-                                          kind: "remove",
-                                          item,
-                                          submissionId: detail.id,
-                                        })
-                                      }
-                                    >
-                                      Xóa
-                                    </Button>
-                                  </div>
-                                )}
-                              </li>
-                            ))}
-                        </ul>
+                                  {editable && (
+                                    <div className="actions">
+                                      <Button
+                                        variant="secondary"
+                                        disabled={disabled}
+                                        aria-label={`Sửa ${item.name}`}
+                                        onClick={(event) => {
+                                          editorTrigger.current =
+                                            event.currentTarget;
+                                          setEditor({ item });
+                                        }}
+                                      >
+                                        Sửa
+                                      </Button>
+                                      <Button
+                                        variant="destructive"
+                                        disabled={disabled}
+                                        aria-label={`Xóa ${item.name}`}
+                                        onClick={() =>
+                                          setConfirm({
+                                            kind: "remove",
+                                            items: [item],
+                                            submissionId: detail.id,
+                                          })
+                                        }
+                                      >
+                                        Xóa
+                                      </Button>
+                                    </div>
+                                  )}
+                                </li>
+                              ))}
+                          </ul>
+                        </>
                       )}
-                      {!!detail.removedDishes.length && (
+                      {!!removedDishes.length && (
                         <section className="stack-sm mn-removed">
                           <h3>Món đã bỏ so với thực đơn đang bán</h3>
                           <ul>
-                            {detail.removedDishes.map((dish) => (
+                            {removedDishes.map((dish) => (
                               <li key={dish.id}>
                                 {dish.name} · {money(dish.price)}
                               </li>
@@ -711,7 +849,8 @@ export function RestaurantMenuPage() {
             setEditor(null);
             notify.success("Đã lưu món vào bản nháp.");
             setHistoryVersion((value) => value + 1);
-            void open(detail.id);
+            // In place, so the page stays where the owner was.
+            void refresh(detail.id);
           }}
         />
       )}
@@ -719,7 +858,9 @@ export function RestaurantMenuPage() {
         open={confirm !== null}
         title={
           confirm?.kind === "remove"
-            ? "Xóa món khỏi bản nháp?"
+            ? confirm.items.length > 1
+              ? `Xóa ${confirm.items.length} món khỏi bản nháp?`
+              : "Xóa món khỏi bản nháp?"
             : confirm?.kind === "cancel"
               ? "Hủy bản thực đơn?"
               : "Cập nhật tình trạng phục vụ?"
@@ -733,7 +874,9 @@ export function RestaurantMenuPage() {
       >
         <p>
           {confirm?.kind === "remove"
-            ? `Xóa “${confirm.item.name}” khỏi bản nháp. Món đang bán chưa bị xóa.`
+            ? confirm.items.length > 1
+              ? `Xóa ${confirm.items.map((item) => `“${item.name}”`).join(", ")} khỏi bản nháp. Món đang bán chưa bị xóa.`
+              : `Xóa “${confirm.items[0]?.name}” khỏi bản nháp. Món đang bán chưa bị xóa.`
             : confirm?.kind === "cancel"
               ? "Các thay đổi trong bản này sẽ không được áp dụng. Thực đơn đang bán được giữ nguyên."
               : confirm

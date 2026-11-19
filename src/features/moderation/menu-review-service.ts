@@ -7,6 +7,7 @@ import {
   compareItems,
   itemCounts,
   previousApproved,
+  removedDishesOf,
 } from "./menu-review-rules";
 import type {
   ApproveMenuSubmissionResponseDto,
@@ -133,7 +134,7 @@ export async function loadApprovedCounts(
       ]);
       return itemCounts(
         compareItems(own.items, baseline?.items ?? null),
-        own.removedDishes.length,
+        removedDishesOf(own, baseline?.items ?? null).length,
       );
     }),
   );

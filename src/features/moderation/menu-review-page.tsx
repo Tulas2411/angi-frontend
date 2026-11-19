@@ -24,7 +24,6 @@ import { useRemote } from "@/features/explore/use-remote";
 import { exploreService } from "@/features/explore/explore-service";
 import { verificationDateLabel } from "@/features/owner/verification-details";
 import { dishFormLabels, menuStatusLabels } from "@/features/owner/menu-rules";
-import type { MenuDishDto } from "@/features/owner/menu-types";
 import { waitingFor } from "./verification-review-rules";
 import {
   compareItems,
@@ -36,8 +35,10 @@ import {
   menuQueueTabs,
   menuReviewError,
   menuStatusTone,
+  removedDishesOf,
   tagNamesOf,
   type ItemFilter,
+  type RemovedDish,
   type MenuDecision,
 } from "./menu-review-rules";
 import {
@@ -329,7 +330,7 @@ function ItemRow({
   );
 }
 
-function RemovedRow({ dish }: { dish: MenuDishDto }) {
+function RemovedRow({ dish }: { dish: RemovedDish }) {
   return (
     <li className="mr-item" data-change="removed">
       <div className="mr-photos">
@@ -345,8 +346,8 @@ function RemovedRow({ dish }: { dish: MenuDishDto }) {
           <Badge tone="error">Gỡ khỏi thực đơn</Badge>
         </div>
         <p className="mr-item-meta">
-          <strong>{money(dish.price)}</strong> · {dishFormLabels[dish.dishForm]}{" "}
-          · {dish.likeCount} lượt thích
+          <strong>{money(dish.price)}</strong> · {dishFormLabels[dish.dishForm]}
+          {dish.likeCount !== undefined && ` · ${dish.likeCount} lượt thích`}
         </p>
       </div>
     </li>
@@ -428,7 +429,9 @@ export function MenuReviewPage({
   const isApproved = item.status === "approved";
   const baselineData = baseline.status === "ready" ? baseline.data : null;
   const compared = compareItems(item.items, baselineData?.items ?? null);
-  const counts = itemCounts(compared, item.removedDishes.length);
+  // Once approved, the removed dishes come from the previous approved submission (`removedDishesOf`).
+  const removed = removedDishesOf(item, baselineData?.items ?? null);
+  const counts = itemCounts(compared, removed.length);
   const open = item.status === "pending";
   const shownItems =
     filter === "all"
@@ -582,7 +585,7 @@ export function MenuReviewPage({
               ))}
             </SlidingSegment>
             {shownItems.length === 0 &&
-            !(showRemoved && item.removedDishes.length) ? (
+            !(showRemoved && removed.length) ? (
               <p className="helper">Không có món nào trong mục này.</p>
             ) : (
               <ul className="mr-items">
@@ -590,8 +593,8 @@ export function MenuReviewPage({
                   <ItemRow key={entry.item.id} compared={entry} names={names} />
                 ))}
                 {showRemoved &&
-                  item.removedDishes.map((dish) => (
-                    <RemovedRow key={`removed-${dish.id}`} dish={dish} />
+                  removed.map((dish) => (
+                    <RemovedRow key={dish.key} dish={dish} />
                   ))}
               </ul>
             )}

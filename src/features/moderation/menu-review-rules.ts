@@ -7,7 +7,11 @@ import type {
   MenuDishDto,
   MenuItemDto,
 } from "@/features/owner/menu-types";
-import type { MenuQueueStatus, ModMenuItemDiffDto } from "./menu-review-types";
+import type {
+  MenuQueueStatus,
+  ModMenuItemDiffDto,
+  ModMenuSubmissionDetailDto,
+} from "./menu-review-types";
 
 export const menuQueueTabs: { value: MenuQueueStatus; label: string }[] = [
   { value: "pending", label: "Chờ duyệt" },
@@ -236,6 +240,59 @@ export function previousApproved<
     foundAt = time;
   }
   return found;
+}
+
+/** A dish the submission takes off the menu, as the comparison lists it. */
+export interface RemovedDish {
+  key: string;
+  name: string;
+  price: number;
+  dishForm: DishForm;
+  coverUrl: string | null;
+  /** Only when the source is a dish on sale. */
+  likeCount?: number;
+}
+
+/**
+ * Dishes the submission removes. MOD-M2 `removedDishes` are the dishes on sale that no item keeps, which is
+ * right only before the approval: afterwards the dishes on sale are the ones this approval created (new items
+ * keep no source dish, so they would be listed as removed) and the dishes it really removed are gone from
+ * that list. Once approved, the removed dishes are the dishes of the previous approved submission (`baseline`)
+ * that no item keeps; with no earlier approval the menu was empty and nothing was removed.
+ */
+export function removedDishesOf(
+  submission: Pick<
+    ModMenuSubmissionDetailDto,
+    "status" | "items" | "removedDishes"
+  >,
+  baseline: readonly MenuItemDto[] | null,
+): RemovedDish[] {
+  if (submission.status !== "approved")
+    return submission.removedDishes.map((dish) => ({
+      key: `dish-${dish.id}`,
+      name: dish.name,
+      price: dish.price,
+      dishForm: dish.dishForm,
+      coverUrl: dish.coverUrl,
+      likeCount: dish.likeCount,
+    }));
+  const kept = new Set(
+    submission.items.flatMap((item) =>
+      item.sourceDishId === null ? [] : [item.sourceDishId],
+    ),
+  );
+  return (baseline ?? [])
+    .filter((entry) => {
+      const dishId = entry.resultDishId ?? entry.sourceDishId;
+      return dishId !== null && !kept.has(dishId);
+    })
+    .map((entry) => ({
+      key: `item-${entry.id}`,
+      name: entry.name,
+      price: entry.price,
+      dishForm: entry.dishForm,
+      coverUrl: entry.coverUrl,
+    }));
 }
 
 /** Counts shown above the comparison; `unchanged` dishes stay as they are. */
