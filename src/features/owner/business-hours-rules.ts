@@ -18,6 +18,35 @@ function minute(time: string): number | null {
   return hours * 60 + minutes;
 }
 
+/**
+ * The week after one day's edit, optionally copied to other days: the edited day and every target day
+ * lose what they had and get the same intervals (same open and close times). Other days are kept. Order:
+ * kept days first, then the edited day, then the targets in `businessDays` order, so a validation index
+ * past the kept days points at `slots[(index - kept) % slots.length]`.
+ */
+export function weekWithDayHours(
+  week: readonly BusinessHourDto[],
+  dayOfWeek: number,
+  slots: readonly Pick<BusinessHourDto, "openTime" | "closeTime">[],
+  copyTo: readonly number[] = [],
+): { week: BusinessHourDto[]; kept: number } {
+  const targets = businessDays
+    .map((day) => day.dayOfWeek)
+    .filter((day) => day !== dayOfWeek && copyTo.includes(day));
+  const replaced = new Set([dayOfWeek, ...targets]);
+  const kept = week.filter((hour) => !replaced.has(hour.dayOfWeek));
+  const of = (day: number) =>
+    slots.map(({ openTime, closeTime }) => ({
+      dayOfWeek: day,
+      openTime,
+      closeTime,
+    }));
+  return {
+    week: [...kept, ...of(dayOfWeek), ...targets.flatMap(of)],
+    kept: kept.length,
+  };
+}
+
 export function sortBusinessHours(
   hours: readonly BusinessHourDto[],
 ): BusinessHourDto[] {

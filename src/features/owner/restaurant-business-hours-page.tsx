@@ -405,13 +405,8 @@ function BusinessHoursEditor({
           week={draft}
           initialErrors={errors}
           onClose={() => setEditingDay(null)}
-          onApply={(dayHours) => {
-            setDraft([
-              ...draft.filter(
-                (hour) => hour.dayOfWeek !== editingDay.day.dayOfWeek,
-              ),
-              ...dayHours,
-            ]);
+          onApply={(week) => {
+            setDraft(week);
             edited();
             setEditingDay(null);
           }}

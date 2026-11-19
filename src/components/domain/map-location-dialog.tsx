@@ -7,6 +7,7 @@ import {
   MapSelectionOverlay,
 } from "@/components/domain/map-overlays";
 import { isMapLocation, searchMapPlaces } from "@/shared/maps/mapbox";
+import { coordinatesLabel, parseCoordinates } from "@/shared/maps/coordinates";
 import type { MapLocation, MapStyle } from "@/shared/maps/mapbox";
 import { InteractiveLocationMap } from "./interactive-location-map";
 
@@ -14,7 +15,9 @@ import { InteractiveLocationMap } from "./interactive-location-map";
  * Point picker shared by the restaurant location (F-43) and the roadmap origin
  * (F-19). Search is an explicit Search Box
  * forward request on submit; coordinates can also be typed, so the dialog stays
- * usable without a token or WebGL.
+ * usable without a token or WebGL. Coordinates typed or pasted into the search box
+ * ("21.027651, 105.533428", "21°01'39.5\"N 105°32'00.3\"E", as Google Maps copies them)
+ * pin that point directly, without a Search Box request.
  */
 export function MapLocationDialog({
   location,
@@ -143,7 +146,16 @@ export function MapLocationDialog({
     setResultsOpen(false);
     setError("");
   }
+  /** Pins a pair read from the search box; true when the text was coordinates. */
+  function pinCoordinates(text: string) {
+    const point = parseCoordinates(text);
+    if (!point) return false;
+    select({ name: coordinatesLabel(point), ...point });
+    setManualOpen(false);
+    return true;
+  }
   async function search() {
+    if (pinCoordinates(query)) return;
     if (!query.trim() || !token || busy || saving || searchController.current)
       return;
     const controller = new AbortController();
@@ -292,7 +304,7 @@ export function MapLocationDialog({
             <Input
               type="search"
               aria-label="Tìm địa chỉ hoặc địa điểm"
-              placeholder="Tìm địa chỉ hoặc địa điểm"
+              placeholder="Tìm địa chỉ, địa điểm hoặc dán tọa độ"
               value={query}
               maxLength={256}
               disabled={!hasMap}
@@ -300,6 +312,14 @@ export function MapLocationDialog({
               onChange={(event) => {
                 resetSearch();
                 setQuery(event.target.value);
+              }}
+              onPaste={(event) => {
+                // A pasted position is pinned at once, as in Google Maps; other text waits for Enter.
+                const pasted = event.clipboardData.getData("text");
+                if (!parseCoordinates(pasted)) return;
+                event.preventDefault();
+                setQuery(pasted.trim());
+                pinCoordinates(pasted);
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
