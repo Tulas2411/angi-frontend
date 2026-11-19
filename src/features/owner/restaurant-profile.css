@@ -208,7 +208,8 @@
 
 /* ------------------------------------------------------- hours tab */
 .rp-page .business-hours-day {
-  grid-template-columns: 120px minmax(0, 1fr) auto;
+  /* Wide enough for the longest day name with the "Hôm nay" chip on one line. */
+  grid-template-columns: 150px minmax(0, 1fr) auto;
   gap: var(--space-4);
   min-height: 64px;
   padding: var(--space-3) var(--space-2);
@@ -217,10 +218,18 @@
 .rp-page .business-hours-day[data-today] {
   background: var(--canvas);
 }
+/* The chip never breaks inside itself: when the column is too narrow it moves under the name whole. */
+.rp-page .business-hours-day[data-today] .business-hours-day-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-2);
+}
 .rp-page .business-hours-day[data-today] .business-hours-day-name::after {
   content: "Hôm nay";
-  margin-left: var(--space-2);
   padding: 2px 8px;
+  white-space: nowrap;
+  line-height: 1.5;
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--card);

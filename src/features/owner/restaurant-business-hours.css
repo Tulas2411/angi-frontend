@@ -70,6 +70,25 @@
   margin-bottom: var(--space-2);
   font-weight: 600;
 }
+/* "Áp dụng cho các ngày khác": the switch, then the other days as chips. */
+.business-hours-copy {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--control);
+}
+.business-hours-copy > .helper {
+  margin: 0;
+}
+.business-hours-copy-days {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
 .business-hours-slot-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

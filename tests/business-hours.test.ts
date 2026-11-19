@@ -4,6 +4,7 @@ import {
   isOpenAt,
   sortBusinessHours,
   validateBusinessHours,
+  weekWithDayHours,
 } from "@/features/owner/business-hours-rules";
 import type { BusinessHourDto } from "@/features/owner/restaurant-types";
 
@@ -106,5 +107,52 @@ describe("OWN-04 weekly hours", () => {
       isOpenAt([hour(0, "22:00", "03:00")], new Date("2026-10-11T19:00:00Z")),
     ).toBe(true);
     expect(isOpenAt([], monday10)).toBe(false);
+  });
+});
+
+describe("one day's hours copied to other days", () => {
+  const week = [
+    hour(1, "06:00", "10:00"),
+    hour(2, "07:00", "11:00"),
+    hour(0, "08:00", "12:00"),
+  ];
+  const slots = [
+    { openTime: "06:30", closeTime: "13:30" },
+    { openTime: "17:00", closeTime: "22:00" },
+  ];
+
+  it("replaces only the edited day without targets", () => {
+    const { week: next, kept } = weekWithDayHours(week, 1, slots);
+    expect(kept).toBe(2);
+    expect(next).toEqual([
+      hour(2, "07:00", "11:00"),
+      hour(0, "08:00", "12:00"),
+      hour(1, "06:30", "13:30"),
+      hour(1, "17:00", "22:00"),
+    ]);
+  });
+
+  it("gives every chosen day the same intervals, replacing what they had, in week order", () => {
+    const { week: next, kept } = weekWithDayHours(week, 1, slots, [0, 2, 1]);
+    expect(kept).toBe(0);
+    expect(next.map((entry) => entry.dayOfWeek)).toEqual([1, 1, 2, 2, 0, 0]);
+    expect(validateBusinessHours(next).errorCode).toBeNull();
+  });
+
+  it("lets the overlap check see copies that cross midnight into the next day", () => {
+    const overnight = [
+      { openTime: "20:00", closeTime: "03:00" },
+      { openTime: "02:00", closeTime: "06:00" },
+    ];
+    const { week: next } = weekWithDayHours([], 1, overnight.slice(0, 1), [2]);
+    expect(validateBusinessHours(next).errorCode).toBeNull();
+    const clash = weekWithDayHours([], 1, overnight, [2]).week;
+    expect(validateBusinessHours(clash).errorCode).toBe(
+      "INVALID_BUSINESS_HOURS",
+    );
+  });
+
+  it("clears the chosen days when the edited day has no interval", () => {
+    expect(weekWithDayHours(week, 1, [], [2, 0]).week).toEqual([]);
   });
 });
