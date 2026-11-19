@@ -29,6 +29,7 @@ import {
   ratingFilterOptions,
   restaurantApiQuery,
   restaurantFiltersHref,
+  restaurantPageSize,
   restaurantQueryFromParams,
   restaurantSortOptions,
   type RestaurantFilters,
@@ -48,6 +49,8 @@ import {
   BrowseLayout,
   BrowseSearchBar,
   FilterSidebar,
+  ListSkeletons,
+  staggerStyle,
   useInstantFilters,
 } from "./explore-browse";
 import "./explore.css";
@@ -301,8 +304,11 @@ export function RestaurantListPage({
             <DishViewSwitcher view={view} onChange={setView} />
           </div>
           <ul className={`dish-items dish-items-${view}`}>
-            {items.map((restaurant) => (
-              <li key={restaurant.id}>
+            {items.map((restaurant, index) => (
+              <li
+                key={restaurant.id}
+                style={staggerStyle(index, restaurantPageSize)}
+              >
                 {view === "gallery" ? (
                   <RestaurantTile restaurant={restaurant} />
                 ) : view === "list" ? (
@@ -312,15 +318,12 @@ export function RestaurantListPage({
                 )}
               </li>
             ))}
+            {status?.loading && <ListSkeletons view={view} />}
           </ul>
         </section>
       )}
       <div ref={sentinel} className="explore-lazy" aria-live="polite">
-        {status?.loading && (
-          <p className="helper explore-lazy-loading">
-            <span className="spinner" aria-hidden /> Đang tải thêm quán…
-          </p>
-        )}
+        {status?.loading && <p className="sr-only">Đang tải thêm quán…</p>}
         {status?.problem && (
           <Alert>
             Chưa tải được thêm quán: {status.problem}{" "}

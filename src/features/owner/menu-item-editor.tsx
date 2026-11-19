@@ -15,6 +15,7 @@ import {
   SelectField,
   TextArea,
 } from "@/components/ui/primitives";
+import { VndField } from "@/components/ui/vnd-field";
 import { validateRestaurantImage } from "./registration-rules";
 import {
   compareTags,
@@ -384,19 +385,17 @@ export function MenuItemEditor({
             }
           />
           <div className="mie-numbers">
-            <Field
-              placeholder="Ví dụ: 45000"
+            <VndField
+              placeholder="Ví dụ: 45.000 VND"
               label="Giá (VND)"
-              type="number"
-              min={0}
-              max={999999999999}
-              step={1}
+              name="price"
+              maxDigits={12}
               required
               value={values.price}
               disabled={disabled}
               error={errors.price}
-              onChange={(event) =>
-                setValues({ ...values, price: event.target.value })
+              onValueChange={(price) =>
+                setValues((previous) => ({ ...previous, price }))
               }
             />
             <SelectField

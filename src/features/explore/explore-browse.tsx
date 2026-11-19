@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { ChevronRightIcon } from "@heroicons/react/20/solid";
 import { Alert, Button, Input } from "@/shared/ui";
 
@@ -329,3 +335,39 @@ export function BrowseLayout({
     </div>
   );
 }
+
+/** Placeholder cards a loading page shows, as many as one row or two of the layout holds. */
+const skeletonCount: Record<"list" | "detailed" | "gallery", number> = {
+  list: 3,
+  detailed: 2,
+  gallery: 6,
+};
+
+/**
+ * Lazy-loading placeholders: shimmering cards shaped like the chosen layout, appended to the list while
+ * its next page loads (`.dish-skeleton-*` in explore.css). Hidden from screen readers; the status line
+ * after the list says what is happening.
+ */
+export function ListSkeletons({
+  view,
+}: {
+  view: "list" | "detailed" | "gallery";
+}) {
+  return (
+    <>
+      {Array.from({ length: skeletonCount[view] }, (_, index) => (
+        <li
+          key={`skeleton-${index}`}
+          className="dish-skeleton-item"
+          aria-hidden
+        >
+          <div className={`skeleton dish-skeleton dish-skeleton-${view}`} />
+        </li>
+      ))}
+    </>
+  );
+}
+
+/** Position of a card inside its page, for the staggered fade-in of `.dish-items > li`. */
+export const staggerStyle = (index: number, pageSize: number) =>
+  ({ "--stagger": index % pageSize }) as CSSProperties;

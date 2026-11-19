@@ -285,6 +285,7 @@ export function DishRow({
   return (
     <article className="dish-item dish-row" aria-labelledby={`dish-${dish.id}`}>
       <Media
+        lazy
         className="dish-thumb"
         src={dish.coverUrl ?? undefined}
         alt={dish.name}
@@ -328,6 +329,7 @@ export function DishDetailCard({
       aria-labelledby={`dish-${dish.id}`}
     >
       <Media
+        lazy
         className="dish-photo"
         src={dish.coverUrl ?? undefined}
         alt={dish.name}
@@ -363,6 +365,7 @@ export function DishTile({
       aria-labelledby={`dish-${dish.id}`}
     >
       <Media
+        lazy
         className="dish-tile-photo"
         src={dish.coverUrl ?? undefined}
         alt=""

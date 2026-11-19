@@ -562,7 +562,13 @@ test("planning questions offer one-tap answers chosen by the backend stage", asy
     .setGeolocation({ latitude: 21.0278, longitude: 105.8342 });
   conversation = {
     ...conversation,
-    state: { ...conversation.state, province: null, planningIntake: "details" },
+    state: {
+      ...conversation.state,
+      province: null,
+      planningIntake: "details",
+      // Every conversation attached to a roadmap holds this; the real API answers 400 if it comes back.
+      sourceRoadmapUpdatedAt: "2026-11-03T04:35:27.328816Z",
+    } as AgentConversation["state"],
   };
   await open(page);
   await panel(page)
@@ -575,6 +581,9 @@ test("planning questions offer one-tap answers chosen by the backend stage", asy
     originLongitude: 105.8342,
     radiusKm: null,
   });
+  expect(messageCalls[0].confirmedState).not.toHaveProperty(
+    "sourceRoadmapUpdatedAt",
+  );
 });
 
 test("asking for somewhere nearby shares the position at any point in the conversation", async ({
@@ -644,6 +653,29 @@ test("a dish shows why it was suggested and the day ends with its conclusion", a
   await expect(panel(page).locator(".agent-day-summary")).toHaveText(
     "Một ngày nhẹ nhàng, đậm vị miền Trung.",
   );
+});
+
+test("the draft card lists what to know before saving, and an older draft shows no list", async ({
+  page,
+}) => {
+  const proposal = agentProposal();
+  proposal.snapshot.notes = [
+    "Lịch này chưa áp ngân sách. Khi chốt được mức nào, bạn nhắn mình để lập lại nhé.",
+    "Còn thiếu món cho bữa tối ngày 1.",
+  ];
+  conversation = { ...conversation, currentProposal: proposal };
+  await open(page);
+  const notes = panel(page).getByRole("list", { name: "Lưu ý về bản nháp" });
+  await expect(notes.getByRole("listitem")).toHaveText([
+    "Lịch này chưa áp ngân sách. Khi chốt được mức nào, bạn nhắn mình để lập lại nhé.",
+    "Còn thiếu món cho bữa tối ngày 1.",
+  ]);
+
+  proposal.snapshot.notes = null;
+  await page.reload();
+  await open(page);
+  await expect(panel(page).locator(".agent-proposal")).toBeVisible();
+  await expect(panel(page).locator(".agent-proposal-notes")).toHaveCount(0);
 });
 
 test("a draft with no wording from the backend still shows its dishes", async ({

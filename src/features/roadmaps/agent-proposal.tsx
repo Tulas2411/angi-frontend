@@ -203,6 +203,9 @@ export function AgentProposalPreview({
           {budgetAmount !== null && !budgetUnrestricted && (
             <span className="helper">Ngân sách {vnd(budgetAmount)}</span>
           )}
+          {budgetAmount === null && budgetUnrestricted && (
+            <span className="helper">Chưa đặt ngân sách</span>
+          )}
         </p>
         {days.length > 1 && (
           <div
@@ -225,6 +228,13 @@ export function AgentProposalPreview({
         )}
       </header>
       <AgentValidationNotice validation={proposal.validation} />
+      {!!proposal.snapshot.notes?.length && (
+        <ul className="agent-proposal-notes" aria-label="Lưu ý về bản nháp">
+          {proposal.snapshot.notes.map((text, index) => (
+            <li key={index}>{text}</li>
+          ))}
+        </ul>
+      )}
       <Button
         variant="secondary"
         className="agent-map-toggle"

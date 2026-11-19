@@ -14,7 +14,7 @@ export const roadmapLimits = {
   /** roadmaps.destination_province (RM-01 destinationProvince); the field also takes typed text. */
   province: 100,
   minDays: 1,
-  /** Product limit of the app; RM-01 itself accepts 1..30 (API Design v1.8). */
+  /** Team decision: same limit as RM-01, RM-04 and the Agent in the backend (Roadmap.MaxNumDays). */
   maxDays: 7,
 } as const;
 
@@ -265,24 +265,34 @@ export function tripDays(from: string, to: string): number {
 }
 
 /**
- * Longest trip the hero picker offers: the product limit of RM-01, or the current length when the
- * Agent already made the trip longer (it accepts up to 30 days), so such a trip can still be moved.
+ * Longest trip the hero picker offers: the 7-day limit, or the current length of a roadmap made
+ * before that limit (the backend once accepted up to 100 days), so such a trip can still be moved.
  */
 export function maxPickableDays(currentDays: number) {
   return Math.max(roadmapLimits.maxDays, currentDays);
 }
 
-/** Rule of the date range picked on the detail page: whole days, at most `maxDays`. */
+/**
+ * Rule of the date range picked on the detail page: whole days, at most `maxDays`. A trip longer
+ * than the 7-day limit may only keep its `currentDays`: RM-04 refuses any other count above 7.
+ */
 export function dateRangeError(
   from: string,
   to: string,
   maxDays: number = roadmapLimits.maxDays,
+  currentDays?: number,
 ): string | null {
   if (!isDateOnly(from) || !isDateOnly(to))
     return "Chọn ngày đi rồi chọn ngày về.";
   const days = tripDays(from, to);
   if (days < roadmapLimits.minDays) return "Ngày về không được trước ngày đi.";
   if (days > maxDays) return `Chuyến đi tối đa ${maxDays} ngày.`;
+  if (
+    currentDays !== undefined &&
+    days > roadmapLimits.maxDays &&
+    days !== currentDays
+  )
+    return `Chuyến đi tối đa ${roadmapLimits.maxDays} ngày, hoặc giữ nguyên ${currentDays} ngày.`;
   return null;
 }
 
@@ -407,51 +417,9 @@ export const gpsProblemMessages: Record<GpsProblem, string> = {
 
 /** roadmaps.budget_amount is numeric(14,0): whole VND, at most 14 digits. */
 export const budgetMaxDigits = 14;
-const vndSuffix = " VND";
 
-const digitsOf = (text: string) => text.replace(/\D/g, "");
-
-/** `1500000` → `1.500.000 VND`; no digits → empty. */
-export function formatVndInput(digits: string) {
-  const clean = digitsOf(digits);
-  return clean ? clean.replace(/\B(?=(\d{3})+(?!\d))/g, ".") + vndSuffix : "";
-}
-
-/**
- * Applies one edit of the currency input. `previous` and the result are plain digits (what
- * the form stores and sends); `caret` is the position the browser reports in `typed`.
- * Deleting only a separator or the unit deletes the digit before the caret instead, so
- * Backspace never gets stuck on "." or "VND".
- */
-export function applyVndEdit(
-  previous: string,
-  typed: string,
-  caret: number,
-  deleting: boolean,
-): { digits: string; caret: number } {
-  let digits = digitsOf(typed);
-  let before = digitsOf(typed.slice(0, caret)).length;
-  if (deleting && digits === previous && before > 0) {
-    digits = digits.slice(0, before - 1) + digits.slice(before);
-    before -= 1;
-  }
-  const trimmed = digits.replace(/^0+(?=\d)/, "");
-  before = Math.max(0, before - (digits.length - trimmed.length));
-  digits = trimmed.slice(0, budgetMaxDigits);
-  before = Math.min(before, digits.length);
-  // Caret goes right after the `before`-th digit of the formatted text.
-  const text = formatVndInput(digits);
-  let seen = 0;
-  let position = before === 0 ? 0 : text.length;
-  for (let index = 0; before > 0 && index < text.length; index += 1) {
-    if (/\d/.test(text[index])) seen += 1;
-    if (seen === before) {
-      position = index + 1;
-      break;
-    }
-  }
-  return { digits, caret: position };
-}
+// The money input rules are shared with the owner menu (dish price).
+export { applyVndEdit, formatVndInput } from "@/shared/money/vnd-input";
 
 /**
  * Step 1 of the "Lập lộ trình mới" dialog: does the traveler know exactly where they will be?

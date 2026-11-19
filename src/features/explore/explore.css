@@ -1711,3 +1711,75 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/*
+ * Lazy-loading effects of the dish and restaurant lists (2026-11-18):
+ * - cards fade in and rise a little as they arrive, one after another inside their page (`--stagger`);
+ * - while the next page loads, shimmering placeholder cards shaped like the layout end the list;
+ * - a lazy photo waits on a shimmering block and fades in once decoded.
+ * The shimmer is the app's skeleton wave (globals.css); every motion stops under reduced motion.
+ */
+.dish-items > li {
+  animation: dish-card-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--stagger, 0) * 45ms);
+}
+@keyframes dish-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+.dish-items > .dish-skeleton-item {
+  animation: none;
+}
+.dish-skeleton {
+  flex: 1;
+  border-radius: var(--radius-md);
+}
+.dish-skeleton-list {
+  height: 180px;
+}
+.dish-skeleton-detailed {
+  height: 300px;
+}
+.dish-skeleton-gallery {
+  aspect-ratio: 4 / 5;
+  height: auto;
+  border-radius: var(--radius-sm);
+}
+.media.is-loading {
+  position: relative;
+  isolation: isolate;
+}
+.media.is-loading::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    rgb(255 255 255 / 0.6) 50%,
+    transparent 80%
+  );
+  transform: translateX(-100%);
+  animation: skeleton-wave 1.6s ease-in-out infinite;
+  pointer-events: none;
+  content: "";
+}
+.media > img {
+  transition: opacity 360ms ease;
+}
+.media.is-loading > img {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dish-items > li {
+    animation: none;
+  }
+  .media.is-loading::after {
+    animation: none;
+  }
+  .media > img {
+    transition: none;
+  }
+}

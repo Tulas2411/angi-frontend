@@ -3,7 +3,14 @@ import {
   PlanRoadmapBanner,
   type PlanBannerAudience,
 } from "./plan-roadmap-banner";
-import { useId, useMemo, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Alert, Button, Card } from "@/shared/ui";
 import { EmptyState, SelectField, Skeleton } from "@/components/ui/primitives";
@@ -13,6 +20,7 @@ import {
   activeDishFilterCount,
   dishApiQuery,
   dishFiltersHref,
+  dishPageSize,
   dishFormOptions,
   dishMinPriceOptions,
   dishPriceOptions,
@@ -37,9 +45,14 @@ import {
   BrowseLayout,
   BrowseSearchBar,
   FilterSidebar,
+  ListSkeletons,
+  staggerStyle,
   useInstantFilters,
 } from "./explore-browse";
 import "./explore.css";
+
+/** How far below the screen the end of the list may be when the next page is asked for. */
+const preloadMargin = "600px";
 
 /** A group of tag chips; `ids` is the list the chips toggle in. */
 function TagChips({
@@ -208,9 +221,26 @@ export function DishListPage({
     items: DishCardDto[];
     next: string | null;
   } | null>(null);
-  const [moreState, setMoreState] = useState({ loading: false, problem: "" });
+  const [moreState, setMoreState] = useState({
+    key: "",
+    loading: false,
+    problem: "",
+  });
+  const loadingMore = useRef(false);
+  const currentKey = useRef(key);
+  useEffect(() => {
+    currentKey.current = key;
+  }, [key]);
+  const sentinel = useRef<HTMLDivElement>(null);
 
   const extra = more && more.key === key ? more : null;
+  const status = moreState.key === key ? moreState : null;
+  const next =
+    first.status === "ready"
+      ? extra
+        ? extra.next
+        : first.data.nextCursor
+      : null;
   const items =
     first.status === "ready"
       ? [...first.data.items, ...(extra?.items ?? [])]
@@ -219,26 +249,56 @@ export function DishListPage({
   const apply = (next: DishFilters) =>
     router.push(dishFiltersHref(next), { scroll: false });
 
-  async function loadMore(cursor: string) {
-    setMoreState({ loading: true, problem: "" });
+  async function loadMore() {
+    if (loadingMore.current || !next) return;
+    loadingMore.current = true;
+    const forKey = key;
+    setMoreState({ key: forKey, loading: true, problem: "" });
     try {
-      const page = await service.browseDishes(dishApiQuery(filters, cursor));
+      const page = await service.browseDishes(dishApiQuery(filters, next));
+      // A new search started meanwhile: its own first page replaces this one.
+      if (currentKey.current !== forKey) return;
       setMore({
-        key,
+        key: forKey,
         items: [...(extra?.items ?? []), ...page.items],
         next: page.nextCursor,
       });
-      setMoreState({ loading: false, problem: "" });
+      setMoreState({ key: forKey, loading: false, problem: "" });
     } catch (caught) {
-      setMoreState({
-        loading: false,
-        problem:
-          caught instanceof ApiError && caught.errorCode === "INVALID_CURSOR"
-            ? "Danh sách đã thay đổi, hãy tìm lại từ đầu."
-            : getErrorMessage(caught),
-      });
+      if (currentKey.current === forKey)
+        setMoreState({
+          key: forKey,
+          loading: false,
+          problem:
+            caught instanceof ApiError && caught.errorCode === "INVALID_CURSOR"
+              ? "Danh sách đã thay đổi, hãy tìm lại từ đầu."
+              : getErrorMessage(caught),
+        });
+    } finally {
+      loadingMore.current = false;
     }
   }
+  const load = useRef(loadMore);
+  useEffect(() => {
+    load.current = loadMore;
+  });
+
+  // Lazy loading, as on the restaurant list: the next page is asked for when the end of the list nears
+  // the screen. A new observer per loaded page also covers a short page that leaves the end in view.
+  const stopped = Boolean(status?.problem) || Boolean(status?.loading);
+  const loadedPages = extra ? extra.items.length : 0;
+  useEffect(() => {
+    const element = sentinel.current;
+    if (!element || !next || stopped) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((entry) => entry.isIntersecting)) void load.current();
+      },
+      { rootMargin: `0px 0px ${preloadMargin} 0px` },
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [next, stopped, loadedPages, key]);
 
   const heading = (
     <BrowseHeading
@@ -308,7 +368,6 @@ export function DishListPage({
       </Card>,
     );
 
-  const next = extra ? extra.next : first.data.nextCursor;
   return layout(
     <>
       {items.length === 0 ? (
@@ -325,8 +384,8 @@ export function DishListPage({
             <DishViewSwitcher view={view} onChange={setView} />
           </div>
           <ul className={`dish-items dish-items-${view} dish-results`}>
-            {items.map((dish) => (
-              <li key={dish.id}>
+            {items.map((dish, index) => (
+              <li key={dish.id} style={staggerStyle(index, dishPageSize)}>
                 {view === "gallery" ? (
                   <DishTile dish={dish} />
                 ) : view === "list" ? (
@@ -336,21 +395,26 @@ export function DishListPage({
                 )}
               </li>
             ))}
+            {status?.loading && <ListSkeletons view={view} />}
           </ul>
         </section>
       )}
-      {moreState.problem && <Alert>{moreState.problem}</Alert>}
-      {next && (
-        <div className="explore-more">
-          <Button
-            variant="secondary"
-            loading={moreState.loading}
-            onClick={() => void loadMore(next)}
-          >
-            Xem thêm món
-          </Button>
-        </div>
-      )}
+      <div ref={sentinel} className="explore-lazy" aria-live="polite">
+        {status?.loading && (
+          <p className="sr-only">Đang tải thêm món…</p>
+        )}
+        {status?.problem && (
+          <Alert>
+            Chưa tải được thêm món: {status.problem}{" "}
+            <Button variant="secondary" onClick={() => void loadMore()}>
+              Thử lại
+            </Button>
+          </Alert>
+        )}
+        {!next && extra && items.length > 0 && (
+          <p className="helper">Đã hiện tất cả {items.length} món.</p>
+        )}
+      </div>
     </>,
   );
 }

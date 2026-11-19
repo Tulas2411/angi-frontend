@@ -220,7 +220,12 @@ export function RoadmapDatesPicker({
       setError("Chọn ngày đi rồi chọn ngày về.");
       return;
     }
-    const problem = dateRangeError(range.from, range.to, maxDays);
+    const problem = dateRangeError(
+      range.from,
+      range.to,
+      maxDays,
+      overview.numDays,
+    );
     if (problem) {
       setError(problem);
       return;
