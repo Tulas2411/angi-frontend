@@ -90,7 +90,7 @@ CI runs lint, unit tests, build and typecheck. Browser suites run on port 3001 w
 
 The browser talks only to same-origin Route Handlers; the backend is never called from browser code.
 
-- `/api/auth/[action]`: register, email verification, password recovery, login (also Google), refresh, logout, session.
+- `/api/auth/[...action]`: register, email verification, password recovery, login (also Google), refresh, logout, session.
 - `/api/backend/[...path]`: authenticated proxy with an exact `METHOD path` allowlist. Mutations validate `Origin`; anything not listed is `404 ROUTE_NOT_FOUND`.
 - `/api/locations/provinces[/{code}/wards]`: public province and ward catalogue.
 

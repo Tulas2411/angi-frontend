@@ -17,7 +17,12 @@ import { checkOrigin, fail, ok, readJson } from "@/shared/api/http";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
-type Context = { params: Promise<{ action: string }> };
+// Catch-all: `verify-email/resend` has two segments, which a single `[action]` segment never matched (404).
+type Context = { params: Promise<{ action: string[] }> };
+
+async function actionOf(context: Context) {
+  return (await context.params).action.join("/");
+}
 
 // AUTH-01 returns 201 Created. Preserve the designed status when forwarding to the browser.
 function created<T>(data: T) {
@@ -30,7 +35,7 @@ function created<T>(data: T) {
 export async function GET(_request: Request, context: Context) {
   const session = await getSession();
   try {
-    const { action } = await context.params;
+    const action = await actionOf(context);
     if (action !== "session")
       throw new ApiError(404, "ROUTE_NOT_FOUND", "API không tồn tại.");
     return ok(await withAuth(session, async (auth) => auth.user));
@@ -43,7 +48,7 @@ export async function POST(request: Request, context: Context) {
   const session = await getSession();
   try {
     checkOrigin(request);
-    const { action } = await context.params;
+    const action = await actionOf(context);
     switch (action) {
       case "register": {
         // Public endpoint. No session is read or written here because registration
