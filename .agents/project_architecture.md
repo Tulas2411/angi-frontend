@@ -74,7 +74,7 @@ src/
     not-found.tsx               404 for every removed or unknown route
     (public)/                   login, register, verify-email, verify-success, forgot/reset password
     (protected)/                Layout calls requireUser(); account/ and restaurant/*
-    api/auth/[action]           Login, Google, register, refresh, logout, recovery (BFF)
+    api/auth/[...action]        Login, Google, register, refresh, logout, recovery (BFF)
     api/backend/[...path]       Authenticated proxy with an exact method/path allowlist
     api/locations/*             Public province/ward catalogue proxy
   components/
@@ -125,7 +125,7 @@ The `(protected)` area has two route groups with their own shell: `(app)` (accou
 
 Browser code calls only same-origin routes through `src/shared/api/client.ts`:
 
-- `/api/auth/[action]` — `register`, `verify-email`, `verify-email/resend`, `forgot-password`, `reset-password`, `login`, `google`, `refresh`, `logout`, `session`. Login stores the backend token pair in an encrypted HttpOnly cookie (`iron-session`); tokens never reach browser JavaScript.
+- `/api/auth/[...action]` — `register`, `verify-email`, `verify-email/resend`, `forgot-password`, `reset-password`, `login`, `google`, `refresh`, `logout`, `session`. Login stores the backend token pair in an encrypted HttpOnly cookie (`iron-session`); tokens never reach browser JavaScript.
 - `/api/backend/[...path]` — authenticated proxy. A request must match an exact `METHOD path` entry (account `me`, `me/password`, `owner/restaurant…`, `media`, `tags`, verification resubmission, and the validated owner-menu operations). Mutations check `Origin`. Owner paths additionally require the `RESTAURANT_OWNER` role. Anything else answers `404 ROUTE_NOT_FOUND`.
 - `/api/locations/provinces[/{code}/wards]` — public administrative catalogue (Provinces Open API V2, after the 2025 merger), cached.
 

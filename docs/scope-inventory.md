@@ -8,7 +8,7 @@ Rule: a screen stays only if its data and actions come from a backend operation 
 
 | Area                   | Operations                                                                           | Code                                              |
 | ---------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------- |
-| Authentication         | AUTH-01..09                                                                          | `/api/auth/[action]`, `features/auth`             |
+| Authentication         | AUTH-01..09                                                                          | `/api/auth/[...action]`, `features/auth`             |
 | Account                | ME-01..03                                                                            | `features/account`                                |
 | Notifications          | NOTI-01..03                                                                          | `features/notifications`                          |
 | Homepage               | RM-01                                                                                | `features/discovery` (editorial content is local) |
