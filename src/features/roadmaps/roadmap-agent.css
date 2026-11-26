@@ -232,6 +232,10 @@
 .agent-message-body ul {
   list-style: disc;
 }
+/* Each dish of a suggestion is one line starting with "- "; the brand accent marks it so a list reads apart from the opening sentence. */
+.agent-message-body ul > li::marker {
+  color: var(--coral);
+}
 .agent-message-body ol {
   list-style: decimal;
 }
