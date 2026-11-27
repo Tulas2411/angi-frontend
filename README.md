@@ -115,7 +115,7 @@ docs/             Setup, routes, feature notes, deploy
 
 ## Deployment
 
-Production runs on Vercel and calls the backend from the Next.js server. It also needs `BACKEND_PROXY_KEY` and keeps `/demo` off. See [deploy](docs/deploy.vi.md).
+Production is self-hosted with Docker Compose (one project with the backend, reco and Postgres) behind Caddy and a Cloudflare Tunnel, and calls the backend from the Next.js server. The Dockerfile lives on the server, outside the repo; production also needs `BACKEND_PROXY_KEY` and keeps `/demo` off. See [deploy](docs/deploy.vi.md).
 
 ## Documentation
 
@@ -127,7 +127,7 @@ Production runs on Vercel and calls the backend from the Next.js server. It also
 | Routes and implementation status       | [docs/routes.md](docs/routes.md)                                   |
 | Screens, data sources, proxy allowlist | [docs/scope-inventory.md](docs/scope-inventory.md)                 |
 | Feature behavior (Vietnamese)          | `docs/*.vi.md`, one note per feature                               |
-| Deploy (Vercel)                        | [docs/deploy.vi.md](docs/deploy.vi.md)                             |
+| Deploy (self-hosted)                   | [docs/deploy.vi.md](docs/deploy.vi.md)                             |
 | Endpoints and error codes              | `angi-backend/docs/ANGI_API_Design_Ver*.xlsx`                      |
 
 ## Contributing
